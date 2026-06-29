@@ -7,6 +7,8 @@ import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AuthDomainException
 import com.prologue.backend.auth.domain.model.SocialConnection
 import com.prologue.backend.auth.domain.repository.AccountRepository
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 /**
  * 소셜 로그인 유스케이스 (애플리케이션 서비스).
@@ -17,14 +19,15 @@ import com.prologue.backend.auth.domain.repository.AccountRepository
  * 3. 정지/탈퇴 계정이면 로그인 차단
  * 4. 우리 JWT 발급([TokenProvider])
  *
- * 프레임워크 비의존(순수) 클래스. 포트 구현(인프라)이 준비되면 @Configuration에서
- * 빈으로 등록하고 트랜잭션 경계(@Transactional)를 적용한다.
+ * 트랜잭션 경계는 이 서비스가 소유한다. (kotlin("plugin.spring")이 @Service/@Transactional 클래스를 open 처리)
  */
+@Service
 class SocialLoginService(
     private val socialVerifier: SocialVerifier,
     private val accountRepository: AccountRepository,
     private val tokenProvider: TokenProvider,
 ) {
+    @Transactional
     fun login(command: SocialLoginCommand): LoginResult {
         val userInfo: SocialUserInfo = socialVerifier.verify(command.provider, command.token)
 
