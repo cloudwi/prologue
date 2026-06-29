@@ -7,20 +7,30 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * 프롤로그 디자인 시스템 — "하루 한 문답, 편지 같은 무드".
+ * 따뜻한 크림 배경 + 깊은 잉크 텍스트 + 절제된 테라코타 포인트.
+ */
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#2B2723', // 따뜻한 잉크
+    background: '#FAF6F0', // 크림
+    backgroundElement: '#F2EADF', // 카드/표면
+    backgroundSelected: '#E8DCCB',
+    textSecondary: '#8A8178',
+    primary: '#D9694C', // 테라코타 (CTA·하트)
+    primaryText: '#FFFFFF',
+    border: '#E7DDCD',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#F4ECE0',
+    background: '#1A1613', // 깊은 웜 다크
+    backgroundElement: '#262019',
+    backgroundSelected: '#322A21',
+    textSecondary: '#A89C8C',
+    primary: '#E07A5C',
+    primaryText: '#1A1613',
+    border: '#3A3128',
   },
 } as const;
 
