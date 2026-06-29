@@ -6,13 +6,11 @@ import com.prologue.backend.auth.domain.model.SocialProvider
 import com.prologue.backend.auth.interfaces.rest.dto.LoginResponse
 import com.prologue.backend.auth.interfaces.rest.dto.SocialLoginRequest
 import jakarta.validation.Valid
-import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.ResponseStatusException
 
 /**
  * 소셜 로그인 엔드포인트.
@@ -34,9 +32,6 @@ class AuthController(
     }
 
     private fun parseProvider(raw: String): SocialProvider =
-        try {
-            SocialProvider.valueOf(raw.uppercase())
-        } catch (e: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 제공자: $raw")
-        }
+        SocialProvider.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
+            ?: throw UnsupportedSocialProviderException(raw)
 }
