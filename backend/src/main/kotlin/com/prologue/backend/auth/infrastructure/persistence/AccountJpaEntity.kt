@@ -9,9 +9,11 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
+import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
+import org.hibernate.annotations.UuidGenerator
 import java.time.Instant
 import java.util.UUID
 
@@ -23,8 +25,10 @@ import java.util.UUID
 @Table(name = "accounts")
 class AccountJpaEntity(
     @Id
+    @GeneratedValue
+    @UuidGenerator(style = UuidGenerator.Style.TIME) // 시간순(UUIDv7) — 저장 시 자동 생성
     @Column(name = "id", nullable = false, updatable = false)
-    val id: UUID,
+    var id: UUID? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

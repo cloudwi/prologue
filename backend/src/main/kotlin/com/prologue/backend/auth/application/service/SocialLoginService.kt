@@ -34,8 +34,9 @@ class SocialLoginService(
         val account = existing?.also { ensureLoginable(it) }
             ?: registerNewAccount(userInfo)
 
+        val accountId = requireNotNull(account.id) { "영속화된 계정은 반드시 id를 가진다" }
         val tokens = tokenProvider.issue(account)
-        return LoginResult(accountId = account.id, tokens = tokens, isNewUser = isNewUser)
+        return LoginResult(accountId = accountId, tokens = tokens, isNewUser = isNewUser)
     }
 
     private fun registerNewAccount(userInfo: SocialUserInfo): Account {

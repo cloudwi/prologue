@@ -9,9 +9,6 @@ import java.util.UUID
 @JvmInline
 value class AccountId(val value: UUID) {
     companion object {
-        /** 새 계정 식별자 생성. */
-        fun newId(): AccountId = AccountId(UUID.randomUUID())
-
         fun from(value: String): AccountId = AccountId(UUID.fromString(value))
     }
 

@@ -27,7 +27,7 @@ class AccountPersistenceAdapter(
 
     private fun Account.toEntity(): AccountJpaEntity =
         AccountJpaEntity(
-            id = id.value,
+            id = id?.value, // null이면 JPA가 저장 시 생성
             status = status,
             createdAt = createdAt,
             connections = connections
@@ -38,7 +38,7 @@ class AccountPersistenceAdapter(
 
     private fun AccountJpaEntity.toDomain(): Account =
         Account.reconstitute(
-            id = AccountId(id),
+            id = AccountId(requireNotNull(id) { "영속된 엔티티는 id를 가진다" }),
             connections = connections.map { SocialConnection(it.provider, it.providerUserId) },
             status = status,
             roles = roles.toSet(),

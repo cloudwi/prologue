@@ -16,7 +16,8 @@ import java.time.Instant
  * 외부에서 직접 생성하지 못하도록 생성자를 막고, [register]/[reconstitute] 팩토리로만 만든다.
  */
 class Account private constructor(
-    val id: AccountId,
+    /** 식별자. 영속(persist) 전에는 null이며, JPA가 저장 시점에 부여한다. */
+    val id: AccountId?,
     initialConnections: List<SocialConnection>,
     status: AccountStatus,
     roles: Set<Role>,
@@ -82,7 +83,7 @@ class Account private constructor(
          */
         fun register(connection: SocialConnection, now: Instant = Instant.now()): Account =
             Account(
-                id = AccountId.newId(),
+                id = null, // 저장 시 JPA가 부여
                 initialConnections = listOf(connection),
                 status = AccountStatus.ACTIVE,
                 roles = setOf(Role.USER),
