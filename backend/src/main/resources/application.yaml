@@ -9,6 +9,11 @@ spring:
   flyway:
     enabled: true            # classpath:db/migration 의 V*.sql 자동 실행
 
+jwt:
+  secret: ${JWT_SECRET}          # 운영: Render 환경변수(자동생성). 로컬: 환경변수로 주입
+  access-token-expiry: 30m       # 액세스 토큰 30분
+  refresh-token-expiry: 14d      # 리프레시 토큰 14일
+
 management:
   endpoints:
     web:
