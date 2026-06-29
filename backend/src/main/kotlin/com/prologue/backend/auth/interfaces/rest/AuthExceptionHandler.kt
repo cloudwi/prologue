@@ -41,4 +41,11 @@ class AuthExceptionHandler {
     fun handleUnreadable(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다"))
+
+    // 처리되지 않은 예외를 500 JSON으로 직접 응답(=/error 포워드로 인한 깜깜이 403 방지).
+    // 메시지를 노출하므로 진단 후에는 메시지를 가리거나 로깅만으로 전환할 것.
+    @ExceptionHandler(Exception::class)
+    fun handleUnexpected(e: Exception): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse("INTERNAL_ERROR", "${e.javaClass.simpleName}: ${e.message}"))
 }
