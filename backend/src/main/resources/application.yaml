@@ -4,8 +4,10 @@ spring:
   # DataSource는 환경변수로 주입 (SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD)
   jpa:
     hibernate:
-      ddl-auto: validate     # 스키마는 Flyway로 관리 (도메인 설계 후 추가)
+      ddl-auto: none         # 스키마는 Flyway가 단일 소스로 관리 (추후 Testcontainers로 validate 강화)
     open-in-view: false
+  flyway:
+    enabled: true            # classpath:db/migration 의 V*.sql 자동 실행
 
 management:
   endpoints:
