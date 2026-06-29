@@ -6,7 +6,7 @@ plugins {
     kotlin("plugin.jpa") version "2.3.21"
 }
 
-group = "com.prologu"
+group = "com.prologue"
 version = "0.0.1-SNAPSHOT"
 description = "backend"
 
@@ -50,6 +50,11 @@ allOpen {
     annotation("jakarta.persistence.Entity")
     annotation("jakarta.persistence.MappedSuperclass")
     annotation("jakarta.persistence.Embeddable")
+}
+
+// 실행 가능한 boot jar만 만들도록 일반 jar 비활성화 (Docker COPY 시 모호함 제거)
+tasks.named<Jar>("jar") {
+    enabled = false
 }
 
 tasks.withType<Test> {

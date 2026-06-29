@@ -1,0 +1,26 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# 대시보드에서 "New +" → "Blueprint"로 이 파일을 읽으면 서비스가 자동 구성됩니다.
+services:
+  - type: web
+    name: prologue-backend
+    runtime: docker
+    repo: https://github.com/cloudwi/prologue
+    branch: main
+    rootDir: backend            # 모노레포에서 백엔드 폴더를 빌드 컨텍스트로
+    dockerfilePath: ./Dockerfile
+    region: singapore           # 한국에서 가장 가까운 무료 리전 (Supabase도 Singapore로 맞추기)
+    plan: free
+    healthCheckPath: /actuator/health
+    autoDeploy: true            # main 푸시 시 자동 재배포
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true     # Render가 안전한 랜덤값 생성
+      # ── 아래 3개는 Supabase 프로젝트 만든 뒤 대시보드에서 입력 ──
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
