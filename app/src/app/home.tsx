@@ -31,10 +31,12 @@ export default function HomeScreen() {
   const [peerLoading, setPeerLoading] = useState(false);
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
+  const [peerRevealed, setPeerRevealed] = useState(false);
 
   async function loadPeer() {
     setPeerLoading(true);
     setHearted(false);
+    setPeerRevealed(false);
     try {
       setPeer(await getPeer());
     } catch {
@@ -207,9 +209,31 @@ export default function HomeScreen() {
                 ) : peer?.hasPeer && peer.peerAnswer ? (
                   <View style={[styles.peerCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
                     <Text style={[styles.peerBadge, { color: c.textSecondary }]}>익명의 상대 · 같은 질문</Text>
-                    <Text style={[styles.peerAnswer, { color: c.text, fontFamily: Fonts.serif }]}>
-                      {peer.peerAnswer}
-                    </Text>
+
+                    <Pressable onPress={() => setPeerRevealed(true)} disabled={peerRevealed}>
+                      <Text
+                        style={[
+                          styles.peerAnswer,
+                          { fontFamily: Fonts.serif },
+                          peerRevealed
+                            ? { color: c.text }
+                            : {
+                                color: 'transparent',
+                                textShadowColor: c.text,
+                                textShadowOffset: { width: 0, height: 0 },
+                                textShadowRadius: 9,
+                              },
+                        ]}
+                      >
+                        {peer.peerAnswer}
+                      </Text>
+                      {!peerRevealed && (
+                        <View style={styles.revealHint}>
+                          <Text style={[styles.revealHintText, { color: c.primary }]}>👀 탭하여 상대의 답변 보기</Text>
+                        </View>
+                      )}
+                    </Pressable>
+
                     <Pressable
                       onPress={heart}
                       disabled={hearting || hearted}
@@ -268,6 +292,8 @@ const styles = StyleSheet.create({
   peerCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
   peerBadge: { fontSize: 12, marginBottom: 10 },
   peerAnswer: { fontSize: 17, lineHeight: 27 },
+  revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  revealHintText: { fontSize: 14, fontWeight: '700' },
   heart: { height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
   heartText: { fontSize: 15, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 28 },
