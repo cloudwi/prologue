@@ -22,7 +22,7 @@ class Answer private constructor(
     }
 
     companion object {
-        private const val MAX_LENGTH = 1000
+        private const val MAX_LENGTH = 300 // 한 문답에 맞는 분량 (짧은 글)
 
         fun write(accountId: UUID, questionId: Long, content: String, now: Instant = Instant.now()): Answer =
             Answer(null, accountId, questionId, validate(content), now)

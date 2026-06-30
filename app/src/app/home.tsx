@@ -100,10 +100,10 @@ export default function HomeScreen() {
               placeholder="오늘의 마음을 적어보세요"
               placeholderTextColor={c.textSecondary}
               multiline
-              maxLength={1000}
+              maxLength={300}
               style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
             />
-            <Text style={[styles.counter, { color: c.textSecondary }]}>{draft.length}/1000</Text>
+            <Text style={[styles.counter, { color: c.textSecondary }]}>{draft.length}/300</Text>
 
             <Pressable
               onPress={submit}
