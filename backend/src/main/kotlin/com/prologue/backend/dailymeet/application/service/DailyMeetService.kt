@@ -1,0 +1,50 @@
+package com.prologue.backend.dailymeet.application.service
+
+import com.prologue.backend.dailymeet.domain.model.Answer
+import com.prologue.backend.dailymeet.domain.model.DailyMeetException
+import com.prologue.backend.dailymeet.domain.model.Question
+import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
+import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.UUID
+
+/**
+ * 오늘의 문답 유스케이스.
+ * "오늘의 질문"은 질문 풀에서 한국 날짜(epochDay) 기준으로 결정적으로 선택된다(모두 같은 질문).
+ */
+@Service
+class DailyMeetService(
+    private val questionRepository: QuestionRepository,
+    private val answerRepository: AnswerRepository,
+) {
+    @Transactional(readOnly = true)
+    fun today(accountId: UUID): TodayView {
+        val question = pickTodayQuestion()
+        val mine = answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
+        return TodayView(question.id, question.content, mine != null, mine?.content)
+    }
+
+    /** 오늘의 질문에 답변(최초 작성 또는 수정). */
+    @Transactional
+    fun answerToday(accountId: UUID, content: String): Answer {
+        val question = pickTodayQuestion()
+        val existing = answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
+        val answer = existing?.apply { updateContent(content) }
+            ?: Answer.write(accountId, question.id, content)
+        return answerRepository.save(answer)
+    }
+
+    private fun pickTodayQuestion(): Question {
+        val questions = questionRepository.findAllOrdered()
+        if (questions.isEmpty()) throw DailyMeetException("등록된 질문이 없습니다")
+        val index = (LocalDate.now(KST).toEpochDay() % questions.size).toInt()
+        return questions[index]
+    }
+
+    companion object {
+        private val KST = ZoneId.of("Asia/Seoul")
+    }
+}
