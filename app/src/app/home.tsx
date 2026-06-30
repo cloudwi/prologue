@@ -79,12 +79,7 @@ export default function HomeScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView style={styles.flex}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <View style={styles.header}>
-              <Text style={[styles.eyebrow, { color: c.primary }]}>오늘의 문답</Text>
-              <Pressable onPress={logout} hitSlop={10}>
-                <Text style={{ color: c.textSecondary, fontSize: 13 }}>로그아웃</Text>
-              </Pressable>
-            </View>
+            <Text style={[styles.eyebrow, { color: c.primary }]}>오늘의 문답</Text>
 
             {/* 질문 카드 */}
             <View style={[styles.questionCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
@@ -126,6 +121,10 @@ export default function HomeScreen() {
             <Text style={[styles.hint, { color: c.textSecondary }]}>
               답변해야 상대의 답변을 볼 수 있어요. (곧 매칭이 열려요)
             </Text>
+
+            <Pressable onPress={logout} hitSlop={8} style={styles.logout}>
+              <Text style={{ color: c.textSecondary, fontSize: 12, opacity: 0.7 }}>로그아웃</Text>
+            </Pressable>
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -138,8 +137,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 25, paddingBottom: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  eyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  eyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 24 },
   questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
   quote: { fontSize: 40, lineHeight: 40, fontFamily: Platform.select({ default: 'serif' }) },
   question: { fontSize: 22, fontWeight: '600', lineHeight: 32, marginTop: 4 },
@@ -149,4 +147,5 @@ const styles = StyleSheet.create({
   submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   submitText: { fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
+  logout: { alignSelf: 'center', marginTop: 28, padding: 8 },
 });
