@@ -16,6 +16,9 @@ class MatchPersistenceAdapter(
     override fun exists(accountLow: UUID, accountHigh: UUID, questionId: Long): Boolean =
         jpa.existsByAccountLowAndAccountHighAndQuestionId(accountLow, accountHigh, questionId)
 
+    override fun findByAccount(accountId: UUID): List<Match> =
+        jpa.findByAccountLowOrAccountHighOrderByCreatedAtDesc(accountId, accountId).map { it.toDomain() }
+
     private fun Match.toEntity(): MatchJpaEntity =
         MatchJpaEntity(
             id = id,

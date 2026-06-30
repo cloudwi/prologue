@@ -9,4 +9,9 @@ interface MatchJpaRepository : JpaRepository<MatchJpaEntity, UUID> {
         accountHigh: UUID,
         questionId: Long,
     ): Boolean
+
+    fun findByAccountLowOrAccountHighOrderByCreatedAtDesc(
+        accountLow: UUID,
+        accountHigh: UUID,
+    ): List<MatchJpaEntity>
 }
