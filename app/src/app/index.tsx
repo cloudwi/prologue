@@ -16,8 +16,7 @@ import {
 type Provider = 'kakao' | 'naver' | 'google' | 'apple';
 
 export default function LoginScreen() {
-  const scheme = useColorScheme() ?? 'light';
-  const c = Colors[scheme];
+  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
   const [loading, setLoading] = useState<Provider | null>(null);
 
@@ -26,10 +25,11 @@ export default function LoginScreen() {
     setLoading(provider);
     try {
       const result = await fn();
-      // 신규 → 온보딩, 기존 → 홈 (온보딩 화면은 추후, 지금은 홈으로)
-      router.replace('/home');
+      // 신규 유저는 온보딩(프로필 작성)으로, 기존 유저는 홈으로
       if (result.isNewUser) {
-        Alert.alert('환영해요!', '프로필을 설정하고 시작해볼까요?');
+        router.replace('/onboarding');
+      } else {
+        router.replace('/home');
       }
     } catch (e) {
       Alert.alert('로그인 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');

@@ -36,6 +36,9 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/** 한 테마(light 또는 dark)의 색상 맵. 리터럴이 아닌 string 값이라 light/dark 모두 대입 가능. */
+export type ThemeColors = Record<ThemeColor, string>;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

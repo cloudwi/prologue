@@ -6,8 +6,7 @@ import { Colors, Fonts } from '@/constants/theme';
 import { clearTokens } from '@/lib/auth-storage';
 
 export default function HomeScreen() {
-  const scheme = useColorScheme() ?? 'light';
-  const c = Colors[scheme];
+  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
 
   async function logout() {
