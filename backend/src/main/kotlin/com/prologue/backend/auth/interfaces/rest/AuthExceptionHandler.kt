@@ -3,6 +3,7 @@ package com.prologue.backend.auth.interfaces.rest
 import com.prologue.backend.auth.application.port.SocialVerificationException
 import com.prologue.backend.auth.domain.model.AuthDomainException
 import com.prologue.backend.auth.interfaces.rest.dto.ErrorResponse
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -42,10 +43,16 @@ class AuthExceptionHandler {
         ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다"))
 
-    // 처리되지 않은 예외를 500 JSON으로 직접 응답(=/error 포워드로 인한 깜깜이 403 방지).
-    // 메시지를 노출하므로 진단 후에는 메시지를 가리거나 로깅만으로 전환할 것.
+    // 처리되지 않은 예외: 서버에는 상세 로그를 남기고, 클라이언트엔 일반 메시지만 반환.
+    // (500 JSON으로 직접 응답해 /error 포워드로 인한 깜깜이 403 방지)
     @ExceptionHandler(Exception::class)
-    fun handleUnexpected(e: Exception): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ErrorResponse("INTERNAL_ERROR", "${e.javaClass.simpleName}: ${e.message}"))
+    fun handleUnexpected(e: Exception): ResponseEntity<ErrorResponse> {
+        log.error("처리되지 않은 예외 발생", e)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse("INTERNAL_ERROR", "서버 오류가 발생했습니다"))
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(AuthExceptionHandler::class.java)
+    }
 }
