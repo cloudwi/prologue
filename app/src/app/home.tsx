@@ -26,6 +26,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [peerLoading, setPeerLoading] = useState(false);
   const [hearted, setHearted] = useState(false);
@@ -89,6 +90,7 @@ export default function HomeScreen() {
       const updated = await answerToday(draft.trim());
       setToday(updated);
       setDraft(updated.myAnswer ?? '');
+      setEditing(false);
       if (!wasAnswered && updated.answered) loadPeer();
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -96,6 +98,19 @@ export default function HomeScreen() {
       setSubmitting(false);
     }
   }
+
+  function startEdit() {
+    setDraft(today?.myAnswer ?? '');
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setDraft(today?.myAnswer ?? '');
+    setEditing(false);
+  }
+
+  // 미답변이면 항상 편집, 답변했으면 '수정하기'를 눌렀을 때만 편집
+  const isEditing = !today?.answered || editing;
 
   if (loading) {
     return (
@@ -124,39 +139,63 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            {today?.answered && (
-              <Text style={[styles.answeredTag, { color: c.primary }]}>✓ 오늘 답변했어요 (수정 가능)</Text>
-            )}
+            {isEditing ? (
+              <>
+                {/* 답변 입력 (작성 / 수정 모드) */}
+                <TextInput
+                  value={draft}
+                  onChangeText={setDraft}
+                  placeholder="오늘의 마음을 적어보세요"
+                  placeholderTextColor={c.textSecondary}
+                  multiline
+                  autoFocus={editing}
+                  maxLength={300}
+                  style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+                />
+                <Text style={[styles.counter, { color: c.textSecondary }]}>{draft.length}/300</Text>
 
-            {/* 답변 입력 */}
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="오늘의 마음을 적어보세요"
-              placeholderTextColor={c.textSecondary}
-              multiline
-              maxLength={300}
-              style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
-            />
-            <Text style={[styles.counter, { color: c.textSecondary }]}>{draft.length}/300</Text>
+                <Pressable
+                  onPress={submit}
+                  disabled={draft.trim().length === 0 || submitting}
+                  style={[
+                    styles.submit,
+                    { backgroundColor: c.primary, opacity: draft.trim().length === 0 || submitting ? 0.5 : 1 },
+                  ]}
+                >
+                  <Text style={[styles.submitText, { color: c.primaryText }]}>
+                    {submitting ? '저장 중...' : today?.answered ? '수정 완료' : '답변 남기기'}
+                  </Text>
+                </Pressable>
 
-            <Pressable
-              onPress={submit}
-              disabled={draft.trim().length === 0 || submitting}
-              style={[
-                styles.submit,
-                { backgroundColor: c.primary, opacity: draft.trim().length === 0 || submitting ? 0.5 : 1 },
-              ]}
-            >
-              <Text style={[styles.submitText, { color: c.primaryText }]}>
-                {submitting ? '저장 중...' : today?.answered ? '답변 수정하기' : '답변 남기기'}
-              </Text>
-            </Pressable>
+                {today?.answered && (
+                  <Pressable onPress={cancelEdit} disabled={submitting} style={styles.cancel} hitSlop={6}>
+                    <Text style={{ color: c.textSecondary, fontSize: 14 }}>취소</Text>
+                  </Pressable>
+                )}
 
-            {!today?.answered && (
-              <Text style={[styles.hint, { color: c.textSecondary }]}>
-                답변해야 상대의 답변을 볼 수 있어요.
-              </Text>
+                {!today?.answered && (
+                  <Text style={[styles.hint, { color: c.textSecondary }]}>
+                    답변해야 상대의 답변을 볼 수 있어요.
+                  </Text>
+                )}
+              </>
+            ) : (
+              <>
+                {/* 내 답변 (읽기 전용) */}
+                <Text style={[styles.answeredTag, { color: c.primary }]}>✓ 오늘 답변했어요</Text>
+                <View style={[styles.myAnswerCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+                  <Text style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}>
+                    {today?.myAnswer}
+                  </Text>
+                </View>
+
+                <Pressable
+                  onPress={startEdit}
+                  style={[styles.editBtn, { borderColor: c.primary }]}
+                >
+                  <Text style={[styles.editBtnText, { color: c.primary }]}>답변 수정하기</Text>
+                </Pressable>
+              </>
             )}
 
             {/* 블라인드 상대 답변 (Give & Take) */}
@@ -214,6 +253,11 @@ const styles = StyleSheet.create({
   questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
   question: { fontSize: 22, fontWeight: '600', lineHeight: 32, marginTop: 4 },
   answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
+  myAnswerCard: { borderRadius: 12, borderWidth: 1, padding: 18 },
+  myAnswerText: { fontSize: 17, lineHeight: 27 },
+  editBtn: { height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
+  editBtnText: { fontSize: 15, fontWeight: '700' },
+  cancel: { alignSelf: 'center', marginTop: 14, padding: 6 },
   input: { minHeight: 140, borderRadius: 12, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
