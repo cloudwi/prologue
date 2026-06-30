@@ -12,6 +12,7 @@ import {
   loginWithNaver,
   type LoginResult,
 } from '@/lib/auth';
+import { getMyProfile } from '@/lib/member';
 
 type Provider = 'kakao' | 'naver' | 'google' | 'apple';
 
@@ -25,12 +26,14 @@ export default function LoginScreen() {
     setLoading(provider);
     try {
       const result = await fn();
-      // 신규 유저는 온보딩(프로필 작성)으로, 기존 유저는 홈으로
-      if (result.isNewUser) {
-        router.replace('/onboarding');
-      } else {
-        router.replace('/home');
+      // 프로필(Member) 존재 여부로 분기 — 계정만 있고 온보딩 미완료면 온보딩으로
+      let hasProfile: boolean;
+      try {
+        hasProfile = (await getMyProfile()) != null;
+      } catch {
+        hasProfile = !result.isNewUser; // 조회 실패 시 폴백
       }
+      router.replace(hasProfile ? '/home' : '/onboarding');
     } catch (e) {
       Alert.alert('로그인 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
