@@ -53,7 +53,10 @@ export default function HomeScreen() {
       const { matched } = await sendHeart(peer.peerAnswerId);
       setHearted(true);
       if (matched) {
-        Alert.alert('매칭됐어요! 💝', '서로의 마음이 닿았어요. 곧 대화를 시작할 수 있어요.');
+        Alert.alert('매칭됐어요! 💝', '서로의 마음이 닿았어요. 상대의 프로필을 확인해보세요.', [
+          { text: '나중에', style: 'cancel' },
+          { text: '프로필 보기', onPress: () => router.push('/matches') },
+        ]);
       } else {
         Alert.alert('하트를 보냈어요 ♥', '상대도 마음을 보내면 매칭돼요.');
       }
@@ -129,9 +132,14 @@ export default function HomeScreen() {
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
               <Text style={[styles.eyebrow, { color: c.primary }]}>오늘의 문답</Text>
-              <Pressable onPress={() => router.push('/mypage')} hitSlop={10}>
-                <Text style={{ color: c.textSecondary, fontSize: 14, fontWeight: '600' }}>MY</Text>
-              </Pressable>
+              <View style={styles.headerRight}>
+                <Pressable onPress={() => router.push('/matches')} hitSlop={10}>
+                  <Text style={{ color: c.primary, fontSize: 14, fontWeight: '700' }}>매칭</Text>
+                </Pressable>
+                <Pressable onPress={() => router.push('/mypage')} hitSlop={10}>
+                  <Text style={{ color: c.textSecondary, fontSize: 14, fontWeight: '600' }}>MY</Text>
+                </Pressable>
+              </View>
             </View>
 
             {/* 질문 카드 */}
@@ -273,6 +281,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 25, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   eyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
   questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
   question: { fontSize: 22, fontWeight: '600', lineHeight: 32, marginTop: 4 },
