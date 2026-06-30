@@ -20,6 +20,10 @@ class MemberExceptionHandler {
     fun handleDomain(e: MemberDomainException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse("INVALID_PROFILE", e.message))
 
+    @ExceptionHandler(ProfileNotFoundException::class)
+    fun handleProfileNotFound(e: ProfileNotFoundException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse("PROFILE_NOT_FOUND", e.message))
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST)
