@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RegionPicker } from '@/components/region-picker';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { completeOnboarding, type Gender } from '@/lib/member';
 
@@ -100,14 +101,7 @@ export default function OnboardingScreen() {
             </Field>
 
             <Field label="지역" c={c}>
-              <TextInput
-                value={region}
-                onChangeText={setRegion}
-                placeholder="예: 서울"
-                placeholderTextColor={c.textSecondary}
-                maxLength={50}
-                style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
-              />
+              <RegionPicker value={region || null} onChange={setRegion} c={c} />
             </Field>
 
             <Pressable
