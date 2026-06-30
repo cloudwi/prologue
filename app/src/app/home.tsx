@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
+import { getMatches, type Match } from '@/lib/match';
 
 export default function HomeScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -32,6 +33,20 @@ export default function HomeScreen() {
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
   const [peerRevealed, setPeerRevealed] = useState(false);
+  const [matches, setMatches] = useState<Match[]>([]);
+
+  // 매칭은 화면에 들어올 때마다 새로고침(하트로 새 매칭 생길 수 있음)
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getMatches()
+        .then((m) => active && setMatches(m))
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   async function loadPeer() {
     setPeerLoading(true);
@@ -141,6 +156,36 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
             </View>
+
+            {/* 매칭 상대 (메인 노출) */}
+            {matches.length > 0 && (
+              <View style={styles.matchSection}>
+                <View style={styles.matchHeader}>
+                  <Text style={[styles.matchTitle, { color: c.text }]}>💝 내 매칭 {matches.length}</Text>
+                  <Pressable onPress={() => router.push('/matches')} hitSlop={8}>
+                    <Text style={{ color: c.primary, fontWeight: '700', fontSize: 13 }}>전체 보기 ›</Text>
+                  </Pressable>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.matchRow}
+                >
+                  {matches.map((m) => (
+                    <Pressable key={m.peerAccountId} onPress={() => router.push('/matches')} style={styles.matchChip}>
+                      <View style={[styles.matchAvatar, { backgroundColor: c.primary }]}>
+                        <Text style={[styles.matchAvatarText, { color: c.primaryText, fontFamily: Fonts.serif }]}>
+                          {m.nickname.slice(0, 1)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.matchName, { color: c.text }]} numberOfLines={1}>
+                        {m.nickname}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
             {/* 질문 카드 */}
             <View style={[styles.questionCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
@@ -282,6 +327,14 @@ const styles = StyleSheet.create({
   content: { padding: 25, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  matchSection: { marginBottom: 24 },
+  matchHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  matchTitle: { fontSize: 15, fontWeight: '700' },
+  matchRow: { gap: 14, paddingVertical: 2 },
+  matchChip: { alignItems: 'center', width: 64 },
+  matchAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  matchAvatarText: { fontSize: 24, fontWeight: '700' },
+  matchName: { fontSize: 12, marginTop: 6 },
   eyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
   questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
   question: { fontSize: 22, fontWeight: '600', lineHeight: 32, marginTop: 4 },
