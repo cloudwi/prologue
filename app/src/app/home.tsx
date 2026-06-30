@@ -14,6 +14,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
@@ -161,7 +162,14 @@ export default function HomeScreen() {
             {matches.length > 0 && (
               <View style={styles.matchSection}>
                 <View style={styles.matchHeader}>
-                  <Text style={[styles.matchTitle, { color: c.text }]}>💝 내 매칭 {matches.length}</Text>
+                  <View style={styles.matchTitleRow}>
+                    <Image
+                      source={require('@/assets/images/match-heart.png')}
+                      style={styles.matchTitleIcon}
+                      contentFit="contain"
+                    />
+                    <Text style={[styles.matchTitle, { color: c.text }]}>내 매칭 {matches.length}</Text>
+                  </View>
                   <Pressable onPress={() => router.push('/matches')} hitSlop={8}>
                     <Text style={{ color: c.primary, fontWeight: '700', fontSize: 13 }}>전체 보기 ›</Text>
                   </Pressable>
@@ -329,6 +337,8 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   matchSection: { marginBottom: 24 },
   matchHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  matchTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  matchTitleIcon: { width: 20, height: 20 },
   matchTitle: { fontSize: 15, fontWeight: '700' },
   matchRow: { gap: 14, paddingVertical: 2 },
   matchChip: { alignItems: 'center', width: 64 },
