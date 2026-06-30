@@ -37,6 +37,16 @@ class DailyMeetService(
         return answerRepository.save(answer)
     }
 
+    /** 블라인드 상대 답변. 내가 먼저 답해야 열람 가능(Give&Take). */
+    @Transactional(readOnly = true)
+    fun peerAnswer(accountId: UUID): PeerView {
+        val question = pickTodayQuestion()
+        answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
+            ?: throw DailyMeetException("먼저 오늘의 질문에 답해야 상대 답변을 볼 수 있어요")
+        val peer = answerRepository.findOtherAnswer(question.id, accountId)
+        return PeerView(peer != null, peer?.content)
+    }
+
     private fun pickTodayQuestion(): Question {
         val questions = questionRepository.findAllOrdered()
         if (questions.isEmpty()) throw DailyMeetException("등록된 질문이 없습니다")

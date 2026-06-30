@@ -82,4 +82,39 @@ class DailyMeetServiceTest {
 
         assertFailsWith<DailyMeetException> { service.today(accountId) }
     }
+
+    @Test
+    fun `상대 답변 - 내가 답 안 했으면 예외`() {
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+
+        assertFailsWith<DailyMeetException> { service.peerAnswer(accountId) }
+    }
+
+    @Test
+    fun `상대 답변 - 답했고 상대가 있으면 상대 답변 반환`() {
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val peer = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { answerRepository.findOtherAnswer(1L, accountId) } returns peer
+
+        val view = service.peerAnswer(accountId)
+
+        assertTrue(view.hasPeer)
+        assertEquals("상대 답변", view.peerAnswer)
+    }
+
+    @Test
+    fun `상대 답변 - 답했지만 상대가 없으면 hasPeer false`() {
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { answerRepository.findOtherAnswer(1L, accountId) } returns null
+
+        val view = service.peerAnswer(accountId)
+
+        assertFalse(view.hasPeer)
+        assertNull(view.peerAnswer)
+    }
 }

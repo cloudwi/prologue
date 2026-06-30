@@ -16,6 +16,9 @@ class AnswerPersistenceAdapter(
     override fun save(answer: Answer): Answer =
         jpa.save(answer.toEntity()).toDomain()
 
+    override fun findOtherAnswer(questionId: Long, excludeAccountId: UUID): Answer? =
+        jpa.findFirstByQuestionIdAndAccountIdNotOrderByCreatedAtDesc(questionId, excludeAccountId)?.toDomain()
+
     private fun Answer.toEntity(): AnswerJpaEntity =
         AnswerJpaEntity(
             id = id,

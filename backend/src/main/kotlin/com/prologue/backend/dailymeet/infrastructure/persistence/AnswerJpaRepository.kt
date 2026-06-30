@@ -5,4 +5,9 @@ import java.util.UUID
 
 interface AnswerJpaRepository : JpaRepository<AnswerJpaEntity, UUID> {
     fun findByAccountIdAndQuestionId(accountId: UUID, questionId: Long): AnswerJpaEntity?
+
+    fun findFirstByQuestionIdAndAccountIdNotOrderByCreatedAtDesc(
+        questionId: Long,
+        accountId: UUID,
+    ): AnswerJpaEntity?
 }
