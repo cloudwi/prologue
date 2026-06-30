@@ -28,6 +28,8 @@ export default function OnboardingScreen() {
   const [region, setRegion] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const age = /^\d{4}$/.test(birthYear) ? new Date().getFullYear() - Number(birthYear) : null;
+
   const canSubmit =
     nickname.trim().length > 0 &&
     gender != null &&
@@ -68,7 +70,7 @@ export default function OnboardingScreen() {
               <TextInput
                 value={nickname}
                 onChangeText={setNickname}
-                placeholder="불릴 이름"
+                placeholder="예: 봄날의곰"
                 placeholderTextColor={c.textSecondary}
                 maxLength={30}
                 style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
@@ -79,15 +81,18 @@ export default function OnboardingScreen() {
               <GenderToggle value={gender} onChange={setGender} c={c} />
             </Field>
 
-            <Field label="생년 (4자리)" c={c}>
+            <Field label="태어난 해" c={c}>
               <TextInput
                 value={birthYear}
                 onChangeText={(t) => setBirthYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
-                placeholder="예: 1995"
+                placeholder="예: 1999"
                 placeholderTextColor={c.textSecondary}
                 keyboardType="number-pad"
                 style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
               />
+              {age != null && (
+                <Text style={[styles.hint, { color: c.textSecondary }]}>만 {age}세</Text>
+              )}
             </Field>
 
             <Field label="만나고 싶은 상대" c={c}>
@@ -175,6 +180,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, marginTop: 6, marginBottom: 24 },
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  hint: { fontSize: 13, marginTop: 6 },
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
