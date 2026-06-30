@@ -79,7 +79,6 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safe}>
         {/* 브랜드 */}
         <View style={styles.brand}>
-          <Text style={[styles.quote, { color: c.primary }]}>&ldquo;</Text>
           <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
           <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답, 서로를 알아가는</Text>
           <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관 블라인드 소개팅</Text>
@@ -140,7 +139,6 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   safe: { flex: 1, paddingHorizontal: 25, justifyContent: 'flex-end' },
   brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  quote: { fontSize: 56, lineHeight: 60, fontFamily: Platform.select({ default: 'serif' }) },
   wordmark: { fontSize: 44, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
   tagline: { fontSize: 15, marginTop: 6 },
   buttons: { gap: 12 },

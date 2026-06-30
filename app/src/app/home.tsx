@@ -119,7 +119,6 @@ export default function HomeScreen() {
 
             {/* 질문 카드 */}
             <View style={[styles.questionCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
-              <Text style={[styles.quote, { color: c.primary }]}>&ldquo;</Text>
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>
                 {today?.content}
               </Text>
@@ -213,7 +212,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   eyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
   questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
-  quote: { fontSize: 40, lineHeight: 40, fontFamily: Platform.select({ default: 'serif' }) },
   question: { fontSize: 22, fontWeight: '600', lineHeight: 32, marginTop: 4 },
   answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
   input: { minHeight: 140, borderRadius: 12, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
