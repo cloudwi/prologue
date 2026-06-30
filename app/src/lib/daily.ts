@@ -16,3 +16,13 @@ export async function getToday(): Promise<Today> {
 export async function answerToday(content: string): Promise<Today> {
   return authedRequest<Today>('POST', '/daily/today/answer', { content });
 }
+
+export type Peer = {
+  hasPeer: boolean;
+  peerAnswer: string | null;
+};
+
+/** 블라인드 상대 답변 (내가 답해야 열람 가능, GET /daily/today/peer). */
+export async function getPeer(): Promise<Peer> {
+  return authedRequest<Peer>('GET', '/daily/today/peer');
+}

@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Fonts } from '@/constants/theme';
-import { answerToday, getToday, type Today } from '@/lib/daily';
+import { answerToday, getPeer, getToday, type Peer, type Today } from '@/lib/daily';
 
 export default function HomeScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -26,6 +26,19 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [peer, setPeer] = useState<Peer | null>(null);
+  const [peerLoading, setPeerLoading] = useState(false);
+
+  async function loadPeer() {
+    setPeerLoading(true);
+    try {
+      setPeer(await getPeer());
+    } catch {
+      // 상대 답변은 보조 정보 — 실패해도 화면은 유지
+    } finally {
+      setPeerLoading(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -35,6 +48,7 @@ export default function HomeScreen() {
         if (!active) return;
         setToday(t);
         setDraft(t.myAnswer ?? '');
+        if (t.answered) loadPeer();
       } catch (e) {
         if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       } finally {
@@ -50,9 +64,11 @@ export default function HomeScreen() {
     if (draft.trim().length === 0 || submitting) return;
     setSubmitting(true);
     try {
+      const wasAnswered = today?.answered ?? false;
       const updated = await answerToday(draft.trim());
       setToday(updated);
       setDraft(updated.myAnswer ?? '');
+      if (!wasAnswered && updated.answered) loadPeer();
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -117,9 +133,34 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
 
-            <Text style={[styles.hint, { color: c.textSecondary }]}>
-              답변해야 상대의 답변을 볼 수 있어요. (곧 매칭이 열려요)
-            </Text>
+            {!today?.answered && (
+              <Text style={[styles.hint, { color: c.textSecondary }]}>
+                답변해야 상대의 답변을 볼 수 있어요.
+              </Text>
+            )}
+
+            {/* 블라인드 상대 답변 (Give & Take) */}
+            {today?.answered && (
+              <View style={styles.peerSection}>
+                <Text style={[styles.peerEyebrow, { color: c.primary }]}>상대의 답변</Text>
+                {peerLoading ? (
+                  <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
+                ) : peer?.hasPeer && peer.peerAnswer ? (
+                  <View style={[styles.peerCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+                    <Text style={[styles.peerBadge, { color: c.textSecondary }]}>익명의 상대 · 같은 질문</Text>
+                    <Text style={[styles.peerAnswer, { color: c.text, fontFamily: Fonts.serif }]}>
+                      {peer.peerAnswer}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+                    <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
+                      아직 도착한 답변이 없어요.{'\n'}곧 누군가의 마음이 도착할 거예요.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -143,4 +184,11 @@ const styles = StyleSheet.create({
   submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   submitText: { fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
+  peerSection: { marginTop: 32 },
+  peerEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+  peerCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
+  peerBadge: { fontSize: 12, marginBottom: 10 },
+  peerAnswer: { fontSize: 17, lineHeight: 27 },
+  peerEmpty: { alignItems: 'center', paddingVertical: 28 },
+  peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
