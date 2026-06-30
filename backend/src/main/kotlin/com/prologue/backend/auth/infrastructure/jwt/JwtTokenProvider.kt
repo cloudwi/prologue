@@ -1,9 +1,11 @@
 package com.prologue.backend.auth.infrastructure.jwt
 
 import com.prologue.backend.auth.application.port.AuthTokens
+import com.prologue.backend.auth.application.port.AuthenticatedPrincipal
 import com.prologue.backend.auth.application.port.TokenProvider
 import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AccountId
+import com.prologue.backend.auth.domain.model.Role
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
@@ -52,14 +54,18 @@ class JwtTokenProvider(
         )
     }
 
-    override fun resolveAccountId(accessToken: String): AccountId? = runCatching {
+    override fun resolveAuthentication(accessToken: String): AuthenticatedPrincipal? = runCatching {
         val claims = Jwts.parser()
             .verifyWith(key)
             .build()
             .parseSignedClaims(accessToken)
             .payload
         if (claims["type"] != TOKEN_TYPE_ACCESS) return null
-        AccountId.from(claims.subject)
+        val roles = (claims["roles"] as? List<*>)
+            ?.mapNotNull { runCatching { Role.valueOf(it as String) }.getOrNull() }
+            ?.toSet()
+            ?: emptySet()
+        AuthenticatedPrincipal(AccountId.from(claims.subject), roles)
     }.getOrElse { e ->
         if (e is JwtException || e is IllegalArgumentException) null else throw e
     }

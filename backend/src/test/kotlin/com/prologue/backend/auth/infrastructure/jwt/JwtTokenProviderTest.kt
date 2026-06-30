@@ -32,24 +32,26 @@ class JwtTokenProviderTest {
     )
 
     @Test
-    fun `access 토큰을 발급하고 다시 계정 식별자로 복원한다`() {
+    fun `access 토큰을 발급하고 인증 주체(계정+권한)로 복원한다`() {
         val tokens = provider.issue(account)
 
         assertTrue(tokens.accessToken.isNotBlank())
-        assertTrue(tokens.refreshToken.isNotBlank())
         assertEquals(1800, tokens.accessTokenExpiresInSeconds)
-        assertEquals(account.id, provider.resolveAccountId(tokens.accessToken))
+
+        val principal = provider.resolveAuthentication(tokens.accessToken)
+        assertEquals(account.id, principal?.accountId)
+        assertEquals(setOf(Role.USER), principal?.roles)
     }
 
     @Test
     fun `잘못된 토큰은 null을 반환한다`() {
-        assertNull(provider.resolveAccountId("not-a-jwt"))
+        assertNull(provider.resolveAuthentication("not-a-jwt"))
     }
 
     @Test
     fun `refresh 토큰은 access로 인정되지 않는다`() {
         val tokens = provider.issue(account)
 
-        assertNull(provider.resolveAccountId(tokens.refreshToken))
+        assertNull(provider.resolveAuthentication(tokens.refreshToken))
     }
 }
