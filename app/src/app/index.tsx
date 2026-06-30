@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SocialButton } from '@/components/social-button';
 import { Colors, Fonts } from '@/constants/theme';
+import { ApiError } from '@/lib/api';
 import {
   loginWithApple,
   loginWithGoogle,
@@ -12,6 +13,7 @@ import {
   loginWithNaver,
   type LoginResult,
 } from '@/lib/auth';
+import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
 
 type Provider = 'kakao' | 'naver' | 'google' | 'apple';
@@ -20,6 +22,37 @@ export default function LoginScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
   const [loading, setLoading] = useState<Provider | null>(null);
+  const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
+
+  // 앱 시작 시: 저장된 토큰이 있으면 프로필 확인 후 자동 진입
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const token = await getAccessToken();
+      if (!token) {
+        if (active) setChecking(false);
+        return;
+      }
+      try {
+        const profile = await getMyProfile();
+        if (active) router.replace(profile ? '/home' : '/onboarding');
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) await clearTokens();
+        if (active) setChecking(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  if (checking) {
+    return (
+      <View style={[styles.root, styles.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator color={c.primary} />
+      </View>
+    );
+  }
 
   async function handle(provider: Provider, fn: () => Promise<LoginResult>) {
     if (loading) return;
@@ -104,6 +137,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  center: { alignItems: 'center', justifyContent: 'center' },
   safe: { flex: 1, paddingHorizontal: 25, justifyContent: 'flex-end' },
   brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   quote: { fontSize: 56, lineHeight: 60, fontFamily: Platform.select({ default: 'serif' }) },
