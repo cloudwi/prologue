@@ -10,4 +10,7 @@ interface AnswerRepository {
 
     /** 같은 질문에 대한 '나 외의' 답변 하나(최신). 블라인드 상대 답변용. */
     fun findOtherAnswer(questionId: Long, excludeAccountId: UUID): Answer?
+
+    /** 같은 질문에 대한 '나 외의' 모든 답변. 성별·선호 필터링/페어링용. */
+    fun findOthers(questionId: Long, excludeAccountId: UUID): List<Answer>
 }

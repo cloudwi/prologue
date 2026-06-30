@@ -10,4 +10,6 @@ interface AnswerJpaRepository : JpaRepository<AnswerJpaEntity, UUID> {
         questionId: Long,
         accountId: UUID,
     ): AnswerJpaEntity?
+
+    fun findByQuestionIdAndAccountIdNot(questionId: Long, accountId: UUID): List<AnswerJpaEntity>
 }
