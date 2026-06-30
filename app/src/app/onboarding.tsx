@@ -18,6 +18,12 @@ import { RegionPicker } from '@/components/region-picker';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { completeOnboarding, type Gender } from '@/lib/member';
 
+/** 닉네임 placeholder 예시 풀 (화면 진입 시 랜덤). */
+const NICKNAME_EXAMPLES = [
+  '봄날의곰', '책읽는여우', '느긋한고양이', '바다보는사람', '새벽의산책',
+  '조용한위로', '별보는밤', '따뜻한문장', '오후의햇살', '깊은밤라디오',
+];
+
 export default function OnboardingScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
@@ -28,6 +34,10 @@ export default function OnboardingScreen() {
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [region, setRegion] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // 화면 진입 시 한 번 랜덤으로 고정되는 예시 닉네임
+  const [namePlaceholder] = useState(
+    () => NICKNAME_EXAMPLES[Math.floor(Math.random() * NICKNAME_EXAMPLES.length)],
+  );
 
   const age = /^\d{4}$/.test(birthYear) ? new Date().getFullYear() - Number(birthYear) : null;
 
@@ -71,7 +81,7 @@ export default function OnboardingScreen() {
               <TextInput
                 value={nickname}
                 onChangeText={setNickname}
-                placeholder="예: 봄날의곰"
+                placeholder={`예: ${namePlaceholder}`}
                 placeholderTextColor={c.textSecondary}
                 maxLength={30}
                 style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
