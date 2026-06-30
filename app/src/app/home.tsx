@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Fonts } from '@/constants/theme';
-import { answerToday, getPeer, getToday, type Peer, type Today } from '@/lib/daily';
+import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
 
 export default function HomeScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -28,15 +28,36 @@ export default function HomeScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [peerLoading, setPeerLoading] = useState(false);
+  const [hearted, setHearted] = useState(false);
+  const [hearting, setHearting] = useState(false);
 
   async function loadPeer() {
     setPeerLoading(true);
+    setHearted(false);
     try {
       setPeer(await getPeer());
     } catch {
       // 상대 답변은 보조 정보 — 실패해도 화면은 유지
     } finally {
       setPeerLoading(false);
+    }
+  }
+
+  async function heart() {
+    if (!peer?.peerAnswerId || hearting || hearted) return;
+    setHearting(true);
+    try {
+      const { matched } = await sendHeart(peer.peerAnswerId);
+      setHearted(true);
+      if (matched) {
+        Alert.alert('매칭됐어요! 💝', '서로의 마음이 닿았어요. 곧 대화를 시작할 수 있어요.');
+      } else {
+        Alert.alert('하트를 보냈어요 ♥', '상대도 마음을 보내면 매칭돼요.');
+      }
+    } catch (e) {
+      Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally {
+      setHearting(false);
     }
   }
 
@@ -151,6 +172,22 @@ export default function HomeScreen() {
                     <Text style={[styles.peerAnswer, { color: c.text, fontFamily: Fonts.serif }]}>
                       {peer.peerAnswer}
                     </Text>
+                    <Pressable
+                      onPress={heart}
+                      disabled={hearting || hearted}
+                      style={[
+                        styles.heart,
+                        {
+                          backgroundColor: hearted ? c.backgroundElement : c.primary,
+                          borderColor: c.primary,
+                          opacity: hearting ? 0.6 : 1,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.heartText, { color: hearted ? c.primary : c.primaryText }]}>
+                        {hearted ? '♥ 하트를 보냈어요' : hearting ? '보내는 중...' : '♥ 이 마음에 하트 보내기'}
+                      </Text>
+                    </Pressable>
                   </View>
                 ) : (
                   <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
@@ -189,6 +226,8 @@ const styles = StyleSheet.create({
   peerCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
   peerBadge: { fontSize: 12, marginBottom: 10 },
   peerAnswer: { fontSize: 17, lineHeight: 27 },
+  heart: { height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  heartText: { fontSize: 15, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 28 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
