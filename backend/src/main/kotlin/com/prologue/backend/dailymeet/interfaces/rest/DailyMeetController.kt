@@ -1,7 +1,11 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.DailyMeetService
+import com.prologue.backend.dailymeet.application.service.HeartService
+import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
+import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartRequest
+import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PeerResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TodayResponse
 import jakarta.validation.Valid
@@ -20,6 +24,7 @@ import java.util.UUID
 @RequestMapping("/daily")
 class DailyMeetController(
     private val dailyMeetService: DailyMeetService,
+    private val heartService: HeartService,
 ) {
     /** 오늘의 질문 + 내 답변 여부. */
     @GetMapping("/today")
@@ -44,5 +49,20 @@ class DailyMeetController(
         val accountId = UUID.fromString(authentication.name)
         dailyMeetService.answerToday(accountId, request.content)
         return TodayResponse.from(dailyMeetService.today(accountId))
+    }
+
+    /** 익명 상대 답변에 하트. 상호 하트면 매칭 성립. */
+    @PostMapping("/today/heart")
+    fun heart(
+        authentication: Authentication,
+        @Valid @RequestBody request: HeartRequest,
+    ): HeartResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val peerAnswerId = try {
+            UUID.fromString(request.peerAnswerId)
+        } catch (e: IllegalArgumentException) {
+            throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
+        }
+        return HeartResponse.from(heartService.heart(accountId, peerAnswerId))
     }
 }

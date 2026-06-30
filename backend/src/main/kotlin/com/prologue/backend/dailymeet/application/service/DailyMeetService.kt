@@ -44,7 +44,7 @@ class DailyMeetService(
         answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
             ?: throw DailyMeetException("먼저 오늘의 질문에 답해야 상대 답변을 볼 수 있어요")
         val peer = answerRepository.findOtherAnswer(question.id, accountId)
-        return PeerView(peer != null, peer?.content)
+        return PeerView(peer != null, peer?.id, peer?.content)
     }
 
     private fun pickTodayQuestion(): Question {

@@ -13,6 +13,9 @@ class AnswerPersistenceAdapter(
     override fun findByAccountIdAndQuestionId(accountId: UUID, questionId: Long): Answer? =
         jpa.findByAccountIdAndQuestionId(accountId, questionId)?.toDomain()
 
+    override fun findById(id: UUID): Answer? =
+        jpa.findById(id).orElse(null)?.toDomain()
+
     override fun save(answer: Answer): Answer =
         jpa.save(answer.toEntity()).toDomain()
 
