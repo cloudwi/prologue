@@ -20,6 +20,10 @@ import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
 import { getMatches, type Match } from '@/lib/match';
 
+function koreanAge(birthYear: number): number {
+  return new Date().getFullYear() - birthYear + 1;
+}
+
 export default function HomeScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
@@ -36,18 +40,25 @@ export default function HomeScreen() {
   const [peerRevealed, setPeerRevealed] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
 
+  const loadMatches = useCallback(() => {
+    getMatches()
+      .then(setMatches)
+      .catch(() => {});
+  }, []);
+
   // 매칭은 화면에 들어올 때마다 새로고침(하트로 새 매칭 생길 수 있음)
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      getMatches()
-        .then((m) => active && setMatches(m))
-        .catch(() => {});
-      return () => {
-        active = false;
-      };
-    }, []),
+      loadMatches();
+    }, [loadMatches]),
   );
+
+  function openMatch(m: Match) {
+    Alert.alert(
+      `${m.nickname} 님과 매칭됐어요`,
+      `${koreanAge(m.birthYear)}세 · ${m.region}\n\n곧 이 상대와 둘만의 문답을 주고받을 수 있어요. 조금만 기다려주세요 💛`,
+    );
+  }
 
   async function loadPeer() {
     setPeerLoading(true);
@@ -69,10 +80,8 @@ export default function HomeScreen() {
       const { matched } = await sendHeart(peer.peerAnswerId);
       setHearted(true);
       if (matched) {
-        Alert.alert('매칭됐어요! 💝', '서로의 마음이 닿았어요. 상대의 프로필을 확인해보세요.', [
-          { text: '나중에', style: 'cancel' },
-          { text: '프로필 보기', onPress: () => router.push('/matches') },
-        ]);
+        loadMatches(); // 상단 '내 매칭'에 바로 반영
+        Alert.alert('매칭됐어요! 💝', '서로의 마음이 닿았어요. 위 "내 매칭"에서 확인할 수 있어요.');
       } else {
         Alert.alert('하트를 보냈어요 ♥', '상대도 마음을 보내면 매칭돼요.');
       }
@@ -147,32 +156,22 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.flex}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <Text style={[styles.eyebrow, { color: c.primary }]}>오늘의 문답</Text>
-              <View style={styles.headerRight}>
-                <Pressable onPress={() => router.push('/matches')} hitSlop={10}>
-                  <Text style={{ color: c.primary, fontSize: 14, fontWeight: '700' }}>매칭</Text>
-                </Pressable>
-                <Pressable onPress={() => router.push('/mypage')} hitSlop={10}>
-                  <Text style={{ color: c.textSecondary, fontSize: 14, fontWeight: '600' }}>MY</Text>
-                </Pressable>
-              </View>
+              <Text style={[styles.brand, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
+              <Pressable onPress={() => router.push('/mypage')} hitSlop={10}>
+                <Text style={{ color: c.textSecondary, fontSize: 14, fontWeight: '600' }}>MY</Text>
+              </Pressable>
             </View>
 
-            {/* 매칭 상대 (메인 노출) */}
+            {/* 내 매칭 (메인 통합 — 별도 화면 없이 여기서 바로) */}
             {matches.length > 0 && (
               <View style={styles.matchSection}>
-                <View style={styles.matchHeader}>
-                  <View style={styles.matchTitleRow}>
-                    <Image
-                      source={require('@/assets/images/match-heart.png')}
-                      style={styles.matchTitleIcon}
-                      contentFit="contain"
-                    />
-                    <Text style={[styles.matchTitle, { color: c.text }]}>내 매칭 {matches.length}</Text>
-                  </View>
-                  <Pressable onPress={() => router.push('/matches')} hitSlop={8}>
-                    <Text style={{ color: c.primary, fontWeight: '700', fontSize: 13 }}>전체 보기 ›</Text>
-                  </Pressable>
+                <View style={styles.matchTitleRow}>
+                  <Image
+                    source={require('@/assets/images/match-heart.png')}
+                    style={styles.matchTitleIcon}
+                    contentFit="contain"
+                  />
+                  <Text style={[styles.matchTitle, { color: c.text }]}>내 매칭 {matches.length}</Text>
                 </View>
                 <ScrollView
                   horizontal
@@ -180,7 +179,7 @@ export default function HomeScreen() {
                   contentContainerStyle={styles.matchRow}
                 >
                   {matches.map((m) => (
-                    <Pressable key={m.peerAccountId} onPress={() => router.push('/matches')} style={styles.matchChip}>
+                    <Pressable key={m.peerAccountId} onPress={() => openMatch(m)} style={styles.matchChip}>
                       <View style={[styles.matchAvatar, { backgroundColor: c.primary }]}>
                         <Text style={[styles.matchAvatarText, { color: c.primaryText, fontFamily: Fonts.serif }]}>
                           {m.nickname.slice(0, 1)}
@@ -189,13 +188,15 @@ export default function HomeScreen() {
                       <Text style={[styles.matchName, { color: c.text }]} numberOfLines={1}>
                         {m.nickname}
                       </Text>
+                      <Text style={[styles.matchMeta, { color: c.textSecondary }]}>{koreanAge(m.birthYear)}세</Text>
                     </Pressable>
                   ))}
                 </ScrollView>
               </View>
             )}
 
-            {/* 질문 카드 */}
+            {/* 오늘의 문답 */}
+            <Text style={[styles.sectionEyebrow, { color: c.primary }]}>오늘의 문답</Text>
             <View style={[styles.questionCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>
                 {today?.content}
@@ -261,10 +262,13 @@ export default function HomeScreen() {
               </>
             )}
 
-            {/* 블라인드 상대 답변 (Give & Take) */}
+            {/* 오늘의 상대 (디스커버리 — 새 인연) */}
             {today?.answered && (
               <View style={styles.peerSection}>
-                <Text style={[styles.peerEyebrow, { color: c.primary }]}>상대의 답변</Text>
+                <Text style={[styles.peerEyebrow, { color: c.primary }]}>오늘의 상대</Text>
+                <Text style={[styles.peerSub, { color: c.textSecondary }]}>
+                  오늘 같은 질문에 답한 새로운 상대예요. 마음에 들면 하트를 보내보세요.
+                </Text>
                 {peerLoading ? (
                   <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
                 ) : peer?.hasPeer && peer.peerAnswer ? (
@@ -334,18 +338,18 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 25, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 18 },
-  matchSection: { marginBottom: 24 },
-  matchHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  matchTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  brand: { fontSize: 22, fontWeight: '700', letterSpacing: 1 },
+  matchSection: { marginBottom: 28 },
+  matchTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
   matchTitleIcon: { width: 20, height: 20 },
   matchTitle: { fontSize: 15, fontWeight: '700' },
   matchRow: { gap: 14, paddingVertical: 2 },
-  matchChip: { alignItems: 'center', width: 64 },
+  matchChip: { alignItems: 'center', width: 66 },
   matchAvatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   matchAvatarText: { fontSize: 24, fontWeight: '700' },
-  matchName: { fontSize: 12, marginTop: 6 },
-  eyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  matchName: { fontSize: 12, marginTop: 6, fontWeight: '600' },
+  matchMeta: { fontSize: 11, marginTop: 1 },
+  sectionEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
   questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
   question: { fontSize: 22, fontWeight: '600', lineHeight: 32, marginTop: 4 },
   answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
@@ -360,7 +364,8 @@ const styles = StyleSheet.create({
   submitText: { fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
   peerSection: { marginTop: 32 },
-  peerEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+  peerEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
+  peerSub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
   peerCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
   peerBadge: { fontSize: 12, marginBottom: 10 },
   peerAnswer: { fontSize: 17, lineHeight: 27 },
