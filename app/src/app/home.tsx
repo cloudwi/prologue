@@ -56,7 +56,7 @@ export default function HomeScreen() {
   function openMatch(m: Match) {
     Alert.alert(
       `${m.nickname} 님과 매칭됐어요`,
-      `${koreanAge(m.birthYear)}세 · ${m.region}\n\n곧 이 상대와 둘만의 문답을 주고받을 수 있어요. 조금만 기다려주세요 💛`,
+      `${koreanAge(m.birthYear)}세 · ${m.region}\n\n곧 이 상대와 둘만의 문답을 주고받을 수 있어요. 조금만 기다려주세요.`,
     );
   }
 
@@ -81,9 +81,9 @@ export default function HomeScreen() {
       setHearted(true);
       if (matched) {
         loadMatches(); // 상단 '내 매칭'에 바로 반영
-        Alert.alert('매칭됐어요! 💝', '서로의 마음이 닿았어요. 위 "내 매칭"에서 확인할 수 있어요.');
+        Alert.alert('매칭됐어요!', '서로의 마음이 닿았어요. 위 "내 매칭"에서 확인할 수 있어요.');
       } else {
-        Alert.alert('하트를 보냈어요 ♥', '상대도 마음을 보내면 매칭돼요.');
+        Alert.alert('하트를 보냈어요', '상대도 마음을 보내면 매칭돼요.');
       }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -294,7 +294,7 @@ export default function HomeScreen() {
                       </Text>
                       {!peerRevealed && (
                         <View style={styles.revealHint}>
-                          <Text style={[styles.revealHintText, { color: c.primary }]}>👀 탭하여 상대의 답변 보기</Text>
+                          <Text style={[styles.revealHintText, { color: c.primary }]}>탭하여 상대의 답변 보기</Text>
                         </View>
                       )}
                     </Pressable>
@@ -311,8 +311,16 @@ export default function HomeScreen() {
                         },
                       ]}
                     >
+                      {!hearting && (
+                        <Image
+                          source={require('@/assets/images/match-heart.png')}
+                          style={styles.heartIcon}
+                          contentFit="contain"
+                          tintColor={hearted ? c.primary : c.primaryText}
+                        />
+                      )}
                       <Text style={[styles.heartText, { color: hearted ? c.primary : c.primaryText }]}>
-                        {hearted ? '♥ 하트를 보냈어요' : hearting ? '보내는 중...' : '♥ 이 마음에 하트 보내기'}
+                        {hearted ? '하트를 보냈어요' : hearting ? '보내는 중...' : '이 마음에 하트 보내기'}
                       </Text>
                     </Pressable>
                   </View>
@@ -371,7 +379,8 @@ const styles = StyleSheet.create({
   peerAnswer: { fontSize: 17, lineHeight: 27 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
-  heart: { height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  heart: { flexDirection: 'row', gap: 8, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  heartIcon: { width: 18, height: 18 },
   heartText: { fontSize: 15, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 28 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
