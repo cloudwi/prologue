@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ function koreanAge(birthYear: number): number {
 
 export default function ChatsScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const router = useRouter();
 
   const [requests, setRequests] = useState<ReceivedRequest[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -75,10 +76,7 @@ export default function ChatsScreen() {
   }
 
   function openConversation(cv: Conversation) {
-    Alert.alert(
-      `${cv.nickname} 님과의 대화`,
-      `${koreanAge(cv.birthYear)}세 · ${cv.region}\n\n1:1 문답 화면은 곧 열려요 (P3).`,
-    );
+    router.push({ pathname: '/conversation/[id]', params: { id: cv.conversationId, nickname: cv.nickname } });
   }
 
   const isEmpty = requests.length === 0 && conversations.length === 0;

@@ -41,3 +41,20 @@ export type Conversation = {
 export async function getConversations(): Promise<Conversation[]> {
   return authedRequest('GET', '/conversations');
 }
+
+export type Message = {
+  id: string;
+  content: string;
+  mine: boolean;
+  createdAt: string;
+};
+
+/** 대화방 메시지 목록 (GET /conversations/{id}/messages). */
+export async function getMessages(conversationId: string): Promise<Message[]> {
+  return authedRequest('GET', `/conversations/${conversationId}/messages`);
+}
+
+/** 대화방에 메시지 전송 (POST /conversations/{id}/messages). */
+export async function sendMessage(conversationId: string, content: string): Promise<Message> {
+  return authedRequest('POST', `/conversations/${conversationId}/messages`, { content });
+}
