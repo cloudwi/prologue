@@ -43,19 +43,19 @@ class DailyMeetService(
     }
 
     /**
-     * 블라인드 상대 답변. 내가 먼저 답해야 열람 가능(Give&Take).
+     * 블라인드 상대. 프로필(성별·나이·키·체형·소개·키워드)은 답변 전에도 미리보기 가능.
+     * 답변(글)은 Give&Take — 내가 오늘 답해야 열린다.
      * 하루 1명 비독점 + 성별·선호 일치. 한 번 보면 그날 동안 같은 상대로 고정(pin).
      */
     @Transactional
     fun peerAnswer(accountId: UUID): PeerView {
         val question = pickTodayQuestion()
-        answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
-            ?: throw DailyMeetException("먼저 오늘의 질문에 답해야 상대 답변을 볼 수 있어요")
+        val answered = answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null
 
         // 이미 오늘 본 상대가 있으면 그대로 고정
         dailyRevealRepository.findByViewerAndQuestion(accountId, question.id)?.let { pinned ->
             answerRepository.findById(pinned.peerAnswerId)?.let { peer ->
-                return peerView(peer)
+                return peerView(peer, answered)
             }
         }
 
@@ -69,18 +69,32 @@ class DailyMeetService(
                 peerProfile.gender == me.preferredGender &&
                 peerProfile.preferredGender == me.gender
         }
-        if (candidates.isEmpty()) return PeerView(false, null, null, null, null)
+        if (candidates.isEmpty()) return PeerView.empty(answered)
 
         // 비독점 + 공평 분배: 지금까지 가장 적게 노출된 상대를 선택(희소한 성별을 여러 명에게 골고루)
         val chosen = candidates.minBy { dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, it.id!!) }
         dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.id!!))
-        return peerView(chosen)
+        return peerView(chosen, answered)
     }
 
-    /** 상대 답변 + 성별·생년(신원 비공개). */
-    private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer): PeerView {
-        val profile = memberQueryService.findProfile(peer.accountId)
-        return PeerView(true, peer.id, peer.content, profile?.gender, profile?.birthYear)
+    /** 상대 프로필(신원 비공개) + 답변(잠금 시 null). */
+    private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
+        val p = memberQueryService.findProfile(peer.accountId)
+        return PeerView(
+            hasPeer = true,
+            peerAnswerId = peer.id,
+            peerAnswer = if (answered) peer.content else null,
+            answerUnlocked = answered,
+            gender = p?.gender,
+            birthYear = p?.birthYear,
+            region = p?.region,
+            bio = p?.bio,
+            heightCm = p?.heightCm,
+            bodyType = p?.bodyType,
+            hobbies = p?.hobbies ?: emptyList(),
+            interests = p?.interests ?: emptyList(),
+            strengths = p?.strengths ?: emptyList(),
+        )
     }
 
     private fun pickTodayQuestion(): Question {

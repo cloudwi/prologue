@@ -94,11 +94,23 @@ class DailyMeetServiceTest {
     }
 
     @Test
-    fun `상대 답변 - 내가 답 안 했으면 예외`() {
+    fun `상대 답변 - 답 안 했어도 프로필은 보이되 답변은 잠긴다`() {
+        val peerAccount = UUID.randomUUID()
+        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "상대 답변", Instant.now())
         every { questionRepository.findAllOrdered() } returns listOf(question)
-        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null // 미답변
+        every { dailyRevealRepository.findByViewerAndQuestion(accountId, 1L) } returns null
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthers(1L, accountId) } returns listOf(peerAnswer)
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
 
-        assertFailsWith<DailyMeetException> { service.peerAnswer(accountId) }
+        val view = service.peerAnswer(accountId)
+
+        assertTrue(view.hasPeer)
+        assertFalse(view.answerUnlocked)
+        assertNull(view.peerAnswer) // 답변은 Give&Take로 잠김
+        assertEquals(Gender.FEMALE, view.gender) // 프로필은 미리 보임
     }
 
     @Test

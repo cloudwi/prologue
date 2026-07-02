@@ -1,16 +1,30 @@
 package com.prologue.backend.dailymeet.application.service
 
+import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import java.util.UUID
 
 /**
- * 블라인드 상대 답변. 닉네임 등 신원은 감추되 성별·생년은 공개한다.
- * peerAnswerId는 하트/대화 신청 시 상대를 지목하는 불투명 식별자(신원 노출 아님).
+ * 블라인드 상대. 닉네임 등 신원은 감추되 프로필(성별·나이·키·체형·자기소개·키워드)은 공개한다.
+ * 답변(글)은 Give&Take — 내가 오늘 답해야 열린다([answerUnlocked]).
  */
 data class PeerView(
     val hasPeer: Boolean,
     val peerAnswerId: UUID?,
     val peerAnswer: String?,
+    val answerUnlocked: Boolean,
     val gender: Gender?,
     val birthYear: Int?,
-)
+    val region: String?,
+    val bio: String?,
+    val heightCm: Int?,
+    val bodyType: BodyType?,
+    val hobbies: List<String>,
+    val interests: List<String>,
+    val strengths: List<String>,
+) {
+    companion object {
+        fun empty(answerUnlocked: Boolean) =
+            PeerView(false, null, null, answerUnlocked, null, null, null, null, null, null, emptyList(), emptyList(), emptyList())
+    }
+}
