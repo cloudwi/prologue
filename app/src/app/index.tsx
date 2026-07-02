@@ -87,6 +87,7 @@ export default function LoginScreen() {
             contentFit="contain"
           />
           <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
+          <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
           <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답, 서로를 알아가는</Text>
           <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관 블라인드 소개팅</Text>
         </View>
@@ -148,6 +149,7 @@ const styles = StyleSheet.create({
   brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 72, height: 72, marginBottom: 4 },
   wordmark: { fontSize: 44, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
+  wordmarkEn: { fontSize: 13, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
   tagline: { fontSize: 15, marginTop: 6 },
   buttons: { gap: 12 },
   terms: { fontSize: 11, textAlign: 'center', marginTop: 20, marginBottom: 8 },
