@@ -36,11 +36,13 @@ export default function DiscoverScreen() {
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
   const [answerExpanded, setAnswerExpanded] = useState(false);
+  const [peerExpanded, setPeerExpanded] = useState(false);
 
   async function loadPeer() {
     setPeerLoading(true);
     setHearted(false);
     setPeerRevealed(false);
+    setPeerExpanded(false);
     setRequested(false);
     try {
       setPeer(await getPeer());
@@ -214,9 +216,7 @@ export default function DiscoverScreen() {
             {today?.answered && (
               <View style={styles.peerSection}>
                 <Text style={[styles.peerEyebrow, { color: c.primary }]}>오늘의 상대</Text>
-                <Text style={[styles.peerSub, { color: c.textSecondary }]}>
-                  오늘 같은 질문에 답한 새로운 상대예요. 마음에 들면 하트를 보내거나 대화를 신청해보세요.
-                </Text>
+                <Text style={[styles.peerSub, { color: c.textSecondary }]}>오늘 같은 질문에 답한 새로운 상대예요.</Text>
                 {peerLoading ? (
                   <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
                 ) : peer?.hasPeer && peer.peerAnswer ? (
@@ -225,6 +225,7 @@ export default function DiscoverScreen() {
 
                     <Pressable onPress={() => setPeerRevealed(true)} disabled={peerRevealed}>
                       <Text
+                        numberOfLines={peerRevealed ? (peerExpanded ? undefined : 6) : 4}
                         style={[
                           styles.peerAnswer,
                           { fontFamily: Fonts.serif },
@@ -241,6 +242,13 @@ export default function DiscoverScreen() {
                         </View>
                       )}
                     </Pressable>
+                    {peerRevealed && (peer.peerAnswer?.length ?? 0) > 140 && (
+                      <Pressable onPress={() => setPeerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
+                        <Text style={{ color: c.primary, fontSize: 13, fontWeight: '600' }}>
+                          {peerExpanded ? '접기' : '더보기'}
+                        </Text>
+                      </Pressable>
+                    )}
 
                     <View style={styles.peerActions}>
                       <Pressable
@@ -293,27 +301,27 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 25, paddingBottom: 40 },
-  sectionEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12, marginTop: 4 },
-  questionCard: { borderRadius: 16, borderWidth: 1, padding: 24, marginBottom: 20 },
-  question: { fontSize: 22, fontWeight: '600', lineHeight: 32 },
-  answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
-  myAnswerCard: { borderRadius: 12, borderWidth: 1, padding: 18 },
-  myAnswerText: { fontSize: 17, lineHeight: 27 },
-  moreBtn: { marginTop: 10, alignSelf: 'flex-start' },
-  editBtn: { height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
-  editBtnText: { fontSize: 15, fontWeight: '700' },
+  sectionEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginTop: 2 },
+  questionCard: { borderRadius: 14, borderWidth: 1, padding: 18, marginBottom: 16 },
+  question: { fontSize: 19, fontWeight: '600', lineHeight: 27 },
+  answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  myAnswerCard: { borderRadius: 12, borderWidth: 1, padding: 16 },
+  myAnswerText: { fontSize: 16, lineHeight: 25 },
+  moreBtn: { marginTop: 8, alignSelf: 'flex-start' },
+  editBtn: { height: 40, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  editBtnText: { fontSize: 14, fontWeight: '700' },
   cancel: { alignSelf: 'center', marginTop: 14, padding: 6 },
   input: { minHeight: 140, borderRadius: 12, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   submitText: { fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
-  peerSection: { marginTop: 32 },
-  peerEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
-  peerSub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
-  peerCard: { borderRadius: 16, borderWidth: 1, padding: 20 },
+  peerSection: { marginTop: 18 },
+  peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  peerSub: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
+  peerCard: { borderRadius: 16, borderWidth: 1, padding: 18 },
   peerBadge: { fontSize: 12, marginBottom: 10 },
-  peerAnswer: { fontSize: 17, lineHeight: 27 },
+  peerAnswer: { fontSize: 16, lineHeight: 25 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
   peerActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
