@@ -1,6 +1,7 @@
 import { ApiError, authedRequest } from './api';
 
 export type Gender = 'MALE' | 'FEMALE';
+export type BodyType = 'SLIM' | 'AVERAGE' | 'CHUBBY';
 
 export type OnboardingProfile = {
   nickname: string;
@@ -8,9 +9,15 @@ export type OnboardingProfile = {
   birthYear: number;
   preferredGender: Gender;
   region: string;
+  bio?: string | null;
+  heightCm?: number | null;
+  bodyType?: BodyType | null;
+  hobbies?: string[];
+  interests?: string[];
+  strengths?: string[];
 };
 
-export type MemberProfile = OnboardingProfile & { accountId: string };
+export type MemberProfile = Required<OnboardingProfile> & { accountId: string };
 
 /** 온보딩 프로필 생성/수정 (PUT /members/me, 인증 필요). */
 export async function completeOnboarding(profile: OnboardingProfile): Promise<MemberProfile> {

@@ -1,0 +1,114 @@
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { KeywordChips } from '@/components/keyword-chips';
+import { BODY_TYPES, HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
+import type { ThemeColors } from '@/constants/theme';
+import type { BodyType } from '@/lib/member';
+
+export type ProfileExtra = {
+  bio: string;
+  height: string; // 입력 편의를 위해 문자열로 다룸
+  bodyType: BodyType | null;
+  hobbies: string[];
+  interests: string[];
+  strengths: string[];
+};
+
+export function ProfileExtraFields({
+  value,
+  onChange,
+  c,
+}: {
+  value: ProfileExtra;
+  onChange: (patch: Partial<ProfileExtra>) => void;
+  c: ThemeColors;
+}) {
+  return (
+    <View>
+      <Field label="자기소개 (선택)" c={c}>
+        <TextInput
+          value={value.bio}
+          onChangeText={(t) => onChange({ bio: t })}
+          placeholder="나를 한두 문장으로 소개해보세요"
+          placeholderTextColor={c.textSecondary}
+          multiline
+          maxLength={100}
+          style={[styles.bio, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+        />
+        <Text style={[styles.counter, { color: c.textSecondary }]}>{value.bio.length}/100</Text>
+      </Field>
+
+      <Field label="키 (선택)" c={c}>
+        <TextInput
+          value={value.height}
+          onChangeText={(t) => onChange({ height: t.replace(/[^0-9]/g, '').slice(0, 3) })}
+          placeholder="예: 175"
+          placeholderTextColor={c.textSecondary}
+          keyboardType="number-pad"
+          style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+        />
+      </Field>
+
+      <Field label="체형 (선택)" c={c}>
+        <View style={styles.toggleRow}>
+          {BODY_TYPES.map((o) => {
+            const on = value.bodyType === o.key;
+            return (
+              <Pressable
+                key={o.key}
+                onPress={() => onChange({ bodyType: on ? null : o.key })}
+                style={[styles.toggle, { backgroundColor: on ? c.primary : c.backgroundElement, borderColor: on ? c.primary : c.border }]}
+              >
+                <Text style={{ color: on ? c.primaryText : c.text, fontWeight: '600' }}>{o.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Field>
+
+      <Field label={`취미 (최대 ${KEYWORD_MAX}개)`} c={c}>
+        <KeywordChips options={HOBBIES} selected={value.hobbies} onChange={(v) => onChange({ hobbies: v })} c={c} max={KEYWORD_MAX} />
+      </Field>
+
+      <Field label={`관심사 (최대 ${KEYWORD_MAX}개)`} c={c}>
+        <KeywordChips options={INTERESTS} selected={value.interests} onChange={(v) => onChange({ interests: v })} c={c} max={KEYWORD_MAX} />
+      </Field>
+
+      <Field label={`나의 장점 (최대 ${KEYWORD_MAX}개)`} c={c}>
+        <KeywordChips options={STRENGTHS} selected={value.strengths} onChange={(v) => onChange({ strengths: v })} c={c} max={KEYWORD_MAX} />
+      </Field>
+    </View>
+  );
+}
+
+/** ProfileExtra → API 필드로 변환. */
+export function toProfilePayload(v: ProfileExtra) {
+  return {
+    bio: v.bio.trim() || null,
+    heightCm: /^\d{2,3}$/.test(v.height) ? Number(v.height) : null,
+    bodyType: v.bodyType,
+    hobbies: v.hobbies,
+    interests: v.interests,
+    strengths: v.strengths,
+  };
+}
+
+function Field({ label, c, children }: { label: string; c: ThemeColors; children: ReactNode }) {
+  return (
+    <View style={styles.field}>
+      <Text style={[styles.label, { color: c.text }]}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  field: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
+  bio: { minHeight: 72, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
+  counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
+  toggleRow: { flexDirection: 'row', gap: 12 },
+  toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+});

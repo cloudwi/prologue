@@ -16,9 +16,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RegionPicker } from '@/components/region-picker';
+import { ProfileExtraFields, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { clearTokens } from '@/lib/auth-storage';
 import { completeOnboarding, getMyProfile, type Gender } from '@/lib/member';
+
+const EMPTY_EXTRA: ProfileExtra = { bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
 
 export default function MyScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -30,6 +33,7 @@ export default function MyScreen() {
   const [birthYear, setBirthYear] = useState('');
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [region, setRegion] = useState('');
+  const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -43,6 +47,14 @@ export default function MyScreen() {
         setBirthYear(String(p.birthYear));
         setPreferredGender(p.preferredGender);
         setRegion(p.region);
+        setExtra({
+          bio: p.bio ?? '',
+          height: p.heightCm != null ? String(p.heightCm) : '',
+          bodyType: p.bodyType ?? null,
+          hobbies: p.hobbies ?? [],
+          interests: p.interests ?? [],
+          strengths: p.strengths ?? [],
+        });
       } catch (e) {
         if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시');
       } finally {
@@ -71,6 +83,7 @@ export default function MyScreen() {
         birthYear: Number(birthYear),
         preferredGender: preferredGender!,
         region: region.trim(),
+        ...toProfilePayload(extra),
       });
       Alert.alert('저장 완료', '프로필이 수정되었어요');
     } catch (e) {
@@ -130,6 +143,8 @@ export default function MyScreen() {
             <Field label="지역" c={c}>
               <RegionPicker value={region || null} onChange={setRegion} c={c} />
             </Field>
+
+            <ProfileExtraFields value={extra} onChange={(patch) => setExtra((prev) => ({ ...prev, ...patch }))} c={c} />
 
             <Pressable
               onPress={save}

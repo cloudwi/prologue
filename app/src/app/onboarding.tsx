@@ -15,8 +15,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RegionPicker } from '@/components/region-picker';
+import { ProfileExtraFields, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { completeOnboarding, type Gender } from '@/lib/member';
+
+const EMPTY_EXTRA: ProfileExtra = { bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
 
 /** 닉네임 placeholder 예시 풀 (화면 진입 시 랜덤). */
 const NICKNAME_EXAMPLES = [
@@ -33,6 +36,7 @@ export default function OnboardingScreen() {
   const [birthYear, setBirthYear] = useState('');
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [region, setRegion] = useState('');
+  const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
   const [submitting, setSubmitting] = useState(false);
   // 화면 진입 시 한 번 랜덤으로 고정되는 예시 닉네임
   const [namePlaceholder] = useState(
@@ -58,6 +62,7 @@ export default function OnboardingScreen() {
         birthYear: Number(birthYear),
         preferredGender: preferredGender!,
         region: region.trim(),
+        ...toProfilePayload(extra),
       });
       router.replace('/discover');
     } catch (e) {
@@ -113,6 +118,8 @@ export default function OnboardingScreen() {
             <Field label="지역" c={c}>
               <RegionPicker value={region || null} onChange={setRegion} c={c} />
             </Field>
+
+            <ProfileExtraFields value={extra} onChange={(patch) => setExtra((prev) => ({ ...prev, ...patch }))} c={c} />
 
             <Pressable
               onPress={submit}

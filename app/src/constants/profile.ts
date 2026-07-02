@@ -1,0 +1,24 @@
+import type { BodyType } from '@/lib/member';
+
+export const HOBBIES = [
+  '운동·헬스', '등산', '러닝', '여행', '카페', '영화', '독서', '음악',
+  '게임', '요리', '사진', '그림', '반려동물', '드라이브', '맛집', '공연·전시',
+];
+
+export const INTERESTS = [
+  '자기계발', '재테크', '패션', '인테리어', '건강', '환경',
+  '봉사', '창업', '외국어', '과학·IT', '심리', '음식',
+];
+
+export const STRENGTHS = [
+  '유머러스', '다정함', '성실함', '경청', '긍정적', '배려심',
+  '계획적', '즉흥적', '리더십', '손재주', '요리 잘함', '센스있음',
+];
+
+export const BODY_TYPES: { key: BodyType; label: string }[] = [
+  { key: 'SLIM', label: '마름' },
+  { key: 'AVERAGE', label: '보통' },
+  { key: 'CHUBBY', label: '통통' },
+];
+
+export const KEYWORD_MAX = 5;
