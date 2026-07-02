@@ -21,8 +21,16 @@ export type Peer = {
   hasPeer: boolean;
   peerAnswerId: string | null;
   peerAnswer: string | null;
+  answerUnlocked: boolean;
   gender: 'MALE' | 'FEMALE' | null;
   birthYear: number | null;
+  region: string | null;
+  bio: string | null;
+  heightCm: number | null;
+  bodyType: 'SLIM' | 'AVERAGE' | 'CHUBBY' | null;
+  hobbies: string[];
+  interests: string[];
+  strengths: string[];
 };
 
 /** 블라인드 상대 답변 (내가 답해야 열람 가능, GET /daily/today/peer). */
