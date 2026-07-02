@@ -17,6 +17,7 @@ import { Image } from 'expo-image';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
+import { sendConversationRequest } from '@/lib/conversation';
 
 export default function DiscoverScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -31,11 +32,14 @@ export default function DiscoverScreen() {
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
   const [peerRevealed, setPeerRevealed] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
 
   async function loadPeer() {
     setPeerLoading(true);
     setHearted(false);
     setPeerRevealed(false);
+    setRequested(false);
     try {
       setPeer(await getPeer());
     } catch {
@@ -59,8 +63,18 @@ export default function DiscoverScreen() {
     }
   }
 
-  function requestConversation() {
-    Alert.alert('대화 신청', '대화 신청 기능은 곧 열려요. 상대가 수락하면 둘만의 문답이 시작돼요.');
+  async function requestConversation() {
+    if (!peer?.peerAnswerId || requesting || requested) return;
+    setRequesting(true);
+    try {
+      await sendConversationRequest(peer.peerAnswerId);
+      setRequested(true);
+      Alert.alert('대화 신청을 보냈어요', '상대가 수락하면 둘만의 문답이 시작돼요.');
+    } catch (e) {
+      Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally {
+      setRequesting(false);
+    }
   }
 
   useEffect(() => {
@@ -225,8 +239,14 @@ export default function DiscoverScreen() {
                         </Text>
                       </Pressable>
 
-                      <Pressable onPress={requestConversation} style={[styles.talk, { backgroundColor: c.primary }]}>
-                        <Text style={[styles.talkText, { color: c.primaryText }]}>대화 신청</Text>
+                      <Pressable
+                        onPress={requestConversation}
+                        disabled={requesting || requested}
+                        style={[styles.talk, { backgroundColor: c.primary, opacity: requesting ? 0.6 : 1 }]}
+                      >
+                        <Text style={[styles.talkText, { color: c.primaryText }]}>
+                          {requested ? '신청함' : requesting ? '신청 중...' : '대화 신청'}
+                        </Text>
                       </Pressable>
                     </View>
                   </View>
