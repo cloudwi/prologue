@@ -29,10 +29,10 @@ export async function getPeer(): Promise<Peer> {
 }
 
 export type HeartResult = {
-  matched: boolean;
+  hearted: boolean;
 };
 
-/** 익명 상대 답변에 하트. 상호 하트면 매칭 (POST /daily/today/heart). */
+/** 익명 상대 답변에 하트(호감 표시) (POST /daily/today/heart). */
 export async function sendHeart(peerAnswerId: string): Promise<HeartResult> {
   return authedRequest<HeartResult>('POST', '/daily/today/heart', { peerAnswerId });
 }
