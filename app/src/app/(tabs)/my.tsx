@@ -20,7 +20,7 @@ import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { clearTokens } from '@/lib/auth-storage';
 import { completeOnboarding, getMyProfile, type Gender } from '@/lib/member';
 
-export default function MyPageScreen() {
+export default function MyScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
 
@@ -97,13 +97,7 @@ export default function MyPageScreen() {
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView style={styles.flex}>
-          <View style={styles.topbar}>
-            <Pressable onPress={() => router.back()} hitSlop={10}>
-              <Text style={{ color: c.text, fontSize: 16 }}>‹ 뒤로</Text>
-            </Pressable>
-            <Text style={[styles.topTitle, { color: c.text }]}>마이페이지</Text>
-            <View style={{ width: 44 }} />
-          </View>
+          <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>마이페이지</Text>
 
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <Field label="닉네임" c={c}>
@@ -116,7 +110,7 @@ export default function MyPageScreen() {
               />
             </Field>
 
-            <Field label="성별" c={c}>
+            <Field label="나의 성별" c={c}>
               <GenderToggle value={gender} onChange={setGender} c={c} />
             </Field>
 
@@ -129,7 +123,7 @@ export default function MyPageScreen() {
               />
             </Field>
 
-            <Field label="만나고 싶은 상대" c={c}>
+            <Field label="내가 만나고 싶은 성별" c={c}>
               <GenderToggle value={preferredGender} onChange={setPreferredGender} c={c} />
             </Field>
 
@@ -177,10 +171,7 @@ function GenderToggle({ value, onChange, c }: { value: Gender | null; onChange: 
           <Pressable
             key={o.key}
             onPress={() => onChange(o.key)}
-            style={[
-              styles.toggle,
-              { backgroundColor: selected ? c.primary : c.backgroundElement, borderColor: selected ? c.primary : c.border },
-            ]}
+            style={[styles.toggle, { backgroundColor: selected ? c.primary : c.backgroundElement, borderColor: selected ? c.primary : c.border }]}
           >
             <Text style={{ color: selected ? c.primaryText : c.text, fontWeight: '600' }}>{o.label}</Text>
           </Pressable>
@@ -194,8 +185,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
-  topTitle: { fontSize: 17, fontWeight: '700' },
+  title: { fontSize: 26, fontWeight: '700', paddingHorizontal: 25, paddingTop: 8, paddingBottom: 4 },
   content: { padding: 25, paddingBottom: 40 },
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },

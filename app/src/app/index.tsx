@@ -35,7 +35,7 @@ export default function LoginScreen() {
       }
       try {
         const profile = await getMyProfile();
-        if (active) router.replace(profile ? '/home' : '/onboarding');
+        if (active) router.replace(profile ? '/chats' : '/onboarding');
       } catch (e) {
         if (e instanceof ApiError && e.status === 401) await clearTokens();
         if (active) setChecking(false);
@@ -66,7 +66,7 @@ export default function LoginScreen() {
       } catch {
         hasProfile = !result.isNewUser; // 조회 실패 시 폴백
       }
-      router.replace(hasProfile ? '/home' : '/onboarding');
+      router.replace(hasProfile ? '/chats' : '/onboarding');
     } catch (e) {
       Alert.alert('로그인 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {

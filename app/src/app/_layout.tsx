@@ -14,8 +14,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="onboarding" />
-            <Stack.Screen name="home" />
-            <Stack.Screen name="mypage" />
+            <Stack.Screen name="(tabs)" />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
