@@ -34,6 +34,7 @@ export default function DiscoverScreen() {
   const [peerRevealed, setPeerRevealed] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
+  const [answerExpanded, setAnswerExpanded] = useState(false);
 
   async function loadPeer() {
     setPeerLoading(true);
@@ -180,7 +181,19 @@ export default function DiscoverScreen() {
               <>
                 <Text style={[styles.answeredTag, { color: c.primary }]}>✓ 오늘 답변했어요</Text>
                 <View style={[styles.myAnswerCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
-                  <Text style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}>{today?.myAnswer}</Text>
+                  <Text
+                    style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}
+                    numberOfLines={answerExpanded ? undefined : 4}
+                  >
+                    {today?.myAnswer}
+                  </Text>
+                  {(today?.myAnswer?.length ?? 0) > 100 && (
+                    <Pressable onPress={() => setAnswerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
+                      <Text style={{ color: c.primary, fontSize: 13, fontWeight: '600' }}>
+                        {answerExpanded ? '접기' : '더보기'}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
                 <Pressable onPress={startEdit} style={[styles.editBtn, { borderColor: c.primary }]}>
                   <Text style={[styles.editBtnText, { color: c.primary }]}>답변 수정하기</Text>
@@ -277,6 +290,7 @@ const styles = StyleSheet.create({
   answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
   myAnswerCard: { borderRadius: 12, borderWidth: 1, padding: 18 },
   myAnswerText: { fontSize: 17, lineHeight: 27 },
+  moreBtn: { marginTop: 10, alignSelf: 'flex-start' },
   editBtn: { height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   editBtnText: { fontSize: 15, fontWeight: '700' },
   cancel: { alignSelf: 'center', marginTop: 14, padding: 6 },
