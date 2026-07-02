@@ -1,25 +1,20 @@
-import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   return (
-    <Tabs
-      initialRouteName="chats"
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: c.primary,
-        tabBarInactiveTintColor: c.textSecondary,
-        tabBarIconStyle: { display: 'none' },
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '700' },
-        tabBarStyle: { backgroundColor: c.background, borderTopColor: c.border },
-      }}
-    >
-      <Tabs.Screen name="chats" options={{ title: '대화' }} />
-      <Tabs.Screen name="discover" options={{ title: '발견' }} />
-      <Tabs.Screen name="my" options={{ title: 'MY' }} />
-    </Tabs>
+    <NativeTabs>
+      <NativeTabs.Trigger name="chats">
+        <NativeTabs.Trigger.Icon sf="bubble.left.and.bubble.right.fill" drawable="ic_dialog_email" />
+        <NativeTabs.Trigger.Label>대화</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="discover">
+        <NativeTabs.Trigger.Icon sf="sparkles" drawable="ic_menu_search" />
+        <NativeTabs.Trigger.Label>발견</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="my">
+        <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_menu_myplaces" />
+        <NativeTabs.Trigger.Label>MY</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }
