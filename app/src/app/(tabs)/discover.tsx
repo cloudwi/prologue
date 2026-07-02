@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -97,6 +98,14 @@ export default function DiscoverScreen() {
       active = false;
     };
   }, []);
+
+  // 발견 탭에 다시 들어올 때, 아직 오늘의 상대를 못 찾았으면 다시 시도
+  useFocusEffect(
+    useCallback(() => {
+      if (today?.answered && !peer?.hasPeer) loadPeer();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [today?.answered, peer?.hasPeer]),
+  );
 
   async function submit() {
     if (draft.trim().length === 0 || submitting) return;
