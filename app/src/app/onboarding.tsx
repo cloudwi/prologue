@@ -59,7 +59,7 @@ export default function OnboardingScreen() {
         preferredGender: preferredGender!,
         region: region.trim(),
       });
-      router.replace('/chats');
+      router.replace('/discover');
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
