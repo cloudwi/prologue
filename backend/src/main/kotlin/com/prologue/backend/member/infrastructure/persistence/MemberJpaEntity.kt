@@ -1,5 +1,6 @@
 package com.prologue.backend.member.infrastructure.persistence
 
+import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -37,4 +38,24 @@ class MemberJpaEntity(
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
+
+    @Column(name = "bio", length = 200)
+    var bio: String? = null,
+
+    @Column(name = "height_cm")
+    var heightCm: Int? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "body_type", length = 10)
+    var bodyType: BodyType? = null,
+
+    // 키워드는 콤마 구분 문자열로 저장(도메인에서는 List<String>)
+    @Column(name = "hobbies", length = 500)
+    var hobbies: String? = null,
+
+    @Column(name = "interests", length = 500)
+    var interests: String? = null,
+
+    @Column(name = "strengths", length = 500)
+    var strengths: String? = null,
 )

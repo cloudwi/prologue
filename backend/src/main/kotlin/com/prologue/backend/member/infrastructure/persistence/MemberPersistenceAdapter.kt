@@ -26,6 +26,12 @@ class MemberPersistenceAdapter(
             preferredGender = preferredGender,
             region = region,
             createdAt = createdAt,
+            bio = bio,
+            heightCm = heightCm,
+            bodyType = bodyType,
+            hobbies = hobbies.joinToString(",").ifBlank { null },
+            interests = interests.joinToString(",").ifBlank { null },
+            strengths = strengths.joinToString(",").ifBlank { null },
         )
 
     private fun MemberJpaEntity.toDomain(): Member =
@@ -37,5 +43,14 @@ class MemberPersistenceAdapter(
             preferredGender = preferredGender,
             region = region,
             createdAt = createdAt,
+            bio = bio,
+            heightCm = heightCm,
+            bodyType = bodyType,
+            hobbies = splitKeywords(hobbies),
+            interests = splitKeywords(interests),
+            strengths = splitKeywords(strengths),
         )
+
+    private fun splitKeywords(joined: String?): List<String> =
+        joined?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
 }

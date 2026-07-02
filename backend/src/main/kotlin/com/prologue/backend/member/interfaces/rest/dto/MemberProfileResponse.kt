@@ -1,5 +1,6 @@
 package com.prologue.backend.member.interfaces.rest.dto
 
+import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.member.domain.model.Member
 
@@ -10,6 +11,12 @@ data class MemberProfileResponse(
     val birthYear: Int,
     val preferredGender: Gender,
     val region: String,
+    val bio: String?,
+    val heightCm: Int?,
+    val bodyType: BodyType?,
+    val hobbies: List<String>,
+    val interests: List<String>,
+    val strengths: List<String>,
 ) {
     companion object {
         fun from(member: Member): MemberProfileResponse =
@@ -20,6 +27,12 @@ data class MemberProfileResponse(
                 birthYear = member.birthYear,
                 preferredGender = member.preferredGender,
                 region = member.region,
+                bio = member.bio,
+                heightCm = member.heightCm,
+                bodyType = member.bodyType,
+                hobbies = member.hobbies,
+                interests = member.interests,
+                strengths = member.strengths,
             )
     }
 }

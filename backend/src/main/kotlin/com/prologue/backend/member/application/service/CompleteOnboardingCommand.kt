@@ -1,5 +1,6 @@
 package com.prologue.backend.member.application.service
 
+import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import java.util.UUID
 
@@ -11,4 +12,10 @@ data class CompleteOnboardingCommand(
     val birthYear: Int,
     val preferredGender: Gender,
     val region: String,
+    val bio: String? = null,
+    val heightCm: Int? = null,
+    val bodyType: BodyType? = null,
+    val hobbies: List<String> = emptyList(),
+    val interests: List<String> = emptyList(),
+    val strengths: List<String> = emptyList(),
 )

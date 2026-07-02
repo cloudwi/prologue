@@ -46,6 +46,12 @@ class OnboardingController(
                 birthYear = request.birthYear!!,
                 preferredGender = request.preferredGender!!,
                 region = request.region,
+                bio = request.bio,
+                heightCm = request.heightCm,
+                bodyType = request.bodyType,
+                hobbies = request.hobbies,
+                interests = request.interests,
+                strengths = request.strengths,
             ),
         )
         return MemberProfileResponse.from(member)

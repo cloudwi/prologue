@@ -23,6 +23,12 @@ class OnboardingService(
                     birthYear = command.birthYear,
                     preferredGender = command.preferredGender,
                     region = command.region,
+                    bio = command.bio,
+                    heightCm = command.heightCm,
+                    bodyType = command.bodyType,
+                    hobbies = command.hobbies,
+                    interests = command.interests,
+                    strengths = command.strengths,
                 )
             }
         } else {
@@ -33,6 +39,12 @@ class OnboardingService(
                 birthYear = command.birthYear,
                 preferredGender = command.preferredGender,
                 region = command.region,
+                bio = command.bio,
+                heightCm = command.heightCm,
+                bodyType = command.bodyType,
+                hobbies = command.hobbies,
+                interests = command.interests,
+                strengths = command.strengths,
             )
         }
         return memberRepository.save(member)

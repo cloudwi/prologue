@@ -1,5 +1,6 @@
 package com.prologue.backend.member.interfaces.rest.dto
 
+import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
@@ -22,4 +23,12 @@ data class OnboardingRequest(
 
     @field:NotBlank(message = "지역은 필수입니다")
     val region: String,
+
+    // 선택(프로필 풍부화)
+    val bio: String? = null,
+    val heightCm: Int? = null,
+    val bodyType: BodyType? = null,
+    val hobbies: List<String> = emptyList(),
+    val interests: List<String> = emptyList(),
+    val strengths: List<String> = emptyList(),
 )
