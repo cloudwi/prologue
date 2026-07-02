@@ -19,6 +19,9 @@ class ConversationPersistenceAdapter(
     override fun findByAccount(accountId: UUID): List<Conversation> =
         jpa.findByAccountLowOrAccountHighOrderByCreatedAtDesc(accountId, accountId).map { it.toDomain() }
 
+    override fun findById(id: UUID): Conversation? =
+        jpa.findById(id).orElse(null)?.toDomain()
+
     private fun Conversation.toEntity(): ConversationJpaEntity =
         ConversationJpaEntity(id = id, accountLow = accountLow, accountHigh = accountHigh, createdAt = createdAt)
 

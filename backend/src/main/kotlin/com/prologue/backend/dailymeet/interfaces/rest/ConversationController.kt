@@ -1,11 +1,14 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.ConversationService
+import com.prologue.backend.dailymeet.application.service.MessageService
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AcceptResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ConversationRequestBody
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ConversationRequestCreatedResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ConversationResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.MessageBody
+import com.prologue.backend.dailymeet.interfaces.rest.dto.MessageResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedRequestResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
@@ -24,6 +27,7 @@ import java.util.UUID
 @RequestMapping("/conversations")
 class ConversationController(
     private val conversationService: ConversationService,
+    private val messageService: MessageService,
 ) {
     /** 상대 답변을 보고 대화 신청. */
     @PostMapping("/requests")
@@ -62,6 +66,24 @@ class ConversationController(
     fun conversations(authentication: Authentication): List<ConversationResponse> {
         val me = UUID.fromString(authentication.name)
         return conversationService.myConversations(me).map(ConversationResponse::from)
+    }
+
+    /** 대화방 메시지 목록. */
+    @GetMapping("/{id}/messages")
+    fun messages(authentication: Authentication, @PathVariable id: String): List<MessageResponse> {
+        val me = UUID.fromString(authentication.name)
+        return messageService.list(me, parseUuid(id, "잘못된 대화 식별자")).map(MessageResponse::from)
+    }
+
+    /** 대화방에 메시지 전송. */
+    @PostMapping("/{id}/messages")
+    fun sendMessage(
+        authentication: Authentication,
+        @PathVariable id: String,
+        @Valid @RequestBody body: MessageBody,
+    ): MessageResponse {
+        val me = UUID.fromString(authentication.name)
+        return MessageResponse.from(messageService.send(me, parseUuid(id, "잘못된 대화 식별자"), body.content))
     }
 
     private fun parseUuid(value: String, message: String): UUID =

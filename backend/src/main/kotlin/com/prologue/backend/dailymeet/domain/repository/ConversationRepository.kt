@@ -7,4 +7,5 @@ interface ConversationRepository {
     fun save(conversation: Conversation): Conversation
     fun existsBetween(accountLow: UUID, accountHigh: UUID): Boolean
     fun findByAccount(accountId: UUID): List<Conversation>
+    fun findById(id: UUID): Conversation?
 }
