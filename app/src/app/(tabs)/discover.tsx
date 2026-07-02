@@ -20,6 +20,19 @@ import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
 
+/** 만 나이(생일 정보가 없어 올해-출생년으로 근사). */
+function manAge(birthYear: number): number {
+  return new Date().getFullYear() - birthYear;
+}
+
+function peerLabel(peer: Peer): string {
+  const parts: string[] = [];
+  if (peer.gender) parts.push(peer.gender === 'MALE' ? '남성' : '여성');
+  if (peer.birthYear) parts.push(`${manAge(peer.birthYear)}세`);
+  parts.push('같은 질문');
+  return parts.join(' · ');
+}
+
 export default function DiscoverScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
 
@@ -221,7 +234,7 @@ export default function DiscoverScreen() {
                   <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
                 ) : peer?.hasPeer && peer.peerAnswer ? (
                   <View style={[styles.peerCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
-                    <Text style={[styles.peerBadge, { color: c.textSecondary }]}>익명의 상대 · 같은 질문</Text>
+                    <Text style={[styles.peerBadge, { color: c.textSecondary }]}>{peerLabel(peer)}</Text>
 
                     <Pressable onPress={() => setPeerRevealed(true)} disabled={peerRevealed}>
                       <Text

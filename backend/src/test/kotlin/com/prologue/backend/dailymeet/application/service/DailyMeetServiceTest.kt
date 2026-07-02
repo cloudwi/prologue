@@ -146,17 +146,20 @@ class DailyMeetServiceTest {
     @Test
     fun `상대 답변 - 이미 본 상대가 있으면 고정된 상대를 반환`() {
         val peerAnswerId = UUID.randomUUID()
+        val peerAccount = UUID.randomUUID()
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
-        val peerAnswer = Answer.reconstitute(peerAnswerId, UUID.randomUUID(), 1L, "고정된 상대", Instant.now())
+        val peerAnswer = Answer.reconstitute(peerAnswerId, peerAccount, 1L, "고정된 상대", Instant.now())
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
         every { dailyRevealRepository.findByViewerAndQuestion(accountId, 1L) } returns
             DailyReveal.reconstitute(UUID.randomUUID(), accountId, 1L, peerAnswerId, Instant.now())
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
 
         val view = service.peerAnswer(accountId)
 
         assertTrue(view.hasPeer)
         assertEquals("고정된 상대", view.peerAnswer)
+        assertEquals(Gender.FEMALE, view.gender)
     }
 }

@@ -21,6 +21,8 @@ export type Peer = {
   hasPeer: boolean;
   peerAnswerId: string | null;
   peerAnswer: string | null;
+  gender: 'MALE' | 'FEMALE' | null;
+  birthYear: number | null;
 };
 
 /** 블라인드 상대 답변 (내가 답해야 열람 가능, GET /daily/today/peer). */

@@ -55,7 +55,7 @@ class DailyMeetService(
         // 이미 오늘 본 상대가 있으면 그대로 고정
         dailyRevealRepository.findByViewerAndQuestion(accountId, question.id)?.let { pinned ->
             answerRepository.findById(pinned.peerAnswerId)?.let { peer ->
-                return PeerView(true, peer.id, peer.content)
+                return peerView(peer)
             }
         }
 
@@ -69,12 +69,18 @@ class DailyMeetService(
                 peerProfile.gender == me.preferredGender &&
                 peerProfile.preferredGender == me.gender
         }
-        if (candidates.isEmpty()) return PeerView(false, null, null)
+        if (candidates.isEmpty()) return PeerView(false, null, null, null, null)
 
         // 비독점 + 공평 분배: 지금까지 가장 적게 노출된 상대를 선택(희소한 성별을 여러 명에게 골고루)
         val chosen = candidates.minBy { dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, it.id!!) }
         dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.id!!))
-        return PeerView(true, chosen.id, chosen.content)
+        return peerView(chosen)
+    }
+
+    /** 상대 답변 + 성별·생년(신원 비공개). */
+    private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer): PeerView {
+        val profile = memberQueryService.findProfile(peer.accountId)
+        return PeerView(true, peer.id, peer.content, profile?.gender, profile?.birthYear)
     }
 
     private fun pickTodayQuestion(): Question {
