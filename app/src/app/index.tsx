@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
+
 import { SocialButton } from '@/components/social-button';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
@@ -79,6 +81,11 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safe}>
         {/* 브랜드 */}
         <View style={styles.brand}>
+          <Image
+            source={require('@/assets/images/match-heart.png')}
+            style={styles.logo}
+            contentFit="contain"
+          />
           <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
           <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답, 서로를 알아가는</Text>
           <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관 블라인드 소개팅</Text>
@@ -139,6 +146,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   safe: { flex: 1, paddingHorizontal: 25, justifyContent: 'flex-end' },
   brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 72, height: 72, marginBottom: 4 },
   wordmark: { fontSize: 44, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
   tagline: { fontSize: 15, marginTop: 6 },
   buttons: { gap: 12 },
