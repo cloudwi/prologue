@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, paddingHorizontal: 25, justifyContent: 'flex-end' },
   brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 72, height: 72, marginBottom: 4 },
-  wordmark: { fontSize: 44, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
+  wordmark: { fontSize: 36, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
   wordmarkEn: { fontSize: 13, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
   tagline: { fontSize: 15, marginTop: 6 },
   buttons: { gap: 12 },
