@@ -137,7 +137,7 @@ class Member private constructor(
             keywords.map { it.trim() }.filter { it.isNotBlank() }.distinct().take(KEYWORD_MAX)
 
         private fun validate(nickname: String, birthYear: Int, region: String, bio: String?, heightCm: Int?, avatarId: Int?, now: Instant = Instant.now()) {
-            if (avatarId != null && (avatarId < 1 || avatarId > 8)) throw MemberDomainException("아바타가 올바르지 않습니다")
+            if (avatarId != null && (avatarId < 1 || avatarId > 4)) throw MemberDomainException("아바타가 올바르지 않습니다")
             if (nickname.isBlank()) throw MemberDomainException("닉네임은 필수입니다")
             if (nickname.trim().length > NICKNAME_MAX) {
                 throw MemberDomainException("닉네임은 ${NICKNAME_MAX}자 이하여야 합니다")
