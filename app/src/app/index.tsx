@@ -82,7 +82,7 @@ export default function LoginScreen() {
         {/* 브랜드 */}
         <View style={styles.brand}>
           <Image
-            source={require('@/assets/images/match-heart.png')}
+            source={require('@/assets/images/brand-mark.png')}
             style={styles.logo}
             contentFit="contain"
           />
