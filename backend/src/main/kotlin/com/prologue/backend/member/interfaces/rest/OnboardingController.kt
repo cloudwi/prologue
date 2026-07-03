@@ -52,6 +52,7 @@ class OnboardingController(
                 hobbies = request.hobbies,
                 interests = request.interests,
                 strengths = request.strengths,
+                avatarId = request.avatarId,
             ),
         )
         return MemberProfileResponse.from(member)

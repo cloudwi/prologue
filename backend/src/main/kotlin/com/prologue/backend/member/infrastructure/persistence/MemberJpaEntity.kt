@@ -58,4 +58,7 @@ class MemberJpaEntity(
 
     @Column(name = "strengths", length = 500)
     var strengths: String? = null,
+
+    @Column(name = "avatar_id")
+    var avatarId: Int? = null,
 )

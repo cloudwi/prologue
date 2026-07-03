@@ -18,4 +18,5 @@ data class CompleteOnboardingCommand(
     val hobbies: List<String> = emptyList(),
     val interests: List<String> = emptyList(),
     val strengths: List<String> = emptyList(),
+    val avatarId: Int? = null,
 )

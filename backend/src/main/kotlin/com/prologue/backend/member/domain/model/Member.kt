@@ -25,6 +25,7 @@ class Member private constructor(
     hobbies: List<String>,
     interests: List<String>,
     strengths: List<String>,
+    avatarId: Int?,
 ) {
     var nickname: String = nickname
         private set
@@ -48,6 +49,8 @@ class Member private constructor(
         private set
     var strengths: List<String> = strengths
         private set
+    var avatarId: Int? = avatarId
+        private set
 
     /** 프로필 수정(재온보딩/편집). */
     fun updateProfile(
@@ -62,8 +65,9 @@ class Member private constructor(
         hobbies: List<String> = emptyList(),
         interests: List<String> = emptyList(),
         strengths: List<String> = emptyList(),
+        avatarId: Int? = null,
     ) {
-        validate(nickname, birthYear, region, bio, heightCm)
+        validate(nickname, birthYear, region, bio, heightCm, avatarId)
         this.nickname = nickname.trim()
         this.gender = gender
         this.birthYear = birthYear
@@ -75,6 +79,7 @@ class Member private constructor(
         this.hobbies = normalizeKeywords(hobbies)
         this.interests = normalizeKeywords(interests)
         this.strengths = normalizeKeywords(strengths)
+        this.avatarId = avatarId
     }
 
     companion object {
@@ -96,13 +101,14 @@ class Member private constructor(
             hobbies: List<String> = emptyList(),
             interests: List<String> = emptyList(),
             strengths: List<String> = emptyList(),
+            avatarId: Int? = null,
             now: Instant = Instant.now(),
         ): Member {
-            validate(nickname, birthYear, region, bio, heightCm, now)
+            validate(nickname, birthYear, region, bio, heightCm, avatarId, now)
             return Member(
                 accountId, nickname.trim(), gender, birthYear, preferredGender, region.trim(), now,
                 bio?.trim()?.ifBlank { null }, heightCm, bodyType,
-                normalizeKeywords(hobbies), normalizeKeywords(interests), normalizeKeywords(strengths),
+                normalizeKeywords(hobbies), normalizeKeywords(interests), normalizeKeywords(strengths), avatarId,
             )
         }
 
@@ -121,15 +127,17 @@ class Member private constructor(
             hobbies: List<String> = emptyList(),
             interests: List<String> = emptyList(),
             strengths: List<String> = emptyList(),
+            avatarId: Int? = null,
         ): Member = Member(
             accountId, nickname, gender, birthYear, preferredGender, region, createdAt,
-            bio, heightCm, bodyType, hobbies, interests, strengths,
+            bio, heightCm, bodyType, hobbies, interests, strengths, avatarId,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =
             keywords.map { it.trim() }.filter { it.isNotBlank() }.distinct().take(KEYWORD_MAX)
 
-        private fun validate(nickname: String, birthYear: Int, region: String, bio: String?, heightCm: Int?, now: Instant = Instant.now()) {
+        private fun validate(nickname: String, birthYear: Int, region: String, bio: String?, heightCm: Int?, avatarId: Int?, now: Instant = Instant.now()) {
+            if (avatarId != null && (avatarId < 1 || avatarId > 8)) throw MemberDomainException("아바타가 올바르지 않습니다")
             if (nickname.isBlank()) throw MemberDomainException("닉네임은 필수입니다")
             if (nickname.trim().length > NICKNAME_MAX) {
                 throw MemberDomainException("닉네임은 ${NICKNAME_MAX}자 이하여야 합니다")

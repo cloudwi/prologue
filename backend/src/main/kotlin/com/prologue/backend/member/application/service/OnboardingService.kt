@@ -29,6 +29,7 @@ class OnboardingService(
                     hobbies = command.hobbies,
                     interests = command.interests,
                     strengths = command.strengths,
+                    avatarId = command.avatarId,
                 )
             }
         } else {
@@ -45,6 +46,7 @@ class OnboardingService(
                 hobbies = command.hobbies,
                 interests = command.interests,
                 strengths = command.strengths,
+                avatarId = command.avatarId,
             )
         }
         return memberRepository.save(member)
