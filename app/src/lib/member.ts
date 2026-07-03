@@ -15,6 +15,7 @@ export type OnboardingProfile = {
   hobbies?: string[];
   interests?: string[];
   strengths?: string[];
+  avatarId?: number | null;
 };
 
 export type MemberProfile = Required<OnboardingProfile> & { accountId: string };

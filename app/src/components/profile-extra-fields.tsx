@@ -1,12 +1,15 @@
+import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { KeywordChips } from '@/components/keyword-chips';
+import { AVATARS } from '@/constants/avatars';
 import { BODY_TYPES, HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import type { ThemeColors } from '@/constants/theme';
 import type { BodyType } from '@/lib/member';
 
 export type ProfileExtra = {
+  avatarId: number | null;
   bio: string;
   height: string; // 입력 편의를 위해 문자열로 다룸
   bodyType: BodyType | null;
@@ -26,6 +29,23 @@ export function ProfileExtraFields({
 }) {
   return (
     <View>
+      <Field label="아바타 (나를 닮은 아이콘)" c={c}>
+        <View style={styles.avatarRow}>
+          {AVATARS.map((a) => {
+            const on = value.avatarId === a.id;
+            return (
+              <Pressable
+                key={a.id}
+                onPress={() => onChange({ avatarId: on ? null : a.id })}
+                style={[styles.avatarItem, { borderColor: on ? c.primary : 'transparent' }]}
+              >
+                <Image source={a.source} style={styles.avatarImg} contentFit="cover" />
+              </Pressable>
+            );
+          })}
+        </View>
+      </Field>
+
       <Field label="자기소개 (선택)" c={c}>
         <TextInput
           value={value.bio}
@@ -85,6 +105,7 @@ export function ProfileExtraFields({
 /** ProfileExtra → API 필드로 변환. */
 export function toProfilePayload(v: ProfileExtra) {
   return {
+    avatarId: v.avatarId,
     bio: v.bio.trim() || null,
     heightCm: /^\d{2,3}$/.test(v.height) ? Number(v.height) : null,
     bodyType: v.bodyType,
@@ -111,4 +132,7 @@ const styles = StyleSheet.create({
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  avatarItem: { width: 58, height: 58, borderRadius: 29, borderWidth: 2, padding: 2 },
+  avatarImg: { width: '100%', height: '100%', borderRadius: 27 },
 });

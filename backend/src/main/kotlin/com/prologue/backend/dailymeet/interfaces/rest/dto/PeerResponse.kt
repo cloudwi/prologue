@@ -18,6 +18,7 @@ data class PeerResponse(
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
+    val avatarId: Int?,
 ) {
     companion object {
         fun from(view: PeerView): PeerResponse =
@@ -35,6 +36,7 @@ data class PeerResponse(
                 hobbies = view.hobbies,
                 interests = view.interests,
                 strengths = view.strengths,
+                avatarId = view.avatarId,
             )
     }
 }

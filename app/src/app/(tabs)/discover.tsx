@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
+import { Avatar } from '@/components/avatar';
 import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
@@ -241,9 +242,14 @@ export default function DiscoverScreen() {
                   <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
                 ) : peer?.hasPeer ? (
                   <View style={[styles.peerCard, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
-                    {/* 프로필 (신원 비공개) */}
-                    <Text style={[styles.peerMeta, { color: c.text }]}>{peerMetaLabel(peer)}</Text>
-                    {peer.bio ? <Text style={[styles.peerBio, { color: c.textSecondary }]}>{peer.bio}</Text> : null}
+                    {/* 프로필 (신원 비공개 — 아바타·성별·나이 등) */}
+                    <View style={styles.peerHead}>
+                      <Avatar avatarId={peer.avatarId} size={46} c={c} />
+                      <View style={styles.peerHeadBody}>
+                        <Text style={[styles.peerMeta, { color: c.text }]}>{peerMetaLabel(peer)}</Text>
+                        {peer.bio ? <Text style={[styles.peerBio, { color: c.textSecondary }]}>{peer.bio}</Text> : null}
+                      </View>
+                    </View>
                     {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
                       <View style={styles.peerChips}>
                         {[...peer.hobbies, ...peer.interests, ...peer.strengths].slice(0, 8).map((k) => (
@@ -361,8 +367,10 @@ const styles = StyleSheet.create({
   peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
   peerSub: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
   peerCard: { borderRadius: 16, borderWidth: 1, padding: 18 },
+  peerHead: { flexDirection: 'row', alignItems: 'center' },
+  peerHeadBody: { flex: 1, marginLeft: 12 },
   peerMeta: { fontSize: 15, fontWeight: '700' },
-  peerBio: { fontSize: 14, lineHeight: 21, marginTop: 8 },
+  peerBio: { fontSize: 14, lineHeight: 21, marginTop: 4 },
   peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   peerChip: { paddingHorizontal: 10, height: 28, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   peerDivider: { height: 1, marginVertical: 16 },

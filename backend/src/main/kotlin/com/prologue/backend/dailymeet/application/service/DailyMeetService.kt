@@ -94,6 +94,7 @@ class DailyMeetService(
             hobbies = p?.hobbies ?: emptyList(),
             interests = p?.interests ?: emptyList(),
             strengths = p?.strengths ?: emptyList(),
+            avatarId = p?.avatarId,
         )
     }
 

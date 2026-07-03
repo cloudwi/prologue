@@ -61,6 +61,7 @@ data class ConversationResponse(
     val gender: Gender,
     val birthYear: Int,
     val region: String,
+    val avatarId: Int?,
 ) {
     companion object {
         fun from(v: ConversationView) = ConversationResponse(
@@ -70,6 +71,7 @@ data class ConversationResponse(
             gender = v.gender,
             birthYear = v.birthYear,
             region = v.region,
+            avatarId = v.avatarId,
         )
     }
 }

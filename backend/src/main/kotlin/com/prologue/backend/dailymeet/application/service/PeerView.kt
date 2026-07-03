@@ -22,9 +22,10 @@ data class PeerView(
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
+    val avatarId: Int?,
 ) {
     companion object {
         fun empty(answerUnlocked: Boolean) =
-            PeerView(false, null, null, answerUnlocked, null, null, null, null, null, null, emptyList(), emptyList(), emptyList())
+            PeerView(false, null, null, answerUnlocked, null, null, null, null, null, null, emptyList(), emptyList(), emptyList(), null)
     }
 }

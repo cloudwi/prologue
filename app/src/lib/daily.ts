@@ -31,6 +31,7 @@ export type Peer = {
   hobbies: string[];
   interests: string[];
   strengths: string[];
+  avatarId: number | null;
 };
 
 /** 블라인드 상대 답변 (내가 답해야 열람 가능, GET /daily/today/peer). */

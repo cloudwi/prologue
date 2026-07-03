@@ -35,6 +35,7 @@ export type Conversation = {
   gender: Gender;
   birthYear: number;
   region: string;
+  avatarId: number | null;
 };
 
 /** 내 대화 목록 (GET /conversations). */

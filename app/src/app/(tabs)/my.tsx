@@ -21,7 +21,7 @@ import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { clearTokens } from '@/lib/auth-storage';
 import { completeOnboarding, getMyProfile, type Gender } from '@/lib/member';
 
-const EMPTY_EXTRA: ProfileExtra = { bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
+const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
 
 export default function MyScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -48,6 +48,7 @@ export default function MyScreen() {
         setPreferredGender(p.preferredGender);
         setRegion(p.region);
         setExtra({
+          avatarId: p.avatarId ?? null,
           bio: p.bio ?? '',
           height: p.heightCm != null ? String(p.heightCm) : '',
           bodyType: p.bodyType ?? null,
@@ -113,6 +114,13 @@ export default function MyScreen() {
           <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>마이페이지</Text>
 
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <View style={[styles.tip, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+              <Text style={[styles.tipText, { color: c.text }]}>
+                프로필을 자세히 채울수록 매칭 확률이 올라가요.
+              </Text>
+            </View>
+
+            <Text style={[styles.sectionHead, { color: c.primary }]}>기본 정보</Text>
             <Field label="닉네임" c={c}>
               <TextInput
                 value={nickname}
@@ -144,6 +152,7 @@ export default function MyScreen() {
               <RegionPicker value={region || null} onChange={setRegion} c={c} />
             </Field>
 
+            <Text style={[styles.sectionHead, { color: c.primary }]}>상세 프로필 (선택)</Text>
             <ProfileExtraFields value={extra} onChange={(patch) => setExtra((prev) => ({ ...prev, ...patch }))} c={c} />
 
             <Pressable
@@ -202,6 +211,9 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 26, fontWeight: '700', paddingHorizontal: 25, paddingTop: 8, paddingBottom: 4 },
   content: { padding: 25, paddingBottom: 40 },
+  tip: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 22 },
+  tipText: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  sectionHead: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 14 },
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },

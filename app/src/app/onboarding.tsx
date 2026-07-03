@@ -19,7 +19,7 @@ import { ProfileExtraFields, toProfilePayload, type ProfileExtra } from '@/compo
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { completeOnboarding, type Gender } from '@/lib/member';
 
-const EMPTY_EXTRA: ProfileExtra = { bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
+const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
 
 /** 닉네임 placeholder 예시 풀 (화면 진입 시 랜덤). */
 const NICKNAME_EXAMPLES = [
@@ -79,7 +79,7 @@ export default function OnboardingScreen() {
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>프로필 작성</Text>
             <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-              매칭에 쓰일 기본 정보예요. 사진은 없어요.
+              사진은 없어요. 답변과 프로필로 나를 보여주세요.{'\n'}자세히 채울수록 매칭 확률이 올라가요.
             </Text>
 
             <Field label="닉네임" c={c}>

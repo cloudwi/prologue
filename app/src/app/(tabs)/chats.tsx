@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import {
   acceptRequest,
@@ -136,9 +137,7 @@ export default function ChatsScreen() {
                     onPress={() => openConversation(cv)}
                     style={[styles.convCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}
                   >
-                    <View style={[styles.avatar, { backgroundColor: c.primary }]}>
-                      <Text style={[styles.avatarText, { color: c.primaryText, fontFamily: Fonts.serif }]}>{cv.nickname.slice(0, 1)}</Text>
-                    </View>
+                    <Avatar avatarId={cv.avatarId} nickname={cv.nickname} size={48} c={c} />
                     <View style={styles.convBody}>
                       <Text style={[styles.convName, { color: c.text }]}>{cv.nickname}</Text>
                       <Text style={[styles.convMeta, { color: c.textSecondary }]}>

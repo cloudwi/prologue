@@ -31,6 +31,7 @@ data class ConversationView(
     val gender: Gender,
     val birthYear: Int,
     val region: String,
+    val avatarId: Int?,
     val createdAt: Instant,
 )
 
@@ -120,6 +121,7 @@ class ConversationService(
                 gender = profile.gender,
                 birthYear = profile.birthYear,
                 region = profile.region,
+                avatarId = profile.avatarId,
                 createdAt = conv.createdAt,
             )
         }
