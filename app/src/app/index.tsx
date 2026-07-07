@@ -1,29 +1,18 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 
-import { SocialButton } from '@/components/social-button';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
-import {
-  loginWithApple,
-  loginWithGoogle,
-  loginWithKakao,
-  loginWithNaver,
-  type LoginResult,
-} from '@/lib/auth';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
-
-type Provider = 'kakao' | 'naver' | 'google' | 'apple';
 
 export default function LoginScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
-  const [loading, setLoading] = useState<Provider | null>(null);
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
 
   // 앱 시작 시: 저장된 토큰이 있으면 프로필 확인 후 자동 진입
@@ -56,26 +45,6 @@ export default function LoginScreen() {
     );
   }
 
-  async function handle(provider: Provider, fn: () => Promise<LoginResult>) {
-    if (loading) return;
-    setLoading(provider);
-    try {
-      const result = await fn();
-      // 프로필(Member) 존재 여부로 분기 — 계정만 있고 온보딩 미완료면 온보딩으로
-      let hasProfile: boolean;
-      try {
-        hasProfile = (await getMyProfile()) != null;
-      } catch {
-        hasProfile = !result.isNewUser; // 조회 실패 시 폴백
-      }
-      router.replace(hasProfile ? '/discover' : '/onboarding');
-    } catch (e) {
-      Alert.alert('로그인 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-    } finally {
-      setLoading(null);
-    }
-  }
-
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.safe}>
@@ -92,46 +61,14 @@ export default function LoginScreen() {
           <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관 블라인드 소개팅</Text>
         </View>
 
-        {/* 소셜 로그인 */}
+        {/* 이메일 로그인 (소셜 로그인 제거 → 이메일 인증 방식으로 전환) */}
         <View style={styles.buttons}>
-          <SocialButton
-            label="카카오로 시작하기"
-            iconText="k"
-            backgroundColor="#FEE500"
-            textColor="#191600"
-            iconColor="#FEE500"
-            iconBackground="#191600"
-            loading={loading === 'kakao'}
-            onPress={() => handle('kakao', loginWithKakao)}
-          />
-          <SocialButton
-            label="네이버로 시작하기"
-            iconText="N"
-            backgroundColor="#03C75A"
-            textColor="#FFFFFF"
-            loading={loading === 'naver'}
-            onPress={() => handle('naver', loginWithNaver)}
-          />
-          <SocialButton
-            label="구글로 시작하기"
-            iconText="G"
-            backgroundColor="#FFFFFF"
-            textColor={c.text}
-            iconColor="#4285F4"
-            borderColor={c.border}
-            loading={loading === 'google'}
-            onPress={() => handle('google', loginWithGoogle)}
-          />
-          {Platform.OS === 'ios' && (
-            <SocialButton
-              label="Apple로 시작하기"
-              iconText=""
-              backgroundColor="#111111"
-              textColor="#FFFFFF"
-              loading={loading === 'apple'}
-              onPress={() => handle('apple', loginWithApple)}
-            />
-          )}
+          <Pressable
+            onPress={() => router.push('/email-auth')}
+            style={({ pressed }) => [styles.emailBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
+          >
+            <Text style={[styles.emailBtnText, { color: c.primaryText }]}>이메일로 시작하기</Text>
+          </Pressable>
         </View>
 
         <Text style={[styles.terms, { color: c.textSecondary }]}>
@@ -152,5 +89,7 @@ const styles = StyleSheet.create({
   wordmarkEn: { fontSize: 13, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
   tagline: { fontSize: 15, marginTop: 6 },
   buttons: { gap: 12 },
+  emailBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  emailBtnText: { fontSize: 16, fontWeight: '700' },
   terms: { fontSize: 11, textAlign: 'center', marginTop: 20, marginBottom: 8 },
 });
