@@ -1,9 +1,6 @@
 package com.prologue.backend.auth.infrastructure.persistence
 
-import com.prologue.backend.auth.domain.model.SocialProvider
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 /**
@@ -11,12 +8,6 @@ import java.util.UUID
  */
 interface AccountJpaRepository : JpaRepository<AccountJpaEntity, UUID> {
 
-    @Query(
-        "select a from AccountJpaEntity a join a.connections c " +
-            "where c.provider = :provider and c.providerUserId = :providerUserId",
-    )
-    fun findBySocialConnection(
-        @Param("provider") provider: SocialProvider,
-        @Param("providerUserId") providerUserId: String,
-    ): AccountJpaEntity?
+    /** 이메일(정규화된 형태)로 계정 조회. */
+    fun findByEmail(email: String): AccountJpaEntity?
 }

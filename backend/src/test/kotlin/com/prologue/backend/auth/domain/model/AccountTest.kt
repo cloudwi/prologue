@@ -8,50 +8,21 @@ import kotlin.test.assertTrue
 
 class AccountTest {
 
-    private val kakao = SocialConnection(SocialProvider.KAKAO, "kakao-123")
-    private val google = SocialConnection(SocialProvider.GOOGLE, "google-abc")
+    private val credential = EmailCredential("user@example.com", "hashed-pw")
 
     @Test
-    fun `register는 ACTIVE USER 계정을 최초 소셜 연결과 함께 생성한다`() {
-        val account = Account.register(kakao)
+    fun `register는 ACTIVE USER 계정을 이메일 자격증명과 함께 생성한다`() {
+        val account = Account.register(credential)
 
         assertEquals(AccountStatus.ACTIVE, account.status)
         assertEquals(setOf(Role.USER), account.roles)
-        assertEquals(listOf(kakao), account.connections)
-        assertTrue(account.hasConnection(SocialProvider.KAKAO, "kakao-123"))
-    }
-
-    @Test
-    fun `다른 제공자를 연결하면 계정에 추가된다`() {
-        val account = Account.register(kakao)
-
-        account.linkSocial(google)
-
-        assertEquals(2, account.connections.size)
-        assertTrue(account.isLinkedTo(SocialProvider.GOOGLE))
-    }
-
-    @Test
-    fun `같은 제공자 재연결은 멱등하게 무시된다`() {
-        val account = Account.register(kakao)
-
-        account.linkSocial(SocialConnection(SocialProvider.KAKAO, "kakao-different"))
-
-        assertEquals(1, account.connections.size)
-        assertTrue(account.hasConnection(SocialProvider.KAKAO, "kakao-123"))
-    }
-
-    @Test
-    fun `정지된 계정에는 소셜 연결을 추가할 수 없다`() {
-        val account = Account.register(kakao)
-        account.suspend()
-
-        assertFailsWith<AuthDomainException> { account.linkSocial(google) }
+        assertEquals(credential, account.credential)
+        assertEquals("user@example.com", account.email)
     }
 
     @Test
     fun `suspend 후 reactivate로 다시 활성화된다`() {
-        val account = Account.register(kakao)
+        val account = Account.register(credential)
 
         account.suspend()
         assertFalse(account.isActive())
@@ -62,16 +33,35 @@ class AccountTest {
 
     @Test
     fun `탈퇴 계정은 정지할 수 없다`() {
-        val account = Account.register(kakao)
+        val account = Account.register(credential)
         account.withdraw()
 
         assertFailsWith<AuthDomainException> { account.suspend() }
     }
 
     @Test
-    fun `providerUserId가 비어 있으면 SocialConnection 생성 실패`() {
+    fun `정지 상태가 아닌 계정은 reactivate할 수 없다`() {
+        val account = Account.register(credential)
+
+        assertFailsWith<AuthDomainException> { account.reactivate() }
+    }
+
+    @Test
+    fun `email이 정규화되지 않았으면 EmailCredential 생성 실패`() {
         assertFailsWith<IllegalArgumentException> {
-            SocialConnection(SocialProvider.NAVER, "")
+            EmailCredential("User@Example.com", "hashed-pw")
         }
+    }
+
+    @Test
+    fun `passwordHash가 비어 있으면 EmailCredential 생성 실패`() {
+        assertFailsWith<IllegalArgumentException> {
+            EmailCredential("user@example.com", "")
+        }
+    }
+
+    @Test
+    fun `normalizeEmail은 공백을 제거하고 소문자로 변환한다`() {
+        assertEquals("user@example.com", EmailCredential.normalizeEmail("  User@Example.COM "))
     }
 }

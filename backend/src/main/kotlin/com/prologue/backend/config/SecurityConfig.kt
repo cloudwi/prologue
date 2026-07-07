@@ -12,7 +12,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * REST API 보안 설정.
  * - 무상태(JWT 기반, 세션 미사용), CSRF/폼로그인/기본인증 비활성
- * - 공개: 소셜 로그인 경로(auth 하위), 헬스체크(actuator health) — Render·UptimeRobot
+ * - 공개: 이메일 가입/로그인 경로(auth 하위), 헬스체크(actuator health) — Render·UptimeRobot
  * - 그 외: 인증 필요 (JWT 인증 필터는 보호 API 추가 시 도입)
  */
 @Configuration

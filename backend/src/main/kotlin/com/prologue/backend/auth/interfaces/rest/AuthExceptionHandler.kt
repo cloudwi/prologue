@@ -1,6 +1,7 @@
 package com.prologue.backend.auth.interfaces.rest
 
-import com.prologue.backend.auth.application.port.SocialVerificationException
+import com.prologue.backend.auth.application.service.EmailAlreadyRegisteredException
+import com.prologue.backend.auth.application.service.InvalidCredentialsException
 import com.prologue.backend.auth.domain.model.AuthDomainException
 import com.prologue.backend.auth.interfaces.rest.dto.ErrorResponse
 import org.slf4j.LoggerFactory
@@ -18,20 +19,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @RestControllerAdvice(basePackages = ["com.prologue.backend.auth"])
 class AuthExceptionHandler {
 
-    @ExceptionHandler(SocialVerificationException::class)
-    fun handleSocialVerification(e: SocialVerificationException): ResponseEntity<ErrorResponse> =
+    @ExceptionHandler(EmailAlreadyRegisteredException::class)
+    fun handleEmailAlreadyRegistered(e: EmailAlreadyRegisteredException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(ErrorResponse("EMAIL_ALREADY_REGISTERED", e.message))
+
+    @ExceptionHandler(InvalidCredentialsException::class)
+    fun handleInvalidCredentials(e: InvalidCredentialsException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(ErrorResponse("INVALID_SOCIAL_TOKEN", e.message))
+            .body(ErrorResponse("INVALID_CREDENTIALS", e.message))
 
     @ExceptionHandler(AuthDomainException::class)
     fun handleAuthDomain(e: AuthDomainException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(ErrorResponse("ACCOUNT_NOT_LOGINABLE", e.message))
-
-    @ExceptionHandler(UnsupportedSocialProviderException::class)
-    fun handleUnsupportedProvider(e: UnsupportedSocialProviderException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.BAD_REQUEST)
-            .body(ErrorResponse("UNSUPPORTED_PROVIDER", e.message))
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> =

@@ -9,48 +9,27 @@ import java.time.Instant
  * 별도의 Member 컨텍스트가 담당하며 [id](AccountId)로 연결된다.
  *
  * 불변식:
- * - 한 계정은 최소 1개의 소셜 연결을 가진다.
- * - 같은 제공자(provider)는 계정당 한 번만 연결된다.
- * - ACTIVE 상태에서만 소셜 연결을 추가할 수 있다.
+ * - 한 계정은 정확히 하나의 이메일 자격증명([credential])을 가진다.
+ * - [credential]의 email이 전 시스템에서 유일하다(중복 가입 불가 — 영속 계층 unique 제약으로 강제).
  *
  * 외부에서 직접 생성하지 못하도록 생성자를 막고, [register]/[reconstitute] 팩토리로만 만든다.
  */
 class Account private constructor(
     /** 식별자. 영속(persist) 전에는 null이며, JPA가 저장 시점에 부여한다. */
     val id: AccountId?,
-    initialConnections: List<SocialConnection>,
+    val credential: EmailCredential,
     status: AccountStatus,
     roles: Set<Role>,
     val createdAt: Instant,
 ) {
-    private val _connections: MutableList<SocialConnection> = initialConnections.toMutableList()
-    val connections: List<SocialConnection> get() = _connections.toList()
-
     var status: AccountStatus = status
         private set
 
     private val _roles: MutableSet<Role> = roles.toMutableSet()
     val roles: Set<Role> get() = _roles.toSet()
 
-    /** 특정 소셜 연결을 보유하는지 확인. */
-    fun hasConnection(provider: SocialProvider, providerUserId: String): Boolean =
-        _connections.any { it.provider == provider && it.providerUserId == providerUserId }
-
-    /** 이미 해당 제공자로 연결돼 있는지 확인. */
-    fun isLinkedTo(provider: SocialProvider): Boolean =
-        _connections.any { it.provider == provider }
-
-    /**
-     * 다른 소셜 제공자를 이 계정에 연결한다(계정 통합).
-     * 같은 제공자가 이미 연결돼 있으면 멱등하게 무시한다.
-     */
-    fun linkSocial(connection: SocialConnection) {
-        if (status != AccountStatus.ACTIVE) {
-            throw AuthDomainException("활성 상태(ACTIVE) 계정만 소셜 연결을 추가할 수 있다 (현재: $status)")
-        }
-        if (isLinkedTo(connection.provider)) return
-        _connections.add(connection)
-    }
+    /** 로그인 식별자(정규화된 이메일). */
+    val email: String get() = credential.email
 
     fun isActive(): Boolean = status == AccountStatus.ACTIVE
 
@@ -77,14 +56,14 @@ class Account private constructor(
 
     companion object {
         /**
-         * 소셜 로그인으로 신규 계정 등록.
-         * @param connection 최초 소셜 연결
+         * 이메일 가입으로 신규 계정 등록.
+         * @param credential 이메일 + 해싱된 비밀번호
          * @param now 생성 시각(테스트 용이성을 위해 주입; 기본값 현재 시각)
          */
-        fun register(connection: SocialConnection, now: Instant = Instant.now()): Account =
+        fun register(credential: EmailCredential, now: Instant = Instant.now()): Account =
             Account(
                 id = null, // 저장 시 JPA가 부여
-                initialConnections = listOf(connection),
+                credential = credential,
                 status = AccountStatus.ACTIVE,
                 roles = setOf(Role.USER),
                 createdAt = now,
@@ -96,10 +75,10 @@ class Account private constructor(
          */
         fun reconstitute(
             id: AccountId,
-            connections: List<SocialConnection>,
+            credential: EmailCredential,
             status: AccountStatus,
             roles: Set<Role>,
             createdAt: Instant,
-        ): Account = Account(id, connections, status, roles, createdAt)
+        ): Account = Account(id, credential, status, roles, createdAt)
     }
 }

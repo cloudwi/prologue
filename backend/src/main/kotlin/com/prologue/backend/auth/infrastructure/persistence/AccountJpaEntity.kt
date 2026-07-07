@@ -30,19 +30,18 @@ class AccountJpaEntity(
     @Column(name = "id", nullable = false, updatable = false)
     var id: UUID? = null,
 
+    @Column(name = "email", nullable = false, unique = true, length = 255)
+    var email: String,
+
+    @Column(name = "password_hash", nullable = false, length = 255)
+    var passwordHash: String,
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     var status: AccountStatus,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-        name = "account_social_connections",
-        joinColumns = [JoinColumn(name = "account_id")],
-    )
-    val connections: MutableSet<SocialConnectionEmbeddable> = mutableSetOf(),
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
