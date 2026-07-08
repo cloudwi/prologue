@@ -5,9 +5,11 @@ import com.prologue.backend.auth.application.service.TooManyRequestsException
 import com.prologue.backend.auth.domain.model.AuthDomainException
 import com.prologue.backend.auth.interfaces.rest.dto.ErrorResponse
 import org.slf4j.LoggerFactory
+import org.springframework.core.NestedExceptionUtils
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.mail.MailException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -43,6 +45,15 @@ class AuthExceptionHandler {
     fun handleUnreadable(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다"))
+
+    // [진단용 임시] 이메일 발송 실패의 근본 원인(SMTP 응답)을 응답에 노출. 원인 파악 후 제거 예정.
+    @ExceptionHandler(MailException::class)
+    fun handleMail(e: MailException): ResponseEntity<ErrorResponse> {
+        log.error("이메일 발송 실패", e)
+        val detail = NestedExceptionUtils.getMostSpecificCause(e).message
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse("MAIL_SEND_FAILED", detail))
+    }
 
     // 처리되지 않은 예외: 서버에는 상세 로그를 남기고, 클라이언트엔 일반 메시지만 반환.
     @ExceptionHandler(Exception::class)
