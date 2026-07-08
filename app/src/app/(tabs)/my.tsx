@@ -111,7 +111,17 @@ export default function MyScreen() {
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView style={styles.flex}>
-          <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>마이페이지</Text>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>마이페이지</Text>
+            <Pressable
+              onPress={save}
+              disabled={!canSave || saving}
+              hitSlop={12}
+              style={({ pressed }) => [styles.saveBtn, { opacity: !canSave || saving ? 0.35 : pressed ? 0.5 : 1 }]}
+            >
+              <Text style={[styles.saveBtnText, { color: c.primary }]}>{saving ? '저장 중' : '저장'}</Text>
+            </Pressable>
+          </View>
 
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={[styles.tip, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
@@ -154,14 +164,6 @@ export default function MyScreen() {
 
             <Text style={[styles.sectionHead, { color: c.primary }]}>상세 프로필 (선택)</Text>
             <ProfileExtraFields value={extra} onChange={(patch) => setExtra((prev) => ({ ...prev, ...patch }))} c={c} />
-
-            <Pressable
-              onPress={save}
-              disabled={!canSave || saving}
-              style={[styles.save, { backgroundColor: c.primary, opacity: !canSave || saving ? 0.5 : 1 }]}
-            >
-              <Text style={[styles.saveText, { color: c.primaryText }]}>{saving ? '저장 중...' : '저장'}</Text>
-            </Pressable>
 
             <Pressable onPress={logout} hitSlop={8} style={styles.logout}>
               <Text style={{ color: c.textSecondary, fontSize: 14 }}>로그아웃</Text>
@@ -209,7 +211,10 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 26, fontWeight: '700', paddingHorizontal: 25, paddingTop: 8, paddingBottom: 4 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 25, paddingTop: 8, paddingBottom: 4 },
+  title: { fontSize: 26, fontWeight: '700' },
+  saveBtn: { paddingVertical: 6, paddingLeft: 12 },
+  saveBtnText: { fontSize: 17, fontWeight: '600' },
   content: { padding: 25, paddingBottom: 40 },
   tip: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 22 },
   tipText: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
@@ -219,7 +224,5 @@ const styles = StyleSheet.create({
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  save: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
-  saveText: { fontSize: 16, fontWeight: '700' },
-  logout: { alignSelf: 'center', marginTop: 28, padding: 8 },
+  logout: { alignSelf: 'center', marginTop: 24, padding: 8 },
 });
