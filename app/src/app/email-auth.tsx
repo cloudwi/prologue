@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,148 +15,197 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
-import { login, signup } from '@/lib/auth';
+import { requestCode, verifyCode } from '@/lib/auth';
 import { getMyProfile } from '@/lib/member';
 
-type Mode = 'signup' | 'login';
+type Step = 'email' | 'code';
+
+const RESEND_SECONDS = 60;
 
 export default function EmailAuthScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
 
-  const [mode, setMode] = useState<Mode>('signup');
+  const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isSignup = mode === 'signup';
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
-  const passwordValid = password.length >= 8;
-  const canSubmit = emailValid && passwordValid && !submitting;
+  const codeValid = /^\d{6}$/.test(code);
 
-  function switchMode(next: Mode) {
-    setMode(next);
-    setError(null);
-  }
+  // 재전송 쿨다운 카운트다운
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    timer.current = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => {
+      if (timer.current) clearInterval(timer.current);
+    };
+  }, [cooldown > 0]);
 
-  async function handleSubmit() {
-    if (!canSubmit) return;
+  async function sendCode() {
+    if (!emailValid || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
-      const run = isSignup ? signup : login;
-      await run(email.trim(), password);
-      // 프로필 유무로 온보딩/홈 분기 (index.tsx 자동 로그인과 동일한 규칙)
-      const profile = await getMyProfile();
-      router.replace(profile ? '/discover' : '/onboarding');
+      await requestCode(email.trim());
+      setStep('code');
+      setCode('');
+      setCooldown(RESEND_SECONDS);
     } catch (e) {
-      setError(messageFor(e, isSignup, () => switchMode('login')));
+      setError(sendErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
   }
 
+  async function submitCode() {
+    if (!codeValid || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await verifyCode(email.trim(), code);
+      const profile = await getMyProfile();
+      router.replace(profile ? '/discover' : '/onboarding');
+    } catch (e) {
+      setError(verifyErrorMessage(e));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function editEmail() {
+    setStep('email');
+    setError(null);
+    setCode('');
+    setCooldown(0);
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Pressable onPress={() => (step === 'code' ? editEmail() : router.back())} hitSlop={12}>
               <Text style={[styles.back, { color: c.textSecondary }]}>← 뒤로</Text>
             </Pressable>
           </View>
 
           <View style={styles.body}>
-            <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>
-              {isSignup ? '이메일로 가입' : '이메일로 로그인'}
-            </Text>
-            <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-              {isSignup ? '이메일과 비밀번호로 시작해요' : '다시 만나서 반가워요'}
-            </Text>
+            {step === 'email' ? (
+              <>
+                <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>이메일로 시작</Text>
+                <Text style={[styles.subtitle, { color: c.textSecondary }]}>
+                  인증코드를 보내드릴 이메일을 입력해 주세요
+                </Text>
+                <View style={styles.form}>
+                  <TextInput
+                    value={email}
+                    onChangeText={(t) => {
+                      setEmail(t);
+                      setError(null);
+                    }}
+                    placeholder="이메일"
+                    placeholderTextColor={c.textSecondary}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect={false}
+                    textContentType="emailAddress"
+                    autoFocus
+                    onSubmitEditing={sendCode}
+                    returnKeyType="send"
+                    style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text, borderColor: c.border }]}
+                  />
+                  {error ? <Text style={[styles.error, { color: c.primary }]}>{error}</Text> : null}
+                  <Pressable
+                    onPress={sendCode}
+                    disabled={!emailValid || submitting}
+                    style={({ pressed }) => [
+                      styles.submit,
+                      { backgroundColor: c.primary, opacity: !emailValid || submitting ? 0.5 : pressed ? 0.85 : 1 },
+                    ]}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator color={c.primaryText} />
+                    ) : (
+                      <Text style={[styles.submitText, { color: c.primaryText }]}>인증코드 받기</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>인증코드 입력</Text>
+                <Text style={[styles.subtitle, { color: c.textSecondary }]}>
+                  <Text style={{ color: c.text }}>{email.trim()}</Text> 로 보낸 6자리 코드를 입력해 주세요
+                </Text>
+                <View style={styles.form}>
+                  <TextInput
+                    value={code}
+                    onChangeText={(t) => {
+                      setCode(t.replace(/\D/g, '').slice(0, 6));
+                      setError(null);
+                    }}
+                    placeholder="000000"
+                    placeholderTextColor={c.textSecondary}
+                    keyboardType="number-pad"
+                    autoComplete="one-time-code"
+                    textContentType="oneTimeCode"
+                    maxLength={6}
+                    autoFocus
+                    onSubmitEditing={submitCode}
+                    returnKeyType="go"
+                    style={[styles.codeInput, { backgroundColor: c.backgroundElement, color: c.text, borderColor: c.border }]}
+                  />
+                  {error ? <Text style={[styles.error, { color: c.primary }]}>{error}</Text> : null}
+                  <Pressable
+                    onPress={submitCode}
+                    disabled={!codeValid || submitting}
+                    style={({ pressed }) => [
+                      styles.submit,
+                      { backgroundColor: c.primary, opacity: !codeValid || submitting ? 0.5 : pressed ? 0.85 : 1 },
+                    ]}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator color={c.primaryText} />
+                    ) : (
+                      <Text style={[styles.submitText, { color: c.primaryText }]}>확인</Text>
+                    )}
+                  </Pressable>
 
-            <View style={styles.form}>
-              <TextInput
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setError(null);
-                }}
-                placeholder="이메일"
-                placeholderTextColor={c.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                autoCorrect={false}
-                textContentType="emailAddress"
-                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text, borderColor: c.border }]}
-              />
-              <TextInput
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  setError(null);
-                }}
-                placeholder="비밀번호 (8자 이상)"
-                placeholderTextColor={c.textSecondary}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete={isSignup ? 'new-password' : 'current-password'}
-                textContentType={isSignup ? 'newPassword' : 'password'}
-                onSubmitEditing={handleSubmit}
-                returnKeyType="go"
-                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text, borderColor: c.border }]}
-              />
-
-              {error ? <Text style={[styles.error, { color: c.primary }]}>{error}</Text> : null}
-
-              <Pressable
-                onPress={handleSubmit}
-                disabled={!canSubmit}
-                style={({ pressed }) => [
-                  styles.submit,
-                  { backgroundColor: c.primary, opacity: !canSubmit ? 0.5 : pressed ? 0.85 : 1 },
-                ]}
-              >
-                {submitting ? (
-                  <ActivityIndicator color={c.primaryText} />
-                ) : (
-                  <Text style={[styles.submitText, { color: c.primaryText }]}>
-                    {isSignup ? '가입하고 시작하기' : '로그인'}
-                  </Text>
-                )}
-              </Pressable>
-            </View>
+                  <Pressable onPress={sendCode} disabled={cooldown > 0 || submitting} hitSlop={8} style={styles.resend}>
+                    <Text style={[styles.resendText, { color: cooldown > 0 ? c.textSecondary : c.primary }]}>
+                      {cooldown > 0 ? `코드 재전송 (${cooldown}초)` : '코드 재전송'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
-
-          <Pressable onPress={() => switchMode(isSignup ? 'login' : 'signup')} hitSlop={8} style={styles.switch}>
-            <Text style={[styles.switchText, { color: c.textSecondary }]}>
-              {isSignup ? '이미 계정이 있어요 · 로그인' : '처음이신가요? · 가입하기'}
-            </Text>
-          </Pressable>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
 }
 
-/** 예외를 사용자용 메시지로 변환. 이미 가입된 이메일이면 로그인 모드로 전환 유도. */
-function messageFor(e: unknown, isSignup: boolean, switchToLogin: () => void): string {
+function sendErrorMessage(e: unknown): string {
   if (e instanceof ApiError) {
-    if (e.status === 409 || e.code === 'EMAIL_ALREADY_REGISTERED') {
-      switchToLogin();
-      return '이미 가입된 이메일이에요. 로그인해 주세요.';
-    }
-    if (e.status === 401 || e.code === 'INVALID_CREDENTIALS') {
-      return '이메일 또는 비밀번호가 올바르지 않아요.';
-    }
-    if (e.status === 400) {
-      return e.message || '입력값을 확인해 주세요.';
-    }
-    return isSignup ? '가입 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.' : '로그인 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
+    if (e.status === 429) return e.message || '인증코드를 방금 보냈어요. 잠시 후 다시 시도해 주세요.';
+    if (e.status === 400) return e.message || '이메일 형식을 확인해 주세요.';
+    return '코드 발송 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
+  }
+  return '네트워크 연결을 확인해 주세요.';
+}
+
+function verifyErrorMessage(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.status === 401 || e.code === 'INVALID_CODE') return '코드가 올바르지 않거나 만료됐어요.';
+    if (e.status === 429) return '시도 횟수를 초과했어요. 코드를 다시 요청해 주세요.';
+    return '인증 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
   }
   return '네트워크 연결을 확인해 주세요.';
 }
@@ -169,12 +218,22 @@ const styles = StyleSheet.create({
   back: { fontSize: 15 },
   body: { flex: 1, justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '700' },
-  subtitle: { fontSize: 15, marginTop: 8 },
+  subtitle: { fontSize: 15, marginTop: 8, lineHeight: 22 },
   form: { marginTop: 32, gap: 12 },
   input: { height: 54, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
+  codeInput: {
+    height: 60,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: 8,
+    textAlign: 'center',
+  },
   error: { fontSize: 13, marginTop: 2, marginLeft: 4 },
   submit: { height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   submitText: { fontSize: 16, fontWeight: '700' },
-  switch: { alignItems: 'center', paddingVertical: 16 },
-  switchText: { fontSize: 14 },
+  resend: { alignItems: 'center', paddingVertical: 14 },
+  resendText: { fontSize: 14 },
 });
