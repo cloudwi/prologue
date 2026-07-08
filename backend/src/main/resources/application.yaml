@@ -8,6 +8,21 @@ spring:
     open-in-view: false
   flyway:
     enabled: true            # classpath:db/migration 의 V*.sql 자동 실행
+  # 이메일 인증코드 발송(Gmail SMTP). 계정/앱비밀번호는 환경변수로 주입:
+  #   SPRING_MAIL_USERNAME=<gmail 주소>, SPRING_MAIL_PASSWORD=<앱 비밀번호 16자>
+  # username 미설정 시 SmtpEmailSender가 비활성 → LoggingEmailSender(dev stub) 사용.
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 jwt:
   secret: ${JWT_SECRET}          # 운영: Render 환경변수(자동생성). 로컬: 환경변수로 주입
@@ -25,3 +40,5 @@ management:
   health:
     db:
       enabled: true           # 핑 시 DB도 함께 깨움 → Supabase 일시정지 방지
+    mail:
+      enabled: false          # 헬스체크마다 SMTP 접속 방지(크리덴셜 없으면 DOWN, 있어도 Gmail 접속 낭비)
