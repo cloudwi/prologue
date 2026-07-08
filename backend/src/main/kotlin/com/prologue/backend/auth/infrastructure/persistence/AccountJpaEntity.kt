@@ -33,9 +33,6 @@ class AccountJpaEntity(
     @Column(name = "email", nullable = false, unique = true, length = 255)
     var email: String,
 
-    @Column(name = "password_hash", nullable = false, length = 255)
-    var passwordHash: String,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     var status: AccountStatus,

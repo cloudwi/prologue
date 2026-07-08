@@ -3,7 +3,6 @@ package com.prologue.backend.auth.infrastructure.jwt
 import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AccountId
 import com.prologue.backend.auth.domain.model.AccountStatus
-import com.prologue.backend.auth.domain.model.EmailCredential
 import com.prologue.backend.auth.domain.model.Role
 import java.time.Duration
 import java.time.Instant
@@ -24,7 +23,7 @@ class JwtTokenProviderTest {
 
     private val account = Account.reconstitute(
         id = AccountId(UUID.randomUUID()),
-        credential = EmailCredential("user@example.com", "hashed-pw"),
+        email = "user@example.com",
         status = AccountStatus.ACTIVE,
         roles = setOf(Role.USER),
         createdAt = Instant.now(),

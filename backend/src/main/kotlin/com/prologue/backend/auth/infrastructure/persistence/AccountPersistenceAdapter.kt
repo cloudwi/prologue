@@ -2,7 +2,6 @@ package com.prologue.backend.auth.infrastructure.persistence
 
 import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AccountId
-import com.prologue.backend.auth.domain.model.EmailCredential
 import com.prologue.backend.auth.domain.repository.AccountRepository
 import org.springframework.stereotype.Repository
 
@@ -27,8 +26,7 @@ class AccountPersistenceAdapter(
     private fun Account.toEntity(): AccountJpaEntity =
         AccountJpaEntity(
             id = id?.value, // null이면 JPA가 저장 시 생성
-            email = credential.email,
-            passwordHash = credential.passwordHash,
+            email = email,
             status = status,
             createdAt = createdAt,
             roles = roles.toMutableSet(),
@@ -37,7 +35,7 @@ class AccountPersistenceAdapter(
     private fun AccountJpaEntity.toDomain(): Account =
         Account.reconstitute(
             id = AccountId(requireNotNull(id) { "영속된 엔티티는 id를 가진다" }),
-            credential = EmailCredential(email, passwordHash),
+            email = email,
             status = status,
             roles = roles.toSet(),
             createdAt = createdAt,

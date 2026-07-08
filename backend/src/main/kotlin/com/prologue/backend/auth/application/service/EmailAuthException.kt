@@ -1,13 +1,14 @@
 package com.prologue.backend.auth.application.service
 
-/** 이미 가입된 이메일로 다시 가입을 시도할 때. (→ 409) */
-class EmailAlreadyRegisteredException(email: String) :
-    RuntimeException("이미 가입된 이메일입니다: $email")
+/**
+ * 인증코드 검증 실패(코드 없음/불일치/만료). (→ 401)
+ *
+ * 보안상 세부 사유(없음 vs 틀림 vs 만료)를 구분해 노출하지 않는다.
+ */
+class InvalidVerificationCodeException :
+    RuntimeException("인증코드가 올바르지 않거나 만료되었습니다")
 
 /**
- * 로그인 실패(존재하지 않는 이메일 또는 비밀번호 불일치). (→ 401)
- *
- * 보안상 "이메일 없음"과 "비밀번호 틀림"을 구분하지 않는다 — 계정 존재 여부가 노출되지 않도록.
+ * 요청이 너무 잦음: 재발송 최소 간격 위반 또는 코드 시도횟수 초과. (→ 429)
  */
-class InvalidCredentialsException :
-    RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다")
+class TooManyRequestsException(message: String) : RuntimeException(message)

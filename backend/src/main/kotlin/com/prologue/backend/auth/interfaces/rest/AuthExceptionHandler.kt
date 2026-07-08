@@ -1,7 +1,7 @@
 package com.prologue.backend.auth.interfaces.rest
 
-import com.prologue.backend.auth.application.service.EmailAlreadyRegisteredException
-import com.prologue.backend.auth.application.service.InvalidCredentialsException
+import com.prologue.backend.auth.application.service.InvalidVerificationCodeException
+import com.prologue.backend.auth.application.service.TooManyRequestsException
 import com.prologue.backend.auth.domain.model.AuthDomainException
 import com.prologue.backend.auth.interfaces.rest.dto.ErrorResponse
 import org.slf4j.LoggerFactory
@@ -19,15 +19,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @RestControllerAdvice(basePackages = ["com.prologue.backend.auth"])
 class AuthExceptionHandler {
 
-    @ExceptionHandler(EmailAlreadyRegisteredException::class)
-    fun handleEmailAlreadyRegistered(e: EmailAlreadyRegisteredException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(ErrorResponse("EMAIL_ALREADY_REGISTERED", e.message))
-
-    @ExceptionHandler(InvalidCredentialsException::class)
-    fun handleInvalidCredentials(e: InvalidCredentialsException): ResponseEntity<ErrorResponse> =
+    @ExceptionHandler(InvalidVerificationCodeException::class)
+    fun handleInvalidCode(e: InvalidVerificationCodeException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(ErrorResponse("INVALID_CREDENTIALS", e.message))
+            .body(ErrorResponse("INVALID_CODE", e.message))
+
+    @ExceptionHandler(TooManyRequestsException::class)
+    fun handleTooManyRequests(e: TooManyRequestsException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(ErrorResponse("TOO_MANY_REQUESTS", e.message))
 
     @ExceptionHandler(AuthDomainException::class)
     fun handleAuthDomain(e: AuthDomainException): ResponseEntity<ErrorResponse> =
@@ -45,7 +45,6 @@ class AuthExceptionHandler {
             .body(ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다"))
 
     // 처리되지 않은 예외: 서버에는 상세 로그를 남기고, 클라이언트엔 일반 메시지만 반환.
-    // (500 JSON으로 직접 응답해 /error 포워드로 인한 깜깜이 403 방지)
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(e: Exception): ResponseEntity<ErrorResponse> {
         log.error("처리되지 않은 예외 발생", e)

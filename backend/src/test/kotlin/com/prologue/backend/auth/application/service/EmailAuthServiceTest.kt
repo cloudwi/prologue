@@ -1,15 +1,18 @@
 package com.prologue.backend.auth.application.service
 
 import com.prologue.backend.auth.application.port.AuthTokens
-import com.prologue.backend.auth.application.port.PasswordEncoder
+import com.prologue.backend.auth.application.port.CodeGenerator
+import com.prologue.backend.auth.application.port.CodeHasher
+import com.prologue.backend.auth.application.port.EmailSender
 import com.prologue.backend.auth.application.port.TokenProvider
 import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AccountId
 import com.prologue.backend.auth.domain.model.AccountStatus
 import com.prologue.backend.auth.domain.model.AuthDomainException
-import com.prologue.backend.auth.domain.model.EmailCredential
 import com.prologue.backend.auth.domain.model.Role
+import com.prologue.backend.auth.domain.model.VerificationCode
 import com.prologue.backend.auth.domain.repository.AccountRepository
+import com.prologue.backend.auth.domain.repository.VerificationCodeRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -25,102 +28,131 @@ import kotlin.test.assertTrue
 class EmailAuthServiceTest {
 
     private val accountRepository = mockk<AccountRepository>()
-    private val passwordEncoder = mockk<PasswordEncoder>()
+    private val codeRepository = mockk<VerificationCodeRepository>(relaxUnitFun = true)
+    private val codeGenerator = mockk<CodeGenerator>()
+    private val codeHasher = mockk<CodeHasher>()
+    private val emailSender = mockk<EmailSender>(relaxUnitFun = true)
     private val tokenProvider = mockk<TokenProvider>()
-    private val service = EmailAuthService(accountRepository, passwordEncoder, tokenProvider)
+    private val service = EmailAuthService(
+        accountRepository, codeRepository, codeGenerator, codeHasher, emailSender, tokenProvider,
+    )
 
     private val tokens = AuthTokens("access", "refresh", 3600)
 
     private fun persistedAccount(
         email: String = "user@example.com",
-        passwordHash: String = "hashed-pw",
         status: AccountStatus = AccountStatus.ACTIVE,
     ): Account = Account.reconstitute(
         id = AccountId(UUID.randomUUID()),
-        credential = EmailCredential(email, passwordHash),
+        email = email,
         status = status,
         roles = setOf(Role.USER),
         createdAt = Instant.now(),
     )
 
-    // --- 가입 ---
+    private fun activeCode(email: String = "user@example.com", codeHash: String = "hashed"): VerificationCode =
+        VerificationCode.issue(email, codeHash, Instant.now())
+
+    // --- requestCode ---
 
     @Test
-    fun `가입은 이메일을 정규화하고 비밀번호를 해싱해 계정을 생성한다`() {
-        val persistedId = AccountId(UUID.randomUUID())
-        every { accountRepository.findByEmail("user@example.com") } returns null
-        every { passwordEncoder.encode("plain-pw") } returns "hashed-pw"
-        val saved = slot<Account>()
-        every { accountRepository.save(capture(saved)) } answers {
-            val a = saved.captured
-            Account.reconstitute(persistedId, a.credential, a.status, a.roles, a.createdAt)
-        }
-        every { tokenProvider.issue(any()) } returns tokens
+    fun `requestCode는 이메일 정규화 후 코드를 생성·저장·발송한다`() {
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns null
+        every { codeGenerator.generate() } returns "042917"
+        every { codeHasher.hash("042917") } returns "hashed"
+        val saved = slot<VerificationCode>()
+        every { codeRepository.save(capture(saved)) } answers { saved.captured }
 
-        val result = service.signup(EmailSignupCommand("  User@Example.COM ", "plain-pw"))
+        service.requestCode(RequestCodeCommand("  User@Example.COM "))
 
-        assertTrue(result.isNewUser)
-        assertEquals(persistedId, result.accountId)
-        assertEquals(tokens, result.tokens)
-        assertEquals("user@example.com", saved.captured.credential.email)
-        assertEquals("hashed-pw", saved.captured.credential.passwordHash)
+        assertEquals("user@example.com", saved.captured.email)
+        assertEquals("hashed", saved.captured.codeHash)
+        verify { codeRepository.deleteByEmail("user@example.com") } // 이전 코드 무효화
+        verify { emailSender.sendVerificationCode("user@example.com", "042917") }
     }
 
     @Test
-    fun `이미 가입된 이메일이면 예외를 던지고 저장하지 않는다`() {
-        every { accountRepository.findByEmail("user@example.com") } returns persistedAccount()
+    fun `requestCode는 재발송 간격 이내면 TooManyRequests`() {
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns activeCode()
 
-        assertFailsWith<EmailAlreadyRegisteredException> {
-            service.signup(EmailSignupCommand("user@example.com", "plain-pw"))
+        assertFailsWith<TooManyRequestsException> {
+            service.requestCode(RequestCodeCommand("user@example.com"))
         }
-        verify(exactly = 0) { accountRepository.save(any()) }
+        verify(exactly = 0) { emailSender.sendVerificationCode(any(), any()) }
     }
 
-    // --- 로그인 ---
+    // --- verify ---
 
     @Test
-    fun `로그인 성공 시 토큰과 isNewUser false를 반환한다`() {
+    fun `기존 계정 검증 성공 시 토큰과 isNewUser false`() {
         val account = persistedAccount()
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns activeCode()
+        every { codeHasher.matches("042917", "hashed") } returns true
         every { accountRepository.findByEmail("user@example.com") } returns account
-        every { passwordEncoder.matches("plain-pw", "hashed-pw") } returns true
+        every { codeRepository.save(any()) } answers { firstArg() }
         every { tokenProvider.issue(account) } returns tokens
 
-        val result = service.login(EmailLoginCommand("User@Example.com", "plain-pw"))
+        val result = service.verify(VerifyCodeCommand("User@Example.com", "042917"))
 
         assertFalse(result.isNewUser)
         assertEquals(account.id, result.accountId)
-        assertEquals(tokens, result.tokens)
+        verify { codeRepository.deleteByEmail("user@example.com") } // 성공 후 정리
     }
 
     @Test
-    fun `존재하지 않는 이메일은 InvalidCredentials를 던진다`() {
-        every { accountRepository.findByEmail("user@example.com") } returns null
+    fun `신규 이메일 검증 성공 시 계정 생성하고 isNewUser true`() {
+        val persistedId = AccountId(UUID.randomUUID())
+        every { codeRepository.findLatestActiveByEmail("new@example.com") } returns activeCode("new@example.com")
+        every { codeHasher.matches("042917", "hashed") } returns true
+        every { accountRepository.findByEmail("new@example.com") } returns null
+        val savedAcc = slot<Account>()
+        every { accountRepository.save(capture(savedAcc)) } answers {
+            Account.reconstitute(persistedId, savedAcc.captured.email, savedAcc.captured.status, savedAcc.captured.roles, savedAcc.captured.createdAt)
+        }
+        every { codeRepository.save(any()) } answers { firstArg() }
+        every { tokenProvider.issue(any()) } returns tokens
 
-        assertFailsWith<InvalidCredentialsException> {
-            service.login(EmailLoginCommand("user@example.com", "plain-pw"))
+        val result = service.verify(VerifyCodeCommand("new@example.com", "042917"))
+
+        assertTrue(result.isNewUser)
+        assertEquals("new@example.com", savedAcc.captured.email)
+        assertEquals(persistedId, result.accountId)
+    }
+
+    @Test
+    fun `코드가 없으면 InvalidVerificationCode`() {
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns null
+
+        assertFailsWith<InvalidVerificationCodeException> {
+            service.verify(VerifyCodeCommand("user@example.com", "042917"))
         }
         verify(exactly = 0) { tokenProvider.issue(any()) }
     }
 
     @Test
-    fun `비밀번호 불일치는 InvalidCredentials를 던진다`() {
-        every { accountRepository.findByEmail("user@example.com") } returns persistedAccount()
-        every { passwordEncoder.matches("wrong-pw", "hashed-pw") } returns false
+    fun `코드 불일치 시 시도횟수 증가 후 InvalidVerificationCode`() {
+        val code = activeCode()
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns code
+        every { codeHasher.matches("000000", "hashed") } returns false
+        every { codeRepository.save(any()) } answers { firstArg() }
 
-        assertFailsWith<InvalidCredentialsException> {
-            service.login(EmailLoginCommand("user@example.com", "wrong-pw"))
+        assertFailsWith<InvalidVerificationCodeException> {
+            service.verify(VerifyCodeCommand("user@example.com", "000000"))
         }
+        assertEquals(1, code.attempts)
+        verify { codeRepository.save(code) }
         verify(exactly = 0) { tokenProvider.issue(any()) }
     }
 
     @Test
-    fun `정지된 계정은 로그인 차단되고 토큰을 발급하지 않는다`() {
-        every { accountRepository.findByEmail("user@example.com") } returns
-            persistedAccount(status = AccountStatus.SUSPENDED)
-        every { passwordEncoder.matches("plain-pw", "hashed-pw") } returns true
+    fun `정지된 계정은 코드가 맞아도 로그인 차단`() {
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns activeCode()
+        every { codeHasher.matches("042917", "hashed") } returns true
+        every { accountRepository.findByEmail("user@example.com") } returns persistedAccount(status = AccountStatus.SUSPENDED)
+        every { codeRepository.save(any()) } answers { firstArg() }
 
         assertFailsWith<AuthDomainException> {
-            service.login(EmailLoginCommand("user@example.com", "plain-pw"))
+            service.verify(VerifyCodeCommand("user@example.com", "042917"))
         }
         verify(exactly = 0) { tokenProvider.issue(any()) }
     }

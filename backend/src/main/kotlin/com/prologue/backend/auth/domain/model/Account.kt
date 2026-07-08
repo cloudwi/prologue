@@ -8,16 +8,16 @@ import java.time.Instant
  * 책임: "누가 로그인했는가"만 담당한다. 프로필·가치관 등 소개팅 도메인 정보는
  * 별도의 Member 컨텍스트가 담당하며 [id](AccountId)로 연결된다.
  *
- * 불변식:
- * - 한 계정은 정확히 하나의 이메일 자격증명([credential])을 가진다.
- * - [credential]의 email이 전 시스템에서 유일하다(중복 가입 불가 — 영속 계층 unique 제약으로 강제).
+ * 인증 방식은 이메일 인증코드(passwordless)다 — 계정은 비밀번호를 갖지 않으며,
+ * [email]이 전 시스템에서 유일한 자연키다(중복 가입 불가, 영속 계층 unique 제약으로 강제).
  *
  * 외부에서 직접 생성하지 못하도록 생성자를 막고, [register]/[reconstitute] 팩토리로만 만든다.
  */
 class Account private constructor(
     /** 식별자. 영속(persist) 전에는 null이며, JPA가 저장 시점에 부여한다. */
     val id: AccountId?,
-    val credential: EmailCredential,
+    /** 로그인 식별자(정규화된 이메일). */
+    val email: String,
     status: AccountStatus,
     roles: Set<Role>,
     val createdAt: Instant,
@@ -27,9 +27,6 @@ class Account private constructor(
 
     private val _roles: MutableSet<Role> = roles.toMutableSet()
     val roles: Set<Role> get() = _roles.toSet()
-
-    /** 로그인 식별자(정규화된 이메일). */
-    val email: String get() = credential.email
 
     fun isActive(): Boolean = status == AccountStatus.ACTIVE
 
@@ -55,19 +52,25 @@ class Account private constructor(
     }
 
     companion object {
+        /** 이메일 정규화: 앞뒤 공백 제거 + 소문자화. 조회/저장 양쪽에서 동일하게 사용한다. */
+        fun normalizeEmail(raw: String): String = raw.trim().lowercase()
+
         /**
-         * 이메일 가입으로 신규 계정 등록.
-         * @param credential 이메일 + 해싱된 비밀번호
+         * 이메일 인증으로 신규 계정 등록.
+         * @param email 로그인 식별자(정규화된 이메일)
          * @param now 생성 시각(테스트 용이성을 위해 주입; 기본값 현재 시각)
          */
-        fun register(credential: EmailCredential, now: Instant = Instant.now()): Account =
-            Account(
+        fun register(email: String, now: Instant = Instant.now()): Account {
+            require(email.isNotBlank()) { "email은 비어 있을 수 없다" }
+            require(email == normalizeEmail(email)) { "email은 정규화된 형태여야 한다" }
+            return Account(
                 id = null, // 저장 시 JPA가 부여
-                credential = credential,
+                email = email,
                 status = AccountStatus.ACTIVE,
                 roles = setOf(Role.USER),
                 createdAt = now,
             )
+        }
 
         /**
          * 영속 저장소에서 읽어온 데이터로 애그리거트를 재구성한다(인프라 계층 전용).
@@ -75,10 +78,10 @@ class Account private constructor(
          */
         fun reconstitute(
             id: AccountId,
-            credential: EmailCredential,
+            email: String,
             status: AccountStatus,
             roles: Set<Role>,
             createdAt: Instant,
-        ): Account = Account(id, credential, status, roles, createdAt)
+        ): Account = Account(id, email, status, roles, createdAt)
     }
 }

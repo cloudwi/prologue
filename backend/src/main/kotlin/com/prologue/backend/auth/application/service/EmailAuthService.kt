@@ -1,57 +1,94 @@
 package com.prologue.backend.auth.application.service
 
-import com.prologue.backend.auth.application.port.PasswordEncoder
+import com.prologue.backend.auth.application.port.CodeGenerator
+import com.prologue.backend.auth.application.port.CodeHasher
+import com.prologue.backend.auth.application.port.EmailSender
 import com.prologue.backend.auth.application.port.TokenProvider
 import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AuthDomainException
-import com.prologue.backend.auth.domain.model.EmailCredential
+import com.prologue.backend.auth.domain.model.VerificationCode
 import com.prologue.backend.auth.domain.repository.AccountRepository
+import com.prologue.backend.auth.domain.repository.VerificationCodeRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 /**
- * 이메일 가입/로그인 유스케이스 (애플리케이션 서비스).
+ * 이메일 인증코드(passwordless) 인증 유스케이스.
  *
- * 가입:  이메일 중복 확인 → 비밀번호 해싱 → 계정 등록 → JWT 발급 (isNewUser=true)
- * 로그인: 이메일로 계정 조회 → 로그인 가능 상태 확인 → 비밀번호 대조 → JWT 발급 (isNewUser=false)
+ * 발송(requestCode): 이메일 정규화 → 재발송 간격 확인 → 이전 코드 무효화 →
+ *   6자리 코드 생성·해시 저장 → 이메일 발송
+ * 검증(verify): 최신 코드 조회 → 만료·시도횟수 확인 → 코드 대조 →
+ *   성공 시 코드 소비·정리 → 계정 find-or-create → JWT 발급
  *
- * 트랜잭션 경계는 이 서비스가 소유한다. (kotlin("plugin.spring")이 @Service/@Transactional 클래스를 open 처리)
- *
- * TODO(이메일 소유 인증): 현재는 가입 즉시 ACTIVE. 추후 이메일 인증 코드/링크 발송 포트를 추가해
- *   미인증 상태(PENDING)를 거치도록 확장한다.
+ * 트랜잭션 경계는 이 서비스가 소유한다.
  */
 @Service
 class EmailAuthService(
     private val accountRepository: AccountRepository,
-    private val passwordEncoder: PasswordEncoder,
+    private val verificationCodeRepository: VerificationCodeRepository,
+    private val codeGenerator: CodeGenerator,
+    private val codeHasher: CodeHasher,
+    private val emailSender: EmailSender,
     private val tokenProvider: TokenProvider,
 ) {
+    /** 인증코드 발송. */
     @Transactional
-    fun signup(command: EmailSignupCommand): LoginResult {
-        val email = EmailCredential.normalizeEmail(command.email)
-        if (accountRepository.findByEmail(email) != null) {
-            throw EmailAlreadyRegisteredException(email)
+    fun requestCode(command: RequestCodeCommand) {
+        val email = Account.normalizeEmail(command.email)
+        val now = Instant.now()
+
+        // 이메일 폭탄 방지: 직전 코드가 아직 살아있고 재발송 간격이 안 지났으면 거부
+        val latest = verificationCodeRepository.findLatestActiveByEmail(email)
+        if (latest != null && !latest.isExpired(now) &&
+            latest.issuedWithin(VerificationCode.RESEND_INTERVAL, now)
+        ) {
+            throw TooManyRequestsException("인증코드를 방금 보냈어요. 잠시 후 다시 시도해 주세요.")
         }
 
-        val credential = EmailCredential(email, passwordEncoder.encode(command.password))
-        val account = accountRepository.save(Account.register(credential))
+        // 이전 코드 전부 무효화(1개 이메일당 유효 코드 1개 유지)
+        verificationCodeRepository.deleteByEmail(email)
 
-        val accountId = requireNotNull(account.id) { "영속화된 계정은 반드시 id를 가진다" }
-        return LoginResult(accountId = accountId, tokens = tokenProvider.issue(account), isNewUser = true)
+        val rawCode = codeGenerator.generate()
+        val code = VerificationCode.issue(email, codeHasher.hash(rawCode), now)
+        verificationCodeRepository.save(code)
+
+        emailSender.sendVerificationCode(email, rawCode)
     }
 
-    @Transactional(readOnly = true)
-    fun login(command: EmailLoginCommand): LoginResult {
-        val email = EmailCredential.normalizeEmail(command.email)
-        val account = accountRepository.findByEmail(email) ?: throw InvalidCredentialsException()
+    /** 인증코드 검증 → 로그인/가입 처리. */
+    @Transactional
+    fun verify(command: VerifyCodeCommand): LoginResult {
+        val email = Account.normalizeEmail(command.email)
+        val now = Instant.now()
 
-        if (!passwordEncoder.matches(command.password, account.credential.passwordHash)) {
-            throw InvalidCredentialsException()
+        val code = verificationCodeRepository.findLatestActiveByEmail(email)
+            ?: throw InvalidVerificationCodeException()
+
+        if (code.isExpired(now)) throw InvalidVerificationCodeException()
+        if (code.attemptsExhausted()) {
+            throw TooManyRequestsException("시도 횟수를 초과했어요. 코드를 다시 요청해 주세요.")
         }
-        ensureLoginable(account)
+
+        if (!codeHasher.matches(command.code, code.codeHash)) {
+            code.recordFailedAttempt()
+            verificationCodeRepository.save(code)
+            throw InvalidVerificationCodeException()
+        }
+
+        // 성공: 코드 소비 + 해당 이메일 코드 전부 정리
+        code.consume(now)
+        verificationCodeRepository.save(code)
+        verificationCodeRepository.deleteByEmail(email)
+
+        // 계정 find-or-create
+        val existing = accountRepository.findByEmail(email)
+        val isNewUser = existing == null
+        val account = existing?.also { ensureLoginable(it) }
+            ?: accountRepository.save(Account.register(email, now))
 
         val accountId = requireNotNull(account.id) { "영속화된 계정은 반드시 id를 가진다" }
-        return LoginResult(accountId = accountId, tokens = tokenProvider.issue(account), isNewUser = false)
+        return LoginResult(accountId = accountId, tokens = tokenProvider.issue(account), isNewUser = isNewUser)
     }
 
     private fun ensureLoginable(account: Account) {

@@ -8,21 +8,23 @@ import kotlin.test.assertTrue
 
 class AccountTest {
 
-    private val credential = EmailCredential("user@example.com", "hashed-pw")
-
     @Test
-    fun `register는 ACTIVE USER 계정을 이메일 자격증명과 함께 생성한다`() {
-        val account = Account.register(credential)
+    fun `register는 ACTIVE USER 계정을 이메일과 함께 생성한다`() {
+        val account = Account.register("user@example.com")
 
         assertEquals(AccountStatus.ACTIVE, account.status)
         assertEquals(setOf(Role.USER), account.roles)
-        assertEquals(credential, account.credential)
         assertEquals("user@example.com", account.email)
     }
 
     @Test
+    fun `register는 정규화되지 않은 이메일을 거부한다`() {
+        assertFailsWith<IllegalArgumentException> { Account.register("User@Example.com") }
+    }
+
+    @Test
     fun `suspend 후 reactivate로 다시 활성화된다`() {
-        val account = Account.register(credential)
+        val account = Account.register("user@example.com")
 
         account.suspend()
         assertFalse(account.isActive())
@@ -33,35 +35,14 @@ class AccountTest {
 
     @Test
     fun `탈퇴 계정은 정지할 수 없다`() {
-        val account = Account.register(credential)
+        val account = Account.register("user@example.com")
         account.withdraw()
 
         assertFailsWith<AuthDomainException> { account.suspend() }
     }
 
     @Test
-    fun `정지 상태가 아닌 계정은 reactivate할 수 없다`() {
-        val account = Account.register(credential)
-
-        assertFailsWith<AuthDomainException> { account.reactivate() }
-    }
-
-    @Test
-    fun `email이 정규화되지 않았으면 EmailCredential 생성 실패`() {
-        assertFailsWith<IllegalArgumentException> {
-            EmailCredential("User@Example.com", "hashed-pw")
-        }
-    }
-
-    @Test
-    fun `passwordHash가 비어 있으면 EmailCredential 생성 실패`() {
-        assertFailsWith<IllegalArgumentException> {
-            EmailCredential("user@example.com", "")
-        }
-    }
-
-    @Test
     fun `normalizeEmail은 공백을 제거하고 소문자로 변환한다`() {
-        assertEquals("user@example.com", EmailCredential.normalizeEmail("  User@Example.COM "))
+        assertEquals("user@example.com", Account.normalizeEmail("  User@Example.COM "))
     }
 }
