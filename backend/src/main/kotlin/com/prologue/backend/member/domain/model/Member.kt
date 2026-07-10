@@ -26,6 +26,7 @@ class Member private constructor(
     interests: List<String>,
     strengths: List<String>,
     avatarId: Int?,
+    photoUrl: String?,
 ) {
     var nickname: String = nickname
         private set
@@ -52,7 +53,16 @@ class Member private constructor(
     var avatarId: Int? = avatarId
         private set
 
-    /** 프로필 수정(재온보딩/편집). */
+    /** 대표 프로필 사진 URL. 온보딩 본문과 별개로 전용 업로드 엔드포인트에서 갱신된다. */
+    var photoUrl: String? = photoUrl
+        private set
+
+    /** 사진 업로드/삭제 시 갱신(전용 엔드포인트). null이면 사진 없음. */
+    fun updatePhoto(photoUrl: String?) {
+        this.photoUrl = photoUrl?.trim()?.ifBlank { null }
+    }
+
+    /** 프로필 수정(재온보딩/편집). 사진은 별도 관리라 여기서 건드리지 않는다. */
     fun updateProfile(
         nickname: String,
         gender: Gender,
@@ -109,6 +119,7 @@ class Member private constructor(
                 accountId, nickname.trim(), gender, birthYear, preferredGender, region.trim(), now,
                 bio?.trim()?.ifBlank { null }, heightCm, bodyType,
                 normalizeKeywords(hobbies), normalizeKeywords(interests), normalizeKeywords(strengths), avatarId,
+                photoUrl = null, // 신규 회원은 사진 없음(가입 후 업로드)
             )
         }
 
@@ -128,9 +139,10 @@ class Member private constructor(
             interests: List<String> = emptyList(),
             strengths: List<String> = emptyList(),
             avatarId: Int? = null,
+            photoUrl: String? = null,
         ): Member = Member(
             accountId, nickname, gender, birthYear, preferredGender, region, createdAt,
-            bio, heightCm, bodyType, hobbies, interests, strengths, avatarId,
+            bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrl,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =

@@ -1,6 +1,9 @@
 package com.prologue.backend.member.interfaces.rest
 
 import com.prologue.backend.auth.interfaces.rest.dto.ErrorResponse
+import com.prologue.backend.member.application.port.PhotoUploadException
+import com.prologue.backend.member.application.port.StorageNotConfiguredException
+import com.prologue.backend.member.application.service.MemberNotOnboardedException
 import com.prologue.backend.member.domain.model.MemberDomainException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -23,6 +26,21 @@ class MemberExceptionHandler {
     @ExceptionHandler(ProfileNotFoundException::class)
     fun handleProfileNotFound(e: ProfileNotFoundException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse("PROFILE_NOT_FOUND", e.message))
+
+    @ExceptionHandler(MemberNotOnboardedException::class)
+    fun handleNotOnboarded(e: MemberNotOnboardedException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse("NOT_ONBOARDED", e.message))
+
+    @ExceptionHandler(StorageNotConfiguredException::class)
+    fun handleStorageNotConfigured(e: StorageNotConfiguredException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ErrorResponse("STORAGE_NOT_CONFIGURED", e.message))
+
+    // [진단용] 저장소 업로드 실패 원인을 응답에 노출. 안정화 후 일반 메시지로 축소 예정.
+    @ExceptionHandler(PhotoUploadException::class)
+    fun handlePhotoUpload(e: PhotoUploadException): ResponseEntity<ErrorResponse> {
+        log.error("사진 업로드 실패", e)
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ErrorResponse("PHOTO_UPLOAD_FAILED", e.message))
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> =

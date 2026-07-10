@@ -61,4 +61,7 @@ class MemberJpaEntity(
 
     @Column(name = "avatar_id")
     var avatarId: Int? = null,
+
+    @Column(name = "photo_url", length = 500)
+    var photoUrl: String? = null,
 )

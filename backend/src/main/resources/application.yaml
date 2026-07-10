@@ -8,6 +8,19 @@ spring:
     open-in-view: false
   flyway:
     enabled: true            # classpath:db/migration 의 V*.sql 자동 실행
+  servlet:
+    multipart:               # 프로필 사진 업로드 크기 제한
+      max-file-size: 6MB
+      max-request-size: 6MB
+
+# 프로필 사진 저장소(Supabase Storage HTTP API). Render가 SMTP는 막지만 오브젝트 스토리지는 HTTPS라 가능.
+# 환경변수 미설정 시 업로드는 503(STORAGE_NOT_CONFIGURED). 버킷은 public이어야 반환 URL로 조회됨.
+#   SUPABASE_URL=<https://xxx.supabase.co>, SUPABASE_SERVICE_KEY=<service_role 키>, (선택)SUPABASE_STORAGE_BUCKET
+supabase:
+  storage:
+    url: ${SUPABASE_URL:}
+    service-key: ${SUPABASE_SERVICE_KEY:}
+    bucket: ${SUPABASE_STORAGE_BUCKET:profile-photos}
 
 # 이메일 인증코드 발송(Resend HTTP API). Render가 SMTP 포트를 막아 SMTP 대신 HTTPS로 발송.
 # RESEND_API_KEY 환경변수가 있을 때만 ResendEmailSender 활성(@ConditionalOnProperty),
