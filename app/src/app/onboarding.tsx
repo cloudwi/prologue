@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -63,6 +65,18 @@ export default function OnboardingScreen() {
   );
 
   const patchExtra = (patch: Partial<ProfileExtra>) => setExtra((prev) => ({ ...prev, ...patch }));
+
+  // 스텝 전환 시 질문 블록이 아래에서 살짝 떠오르며 나타난다 — 장면이 넘어가는 호흡.
+  const [enterAnim] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    enterAnim.setValue(0);
+    Animated.timing(enterAnim, {
+      toValue: 1,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [stepIndex, enterAnim]);
 
   const age = /^\d{4}$/.test(birthYear) ? new Date().getFullYear() - Number(birthYear) : null;
 
@@ -271,11 +285,19 @@ export default function OnboardingScreen() {
           </View>
 
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>{step.title}</Text>
-            {step.subtitle ? (
-              <Text style={[styles.subtitle, { color: c.textSecondary }]}>{step.subtitle}</Text>
-            ) : null}
-            <View style={styles.stepBody}>{step.content}</View>
+            <Animated.View
+              style={{
+                opacity: enterAnim,
+                transform: [{ translateY: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+              }}
+            >
+              <Text style={[styles.stepEyebrow, { color: c.primary }]}>Q{stepIndex + 1}</Text>
+              <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>{step.title}</Text>
+              {step.subtitle ? (
+                <Text style={[styles.subtitle, { color: c.textSecondary }]}>{step.subtitle}</Text>
+              ) : null}
+              <View style={styles.stepBody}>{step.content}</View>
+            </Animated.View>
           </ScrollView>
 
           <View style={styles.footer}>
@@ -338,10 +360,11 @@ const styles = StyleSheet.create({
   progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   stepCount: { fontSize: 12, fontVariant: ['tabular-nums'] },
-  content: { padding: 25, paddingBottom: 24 },
-  title: { fontSize: 26, fontWeight: '700', marginTop: 18 },
-  subtitle: { fontSize: 14, marginTop: 8, lineHeight: 21 },
-  stepBody: { marginTop: 28 },
+  content: { padding: 25, paddingTop: 48, paddingBottom: 24 },
+  stepEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 3 },
+  title: { fontSize: 29, fontWeight: '700', marginTop: 12, lineHeight: 40 },
+  subtitle: { fontSize: 15, marginTop: 10, lineHeight: 23 },
+  stepBody: { marginTop: 40 },
   hint: { fontSize: 13, marginTop: 6 },
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
   bio: { minHeight: 72, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
