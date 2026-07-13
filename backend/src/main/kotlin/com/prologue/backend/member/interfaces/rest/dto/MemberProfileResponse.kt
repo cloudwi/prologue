@@ -3,12 +3,13 @@ package com.prologue.backend.member.interfaces.rest.dto
 import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.member.domain.model.Member
+import java.time.LocalDate
 
 data class MemberProfileResponse(
     val accountId: String,
     val nickname: String,
     val gender: Gender,
-    val birthYear: Int,
+    val birthDate: LocalDate,
     val preferredGender: Gender,
     val region: String,
     val bio: String?,
@@ -26,7 +27,7 @@ data class MemberProfileResponse(
                 accountId = member.accountId.toString(),
                 nickname = member.nickname,
                 gender = member.gender,
-                birthYear = member.birthYear,
+                birthDate = member.birthDate,
                 preferredGender = member.preferredGender,
                 region = member.region,
                 bio = member.bio,

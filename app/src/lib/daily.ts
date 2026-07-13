@@ -23,7 +23,8 @@ export type Peer = {
   peerAnswer: string | null;
   answerUnlocked: boolean;
   gender: 'MALE' | 'FEMALE' | null;
-  birthYear: number | null;
+  /** 만 나이(서버 계산). */
+  age: number | null;
   region: string | null;
   bio: string | null;
   heightCm: number | null;

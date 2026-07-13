@@ -59,7 +59,7 @@ data class ConversationResponse(
     val peerAccountId: String,
     val nickname: String,
     val gender: Gender,
-    val birthYear: Int,
+    val age: Int,
     val region: String,
     val avatarId: Int?,
 ) {
@@ -69,7 +69,7 @@ data class ConversationResponse(
             peerAccountId = v.peerAccountId.toString(),
             nickname = v.nickname,
             gender = v.gender,
-            birthYear = v.birthYear,
+            age = v.age,
             region = v.region,
             avatarId = v.avatarId,
         )

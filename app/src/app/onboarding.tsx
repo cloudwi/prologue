@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { KeywordChips } from '@/components/keyword-chips';
+import { formatBirthDigits, koreanManAge, parseBirthDigits, sanitizeBirthDigits } from '@/lib/birth-date';
 import { AvatarPicker, BodyTypeToggle, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
@@ -53,7 +54,7 @@ export default function OnboardingScreen() {
 
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
-  const [birthYear, setBirthYear] = useState('');
+  const [birthDigits, setBirthDigits] = useState('');
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [region, setRegion] = useState('');
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
@@ -78,7 +79,8 @@ export default function OnboardingScreen() {
     }).start();
   }, [stepIndex, enterAnim]);
 
-  const age = /^\d{4}$/.test(birthYear) ? new Date().getFullYear() - Number(birthYear) : null;
+  const birthDate = parseBirthDigits(birthDigits);
+  const age = birthDate != null ? koreanManAge(birthDate) : null;
 
   const inputStyle: StyleProp<TextStyle> = [styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }];
 
@@ -107,21 +109,26 @@ export default function OnboardingScreen() {
       content: <GenderToggle value={gender} onChange={setGender} c={c} />,
     },
     {
-      key: 'birthYear',
-      title: '몇 년생이신가요?',
-      valid: /^\d{4}$/.test(birthYear),
+      key: 'birthDate',
+      title: '생년월일을 알려주세요',
+      subtitle: '프로필에는 만 나이만 표시돼요.',
+      valid: birthDate != null,
       content: (
         <>
           <TextInput
-            value={birthYear}
-            onChangeText={(t) => setBirthYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
-            placeholder="예: 1999"
+            value={formatBirthDigits(birthDigits)}
+            onChangeText={(t) => setBirthDigits(sanitizeBirthDigits(t))}
+            placeholder="예: 1999.05.14"
             placeholderTextColor={c.textSecondary}
             keyboardType="number-pad"
+            maxLength={10}
             autoFocus
             style={inputStyle}
           />
           {age != null && <Text style={[styles.hint, { color: c.textSecondary }]}>만 {age}세</Text>}
+          {age == null && birthDigits.length === 8 && (
+            <Text style={[styles.hint, { color: c.primary }]}>날짜를 다시 확인해주세요</Text>
+          )}
         </>
       ),
     },
@@ -227,7 +234,7 @@ export default function OnboardingScreen() {
       await completeOnboarding({
         nickname: nickname.trim(),
         gender: gender!,
-        birthYear: Number(birthYear),
+        birthDate: birthDate!,
         preferredGender: preferredGender!,
         region: region.trim(),
         ...toProfilePayload(extra),

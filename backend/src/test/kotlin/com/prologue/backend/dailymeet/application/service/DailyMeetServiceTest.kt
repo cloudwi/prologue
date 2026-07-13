@@ -14,6 +14,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,7 +36,7 @@ class DailyMeetServiceTest {
     private val question = Question(1L, "요즘 가장 마음 쓰는 일은?")
 
     private fun member(id: UUID, gender: Gender, prefers: Gender): Member =
-        Member.reconstitute(id, "닉", gender, 1995, prefers, "서울특별시 강남구", Instant.now())
+        Member.reconstitute(id, "닉", gender, LocalDate.of(1995, 5, 14), prefers, "서울특별시 강남구", Instant.now())
 
     @Test
     fun `오늘 - 아직 답 안 함`() {

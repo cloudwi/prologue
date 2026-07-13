@@ -86,7 +86,7 @@ class DailyMeetService(
             peerAnswer = if (answered) peer.content else null,
             answerUnlocked = answered,
             gender = p?.gender,
-            birthYear = p?.birthYear,
+            age = p?.age(),
             region = p?.region,
             bio = p?.bio,
             heightCm = p?.heightCm,

@@ -6,7 +6,8 @@ export type BodyType = 'SLIM' | 'AVERAGE' | 'CHUBBY';
 export type OnboardingProfile = {
   nickname: string;
   gender: Gender;
-  birthYear: number;
+  /** 생년월일, ISO 형식("1999-05-14"). */
+  birthDate: string;
   preferredGender: Gender;
   region: string;
   bio?: string | null;

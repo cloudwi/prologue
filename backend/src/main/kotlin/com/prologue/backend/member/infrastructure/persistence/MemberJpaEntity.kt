@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /** members 테이블 매핑. account_id를 PK로 사용(계정과 1:1, 외부에서 부여). */
@@ -26,8 +27,8 @@ class MemberJpaEntity(
     @Column(name = "gender", nullable = false, length = 10)
     var gender: Gender,
 
-    @Column(name = "birth_year", nullable = false)
-    var birthYear: Int,
+    @Column(name = "birth_date", nullable = false)
+    var birthDate: LocalDate,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_gender", nullable = false, length = 10)

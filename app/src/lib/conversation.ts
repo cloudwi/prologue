@@ -33,7 +33,8 @@ export type Conversation = {
   peerAccountId: string;
   nickname: string;
   gender: Gender;
-  birthYear: number;
+  /** 만 나이(서버 계산). */
+  age: number;
   region: string;
   avatarId: number | null;
 };

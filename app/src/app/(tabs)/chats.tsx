@@ -14,10 +14,6 @@ import {
   type ReceivedRequest,
 } from '@/lib/conversation';
 
-function koreanAge(birthYear: number): number {
-  return new Date().getFullYear() - birthYear + 1;
-}
-
 export default function ChatsScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
@@ -141,7 +137,7 @@ export default function ChatsScreen() {
                     <View style={styles.convBody}>
                       <Text style={[styles.convName, { color: c.text }]}>{cv.nickname}</Text>
                       <Text style={[styles.convMeta, { color: c.textSecondary }]}>
-                        {koreanAge(cv.birthYear)}세 · {cv.region}
+                        만 {cv.age}세 · {cv.region}
                       </Text>
                     </View>
                   </Pressable>

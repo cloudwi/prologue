@@ -19,6 +19,7 @@ import { RegionPicker } from '@/components/region-picker';
 import { ProfileExtraFields, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { clearTokens } from '@/lib/auth-storage';
+import { formatBirthDigits, isoToBirthDigits, parseBirthDigits, sanitizeBirthDigits } from '@/lib/birth-date';
 import { completeOnboarding, getMyProfile, type Gender } from '@/lib/member';
 
 const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
@@ -30,7 +31,7 @@ export default function MyScreen() {
   const [loading, setLoading] = useState(true);
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
-  const [birthYear, setBirthYear] = useState('');
+  const [birthDigits, setBirthDigits] = useState('');
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [region, setRegion] = useState('');
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
@@ -44,7 +45,7 @@ export default function MyScreen() {
         if (!active || !p) return;
         setNickname(p.nickname);
         setGender(p.gender);
-        setBirthYear(String(p.birthYear));
+        setBirthDigits(isoToBirthDigits(p.birthDate));
         setPreferredGender(p.preferredGender);
         setRegion(p.region);
         setExtra({
@@ -67,10 +68,12 @@ export default function MyScreen() {
     };
   }, []);
 
+  const birthDate = parseBirthDigits(birthDigits);
+
   const canSave =
     nickname.trim().length > 0 &&
     gender != null &&
-    /^\d{4}$/.test(birthYear) &&
+    birthDate != null &&
     preferredGender != null &&
     region.trim().length > 0;
 
@@ -81,7 +84,7 @@ export default function MyScreen() {
       await completeOnboarding({
         nickname: nickname.trim(),
         gender: gender!,
-        birthYear: Number(birthYear),
+        birthDate: birthDate!,
         preferredGender: preferredGender!,
         region: region.trim(),
         ...toProfilePayload(extra),
@@ -145,11 +148,14 @@ export default function MyScreen() {
               <GenderToggle value={gender} onChange={setGender} c={c} />
             </Field>
 
-            <Field label="태어난 해" c={c}>
+            <Field label="생년월일" c={c}>
               <TextInput
-                value={birthYear}
-                onChangeText={(t) => setBirthYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                value={formatBirthDigits(birthDigits)}
+                onChangeText={(t) => setBirthDigits(sanitizeBirthDigits(t))}
                 keyboardType="number-pad"
+                maxLength={10}
+                placeholder="예: 1999.05.14"
+                placeholderTextColor={c.textSecondary}
                 style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
               />
             </Field>

@@ -29,7 +29,8 @@ data class ConversationView(
     val peerAccountId: UUID,
     val nickname: String,
     val gender: Gender,
-    val birthYear: Int,
+    /** 만 나이(서버 계산). 생년월일 원본은 상대에게 노출하지 않는다. */
+    val age: Int,
     val region: String,
     val avatarId: Int?,
     val createdAt: Instant,
@@ -119,7 +120,7 @@ class ConversationService(
                 peerAccountId = peerId,
                 nickname = profile.nickname,
                 gender = profile.gender,
-                birthYear = profile.birthYear,
+                age = profile.age(),
                 region = profile.region,
                 avatarId = profile.avatarId,
                 createdAt = conv.createdAt,

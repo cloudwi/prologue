@@ -20,7 +20,7 @@ class OnboardingService(
                 updateProfile(
                     nickname = command.nickname,
                     gender = command.gender,
-                    birthYear = command.birthYear,
+                    birthDate = command.birthDate,
                     preferredGender = command.preferredGender,
                     region = command.region,
                     bio = command.bio,
@@ -37,7 +37,7 @@ class OnboardingService(
                 accountId = command.accountId,
                 nickname = command.nickname,
                 gender = command.gender,
-                birthYear = command.birthYear,
+                birthDate = command.birthDate,
                 preferredGender = command.preferredGender,
                 region = command.region,
                 bio = command.bio,

@@ -53,7 +53,7 @@ class OnboardingController(
                 accountId = accountId,
                 nickname = request.nickname,
                 gender = request.gender!!,
-                birthYear = request.birthYear!!,
+                birthDate = request.birthDate!!,
                 preferredGender = request.preferredGender!!,
                 region = request.region,
                 bio = request.bio,

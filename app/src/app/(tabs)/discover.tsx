@@ -21,11 +21,6 @@ import { Colors, Fonts } from '@/constants/theme';
 import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
 
-/** 만 나이(생일 정보가 없어 올해-출생년으로 근사). */
-function manAge(birthYear: number): number {
-  return new Date().getFullYear() - birthYear;
-}
-
 function bodyLabel(b: Peer['bodyType']): string | null {
   return b === 'SLIM' ? '마름' : b === 'AVERAGE' ? '보통' : b === 'CHUBBY' ? '통통' : null;
 }
@@ -33,7 +28,7 @@ function bodyLabel(b: Peer['bodyType']): string | null {
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
   if (peer.gender) parts.push(peer.gender === 'MALE' ? '남성' : '여성');
-  if (peer.birthYear) parts.push(`${manAge(peer.birthYear)}세`);
+  if (peer.age != null) parts.push(`만 ${peer.age}세`);
   if (peer.heightCm) parts.push(`${peer.heightCm}cm`);
   const bl = bodyLabel(peer.bodyType);
   if (bl) parts.push(bl);

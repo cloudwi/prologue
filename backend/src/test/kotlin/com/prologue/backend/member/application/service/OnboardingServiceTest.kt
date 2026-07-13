@@ -8,6 +8,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,7 +23,7 @@ class OnboardingServiceTest {
         accountId = accountId,
         nickname = "프롤",
         gender = Gender.MALE,
-        birthYear = 1995,
+        birthDate = LocalDate.of(1995, 5, 14),
         preferredGender = Gender.FEMALE,
         region = "서울",
     )
@@ -48,7 +49,7 @@ class OnboardingServiceTest {
             accountId = accountId,
             nickname = "옛닉",
             gender = Gender.MALE,
-            birthYear = 1990,
+            birthDate = LocalDate.of(1990, 1, 2),
             preferredGender = Gender.FEMALE,
             region = "부산",
             createdAt = Instant.now(),

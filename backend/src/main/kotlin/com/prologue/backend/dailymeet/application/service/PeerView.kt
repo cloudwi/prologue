@@ -14,7 +14,8 @@ data class PeerView(
     val peerAnswer: String?,
     val answerUnlocked: Boolean,
     val gender: Gender?,
-    val birthYear: Int?,
+    /** 만 나이(서버 계산). 생년월일 원본은 상대에게 노출하지 않는다. */
+    val age: Int?,
     val region: String?,
     val bio: String?,
     val heightCm: Int?,
