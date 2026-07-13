@@ -1,4 +1,12 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-<path d="M28 22 H72 Q86 22 86 36 V52 Q86 66 72 66 H46 L32 78 L34 66 H28 Q14 66 14 52 V36 Q14 22 28 22 Z" fill="#D9694C"/>
-<path d="M50 58 C 40 50, 34 46, 34 39 C 34 34, 38 31, 43 31 C 46 31, 49 33, 50 36 C 51 33, 54 31, 57 31 C 62 31, 66 34, 66 39 C 66 46, 60 50, 50 58 Z" fill="#FFFFFF"/>
+<!-- 편지지(글이 적힌 종이) — 프롤로그: 하루 한 문답, 편지 같은 무드 -->
+<!-- 종이 본체: 세로형, 오른쪽 위 접힌 모서리(dog-ear) -->
+<path d="M34 18 H61 L72 29 V78 Q72 84 66 84 H34 Q28 84 28 78 V24 Q28 18 34 18 Z" fill="#D9694C"/>
+<!-- 접힌 모서리 -->
+<path d="M61 18 L72 29 H61 Z" fill="#E8A188"/>
+<!-- 손글씨 같은 본문 줄 -->
+<rect x="36" y="40" width="28" height="4.2" rx="2.1" fill="#FFFFFF"/>
+<rect x="36" y="49" width="23" height="4.2" rx="2.1" fill="#FFFFFF"/>
+<rect x="36" y="58" width="28" height="4.2" rx="2.1" fill="#FFFFFF"/>
+<rect x="36" y="67" width="17" height="4.2" rx="2.1" fill="#FFFFFF"/>
 </svg>
