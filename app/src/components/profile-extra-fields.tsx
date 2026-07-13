@@ -30,20 +30,7 @@ export function ProfileExtraFields({
   return (
     <View>
       <Field label="아바타 (나를 닮은 아이콘)" c={c}>
-        <View style={styles.avatarRow}>
-          {AVATARS.map((a) => {
-            const on = value.avatarId === a.id;
-            return (
-              <Pressable
-                key={a.id}
-                onPress={() => onChange({ avatarId: on ? null : a.id })}
-                style={[styles.avatarItem, { borderColor: on ? c.primary : 'transparent' }]}
-              >
-                <Image source={a.source} style={styles.avatarImg} contentFit="cover" />
-              </Pressable>
-            );
-          })}
-        </View>
+        <AvatarPicker value={value.avatarId} onChange={(avatarId) => onChange({ avatarId })} c={c} />
       </Field>
 
       <Field label="자기소개 (선택)" c={c}>
@@ -71,20 +58,7 @@ export function ProfileExtraFields({
       </Field>
 
       <Field label="체형 (선택)" c={c}>
-        <View style={styles.toggleRow}>
-          {BODY_TYPES.map((o) => {
-            const on = value.bodyType === o.key;
-            return (
-              <Pressable
-                key={o.key}
-                onPress={() => onChange({ bodyType: on ? null : o.key })}
-                style={[styles.toggle, { backgroundColor: on ? c.primary : c.backgroundElement, borderColor: on ? c.primary : c.border }]}
-              >
-                <Text style={{ color: on ? c.primaryText : c.text, fontWeight: '600' }}>{o.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <BodyTypeToggle value={value.bodyType} onChange={(bodyType) => onChange({ bodyType })} c={c} />
       </Field>
 
       <Field label={`취미 (최대 ${KEYWORD_MAX}개)`} c={c}>
@@ -98,6 +72,60 @@ export function ProfileExtraFields({
       <Field label={`나의 장점 (최대 ${KEYWORD_MAX}개)`} c={c}>
         <KeywordChips options={STRENGTHS} selected={value.strengths} onChange={(v) => onChange({ strengths: v })} c={c} max={KEYWORD_MAX} />
       </Field>
+    </View>
+  );
+}
+
+export function AvatarPicker({
+  value,
+  onChange,
+  c,
+}: {
+  value: number | null;
+  onChange: (id: number | null) => void;
+  c: ThemeColors;
+}) {
+  return (
+    <View style={styles.avatarRow}>
+      {AVATARS.map((a) => {
+        const on = value === a.id;
+        return (
+          <Pressable
+            key={a.id}
+            onPress={() => onChange(on ? null : a.id)}
+            style={[styles.avatarItem, { borderColor: on ? c.primary : 'transparent' }]}
+          >
+            <Image source={a.source} style={styles.avatarImg} contentFit="cover" />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export function BodyTypeToggle({
+  value,
+  onChange,
+  c,
+}: {
+  value: BodyType | null;
+  onChange: (t: BodyType | null) => void;
+  c: ThemeColors;
+}) {
+  return (
+    <View style={styles.toggleRow}>
+      {BODY_TYPES.map((o) => {
+        const on = value === o.key;
+        return (
+          <Pressable
+            key={o.key}
+            onPress={() => onChange(on ? null : o.key)}
+            style={[styles.toggle, { backgroundColor: on ? c.primary : c.backgroundElement, borderColor: on ? c.primary : c.border }]}
+          >
+            <Text style={{ color: on ? c.primaryText : c.text, fontWeight: '600' }}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
