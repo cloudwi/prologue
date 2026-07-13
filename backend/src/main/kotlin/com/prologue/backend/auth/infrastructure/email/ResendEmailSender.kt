@@ -5,6 +5,7 @@ import com.prologue.backend.auth.application.port.EmailSender
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Primary
+import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -30,11 +31,16 @@ class ResendEmailSender(
 
     private val client = restClientBuilder.baseUrl("https://api.resend.com").build()
 
+    private val htmlTemplate =
+        ClassPathResource("email/verification-code.html").inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+
     override fun sendVerificationCode(email: String, code: String) {
         val payload = mapOf(
             "from" to from,
             "to" to listOf(email),
             "subject" to "[프롤로그] 인증코드 $code",
+            "html" to htmlTemplate.replace("{{code}}", code),
+            // HTML 미지원 클라이언트용 폴백
             "text" to buildString {
                 appendLine("프롤로그 인증코드입니다.")
                 appendLine()
