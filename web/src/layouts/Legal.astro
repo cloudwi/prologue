@@ -1,0 +1,13 @@
+---
+import Base from './Base.astro';
+
+const { frontmatter } = Astro.props;
+---
+
+<Base title={`${frontmatter.title} — 프롤로그`}>
+  <article class="prose">
+    <h1>{frontmatter.title}</h1>
+    <div class="meta">시행일: {frontmatter.updatedAt}</div>
+    <slot />
+  </article>
+</Base>

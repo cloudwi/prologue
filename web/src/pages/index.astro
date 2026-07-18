@@ -1,0 +1,103 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const posts = (await getCollection('blog'))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3);
+
+// 꽃잎 배치 — 빌드 시 고정된 의사 난수
+const petals = Array.from({ length: 12 }, (_, i) => {
+  const r = (n: number) => {
+    const x = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  return {
+    left: `${Math.round(r(1) * 100)}%`,
+    size: `${Math.round(9 + r(2) * 9)}px`,
+    duration: `${(8 + r(3) * 8).toFixed(1)}s`,
+    delay: `-${(r(4) * 12).toFixed(1)}s`,
+  };
+});
+
+const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base>
+  <section class="hero">
+    {
+      petals.map((p) => (
+        <span
+          class="petal"
+          style={`left:${p.left};width:${p.size};height:${p.size};animation-duration:${p.duration};animation-delay:${p.delay};`}
+        />
+      ))
+    }
+    <img src="/brand-mark.png" alt="프롤로그 브랜드 마크" class="brand-mark" />
+    <h1>
+      하루 한 문답으로 알아가는,<br />
+      가치관이 꼭 맞는 소중한 인연
+    </h1>
+    <p class="sub">가치관 블라인드 소개팅, 프롤로그</p>
+    <p class="hero-en">PROLOGUE</p>
+    <div class="actions" id="download">
+      <a class="btn btn-primary" href="#download">앱 다운로드 (출시 준비 중)</a>
+      <a class="btn btn-ghost" href="/story">프롤로그 스토리 읽기</a>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="container">
+      <div class="section-label">프롤로그의 방식</div>
+      <h2>사진이 아니라, 이야기로 시작해요</h2>
+      <p class="desc">
+        조건과 외모로 서로를 스치듯 평가하는 만남 대신, 매일 하나의 질문에 답하며 서로의 생각을 천천히
+        들여다봅니다.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <img src="/avatars/1.svg" alt="" />
+          <h3>하루 한 문답</h3>
+          <p>매일 도착하는 하나의 질문. 서두르지 않고, 하루에 한 걸음씩 서로를 알아가요.</p>
+        </div>
+        <div class="feature-card">
+          <img src="/avatars/2.svg" alt="" />
+          <h3>가치관 블라인드</h3>
+          <p>프로필 사진은 잠시 뒤로. 답변에 담긴 생각이 먼저 서로에게 닿습니다.</p>
+        </div>
+        <div class="feature-card">
+          <img src="/avatars/3.svg" alt="" />
+          <h3>1:1 큐레이션</h3>
+          <p>수백 장의 카드를 넘기는 대신, 한 번에 한 사람과의 깊은 대화에 집중해요.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote">
+    <div class="mark">“</div>
+    <p>
+      모든 이야기의 시작에는 프롤로그가 있습니다.<br />
+      당신의 다음 이야기가 여기에서 시작되기를.
+    </p>
+  </section>
+
+  <section class="section alt">
+    <div class="container">
+      <div class="section-label">스토리</div>
+      <h2>프롤로그가 쓰는 이야기</h2>
+      <div class="post-list">
+        {
+          posts.map((post) => (
+            <a class="post-card" href={`/story/${post.id}`}>
+              <div class="meta">{dateFmt.format(post.data.pubDate)}</div>
+              <h3>{post.data.title}</h3>
+              <p>{post.data.description}</p>
+            </a>
+          ))
+        }
+      </div>
+      <p style="margin-top: 28px;"><a href="/story" style="color: var(--terracotta); font-weight: 600;">스토리 전체 보기 →</a></p>
+    </div>
+  </section>
+</Base>

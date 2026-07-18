@@ -1,0 +1,31 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base title="스토리 — 프롤로그" description="프롤로그 팀이 쓰는 이야기. 만남과 가치관, 그리고 서비스의 뒷이야기.">
+  <section class="section">
+    <div class="container">
+      <div class="section-label">스토리</div>
+      <h2>프롤로그가 쓰는 이야기</h2>
+      <p class="desc">만남과 가치관에 대한 생각들, 그리고 프롤로그를 만들어가는 뒷이야기를 기록합니다.</p>
+      <div class="post-list">
+        {
+          posts.map((post) => (
+            <a class="post-card" href={`/story/${post.id}`}>
+              <div class="meta">{dateFmt.format(post.data.pubDate)}</div>
+              <h3>{post.data.title}</h3>
+              <p>{post.data.description}</p>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</Base>
