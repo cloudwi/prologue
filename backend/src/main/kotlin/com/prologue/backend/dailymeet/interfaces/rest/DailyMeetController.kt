@@ -6,7 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartResponse
-import com.prologue.backend.dailymeet.interfaces.rest.dto.PeerResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.PeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TodayResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
@@ -33,11 +33,11 @@ class DailyMeetController(
         return TodayResponse.from(dailyMeetService.today(accountId))
     }
 
-    /** 블라인드 상대 답변 (내가 먼저 답해야 열람 가능). */
-    @GetMapping("/today/peer")
-    fun peer(authentication: Authentication): PeerResponse {
+    /** 오늘의 상대 목록 (매일 정오 공개, 최대 3명, 답변은 내가 먼저 답해야 열람 가능). */
+    @GetMapping("/today/peers")
+    fun peers(authentication: Authentication): PeersResponse {
         val accountId = UUID.fromString(authentication.name)
-        return PeerResponse.from(dailyMeetService.peerAnswer(accountId))
+        return PeersResponse.from(dailyMeetService.todayPeers(accountId))
     }
 
     /** 오늘의 질문에 답변(작성/수정). 답변 후 갱신된 현황 반환. */

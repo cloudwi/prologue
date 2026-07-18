@@ -18,7 +18,6 @@ export async function answerToday(content: string): Promise<Today> {
 }
 
 export type Peer = {
-  hasPeer: boolean;
   peerAnswerId: string | null;
   peerAnswer: string | null;
   answerUnlocked: boolean;
@@ -28,16 +27,23 @@ export type Peer = {
   region: string | null;
   bio: string | null;
   heightCm: number | null;
-  bodyType: 'SLIM' | 'AVERAGE' | 'CHUBBY' | null;
   hobbies: string[];
   interests: string[];
   strengths: string[];
   avatarId: number | null;
 };
 
-/** 블라인드 상대 답변 (내가 답해야 열람 가능, GET /daily/today/peer). */
-export async function getPeer(): Promise<Peer> {
-  return authedRequest<Peer>('GET', '/daily/today/peer');
+export type TodayPeers = {
+  /** 정오(KST) 전에는 false — 아직 공개 전. */
+  open: boolean;
+  answerUnlocked: boolean;
+  /** 공개된 상대, 최대 3명. */
+  peers: Peer[];
+};
+
+/** 오늘의 상대 목록 (매일 정오 공개, 최대 3명, GET /daily/today/peers). */
+export async function getPeers(): Promise<TodayPeers> {
+  return authedRequest<TodayPeers>('GET', '/daily/today/peers');
 }
 
 export type HeartResult = {

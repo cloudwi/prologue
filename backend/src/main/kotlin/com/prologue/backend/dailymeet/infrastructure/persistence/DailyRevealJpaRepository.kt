@@ -4,6 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
 interface DailyRevealJpaRepository : JpaRepository<DailyRevealJpaEntity, UUID> {
-    fun findByViewerAccountIdAndQuestionId(viewerAccountId: UUID, questionId: Long): DailyRevealJpaEntity?
+    fun findAllByViewerAccountIdAndQuestionIdOrderByCreatedAtAsc(viewerAccountId: UUID, questionId: Long): List<DailyRevealJpaEntity>
     fun countByQuestionIdAndPeerAnswerId(questionId: Long, peerAnswerId: UUID): Long
 }

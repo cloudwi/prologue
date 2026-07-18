@@ -10,8 +10,8 @@ class DailyRevealPersistenceAdapter(
     private val jpa: DailyRevealJpaRepository,
 ) : DailyRevealRepository {
 
-    override fun findByViewerAndQuestion(viewerAccountId: UUID, questionId: Long): DailyReveal? =
-        jpa.findByViewerAccountIdAndQuestionId(viewerAccountId, questionId)?.toDomain()
+    override fun findAllByViewerAndQuestion(viewerAccountId: UUID, questionId: Long): List<DailyReveal> =
+        jpa.findAllByViewerAccountIdAndQuestionIdOrderByCreatedAtAsc(viewerAccountId, questionId).map { it.toDomain() }
 
     override fun save(reveal: DailyReveal): DailyReveal =
         jpa.save(reveal.toEntity()).toDomain()

@@ -15,6 +15,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -95,84 +96,113 @@ class DailyMeetServiceTest {
     }
 
     @Test
-    fun `상대 답변 - 답 안 했어도 프로필은 보이되 답변은 잠긴다`() {
+    fun `오늘의 상대 - 정오 전에는 공개되지 않는다`() {
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+
+        val view = service.todayPeers(accountId, now = LocalTime.of(11, 59))
+
+        assertFalse(view.open)
+        assertTrue(view.peers.isEmpty())
+    }
+
+    @Test
+    fun `오늘의 상대 - 답 안 했어도 프로필은 보이되 답변은 잠긴다`() {
         val peerAccount = UUID.randomUUID()
         val peerAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "상대 답변", Instant.now())
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null // 미답변
-        every { dailyRevealRepository.findByViewerAndQuestion(accountId, 1L) } returns null
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
         every { answerRepository.findOthers(1L, accountId) } returns listOf(peerAnswer)
         every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
         every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
 
-        val view = service.peerAnswer(accountId)
+        val view = service.todayPeers(accountId, now = NOON)
 
-        assertTrue(view.hasPeer)
+        assertTrue(view.open)
+        assertEquals(1, view.peers.size)
         assertFalse(view.answerUnlocked)
-        assertNull(view.peerAnswer) // 답변은 Give&Take로 잠김
-        assertEquals(Gender.FEMALE, view.gender) // 프로필은 미리 보임
+        assertNull(view.peers[0].peerAnswer) // 답변은 Give&Take로 잠김
+        assertEquals(Gender.FEMALE, view.peers[0].gender) // 프로필은 미리 보임
     }
 
     @Test
-    fun `상대 답변 - 선호 일치 후보가 있으면 상대 답변 반환 및 고정 저장`() {
-        val peerAccount = UUID.randomUUID()
+    fun `오늘의 상대 - 후보가 3명 이상이면 3명까지 공개하고 고정 저장`() {
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
-        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "상대 답변", Instant.now())
+        val peers = (1..4).map { Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대 답변 $it", Instant.now()) }
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
-        every { dailyRevealRepository.findByViewerAndQuestion(accountId, 1L) } returns null
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
-        every { answerRepository.findOthers(1L, accountId) } returns listOf(peerAnswer)
-        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
-        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
+        every { answerRepository.findOthers(1L, accountId) } returns peers
+        peers.forEach {
+            every { memberQueryService.findProfile(it.accountId) } returns member(it.accountId, Gender.FEMALE, Gender.MALE)
+            every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, it.id!!) } returns 0
+        }
+        val saved = mutableListOf<DailyReveal>()
+        every { dailyRevealRepository.save(capture(saved)) } answers { saved.last() }
 
-        val saved = slot<DailyReveal>()
-        every { dailyRevealRepository.save(capture(saved)) } answers { saved.captured }
+        val view = service.todayPeers(accountId, now = NOON)
 
-        val view = service.peerAnswer(accountId)
-
-        assertTrue(view.hasPeer)
-        assertEquals("상대 답변", view.peerAnswer)
-        assertEquals(peerAnswer.id, saved.captured.peerAnswerId)
+        assertTrue(view.open)
+        assertEquals(3, view.peers.size)
+        assertEquals(3, saved.size)
+        assertTrue(view.answerUnlocked)
+        assertEquals(3, view.peers.mapNotNull { it.peerAnswer }.size)
     }
 
     @Test
-    fun `상대 답변 - 선호 일치 후보가 없으면 hasPeer false`() {
+    fun `오늘의 상대 - 선호 일치 후보가 없으면 빈 목록`() {
         val sameGenderAccount = UUID.randomUUID()
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
         val otherAnswer = Answer.reconstitute(UUID.randomUUID(), sameGenderAccount, 1L, "동성 답변", Instant.now())
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
-        every { dailyRevealRepository.findByViewerAndQuestion(accountId, 1L) } returns null
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
         every { answerRepository.findOthers(1L, accountId) } returns listOf(otherAnswer)
         // 후보가 남성(내가 선호하는 여성이 아님) → 제외
         every { memberQueryService.findProfile(sameGenderAccount) } returns member(sameGenderAccount, Gender.MALE, Gender.FEMALE)
 
-        val view = service.peerAnswer(accountId)
+        val view = service.todayPeers(accountId, now = NOON)
 
-        assertFalse(view.hasPeer)
-        assertNull(view.peerAnswer)
+        assertTrue(view.open)
+        assertTrue(view.peers.isEmpty())
     }
 
     @Test
-    fun `상대 답변 - 이미 본 상대가 있으면 고정된 상대를 반환`() {
-        val peerAnswerId = UUID.randomUUID()
-        val peerAccount = UUID.randomUUID()
+    fun `오늘의 상대 - 이미 공개된 상대는 그대로 유지하고 부족분만 채운다`() {
+        val pinnedAnswerId = UUID.randomUUID()
+        val pinnedAccount = UUID.randomUUID()
+        val newAccount = UUID.randomUUID()
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
-        val peerAnswer = Answer.reconstitute(peerAnswerId, peerAccount, 1L, "고정된 상대", Instant.now())
+        val pinnedAnswer = Answer.reconstitute(pinnedAnswerId, pinnedAccount, 1L, "고정된 상대", Instant.now())
+        val newAnswer = Answer.reconstitute(UUID.randomUUID(), newAccount, 1L, "새 상대", Instant.now())
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
-        every { dailyRevealRepository.findByViewerAndQuestion(accountId, 1L) } returns
-            DailyReveal.reconstitute(UUID.randomUUID(), accountId, 1L, peerAnswerId, Instant.now())
-        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
-        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns
+            listOf(DailyReveal.reconstitute(UUID.randomUUID(), accountId, 1L, pinnedAnswerId, Instant.now()))
+        every { answerRepository.findById(pinnedAnswerId) } returns pinnedAnswer
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthers(1L, accountId) } returns listOf(pinnedAnswer, newAnswer)
+        every { memberQueryService.findProfile(pinnedAccount) } returns member(pinnedAccount, Gender.FEMALE, Gender.MALE)
+        every { memberQueryService.findProfile(newAccount) } returns member(newAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, newAnswer.id!!) } returns 0
+        val saved = mutableListOf<DailyReveal>()
+        every { dailyRevealRepository.save(capture(saved)) } answers { saved.last() }
 
-        val view = service.peerAnswer(accountId)
+        val view = service.todayPeers(accountId, now = NOON)
 
-        assertTrue(view.hasPeer)
-        assertEquals("고정된 상대", view.peerAnswer)
-        assertEquals(Gender.FEMALE, view.gender)
+        assertEquals(2, view.peers.size)
+        assertEquals("고정된 상대", view.peers[0].peerAnswer)
+        assertEquals("새 상대", view.peers[1].peerAnswer)
+        // 고정된 상대는 다시 저장하지 않는다
+        assertEquals(1, saved.size)
+        assertEquals(newAnswer.id, saved[0].peerAnswerId)
+    }
+
+    companion object {
+        private val NOON = LocalTime.NOON
     }
 }

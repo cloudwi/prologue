@@ -17,21 +17,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
 import { Avatar } from '@/components/avatar';
-import { Colors, Fonts } from '@/constants/theme';
-import { answerToday, getPeer, getToday, sendHeart, type Peer, type Today } from '@/lib/daily';
+import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
+import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
-
-function bodyLabel(b: Peer['bodyType']): string | null {
-  return b === 'SLIM' ? '마름' : b === 'AVERAGE' ? '보통' : b === 'CHUBBY' ? '통통' : null;
-}
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
   if (peer.gender) parts.push(peer.gender === 'MALE' ? '남성' : '여성');
   if (peer.age != null) parts.push(`만 ${peer.age}세`);
   if (peer.heightCm) parts.push(`${peer.heightCm}cm`);
-  const bl = bodyLabel(peer.bodyType);
-  if (bl) parts.push(bl);
   if (peer.region) parts.push(peer.region.split(' ').slice(-1)[0]);
   return parts.join(' · ');
 }
@@ -44,56 +38,18 @@ export default function DiscoverScreen() {
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [peer, setPeer] = useState<Peer | null>(null);
-  const [peerLoading, setPeerLoading] = useState(false);
-  const [hearted, setHearted] = useState(false);
-  const [hearting, setHearting] = useState(false);
-  const [peerRevealed, setPeerRevealed] = useState(false);
-  const [requesting, setRequesting] = useState(false);
-  const [requested, setRequested] = useState(false);
+  const [peersData, setPeersData] = useState<TodayPeers | null>(null);
+  const [peersLoading, setPeersLoading] = useState(false);
   const [answerExpanded, setAnswerExpanded] = useState(false);
-  const [peerExpanded, setPeerExpanded] = useState(false);
 
-  async function loadPeer() {
-    setPeerLoading(true);
-    setHearted(false);
-    setPeerRevealed(false);
-    setPeerExpanded(false);
-    setRequested(false);
+  async function loadPeers() {
+    setPeersLoading(true);
     try {
-      setPeer(await getPeer());
+      setPeersData(await getPeers());
     } catch {
       // 상대 답변은 보조 정보 — 실패해도 화면은 유지
     } finally {
-      setPeerLoading(false);
-    }
-  }
-
-  async function heart() {
-    if (!peer?.peerAnswerId || hearting || hearted) return;
-    setHearting(true);
-    try {
-      await sendHeart(peer.peerAnswerId);
-      setHearted(true);
-      Alert.alert('하트를 보냈어요', '이 답변이 마음에 든다는 호감 표시예요.');
-    } catch (e) {
-      Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-    } finally {
-      setHearting(false);
-    }
-  }
-
-  async function requestConversation() {
-    if (!peer?.peerAnswerId || requesting || requested) return;
-    setRequesting(true);
-    try {
-      await sendConversationRequest(peer.peerAnswerId);
-      setRequested(true);
-      Alert.alert('대화 신청을 보냈어요', '상대가 수락하면 둘만의 문답이 시작돼요.');
-    } catch (e) {
-      Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-    } finally {
-      setRequesting(false);
+      setPeersLoading(false);
     }
   }
 
@@ -105,7 +61,7 @@ export default function DiscoverScreen() {
         if (!active) return;
         setToday(t);
         setDraft(t.myAnswer ?? '');
-        loadPeer(); // 답변 전에도 상대 프로필은 미리보기
+        loadPeers(); // 답변 전에도 상대 프로필은 미리보기
       } catch (e) {
         if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       } finally {
@@ -117,12 +73,12 @@ export default function DiscoverScreen() {
     };
   }, []);
 
-  // 발견 탭에 다시 들어올 때, 아직 오늘의 상대를 못 찾았으면 다시 시도
+  // 발견 탭에 다시 들어올 때, 아직 공개 전이거나 상대가 없으면 다시 시도 (정오가 지났을 수 있음)
   useFocusEffect(
     useCallback(() => {
-      if (!peer?.hasPeer) loadPeer();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [peer?.hasPeer]),
+      if (!peersData?.open || peersData.peers.length === 0) loadPeers();
+       
+    }, [peersData?.open, peersData?.peers.length]),
   );
 
   async function submit() {
@@ -134,7 +90,7 @@ export default function DiscoverScreen() {
       setToday(updated);
       setDraft(updated.myAnswer ?? '');
       setEditing(false);
-      if (!wasAnswered && updated.answered) loadPeer();
+      if (!wasAnswered && updated.answered) loadPeers();
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -228,112 +184,163 @@ export default function DiscoverScreen() {
               </>
             )}
 
-            {/* 오늘의 상대 (새 인연) — 답변 전에도 프로필 미리보기 */}
-            {(peerLoading || peer) && (
-              <View style={styles.peerSection}>
-                <Text style={[styles.peerEyebrow, { color: c.primary }]}>오늘의 상대</Text>
-                <Text style={[styles.peerSub, { color: c.textSecondary }]}>오늘 같은 질문에 답한 새로운 상대예요.</Text>
-                {peerLoading ? (
-                  <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
-                ) : peer?.hasPeer ? (
-                  <View style={[styles.peerCard, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
-                    {/* 프로필 (신원 비공개 — 아바타·성별·나이 등) */}
-                    <View style={styles.peerHead}>
-                      <Avatar avatarId={peer.avatarId} size={46} c={c} />
-                      <View style={styles.peerHeadBody}>
-                        <Text style={[styles.peerMeta, { color: c.text }]}>{peerMetaLabel(peer)}</Text>
-                        {peer.bio ? <Text style={[styles.peerBio, { color: c.textSecondary }]}>{peer.bio}</Text> : null}
-                      </View>
-                    </View>
-                    {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
-                      <View style={styles.peerChips}>
-                        {[...peer.hobbies, ...peer.interests, ...peer.strengths].slice(0, 8).map((k) => (
-                          <View key={k} style={[styles.peerChip, { borderColor: c.border, backgroundColor: c.background }]}>
-                            <Text style={{ color: c.textSecondary, fontSize: 12 }}>{k}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
+            {/* 오늘의 상대 — 매일 정오, 최대 3명 */}
+            <View style={styles.peerSection}>
+              <Text style={[styles.peerEyebrow, { color: c.primary }]}>오늘의 상대</Text>
+              <Text style={[styles.peerSub, { color: c.textSecondary }]}>
+                매일 정오, 같은 질문에 답한 3명의 답변이 도착해요.
+              </Text>
 
-                    <View style={[styles.peerDivider, { backgroundColor: c.border }]} />
-
-                    {peer.answerUnlocked && peer.peerAnswer ? (
-                      <>
-                        <Pressable onPress={() => setPeerRevealed(true)} disabled={peerRevealed}>
-                          <Text
-                            numberOfLines={peerRevealed ? (peerExpanded ? undefined : 6) : 4}
-                            style={[
-                              styles.peerAnswer,
-                              { fontFamily: Fonts.serif },
-                              peerRevealed
-                                ? { color: c.text }
-                                : { color: 'transparent', textShadowColor: c.text, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 9 },
-                            ]}
-                          >
-                            {peer.peerAnswer}
-                          </Text>
-                          {!peerRevealed && (
-                            <View style={styles.revealHint}>
-                              <Text style={[styles.revealHintText, { color: c.primary }]}>탭하여 상대의 답변 보기</Text>
-                            </View>
-                          )}
-                        </Pressable>
-                        {peerRevealed && (peer.peerAnswer?.length ?? 0) > 140 && (
-                          <Pressable onPress={() => setPeerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                            <Text style={{ color: c.primary, fontSize: 13, fontWeight: '600' }}>{peerExpanded ? '접기' : '더보기'}</Text>
-                          </Pressable>
-                        )}
-
-                        <View style={styles.peerActions}>
-                          <Pressable
-                            onPress={heart}
-                            disabled={hearting || hearted}
-                            style={[styles.heart, { borderColor: c.primary, backgroundColor: hearted ? c.primary : 'transparent', opacity: hearting ? 0.6 : 1 }]}
-                          >
-                            {!hearting && (
-                              <Image
-                                source={require('@/assets/images/match-heart.png')}
-                                style={styles.heartIcon}
-                                contentFit="contain"
-                                tintColor={hearted ? c.primaryText : c.primary}
-                              />
-                            )}
-                            <Text style={[styles.heartText, { color: hearted ? c.primaryText : c.primary }]}>
-                              {hearted ? '호감 표시함' : hearting ? '...' : '하트'}
-                            </Text>
-                          </Pressable>
-
-                          <Pressable
-                            onPress={requestConversation}
-                            disabled={requesting || requested}
-                            style={[styles.talk, { backgroundColor: c.primary, opacity: requesting ? 0.6 : 1 }]}
-                          >
-                            <Text style={[styles.talkText, { color: c.primaryText }]}>
-                              {requested ? '신청함' : requesting ? '신청 중...' : '대화 신청'}
-                            </Text>
-                          </Pressable>
-                        </View>
-                      </>
-                    ) : (
-                      <View style={styles.peerLock}>
-                        <Text style={[styles.peerLockText, { color: c.textSecondary }]}>
-                          오늘의 질문에 답하면{'\n'}이 상대의 답변이 열려요.
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                ) : (
-                  <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
-                    <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
-                      아직 도착한 답변이 없어요.{'\n'}곧 누군가의 마음이 도착할 거예요.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
+              {peersLoading && !peersData ? (
+                <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
+              ) : !peersData || !peersData.open ? (
+                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+                  <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
+                    오늘의 인연은 정오에 공개돼요.{'\n'}그동안 오늘의 질문에 답을 남겨보세요.
+                  </Text>
+                </View>
+              ) : peersData.peers.length === 0 ? (
+                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+                  <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
+                    아직 도착한 답변이 없어요.{'\n'}곧 누군가의 마음이 도착할 거예요.
+                  </Text>
+                </View>
+              ) : (
+                peersData.peers.map((peer, i) => (
+                  <PeerCard key={peer.peerAnswerId ?? i} peer={peer} c={c} />
+                ))
+              )}
+            </View>
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+/** 상대 1명 카드 — 하트/대화신청/답변 열람 상태를 카드별로 가진다. */
+function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
+  const [hearted, setHearted] = useState(false);
+  const [hearting, setHearting] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  async function heart() {
+    if (!peer.peerAnswerId || hearting || hearted) return;
+    setHearting(true);
+    try {
+      await sendHeart(peer.peerAnswerId);
+      setHearted(true);
+      Alert.alert('하트를 보냈어요', '이 답변이 마음에 든다는 호감 표시예요.');
+    } catch (e) {
+      Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally {
+      setHearting(false);
+    }
+  }
+
+  async function requestConversation() {
+    if (!peer.peerAnswerId || requesting || requested) return;
+    setRequesting(true);
+    try {
+      await sendConversationRequest(peer.peerAnswerId);
+      setRequested(true);
+      Alert.alert('대화 신청을 보냈어요', '상대가 수락하면 둘만의 문답이 시작돼요.');
+    } catch (e) {
+      Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  return (
+    <View style={[styles.peerCard, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+      {/* 프로필 (신원 비공개 — 아바타·성별·나이 등) */}
+      <View style={styles.peerHead}>
+        <Avatar avatarId={peer.avatarId} size={46} c={c} />
+        <View style={styles.peerHeadBody}>
+          <Text style={[styles.peerMeta, { color: c.text }]}>{peerMetaLabel(peer)}</Text>
+          {peer.bio ? <Text style={[styles.peerBio, { color: c.textSecondary }]}>{peer.bio}</Text> : null}
+        </View>
+      </View>
+      {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
+        <View style={styles.peerChips}>
+          {[...peer.hobbies, ...peer.interests, ...peer.strengths].slice(0, 8).map((k) => (
+            <View key={k} style={[styles.peerChip, { borderColor: c.border, backgroundColor: c.background }]}>
+              <Text style={{ color: c.textSecondary, fontSize: 12 }}>{k}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <View style={[styles.peerDivider, { backgroundColor: c.border }]} />
+
+      {peer.answerUnlocked && peer.peerAnswer ? (
+        <>
+          <Pressable onPress={() => setRevealed(true)} disabled={revealed}>
+            <Text
+              numberOfLines={revealed ? (expanded ? undefined : 6) : 4}
+              style={[
+                styles.peerAnswer,
+                { fontFamily: Fonts.serif },
+                revealed
+                  ? { color: c.text }
+                  : { color: 'transparent', textShadowColor: c.text, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 9 },
+              ]}
+            >
+              {peer.peerAnswer}
+            </Text>
+            {!revealed && (
+              <View style={styles.revealHint}>
+                <Text style={[styles.revealHintText, { color: c.primary }]}>탭하여 상대의 답변 보기</Text>
+              </View>
+            )}
+          </Pressable>
+          {revealed && (peer.peerAnswer?.length ?? 0) > 140 && (
+            <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
+              <Text style={{ color: c.primary, fontSize: 13, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
+            </Pressable>
+          )}
+
+          <View style={styles.peerActions}>
+            <Pressable
+              onPress={heart}
+              disabled={hearting || hearted}
+              style={[styles.heart, { borderColor: c.primary, backgroundColor: hearted ? c.primary : 'transparent', opacity: hearting ? 0.6 : 1 }]}
+            >
+              {!hearting && (
+                <Image
+                  source={require('@/assets/images/match-heart.png')}
+                  style={styles.heartIcon}
+                  contentFit="contain"
+                  tintColor={hearted ? c.primaryText : c.primary}
+                />
+              )}
+              <Text style={[styles.heartText, { color: hearted ? c.primaryText : c.primary }]}>
+                {hearted ? '호감 표시함' : hearting ? '...' : '하트'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={requestConversation}
+              disabled={requesting || requested}
+              style={[styles.talk, { backgroundColor: c.primary, opacity: requesting ? 0.6 : 1 }]}
+            >
+              <Text style={[styles.talkText, { color: c.primaryText }]}>
+                {requested ? '신청함' : requesting ? '신청 중...' : '대화 신청'}
+              </Text>
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <View style={styles.peerLock}>
+          <Text style={[styles.peerLockText, { color: c.textSecondary }]}>
+            오늘의 질문에 답하면{'\n'}이 상대의 답변이 열려요.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -361,7 +368,7 @@ const styles = StyleSheet.create({
   peerSection: { marginTop: 18 },
   peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
   peerSub: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
-  peerCard: { borderRadius: 16, borderWidth: 1, padding: 18 },
+  peerCard: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 12 },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
   peerHeadBody: { flex: 1, marginLeft: 12 },
   peerMeta: { fontSize: 15, fontWeight: '700' },

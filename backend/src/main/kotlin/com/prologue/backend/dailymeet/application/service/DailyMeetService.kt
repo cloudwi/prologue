@@ -11,6 +11,7 @@ import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
@@ -43,45 +44,56 @@ class DailyMeetService(
     }
 
     /**
-     * 블라인드 상대. 프로필(성별·나이·키·체형·소개·키워드)은 답변 전에도 미리보기 가능.
-     * 답변(글)은 Give&Take — 내가 오늘 답해야 열린다.
-     * 하루 1명 비독점 + 성별·선호 일치. 한 번 보면 그날 동안 같은 상대로 고정(pin).
+     * 오늘의 상대 — 매일 정오(KST)에 최대 3명이 공개된다.
+     * 프로필(성별·나이·키·소개·키워드)은 바로 보이고, 답변(글)은 Give&Take: 내가 오늘 답해야 열린다.
+     * 공개된 상대는 그날 동안 고정(비독점: 같은 상대가 여러 명에게 노출 가능) + 공평 분배.
      */
     @Transactional
-    fun peerAnswer(accountId: UUID): PeerView {
+    fun todayPeers(accountId: UUID, now: LocalTime = LocalTime.now(KST)): TodayPeersView {
         val question = pickTodayQuestion()
         val answered = answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null
 
-        // 이미 오늘 본 상대가 있으면 그대로 고정
-        dailyRevealRepository.findByViewerAndQuestion(accountId, question.id)?.let { pinned ->
-            answerRepository.findById(pinned.peerAnswerId)?.let { peer ->
-                return peerView(peer, answered)
+        // 정오 전에는 아직 공개 전
+        if (now.isBefore(REVEAL_TIME)) return TodayPeersView(open = false, answerUnlocked = answered, peers = emptyList())
+
+        // 이미 공개된 상대는 그대로 고정
+        val revealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id)
+            .mapNotNull { answerRepository.findById(it.peerAnswerId) }
+            .toMutableList()
+
+        // 3명이 안 되면 후보에서 채운다
+        if (revealed.size < REVEAL_COUNT) {
+            val me = memberQueryService.findProfile(accountId)
+                ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
+
+            val seen = revealed.mapNotNull { it.id }.toSet()
+            // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)하는 후보만
+            val candidates = answerRepository.findOthers(question.id, accountId)
+                .filter { it.id !in seen }
+                .filter { candidate ->
+                    val peerProfile = memberQueryService.findProfile(candidate.accountId)
+                    peerProfile != null &&
+                        peerProfile.gender == me.preferredGender &&
+                        peerProfile.preferredGender == me.gender
+                }
+                .toMutableList()
+
+            // 비독점 + 공평 분배: 지금까지 가장 적게 노출된 상대부터 선택(희소한 성별을 여러 명에게 골고루)
+            while (revealed.size < REVEAL_COUNT && candidates.isNotEmpty()) {
+                val chosen = candidates.minBy { dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, it.id!!) }
+                candidates.remove(chosen)
+                dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.id!!))
+                revealed += chosen
             }
         }
 
-        val me = memberQueryService.findProfile(accountId)
-            ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
-
-        // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)하는 후보만
-        val candidates = answerRepository.findOthers(question.id, accountId).filter { candidate ->
-            val peerProfile = memberQueryService.findProfile(candidate.accountId)
-            peerProfile != null &&
-                peerProfile.gender == me.preferredGender &&
-                peerProfile.preferredGender == me.gender
-        }
-        if (candidates.isEmpty()) return PeerView.empty(answered)
-
-        // 비독점 + 공평 분배: 지금까지 가장 적게 노출된 상대를 선택(희소한 성별을 여러 명에게 골고루)
-        val chosen = candidates.minBy { dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, it.id!!) }
-        dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.id!!))
-        return peerView(chosen, answered)
+        return TodayPeersView(open = true, answerUnlocked = answered, peers = revealed.map { peerView(it, answered) })
     }
 
     /** 상대 프로필(신원 비공개) + 답변(잠금 시 null). */
     private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
         return PeerView(
-            hasPeer = true,
             peerAnswerId = peer.id,
             peerAnswer = if (answered) peer.content else null,
             answerUnlocked = answered,
@@ -107,5 +119,9 @@ class DailyMeetService(
 
     companion object {
         private val KST = ZoneId.of("Asia/Seoul")
+
+        /** 오늘의 상대 공개 시각(정오)과 인원. */
+        private val REVEAL_TIME: LocalTime = LocalTime.NOON
+        private const val REVEAL_COUNT = 3
     }
 }

@@ -14,7 +14,10 @@ import java.util.UUID
 @Table(
     name = "daily_reveals",
     uniqueConstraints = [
-        UniqueConstraint(name = "uq_daily_reveal_viewer_question", columnNames = ["viewer_account_id", "question_id"]),
+        UniqueConstraint(
+            name = "uq_daily_reveal_viewer_question_peer",
+            columnNames = ["viewer_account_id", "question_id", "peer_answer_id"],
+        ),
     ],
 )
 class DailyRevealJpaEntity(
