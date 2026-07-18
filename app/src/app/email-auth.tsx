@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlaceholderInput } from '@/components/placeholder-input';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { requestCode, verifyCode } from '@/lib/auth';
@@ -25,6 +26,8 @@ const RESEND_SECONDS = 60;
 export default function EmailAuthScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isLogin = mode === 'login';
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -97,12 +100,16 @@ export default function EmailAuthScreen() {
           <View style={styles.body}>
             {step === 'email' ? (
               <>
-                <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>이메일로 시작</Text>
+                <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>
+                  {isLogin ? '다시 만나 반가워요' : '프롤로그를 시작해요'}
+                </Text>
                 <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-                  인증코드를 보내드릴 이메일을 입력해 주세요
+                  {isLogin
+                    ? '가입할 때 사용한 이메일을 입력해 주세요'
+                    : '인증코드를 보내드릴 이메일을 입력해 주세요'}
                 </Text>
                 <View style={styles.form}>
-                  <TextInput
+                  <PlaceholderInput
                     value={email}
                     onChangeText={(t) => {
                       setEmail(t);

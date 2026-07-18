@@ -1,17 +1,26 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 
+import { PetalField } from '@/components/petal-field';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
 
+// 흩날리는 꽃잎 색 — 테라코타 계열의 은은한 톤
+const PETAL_TONES = {
+  light: ['#E8A98F', '#EFC3AD', '#DFA37A', '#D9694C'],
+  dark: ['#E07A5C', '#B96A50', '#8A5642', '#E8A98F'],
+} as const;
+
 export default function LoginScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const c = Colors[scheme];
   const router = useRouter();
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
 
@@ -47,33 +56,56 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
+      <PetalField tones={PETAL_TONES[scheme]} />
+
       <SafeAreaView style={styles.safe}>
         {/* 브랜드 */}
         <View style={styles.brand}>
-          <Image
-            source={require('@/assets/images/brand-mark.png')}
-            style={styles.logo}
-            contentFit="contain"
-          />
-          <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
-          <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
-          <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답, 서로를 알아가는</Text>
-          <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관 블라인드 소개팅</Text>
+          <Animated.View entering={FadeInDown.duration(700)} style={styles.center}>
+            <Image
+              source={require('@/assets/images/brand-mark.png')}
+              style={styles.logo}
+              contentFit="contain"
+            />
+            <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
+            <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
+          </Animated.View>
+          <Animated.View entering={FadeInDown.duration(700).delay(250)} style={styles.center}>
+            <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답으로 알아가는,</Text>
+            <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관이 꼭 맞는 소중한 인연</Text>
+          </Animated.View>
         </View>
 
-        {/* 이메일 로그인 (소셜 로그인 제거 → 이메일 인증 방식으로 전환) */}
-        <View style={styles.buttons}>
+        {/* 시작하기 / 로그인하기 */}
+        <Animated.View entering={FadeInUp.duration(700).delay(450)} style={styles.buttons}>
           <Pressable
-            onPress={() => router.push('/email-auth')}
-            style={({ pressed }) => [styles.emailBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'signup' } })}
+            style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
-            <Text style={[styles.emailBtnText, { color: c.primaryText }]}>이메일로 시작하기</Text>
+            <Text style={[styles.startBtnText, { color: c.primaryText }]}>시작하기</Text>
           </Pressable>
-        </View>
+          <Pressable
+            onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'login' } })}
+            style={({ pressed }) => [
+              styles.loginBtn,
+              { borderColor: c.border, backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Text style={[styles.loginBtnText, { color: c.text }]}>로그인하기</Text>
+          </Pressable>
 
-        <Text style={[styles.terms, { color: c.textSecondary }]}>
-          시작하면 이용약관 및 개인정보처리방침에 동의합니다
-        </Text>
+          <Text style={[styles.terms, { color: c.textSecondary }]}>
+            가입 시{' '}
+            <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/terms')}>
+              이용약관
+            </Text>{' '}
+            및{' '}
+            <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/privacy')}>
+              개인정보처리방침
+            </Text>
+            에 동의하게 됩니다
+          </Text>
+        </Animated.View>
       </SafeAreaView>
     </View>
   );
@@ -89,7 +121,10 @@ const styles = StyleSheet.create({
   wordmarkEn: { fontSize: 13, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
   tagline: { fontSize: 15, marginTop: 6 },
   buttons: { gap: 12 },
-  emailBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  emailBtnText: { fontSize: 16, fontWeight: '700' },
-  terms: { fontSize: 11, textAlign: 'center', marginTop: 20, marginBottom: 8 },
+  startBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  startBtnText: { fontSize: 16, fontWeight: '700' },
+  loginBtn: { height: 56, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  loginBtnText: { fontSize: 16, fontWeight: '600' },
+  terms: { fontSize: 11, textAlign: 'center', marginTop: 12, marginBottom: 8, lineHeight: 17 },
+  termsLink: { textDecorationLine: 'underline', fontWeight: '600' },
 });
