@@ -28,7 +28,7 @@ class Member private constructor(
     interests: List<String>,
     strengths: List<String>,
     avatarId: Int?,
-    photoUrl: String?,
+    photoUrls: List<String>,
 ) {
     var nickname: String = nickname
         private set
@@ -55,13 +55,19 @@ class Member private constructor(
     var avatarId: Int? = avatarId
         private set
 
-    /** 대표 프로필 사진 URL. 온보딩 본문과 별개로 전용 업로드 엔드포인트에서 갱신된다. */
-    var photoUrl: String? = photoUrl
+    /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최소 2장·최대 6장, 전용 업로드 엔드포인트에서 갱신된다. */
+    var photoUrls: List<String> = photoUrls
         private set
 
-    /** 사진 업로드/삭제 시 갱신(전용 엔드포인트). null이면 사진 없음. */
-    fun updatePhoto(photoUrl: String?) {
-        this.photoUrl = photoUrl?.trim()?.ifBlank { null }
+    /** 사진 추가(전용 엔드포인트). 최대 [MAX_PHOTOS]장. */
+    fun addPhoto(url: String) {
+        if (photoUrls.size >= MAX_PHOTOS) throw MemberDomainException("사진은 최대 ${MAX_PHOTOS}장까지 등록할 수 있어요")
+        photoUrls = photoUrls + url
+    }
+
+    /** 사진 삭제. 목록에 없으면 무시(멱등). */
+    fun removePhoto(url: String) {
+        photoUrls = photoUrls - url
     }
 
     /** 만 나이. 상대에게는 생년월일 원본 대신 이 값만 노출한다. */
@@ -98,6 +104,10 @@ class Member private constructor(
     }
 
     companion object {
+        /** 프로필 사진 필수/최대 장수. 최소 장수는 앱 온보딩에서 강제된다(사진은 가입 후 업로드라서). */
+        const val MIN_PHOTOS = 2
+        const val MAX_PHOTOS = 6
+
         private const val NICKNAME_MAX = 30
         private const val MIN_BIRTH_YEAR = 1920
         private const val BIO_MAX = 100
@@ -125,7 +135,7 @@ class Member private constructor(
                 accountId, nickname.trim(), gender, birthDate, preferredGender, region.trim(), now,
                 bio?.trim()?.ifBlank { null }, heightCm, bodyType,
                 normalizeKeywords(hobbies), normalizeKeywords(interests), normalizeKeywords(strengths), avatarId,
-                photoUrl = null, // 신규 회원은 사진 없음(가입 후 업로드)
+                photoUrls = emptyList(), // 신규 회원은 사진 없음(가입 직후 업로드)
             )
         }
 
@@ -145,10 +155,10 @@ class Member private constructor(
             interests: List<String> = emptyList(),
             strengths: List<String> = emptyList(),
             avatarId: Int? = null,
-            photoUrl: String? = null,
+            photoUrls: List<String> = emptyList(),
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
-            bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrl,
+            bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =
