@@ -22,7 +22,7 @@ import { clearTokens } from '@/lib/auth-storage';
 import { formatBirthDigits, isoToBirthDigits, parseBirthDigits, sanitizeBirthDigits } from '@/lib/birth-date';
 import { completeOnboarding, getMyProfile, type Gender } from '@/lib/member';
 
-const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', bodyType: null, hobbies: [], interests: [], strengths: [] };
+const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', hobbies: [], interests: [], strengths: [] };
 
 export default function MyScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
@@ -52,7 +52,6 @@ export default function MyScreen() {
           avatarId: p.avatarId ?? null,
           bio: p.bio ?? '',
           height: p.heightCm != null ? String(p.heightCm) : '',
-          bodyType: p.bodyType ?? null,
           hobbies: p.hobbies ?? [],
           interests: p.interests ?? [],
           strengths: p.strengths ?? [],

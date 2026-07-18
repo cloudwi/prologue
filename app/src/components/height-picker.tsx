@@ -2,39 +2,33 @@ import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { REGIONS, SIDO_LIST } from '@/constants/regions';
 import type { ThemeColors } from '@/constants/theme';
 
-/** 지역(시/도 + 구/군) 네이티브 휠 픽커. 바텀시트 안에 UIPickerView 휠 2개. */
+/** 키(cm) 네이티브 휠 픽커. */
 
-type RegionPickerProps = {
-  value: string | null; // "서울 서초구" 형식
-  onChange: (value: string) => void;
+type HeightPickerProps = {
+  /** cm 숫자 문자열 (빈 문자열 = 미선택). */
+  value: string;
+  onChange: (height: string) => void;
   c: ThemeColors;
 };
 
-export function RegionPicker({ value, onChange, c }: RegionPickerProps) {
-  const [open, setOpen] = useState(false);
+const MIN_CM = 140;
+const MAX_CM = 210;
+const DEFAULT_CM = '170';
+const HEIGHTS = Array.from({ length: MAX_CM - MIN_CM + 1 }, (_, i) => String(MIN_CM + i));
 
-  const initialSido = value ? value.split(' ')[0] : SIDO_LIST[0];
-  const initialDistrict = value ? value.split(' ').slice(1).join(' ') : REGIONS[SIDO_LIST[0]][0];
-  const [sido, setSido] = useState(initialSido);
-  const [district, setDistrict] = useState(initialDistrict);
+export function HeightPicker({ value, onChange, c }: HeightPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value || DEFAULT_CM);
 
   function openSheet() {
-    setSido(initialSido);
-    setDistrict(initialDistrict);
+    setDraft(value || DEFAULT_CM);
     setOpen(true);
   }
 
-  // 시/도를 바꾸면 구/군 목록이 달라지므로 첫 항목으로 리셋
-  function changeSido(next: string) {
-    setSido(next);
-    setDistrict(REGIONS[next][0]);
-  }
-
   function confirm() {
-    onChange(`${sido} ${district}`);
+    onChange(draft);
     setOpen(false);
   }
 
@@ -45,7 +39,7 @@ export function RegionPicker({ value, onChange, c }: RegionPickerProps) {
         style={[styles.trigger, { borderColor: c.border, backgroundColor: c.backgroundElement }]}
       >
         <Text style={{ color: value ? c.text : c.textSecondary, fontSize: 16 }}>
-          {value ?? '지역을 선택하세요'}
+          {value ? `${value}cm` : '키를 선택하세요'}
         </Text>
       </Pressable>
 
@@ -56,33 +50,16 @@ export function RegionPicker({ value, onChange, c }: RegionPickerProps) {
               <Pressable onPress={() => setOpen(false)} hitSlop={10}>
                 <Text style={{ color: c.textSecondary, fontSize: 16 }}>취소</Text>
               </Pressable>
-              <Text style={[styles.sheetTitle, { color: c.text }]}>지역</Text>
+              <Text style={[styles.sheetTitle, { color: c.text }]}>키</Text>
               <Pressable onPress={confirm} hitSlop={10}>
                 <Text style={{ color: c.primary, fontSize: 16, fontWeight: '700' }}>완료</Text>
               </Pressable>
             </View>
-            <View style={styles.wheels}>
-              <Picker
-                selectedValue={sido}
-                onValueChange={changeSido}
-                style={styles.wheel}
-                itemStyle={{ color: c.text }}
-              >
-                {SIDO_LIST.map((s) => (
-                  <Picker.Item key={s} label={s} value={s} />
-                ))}
-              </Picker>
-              <Picker
-                selectedValue={district}
-                onValueChange={setDistrict}
-                style={styles.wheel}
-                itemStyle={{ color: c.text }}
-              >
-                {REGIONS[sido].map((d) => (
-                  <Picker.Item key={d} label={d} value={d} />
-                ))}
-              </Picker>
-            </View>
+            <Picker selectedValue={draft} onValueChange={setDraft} itemStyle={{ color: c.text }}>
+              {HEIGHTS.map((h) => (
+                <Picker.Item key={h} label={`${h}cm`} value={h} />
+              ))}
+            </Picker>
           </Pressable>
         </Pressable>
       </Modal>
@@ -96,6 +73,4 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 32 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   sheetTitle: { fontSize: 17, fontWeight: '700' },
-  wheels: { flexDirection: 'row' },
-  wheel: { flex: 1 },
 });

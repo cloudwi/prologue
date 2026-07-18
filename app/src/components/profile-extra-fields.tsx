@@ -1,18 +1,18 @@
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { HeightPicker } from '@/components/height-picker';
 import { KeywordChips } from '@/components/keyword-chips';
+import { PlaceholderInput } from '@/components/placeholder-input';
 import { AVATARS } from '@/constants/avatars';
-import { BODY_TYPES, HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
+import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import type { ThemeColors } from '@/constants/theme';
-import type { BodyType } from '@/lib/member';
 
 export type ProfileExtra = {
   avatarId: number | null;
   bio: string;
   height: string; // 입력 편의를 위해 문자열로 다룸
-  bodyType: BodyType | null;
   hobbies: string[];
   interests: string[];
   strengths: string[];
@@ -34,10 +34,10 @@ export function ProfileExtraFields({
       </Field>
 
       <Field label="자기소개 (선택)" c={c}>
-        <TextInput
+        <PlaceholderInput
           value={value.bio}
           onChangeText={(t) => onChange({ bio: t })}
-          placeholder="나를 한두 문장으로 소개해보세요"
+          placeholder="나를 한 문장으로 소개해보세요"
           placeholderTextColor={c.textSecondary}
           multiline
           maxLength={100}
@@ -47,18 +47,7 @@ export function ProfileExtraFields({
       </Field>
 
       <Field label="키 (선택)" c={c}>
-        <TextInput
-          value={value.height}
-          onChangeText={(t) => onChange({ height: t.replace(/[^0-9]/g, '').slice(0, 3) })}
-          placeholder="예: 175"
-          placeholderTextColor={c.textSecondary}
-          keyboardType="number-pad"
-          style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
-        />
-      </Field>
-
-      <Field label="체형 (선택)" c={c}>
-        <BodyTypeToggle value={value.bodyType} onChange={(bodyType) => onChange({ bodyType })} c={c} />
+        <HeightPicker value={value.height} onChange={(height) => onChange({ height })} c={c} />
       </Field>
 
       <Field label={`취미 (최대 ${KEYWORD_MAX}개)`} c={c}>
@@ -103,40 +92,12 @@ export function AvatarPicker({
   );
 }
 
-export function BodyTypeToggle({
-  value,
-  onChange,
-  c,
-}: {
-  value: BodyType | null;
-  onChange: (t: BodyType | null) => void;
-  c: ThemeColors;
-}) {
-  return (
-    <View style={styles.toggleRow}>
-      {BODY_TYPES.map((o) => {
-        const on = value === o.key;
-        return (
-          <Pressable
-            key={o.key}
-            onPress={() => onChange(on ? null : o.key)}
-            style={[styles.toggle, { backgroundColor: on ? c.primary : c.backgroundElement, borderColor: on ? c.primary : c.border }]}
-          >
-            <Text style={{ color: on ? c.primaryText : c.text, fontWeight: '600' }}>{o.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 /** ProfileExtra → API 필드로 변환. */
 export function toProfilePayload(v: ProfileExtra) {
   return {
     avatarId: v.avatarId,
     bio: v.bio.trim() || null,
     heightCm: /^\d{2,3}$/.test(v.height) ? Number(v.height) : null,
-    bodyType: v.bodyType,
     hobbies: v.hobbies,
     interests: v.interests,
     strengths: v.strengths,

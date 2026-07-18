@@ -1,7 +1,6 @@
 import { ApiError, authedRequest } from './api';
 
 export type Gender = 'MALE' | 'FEMALE';
-export type BodyType = 'SLIM' | 'AVERAGE' | 'CHUBBY';
 
 export type OnboardingProfile = {
   nickname: string;
@@ -12,7 +11,6 @@ export type OnboardingProfile = {
   region: string;
   bio?: string | null;
   heightCm?: number | null;
-  bodyType?: BodyType | null;
   hobbies?: string[];
   interests?: string[];
   strengths?: string[];
