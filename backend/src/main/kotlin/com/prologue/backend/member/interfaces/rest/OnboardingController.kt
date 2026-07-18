@@ -10,6 +10,7 @@ import com.prologue.backend.member.interfaces.rest.dto.OnboardingRequest
 import jakarta.validation.Valid
 import org.springframework.http.MediaType
 import org.springframework.security.core.Authentication
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -68,9 +69,9 @@ class OnboardingController(
         return MemberProfileResponse.from(member)
     }
 
-    /** 대표 프로필 사진 업로드(멀티파트). 온보딩 완료 후 사용. */
-    @PostMapping("/me/photo", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    fun uploadPhoto(
+    /** 프로필 사진 추가(멀티파트, 최대 6장). 온보딩 완료 후 사용. */
+    @PostMapping("/me/photos", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun addPhoto(
         authentication: Authentication,
         @RequestParam("file") file: MultipartFile,
     ): MemberProfileResponse {
@@ -80,7 +81,18 @@ class OnboardingController(
             throw MemberDomainException("jpg/png/webp 이미지만 업로드할 수 있습니다")
         }
         val accountId = UUID.fromString(authentication.name)
-        val member = memberPhotoService.uploadPhoto(accountId, file.bytes, contentType.lowercase())
+        val member = memberPhotoService.addPhoto(accountId, file.bytes, contentType.lowercase())
+        return MemberProfileResponse.from(member)
+    }
+
+    /** 프로필 사진 삭제(공개 URL 지정). */
+    @DeleteMapping("/me/photos")
+    fun removePhoto(
+        authentication: Authentication,
+        @RequestParam("url") url: String,
+    ): MemberProfileResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val member = memberPhotoService.removePhoto(accountId, url)
         return MemberProfileResponse.from(member)
     }
 }

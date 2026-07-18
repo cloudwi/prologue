@@ -63,6 +63,7 @@ class MemberJpaEntity(
     @Column(name = "avatar_id")
     var avatarId: Int? = null,
 
-    @Column(name = "photo_url", length = 500)
-    var photoUrl: String? = null,
+    /** 사진 공개 URL 목록(콤마 조인, 등록 순). 최대 6장. */
+    @Column(name = "photo_urls", columnDefinition = "text")
+    var photoUrls: String? = null,
 )

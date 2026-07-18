@@ -19,7 +19,8 @@ data class MemberProfileResponse(
     val interests: List<String>,
     val strengths: List<String>,
     val avatarId: Int?,
-    val photoUrl: String?,
+    /** 프로필 사진 URL 목록(등록 순). */
+    val photoUrls: List<String>,
 ) {
     companion object {
         fun from(member: Member): MemberProfileResponse =
@@ -37,7 +38,7 @@ data class MemberProfileResponse(
                 interests = member.interests,
                 strengths = member.strengths,
                 avatarId = member.avatarId,
-                photoUrl = member.photoUrl,
+                photoUrls = member.photoUrls,
             )
     }
 }

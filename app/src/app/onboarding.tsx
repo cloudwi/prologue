@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BirthDatePicker } from '@/components/birth-date-picker';
 import { HeightPicker } from '@/components/height-picker';
 import { KeywordChips } from '@/components/keyword-chips';
+import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { koreanManAge, parseBirthDigits } from '@/lib/birth-date';
 import { AvatarPicker, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
@@ -27,6 +28,7 @@ import { RegionPicker } from '@/components/region-picker';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
 import { completeOnboarding, type Gender } from '@/lib/member';
+import { uploadPhoto } from '@/lib/photo';
 
 const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', hobbies: [], interests: [], strengths: [] };
 
@@ -83,8 +85,10 @@ export default function OnboardingScreen() {
     if (!preferredTouched) setPreferredGender(g === 'MALE' ? 'FEMALE' : 'MALE');
   }
   const [region, setRegion] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
   // 화면 진입 시 한 번 랜덤으로 고정되는 추천 닉네임 3개 (탭하면 입력됨)
   const [nameSuggestions] = useState(() =>
@@ -193,6 +197,24 @@ export default function OnboardingScreen() {
       valid: region.trim().length > 0,
       content: <RegionPicker value={region || null} onChange={setRegion} c={c} />,
     },
+    {
+      key: 'photos',
+      title: '프로필 사진을 올려주세요',
+      subtitle: `최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.`,
+      valid: photos.length >= MIN_PHOTOS,
+      content: (
+        <PhotoGrid
+          photos={photos}
+          onAdd={async () => {
+            const picked = await pickPhotos(MAX_PHOTOS - photos.length);
+            if (picked.length > 0) setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+          }}
+          onRemove={(photo) => setPhotos((prev) => prev.filter((p) => p !== photo))}
+          busy={submitting}
+          c={c}
+        />
+      ),
+    },
   ];
 
   // 선택 스텝 — 가입 후 이성에게 더 잘 보이기 위해 채우는 항목. MY에서도 언제든 수정 가능.
@@ -296,12 +318,29 @@ export default function OnboardingScreen() {
     }
   }
 
+  /** 선택된 로컬 사진들을 순차 업로드. 하나라도 실패하면 false. */
+  async function uploadPhotos(): Promise<boolean> {
+    for (let i = 0; i < photos.length; i++) {
+      setUploadProgress(`사진 업로드 중... (${i + 1}/${photos.length})`);
+      try {
+        await uploadPhoto(photos[i]);
+      } catch (e) {
+        Alert.alert('사진 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+        return false;
+      }
+    }
+    setUploadProgress('');
+    return true;
+  }
+
   async function submitRequired() {
     if (submitting) return;
     setSubmitting(true);
-    const ok = await saveProfile();
+    const profileOk = await saveProfile();
+    if (!profileOk) { setSubmitting(false); return; }
+    const photosOk = await uploadPhotos();
     setSubmitting(false);
-    if (ok) setPhase('choice');
+    if (photosOk) setPhase('choice');
   }
 
   async function submitOptional() {
@@ -327,7 +366,7 @@ export default function OnboardingScreen() {
   }
 
   const buttonLabel = submitting
-    ? '저장 중...'
+    ? (uploadProgress || '저장 중...')
     : isLast
       ? phase === 'required'
         ? '가입 완료'
