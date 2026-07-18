@@ -9,6 +9,8 @@ export type OnboardingProfile = {
   birthDate: string;
   preferredGender: Gender;
   region: string;
+  /** 프로필 이미지 URL 리스트 (최소 2장, 최대 6장). */
+  images: string[];
   bio?: string | null;
   heightCm?: number | null;
   hobbies?: string[];
