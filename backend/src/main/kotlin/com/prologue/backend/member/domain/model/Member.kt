@@ -128,14 +128,18 @@ class Member private constructor(
             interests: List<String> = emptyList(),
             strengths: List<String> = emptyList(),
             avatarId: Int? = null,
+            photoUrls: List<String> = emptyList(),
             now: Instant = Instant.now(),
         ): Member {
             validate(nickname, birthDate, region, bio, heightCm, avatarId, now)
+            if (photoUrls.size < MIN_PHOTOS || photoUrls.size > MAX_PHOTOS) {
+                throw MemberDomainException("프로필 이미지는 최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 등록 가능합니다")
+            }
             return Member(
                 accountId, nickname.trim(), gender, birthDate, preferredGender, region.trim(), now,
                 bio?.trim()?.ifBlank { null }, heightCm, bodyType,
                 normalizeKeywords(hobbies), normalizeKeywords(interests), normalizeKeywords(strengths), avatarId,
-                photoUrls = emptyList(), // 신규 회원은 사진 없음(가입 직후 업로드)
+                photoUrls = photoUrls,
             )
         }
 
