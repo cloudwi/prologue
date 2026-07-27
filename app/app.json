@@ -8,10 +8,13 @@
     "scheme": "prologue",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.prologue.app"
+      "bundleIdentifier": "com.juyoung.prologue",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.prologue.app",
+      "package": "com.juyoung.prologue",
       "adaptiveIcon": {
         "backgroundColor": "#FAF6F0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,6 +47,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2ea86b1c-287c-4acd-96a0-a5768eba7752"
+      }
     }
   }
 }
