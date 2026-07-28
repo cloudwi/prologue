@@ -12,11 +12,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
 import { Avatar } from '@/components/avatar';
-import { Fonts, type ThemeColors } from '@/constants/theme';
+import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
 import { useTheme } from '@/hooks/use-theme';
@@ -32,6 +32,7 @@ function peerMetaLabel(peer: Peer): string {
 
 export default function DiscoverScreen() {
   const c = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [today, setToday] = useState<Today | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,11 +122,15 @@ export default function DiscoverScreen() {
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SafeAreaView style={styles.flex}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <SafeAreaView style={styles.flex} edges={['top']}>
+          {/* 탭바는 콘텐츠 위에 떠 있다 — 마지막 카드가 가리지 않도록 탭바 높이만큼 비워둔다. */}
+          <ScrollView
+            contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* 오늘의 문답 */}
-            <Text style={[styles.sectionEyebrow, { color: c.primary }]}>오늘의 문답</Text>
-            <View style={[styles.questionCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+            <Text style={[styles.sectionEyebrow, { color: c.primaryStrong }]}>오늘의 문답</Text>
+            <View style={[styles.questionCard, { backgroundColor: c.backgroundElement }]}>
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>{today?.content}</Text>
             </View>
 
@@ -162,8 +167,8 @@ export default function DiscoverScreen() {
               </>
             ) : (
               <>
-                <Text style={[styles.answeredTag, { color: c.primary }]}>✓ 오늘 답변했어요</Text>
-                <View style={[styles.myAnswerCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+                <Text style={[styles.answeredTag, { color: c.primaryStrong }]}>✓ 오늘 답변했어요</Text>
+                <View style={[styles.myAnswerCard, { backgroundColor: c.backgroundElement }]}>
                   <Text
                     style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}
                     numberOfLines={answerExpanded ? undefined : 4}
@@ -172,21 +177,21 @@ export default function DiscoverScreen() {
                   </Text>
                   {(today?.myAnswer?.length ?? 0) > 100 && (
                     <Pressable onPress={() => setAnswerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                      <Text style={{ color: c.primary, fontSize: 13, fontWeight: '600' }}>
+                      <Text style={{ color: c.primaryStrong, fontSize: 13, fontWeight: '600' }}>
                         {answerExpanded ? '접기' : '더보기'}
                       </Text>
                     </Pressable>
                   )}
                 </View>
-                <Pressable onPress={startEdit} style={[styles.editBtn, { borderColor: c.primary }]}>
-                  <Text style={[styles.editBtnText, { color: c.primary }]}>답변 수정하기</Text>
+                <Pressable onPress={startEdit} style={[styles.editBtn, { borderColor: c.border }]}>
+                  <Text style={[styles.editBtnText, { color: c.primaryStrong }]}>답변 수정하기</Text>
                 </Pressable>
               </>
             )}
 
             {/* 오늘의 상대 — 매일 정오, 최대 3명 */}
             <View style={styles.peerSection}>
-              <Text style={[styles.peerEyebrow, { color: c.primary }]}>오늘의 상대</Text>
+              <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>오늘의 상대</Text>
               <Text style={[styles.peerSub, { color: c.textSecondary }]}>
                 매일 정오, 같은 질문에 답한 3명의 답변이 도착해요.
               </Text>
@@ -194,13 +199,13 @@ export default function DiscoverScreen() {
               {peersLoading && !peersData ? (
                 <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
               ) : !peersData || !peersData.open ? (
-                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected }]}>
                   <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
                     오늘의 인연은 정오에 공개돼요.{'\n'}그동안 오늘의 질문에 답을 남겨보세요.
                   </Text>
                 </View>
               ) : peersData.peers.length === 0 ? (
-                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected }]}>
                   <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
                     아직 도착한 답변이 없어요.{'\n'}곧 누군가의 마음이 도착할 거예요.
                   </Text>
@@ -256,7 +261,7 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
   }
 
   return (
-    <View style={[styles.peerCard, { backgroundColor: c.backgroundSelected, borderColor: c.border }]}>
+    <View style={[styles.peerCard, { backgroundColor: c.backgroundElement }]}>
       {/* 프로필 (신원 비공개 — 아바타·성별·나이 등) */}
       <View style={styles.peerHead}>
         <Avatar avatarId={peer.avatarId} size={46} c={c} />
@@ -268,7 +273,7 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
       {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
         <View style={styles.peerChips}>
           {[...peer.hobbies, ...peer.interests, ...peer.strengths].slice(0, 8).map((k) => (
-            <View key={k} style={[styles.peerChip, { borderColor: c.border, backgroundColor: c.background }]}>
+            <View key={k} style={[styles.peerChip, { backgroundColor: c.backgroundSelected }]}>
               <Text style={{ color: c.textSecondary, fontSize: 12 }}>{k}</Text>
             </View>
           ))}
@@ -294,13 +299,13 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
             </Text>
             {!revealed && (
               <View style={styles.revealHint}>
-                <Text style={[styles.revealHintText, { color: c.primary }]}>탭하여 상대의 답변 보기</Text>
+                <Text style={[styles.revealHintText, { color: c.primaryStrong }]}>탭하여 상대의 답변 보기</Text>
               </View>
             )}
           </Pressable>
           {revealed && (peer.peerAnswer?.length ?? 0) > 140 && (
             <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-              <Text style={{ color: c.primary, fontSize: 13, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
+              <Text style={{ color: c.primaryStrong, fontSize: 13, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
             </Pressable>
           )}
 
@@ -349,44 +354,45 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  content: { padding: 25, paddingBottom: 40 },
-  sectionEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginTop: 2 },
-  questionCard: { borderRadius: 14, borderWidth: 1, padding: 18, marginBottom: 16 },
-  question: { fontSize: 19, fontWeight: '600', lineHeight: 27 },
-  answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
-  myAnswerCard: { borderRadius: 12, borderWidth: 1, padding: 16 },
+  content: { padding: 20, paddingTop: 16 }, // 아래 여백은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
+  sectionEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 10 },
+  questionCard: { borderRadius: Radius.md, padding: 20, marginBottom: 16 },
+  question: { fontSize: 19, fontWeight: '600', lineHeight: 28 },
+  answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
+  myAnswerCard: { borderRadius: Radius.md, padding: 20 },
   myAnswerText: { fontSize: 16, lineHeight: 25 },
   moreBtn: { marginTop: 8, alignSelf: 'flex-start' },
-  editBtn: { height: 40, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  editBtn: { height: 44, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   editBtnText: { fontSize: 14, fontWeight: '700' },
   cancel: { alignSelf: 'center', marginTop: 14, padding: 6 },
-  input: { minHeight: 140, borderRadius: 12, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
+  // 입력만 테두리를 남긴다 — "쓸 수 있는 곳"이라는 표시.
+  input: { minHeight: 140, borderRadius: Radius.md, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
-  submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
+  submit: { height: 56, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   submitText: { fontSize: 16, fontWeight: '700' },
   hint: { fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 18 },
-  peerSection: { marginTop: 18 },
-  peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
-  peerSub: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
-  peerCard: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 12 },
+  peerSection: { marginTop: 34 },
+  peerEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 4 },
+  peerSub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  peerCard: { borderRadius: Radius.lg, padding: 20, marginBottom: 14 },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
   peerHeadBody: { flex: 1, marginLeft: 12 },
   peerMeta: { fontSize: 15, fontWeight: '700' },
   peerBio: { fontSize: 14, lineHeight: 21, marginTop: 4 },
-  peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
-  peerChip: { paddingHorizontal: 10, height: 28, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  peerDivider: { height: 1, marginVertical: 16 },
+  peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 14 },
+  peerChip: { paddingHorizontal: 11, height: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  peerDivider: { height: StyleSheet.hairlineWidth, marginVertical: 18 },
   peerLock: { alignItems: 'center', paddingVertical: 14 },
   peerLockText: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
   peerAnswer: { fontSize: 16, lineHeight: 25 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
   peerActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  heart: { flexDirection: 'row', gap: 6, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
+  heart: { flexDirection: 'row', gap: 6, height: 48, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
   heartIcon: { width: 18, height: 18 },
   heartText: { fontSize: 15, fontWeight: '700' },
-  talk: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  talk: { flex: 1, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   talkText: { fontSize: 15, fontWeight: '700' },
-  peerEmpty: { alignItems: 'center', paddingVertical: 28 },
+  peerEmpty: { alignItems: 'center', paddingVertical: 32 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
