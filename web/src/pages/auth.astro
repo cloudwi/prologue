@@ -1,0 +1,220 @@
+---
+import '../styles/global.css';
+
+// 출시 후 실제 주소로 교체할 것.
+// - 구글 플레이는 패키지명으로 주소가 정해지지만 게시 전에는 404가 난다.
+// - 앱스토어는 심사 통과 후 발급되는 숫자 ID가 필요하다.
+const APP_STORE_URL = ''; // 예: https://apps.apple.com/kr/app/id0000000000
+const PLAY_STORE_URL = ''; // 예: https://play.google.com/store/apps/details?id=com.juyoung.prologue
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>프롤로그 인증코드</title>
+    <!-- 인증코드가 주소에 담기므로 색인과 리퍼러 전달을 막는다 -->
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
+    />
+  </head>
+  <body class="auth-body">
+    <main class="auth-wrap">
+      <div class="auth-card">
+        <img src="/brand-mark.png" alt="" class="auth-mark" />
+        <div class="auth-word">프롤로그</div>
+
+        <!-- 코드가 있을 때 -->
+        <div id="ok" hidden>
+          <h1 class="auth-title">인증코드</h1>
+          <p class="auth-desc" id="desc">앱에 입력하면 로그인이 완료돼요.</p>
+
+          <div class="auth-code" id="code">------</div>
+
+          <button type="button" class="auth-btn" id="copy">코드 복사하기</button>
+
+          <!-- 모바일에서 앱 전환에 실패했을 때만 노출 -->
+          <div id="install" hidden>
+            <p class="auth-note">
+              앱이 열리지 않았어요. 설치되어 있다면 위 코드를 복사해 앱에 입력해 주세요.
+            </p>
+            <a class="auth-btn ghost" id="store" href="#" hidden>앱 설치하기</a>
+          </div>
+
+          <p class="auth-expire">코드는 발송 후 <b>5분</b> 동안 유효해요.</p>
+        </div>
+
+        <!-- 코드가 없거나 형식이 어긋날 때 -->
+        <div id="bad" hidden>
+          <h1 class="auth-title">코드를 찾을 수 없어요</h1>
+          <p class="auth-desc">
+            메일에 적힌 6자리 코드를 앱에 직접 입력해 주세요.<br />
+            링크가 잘렸거나 만료되었을 수 있어요.
+          </p>
+          <a class="auth-btn ghost" href="/">프롤로그 홈으로</a>
+        </div>
+      </div>
+    </main>
+
+    <script is:inline define:vars={{ APP_STORE_URL, PLAY_STORE_URL }}>
+      const params = new URLSearchParams(location.search);
+      const code = (params.get('code') || '').trim();
+      const valid = /^\d{6}$/.test(code);
+
+      const $ = (id) => document.getElementById(id);
+
+      if (!valid) {
+        $('bad').hidden = false;
+      } else {
+        $('ok').hidden = false;
+        $('code').textContent = code;
+
+        // 복사 버튼 — 이메일 안에서는 불가능한 동작이라 이 페이지의 존재 이유다.
+        $('copy').addEventListener('click', async () => {
+          let copied = false;
+          try {
+            await navigator.clipboard.writeText(code);
+            copied = true;
+          } catch {
+            // 구형 브라우저 및 비보안 컨텍스트 폴백
+            try {
+              const t = document.createElement('textarea');
+              t.value = code;
+              document.body.appendChild(t);
+              t.select();
+              copied = document.execCommand('copy');
+              t.remove();
+            } catch {
+              copied = false;
+            }
+          }
+          // 두 경로가 모두 막혀도 사용자가 상황을 알 수 있어야 한다.
+          $('copy').textContent = copied ? '복사했어요' : '코드를 직접 선택해 주세요';
+          setTimeout(() => ($('copy').textContent = '코드 복사하기'), 1800);
+        });
+
+        const ua = navigator.userAgent;
+        const isIOS = /iPhone|iPad|iPod/.test(ua);
+        const isAndroid = /Android/.test(ua);
+
+        if (isIOS || isAndroid) {
+          $('desc').textContent = '앱을 여는 중이에요…';
+
+          // 앱이 열리면 브라우저가 백그라운드로 내려가면서 문서가 숨겨진다.
+          // 그 신호가 없으면 미설치로 보고 안내를 띄운다.
+          let switched = false;
+          const markSwitched = () => {
+            if (document.hidden) switched = true;
+          };
+          document.addEventListener('visibilitychange', markSwitched);
+
+          location.href = 'prologue://email-auth?code=' + encodeURIComponent(code);
+
+          setTimeout(() => {
+            if (switched || document.hidden) return;
+            $('desc').textContent = '앱에 입력하면 로그인이 완료돼요.';
+            $('install').hidden = false;
+            const url = isIOS ? APP_STORE_URL : PLAY_STORE_URL;
+            if (url) {
+              const store = $('store');
+              store.href = url;
+              store.hidden = false;
+            }
+          }, 1500);
+        }
+      }
+    </script>
+
+    <style>
+      .auth-body {
+        background: var(--cream);
+      }
+      .auth-wrap {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 20px;
+      }
+      .auth-card {
+        width: 100%;
+        max-width: 420px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 40px 28px 32px;
+        text-align: center;
+      }
+      .auth-mark {
+        width: 78px;
+        height: 56px;
+      }
+      .auth-word {
+        font-family: var(--serif);
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        margin-top: 6px;
+        margin-bottom: 26px;
+      }
+      .auth-title {
+        font-size: 1.35rem;
+      }
+      .auth-desc {
+        color: var(--muted);
+        font-size: 0.95rem;
+        margin-top: 8px;
+      }
+      .auth-code {
+        margin: 24px 0 20px;
+        padding: 20px 0;
+        background: #fbede6;
+        border: 1px solid #f0d9cd;
+        border-radius: 14px;
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 2.1rem;
+        font-weight: 700;
+        letter-spacing: 0.32em;
+        text-indent: 0.32em;
+        color: var(--terracotta);
+      }
+      .auth-btn {
+        display: block;
+        width: 100%;
+        padding: 15px 20px;
+        border: none;
+        border-radius: 12px;
+        background: var(--terracotta);
+        color: #fff;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .auth-btn.ghost {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--border);
+        margin-top: 10px;
+      }
+      .auth-note {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 18px;
+      }
+      .auth-expire {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 22px;
+      }
+    </style>
+  </body>
+</html>

@@ -26,6 +26,7 @@ import org.springframework.web.client.RestClientResponseException
 class ResendEmailSender(
     @param:Value("\${resend.api-key}") private val apiKey: String,
     @param:Value("\${resend.from}") private val from: String,
+    @param:Value("\${web.base-url}") private val webBaseUrl: String,
     restClientBuilder: RestClient.Builder,
 ) : EmailSender {
 
@@ -35,11 +36,12 @@ class ResendEmailSender(
         ClassPathResource("email/verification-code.html").inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
 
     override fun sendVerificationCode(email: String, code: String) {
+        val authUrl = "${webBaseUrl.trimEnd('/')}/auth?code=$code"
         val payload = mapOf(
             "from" to from,
             "to" to listOf(email),
             "subject" to "[프롤로그] 인증코드 $code",
-            "html" to htmlTemplate.replace("{{code}}", code),
+            "html" to htmlTemplate.replace("{{code}}", code).replace("{{authUrl}}", authUrl),
             // HTML 미지원 클라이언트용 폴백
             "text" to buildString {
                 appendLine("프롤로그 인증코드입니다.")
@@ -47,6 +49,9 @@ class ResendEmailSender(
                 appendLine("    $code")
                 appendLine()
                 appendLine("5분 안에 앱에 입력해 주세요.")
+                appendLine("휴대폰이라면 아래 주소로 앱을 바로 열 수 있어요.")
+                appendLine("    $authUrl")
+                appendLine()
                 appendLine("본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다.")
             },
         )

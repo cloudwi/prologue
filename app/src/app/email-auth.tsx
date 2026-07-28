@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +17,7 @@ import { PlaceholderInput } from '@/components/placeholder-input';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { requestCode, verifyCode } from '@/lib/auth';
+import { clearPendingEmail, getPendingEmail, savePendingEmail } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
 
 type Step = 'email' | 'code';
@@ -26,6 +27,8 @@ const RESEND_SECONDS = 60;
 export default function EmailAuthScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
+  // 메일의 "앱에서 바로 입력하기" 버튼으로 들어오면 코드가 실려 온다.
+  const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -37,6 +40,23 @@ export default function EmailAuthScreen() {
 
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   const codeValid = /^\d{6}$/.test(code);
+
+  // 딥링크로 코드가 실려 오면 저장해 둔 이메일과 짝지어 코드 단계로 바로 넘긴다.
+  // 다른 기기에서 메일을 열어 이메일이 없으면 그대로 이메일 입력부터 진행한다.
+  useEffect(() => {
+    if (!linkedCode || !/^\d{6}$/.test(linkedCode)) return;
+    let active = true;
+    (async () => {
+      const pending = await getPendingEmail();
+      if (!active || !pending) return;
+      setEmail(pending);
+      setCode(linkedCode);
+      setStep('code');
+    })();
+    return () => {
+      active = false;
+    };
+  }, [linkedCode]);
 
   // 재전송 쿨다운 카운트다운
   useEffect(() => {
@@ -53,6 +73,8 @@ export default function EmailAuthScreen() {
     setError(null);
     try {
       await requestCode(email.trim());
+      // 메일의 딥링크는 코드만 담으므로, 짝이 될 이메일을 기기에 남긴다.
+      await savePendingEmail(email.trim());
       setStep('code');
       setCode('');
       setCooldown(RESEND_SECONDS);
@@ -69,6 +91,7 @@ export default function EmailAuthScreen() {
     setError(null);
     try {
       await verifyCode(email.trim(), code);
+      await clearPendingEmail();
       const profile = await getMyProfile();
       router.replace(profile ? '/discover' : '/onboarding');
     } catch (e) {

@@ -35,9 +35,19 @@
                     <span style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:38px;font-weight:700;letter-spacing:12px;color:#D9694C;padding-left:12px;">{{code}}</span>
                   </div>
 
+                  <!--
+                    이메일에서는 클립보드 복사 버튼을 만들 수 없다(모든 주요 클라이언트가 script를 제거).
+                    그래서 웹 페이지로 넘겨서 처리한다. 휴대폰이면 앱을 열어 코드를 자동 입력하고,
+                    앱이 없거나 데스크탑이면 그 페이지가 복사 버튼을 보여준다.
+                  -->
+                  <div style="text-align:center;margin-top:20px;">
+                    <a href="{{authUrl}}"
+                       style="display:inline-block;background:#D9694C;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;padding:15px 30px;border-radius:12px;font-family:-apple-system,'Apple SD Gothic Neo','Segoe UI',sans-serif;">앱에서 바로 입력하기</a>
+                  </div>
+
                   <!-- 복사 안내 · 만료 -->
-                  <div style="font-size:13px;color:#8A8178;text-align:center;margin-top:14px;line-height:1.7;">
-                    코드를 길게 누르면 복사할 수 있어요<br>
+                  <div style="font-size:13px;color:#8A8178;text-align:center;margin-top:16px;line-height:1.7;">
+                    휴대폰에서 열었다면 버튼 한 번으로 입력돼요<br>
                     <b style="color:#2B2723;">5분</b> 안에 입력해 주세요
                   </div>
 

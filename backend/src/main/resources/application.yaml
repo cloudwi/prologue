@@ -31,6 +31,12 @@ supabase:
 resend:
   from: ${RESEND_FROM:프롤로그 <onboarding@resend.dev>}
 
+# 인증코드 메일의 "앱에서 바로 입력하기" 버튼이 가리키는 웹 주소.
+# 휴대폰이면 이 페이지가 앱을 열어 코드를 자동 입력하고, 앱이 없거나 데스크탑이면 복사 버튼을 보여준다.
+# 도메인 구입 후 WEB_BASE_URL 환경변수로 교체.
+web:
+  base-url: ${WEB_BASE_URL:https://prologue-web.onrender.com}
+
 jwt:
   secret: ${JWT_SECRET}          # 운영: Render 환경변수(자동생성). 로컬: 환경변수로 주입
   access-token-expiry: 30m       # 액세스 토큰 30분
