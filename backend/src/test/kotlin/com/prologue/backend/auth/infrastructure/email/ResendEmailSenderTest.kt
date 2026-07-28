@@ -21,7 +21,8 @@ class ResendEmailSenderTest {
 
     private val builder = RestClient.builder()
     private val server = MockRestServiceServer.bindTo(builder).build()
-    private val sender = ResendEmailSender("test-key", "프롤로그 <onboarding@resend.dev>", builder)
+    private val sender =
+        ResendEmailSender("test-key", "프롤로그 <onboarding@resend.dev>", "https://web.example.com", builder)
 
     @Test
     fun `HTML 템플릿에 코드를 치환해 발송한다`() {

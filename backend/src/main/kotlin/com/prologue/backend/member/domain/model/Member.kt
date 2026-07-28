@@ -55,9 +55,18 @@ class Member private constructor(
     var avatarId: Int? = avatarId
         private set
 
-    /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최소 2장·최대 6장, 전용 업로드 엔드포인트에서 갱신된다. */
+    /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최대 [MAX_PHOTOS]장, 전용 업로드 엔드포인트에서 갱신된다. */
     var photoUrls: List<String> = photoUrls
         private set
+
+    /**
+     * 소개 노출 조건. 사진이 [MIN_PHOTOS]장 이상이어야 상대에게 소개된다.
+     *
+     * 가입 시점에는 사진을 올릴 수 없으므로(회원이 있어야 업로드 가능) 최소 장수를
+     * 가입 조건으로 걸 수 없다. 대신 계정은 만들되 사진을 채우기 전까지 소개되지 않는다.
+     * TODO: 매칭·발견 쿼리에 이 조건을 반영할 것. 현재는 클라이언트 온보딩에서만 2장을 요구한다.
+     */
+    fun isVisibleToOthers(): Boolean = photoUrls.size >= MIN_PHOTOS
 
     /** 사진 추가(전용 엔드포인트). 최대 [MAX_PHOTOS]장. */
     fun addPhoto(url: String) {
@@ -132,8 +141,11 @@ class Member private constructor(
             now: Instant = Instant.now(),
         ): Member {
             validate(nickname, birthDate, region, bio, heightCm, avatarId, now)
-            if (photoUrls.size < MIN_PHOTOS || photoUrls.size > MAX_PHOTOS) {
-                throw MemberDomainException("프로필 이미지는 최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 등록 가능합니다")
+            // 사진은 회원이 생긴 뒤에야 업로드할 수 있으므로(POST /members/me/photos)
+            // 가입 시점에 최소 장수를 요구하면 프로필도 사진도 만들 수 없는 교착이 된다.
+            // "최소 ${MIN_PHOTOS}장"은 가입 조건이 아니라 소개 노출 조건으로 다룬다(isVisibleToOthers).
+            if (photoUrls.size > MAX_PHOTOS) {
+                throw MemberDomainException("사진은 최대 ${MAX_PHOTOS}장까지 등록할 수 있어요")
             }
             return Member(
                 accountId, nickname.trim(), gender, birthDate, preferredGender, region.trim(), now,
