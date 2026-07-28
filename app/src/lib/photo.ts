@@ -1,3 +1,6 @@
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
+
 import { getAccessToken } from './auth-storage';
 import { ApiError } from './api';
 
@@ -11,18 +14,30 @@ export type PhotoUploadResult = {
   photoUrls: string[];
 };
 
+/**
+ * 멀티파트에 실을 파일 파트를 만든다.
+ *
+ * Expo SDK 56의 fetch는 RN 고유의 `{ uri, type, name }` 파트를 읽지 못하고
+ * "Unsupported FormDataPart implementation"으로 던진다. 바이트를 직접 읽을 수 있는 값만 받는다.
+ * 네이티브는 expo-file-system의 File(= bytes()·name·type을 가진 Blob 호환 객체)을 쓰고,
+ * 웹은 표준 Blob을 파일명과 함께 넣는다.
+ */
+async function appendPhotoPart(formData: FormData, localUri: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(localUri)).blob();
+    const ext = blob.type.split('/').pop() ?? 'jpg';
+    formData.append('file', blob, `photo.${ext === 'jpeg' ? 'jpg' : ext}`);
+    return;
+  }
+  formData.append('file', new File(localUri) as unknown as Blob);
+}
+
 /** 로컬 이미지 URI → multipart로 POST /members/me/photos 업로드. 업데이트된 프로필(photoUrls 포함)을 반환. */
 export async function uploadPhoto(localUri: string): Promise<PhotoUploadResult> {
   const token = await getAccessToken();
 
-  // 파일 확장자로 MIME type 결정
-  const ext = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-  const type = mimeMap[ext] ?? 'image/jpeg';
-  const name = `photo.${ext}`;
-
   const formData = new FormData();
-  formData.append('file', { uri: localUri, type, name } as unknown as Blob);
+  await appendPhotoPart(formData, localUri);
 
   const res = await fetch(`${API_BASE}/members/me/photos`, {
     method: 'POST',

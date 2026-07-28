@@ -17,6 +17,9 @@ export async function pickPhotos(limit: number): Promise<string[]> {
     allowsMultipleSelection: true,
     selectionLimit: limit,
     quality: 0.8,
+    // 아이폰 기본 촬영 형식(HEIC)은 브라우저·안드로이드에서 열리지 않는다.
+    // 호환 표현을 요청하면 사진 앱이 JPEG로 변환해 넘겨준다.
+    preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
   });
   if (res.canceled) return [];
   return res.assets.map((a) => a.uri);
