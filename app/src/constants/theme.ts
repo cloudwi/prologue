@@ -9,28 +9,36 @@ import { Platform } from 'react-native';
 
 /**
  * 프롤로그 디자인 시스템 — "하루 한 문답, 편지 같은 무드".
- * 따뜻한 크림 배경 + 깊은 잉크 텍스트 + 절제된 테라코타 포인트.
+ *
+ * 바탕은 차갑고 담백한 중성 회색, 온기는 테라코타 포인트 하나로만 낸다.
+ * (예전에는 배경까지 크림이라 화면 전체가 따뜻해 포인트 컬러가 묻혔다)
+ * 면은 세 단계뿐 — 바탕 / 카드 / 눌린 상태. 색을 늘리는 대신 여백과 라운드로 위계를 만든다.
+ *
+ * 값을 바꿀 때는 design/README.md의 팔레트 표와 web/src/styles/global.css를 함께 고쳐야 한다.
  */
 export const Colors = {
   light: {
-    text: '#2B2723', // 따뜻한 잉크
-    background: '#FAF6F0', // 크림
-    backgroundElement: '#F2EADF', // 카드/표면
-    backgroundSelected: '#E8DCCB',
-    textSecondary: '#8A8178',
-    primary: '#D9694C', // 테라코타 (CTA·하트)
+    text: '#1B2126', // 차가운 잉크
+    background: '#F6F8FA', // 페이퍼 (바탕)
+    backgroundElement: '#FFFFFF', // 카드/표면 — 흰 면이라 경계가 또렷하다
+    backgroundSelected: '#EDF1F5',
+    textSecondary: '#69747E',
+    primary: '#D9694C', // 테라코타 (CTA·하트) — 유일한 온기
+    /** 작은 글자에 쓰는 진한 테라코타. primary는 흰 배경에서 4.5:1을 못 넘어 본문 텍스트로는 쓰지 않는다. */
+    primaryStrong: '#C25539',
     primaryText: '#FFFFFF',
-    border: '#E7DDCD',
+    border: '#E3E8EE',
   },
   dark: {
-    text: '#F4ECE0',
-    background: '#1A1613', // 깊은 웜 다크
-    backgroundElement: '#262019',
-    backgroundSelected: '#322A21',
-    textSecondary: '#A89C8C',
+    text: '#EAEFF4',
+    background: '#101418', // 깊은 쿨 다크
+    backgroundElement: '#181D22',
+    backgroundSelected: '#222932',
+    textSecondary: '#96A1AC',
     primary: '#E07A5C',
-    primaryText: '#1A1613',
-    border: '#3A3128',
+    primaryStrong: '#E07A5C', // 어두운 면 위에서는 primary가 이미 5.7:1이라 따로 진하게 하지 않는다
+    primaryText: '#101418',
+    border: '#28303A',
   },
 } as const;
 
@@ -63,6 +71,21 @@ export const Fonts = Platform.select({
     mono: 'var(--font-mono)',
   },
 });
+
+/**
+ * 라운드 스케일. 각진 사각형이 투박해 보여 네 단계로 통일한다.
+ * (아직 예전 숫자를 직접 쓰는 화면이 남아 있다 — 손대는 파일부터 이 토큰으로 옮긴다)
+ */
+export const Radius = {
+  /** 칩·작은 썸네일 */
+  sm: 12,
+  /** 입력·버튼 */
+  md: 18,
+  /** 카드·시트 */
+  lg: 24,
+  /** 알약 버튼·배지 */
+  pill: 999,
+} as const;
 
 export const Spacing = {
   half: 2,

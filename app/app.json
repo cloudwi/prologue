@@ -16,7 +16,7 @@
     "android": {
       "package": "com.juyoung.prologue",
       "adaptiveIcon": {
-        "backgroundColor": "#FAF6F0",
+        "backgroundColor": "#F6F8FA",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -35,10 +35,10 @@
         {
           "image": "./assets/images/splash.png",
           "imageWidth": 200,
-          "backgroundColor": "#FAF6F0",
+          "backgroundColor": "#F6F8FA",
           "dark": {
             "image": "./assets/images/splash-dark.png",
-            "backgroundColor": "#1A1613"
+            "backgroundColor": "#101418"
           }
         }
       ],

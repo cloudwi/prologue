@@ -1,12 +1,14 @@
-/* 프롤로그 디자인 시스템 — 앱(constants/theme.ts)과 동일한 팔레트 */
+/* 프롤로그 디자인 시스템 — 앱(constants/theme.ts)·design/README.md와 같은 팔레트를 씁니다.
+   차가운 중성 회색 바탕 + 테라코타 포인트 하나. 값을 바꾸면 세 곳을 함께 고치세요. */
 :root {
-  --ink: #2b2723;
-  --cream: #faf6f0;
-  --surface: #f2eadf;
-  --muted: #8a8178;
+  --ink: #1b2126;
+  --paper: #f6f8fa;
+  --surface: #ffffff;
+  --muted: #69747e;
   --terracotta: #d9694c;
+  --terracotta-strong: #c25539; /* 작은 글자용 — --terracotta는 흰 배경에서 대비가 모자란다 */
   --terracotta-soft: #e8a98f;
-  --border: #e7ddcd;
+  --border: #e3e8ee;
   --serif: 'Gowun Batang', 'Noto Serif KR', ui-serif, serif;
   --sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
@@ -25,7 +27,7 @@ html {
 
 body {
   font-family: var(--sans);
-  background: var(--cream);
+  background: var(--paper);
   color: var(--ink);
   line-height: 1.7;
   word-break: keep-all;
@@ -59,7 +61,7 @@ img {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--cream) 88%, transparent);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
@@ -104,7 +106,7 @@ img {
 
 .header-nav a.cta {
   background: var(--ink);
-  color: var(--cream);
+  color: var(--paper);
   font-weight: 600;
 }
 
@@ -134,7 +136,7 @@ img {
 }
 
 .btn-primary:hover {
-  background: #c65a3e;
+  background: var(--terracotta-strong);
 }
 
 .btn-ghost {
@@ -176,7 +178,7 @@ img {
 
 .hero-en {
   letter-spacing: 0.5em;
-  color: var(--terracotta);
+  color: var(--terracotta-strong);
   font-size: 0.8rem;
   font-weight: 700;
   margin-top: 14px;
@@ -229,7 +231,7 @@ img {
 }
 
 .section-label {
-  color: var(--terracotta);
+  color: var(--terracotta-strong);
   font-weight: 700;
   font-size: 0.9rem;
   letter-spacing: 0.08em;
@@ -254,7 +256,7 @@ img {
 }
 
 .feature-card {
-  background: var(--cream);
+  background: var(--paper);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 36px 28px;
@@ -262,7 +264,7 @@ img {
 }
 
 .section.alt .feature-card {
-  background: var(--cream);
+  background: var(--paper);
 }
 
 .feature-card img {
@@ -312,7 +314,7 @@ img {
 
 .post-card {
   display: block;
-  background: var(--cream);
+  background: var(--paper);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 28px 30px;
