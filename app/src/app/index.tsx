@@ -76,22 +76,13 @@ export default function LoginScreen() {
           </Animated.View>
         </View>
 
-        {/* 시작하기 / 로그인하기 */}
+        {/* 이메일 인증은 가입과 로그인이 같은 흐름이라 진입 버튼도 하나로 둔다 */}
         <Animated.View entering={FadeInUp.duration(700).delay(450)} style={styles.buttons}>
           <Pressable
-            onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'signup' } })}
+            onPress={() => router.push('/email-auth')}
             style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
-            <Text style={[styles.startBtnText, { color: c.primaryText }]}>시작하기</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'login' } })}
-            style={({ pressed }) => [
-              styles.loginBtn,
-              { borderColor: c.border, backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            <Text style={[styles.loginBtnText, { color: c.text }]}>로그인하기</Text>
+            <Text style={[styles.startBtnText, { color: c.primaryText }]}>이메일로 시작하기</Text>
           </Pressable>
 
           <Text style={[styles.terms, { color: c.textSecondary }]}>
@@ -123,8 +114,6 @@ const styles = StyleSheet.create({
   buttons: { gap: 12 },
   startBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   startBtnText: { fontSize: 16, fontWeight: '700' },
-  loginBtn: { height: 56, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  loginBtnText: { fontSize: 16, fontWeight: '600' },
   terms: { fontSize: 11, textAlign: 'center', marginTop: 12, marginBottom: 8, lineHeight: 17 },
   termsLink: { textDecorationLine: 'underline', fontWeight: '600' },
 });

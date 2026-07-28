@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,8 +26,6 @@ const RESEND_SECONDS = 60;
 export default function EmailAuthScreen() {
   const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
   const router = useRouter();
-  const { mode } = useLocalSearchParams<{ mode?: string }>();
-  const isLogin = mode === 'login';
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -101,12 +99,11 @@ export default function EmailAuthScreen() {
             {step === 'email' ? (
               <>
                 <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>
-                  {isLogin ? '다시 만나 반가워요' : '프롤로그를 시작해요'}
+                  이메일로 시작해요
                 </Text>
+                {/* 문장 경계에서 끊어 "요."만 다음 줄로 떨어지는 것을 막는다 */}
                 <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-                  {isLogin
-                    ? '가입할 때 사용한 이메일을 입력해 주세요'
-                    : '인증코드를 보내드릴 이메일을 입력해 주세요'}
+                  인증코드를 보내드릴게요.{'\n'}이미 가입하셨다면 바로 로그인돼요.
                 </Text>
                 <View style={styles.form}>
                   <PlaceholderInput
