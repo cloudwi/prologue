@@ -9,15 +9,16 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { avatarSource } from '@/constants/avatars';
-import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
+import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { ageFrom, nextStep } from '@/lib/profile-form';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * MY 허브 — 조회 전용.
@@ -25,8 +26,10 @@ import { ageFrom, nextStep } from '@/lib/profile-form';
  * (예전에는 이 화면 자체가 거대한 편집 폼이라 기능을 더할 자리가 없었다)
  */
 export default function MyScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { mode } = useAppearance();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
@@ -71,46 +74,73 @@ export default function MyScreen() {
     );
   }
 
-  const cover = profile?.photoUrls?.[0] ?? null;
+  const photos = profile?.photoUrls ?? [];
   const age = profile ? ageFrom(profile.birthDate) : null;
   const todo = profile ? nextStep(profile) : null;
+  const extra = photos.length - 2;
+  const hasPhoto = photos.length > 0;
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 대표 사진 — 누르면 상대에게 보이는 화면으로. 미리보기를 메뉴에 묻지 않는다. */}
-        <Pressable
-          onPress={() => router.push('/my/preview')}
-          style={({ pressed }) => [styles.cover, { opacity: pressed ? 0.9 : 1 }]}
-        >
-          {cover ? (
-            <Image source={{ uri: cover }} style={styles.coverImage} contentFit="cover" />
-          ) : (
-            <View style={[styles.coverImage, styles.center, { backgroundColor: c.backgroundElement }]}>
-              {profile?.avatarId != null ? (
-                <Image source={avatarSource(profile.avatarId)!} style={styles.coverAvatar} contentFit="contain" />
-              ) : (
-                <Text style={{ color: c.textSecondary, fontSize: 14 }}>사진을 등록해 주세요</Text>
+      {/* 탭바는 콘텐츠 위에 떠 있다 — 마지막 줄(회원 탈퇴)이 가리지 않도록 탭바 높이만큼 더 비워둔다. */}
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <SafeAreaView edges={['top']}>
+          {/*
+           * 프로필 카드 — 사진과 이름을 한 장의 카드로 묶는다.
+           * 예전에는 사진이 화면 끝까지 각지게 깔리고 그 위에 글자가 떠 있어서
+           * 아래 둥근 메뉴 카드들과 따로 노는 인상이었다.
+           * 사진은 가입 시 2장이 필수라 대표 + 두 번째를 나란히 보여줄 수 있다.
+           */}
+          <Pressable
+            onPress={() => router.push(hasPhoto ? '/my/preview' : '/my/edit-photos')}
+            style={({ pressed }) => [
+              styles.hero,
+              { backgroundColor: c.backgroundElement, borderColor: c.border, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            {/* 사진이 없으면 사진 자리를 아예 만들지 않는다 — 빈 상자 가운데 아바타만 덩그러니 놓이는 게 더 초라하다. */}
+            {hasPhoto && (
+              <View style={[styles.heroPhotos, { aspectRatio: photos.length > 1 ? 1.2 : 1.35 }]}>
+                <View style={[styles.heroMain, { backgroundColor: c.backgroundSelected }]}>
+                  <Image source={{ uri: photos[0] }} style={styles.fill} contentFit="cover" />
+                </View>
+
+                {photos[1] && (
+                  <View style={[styles.heroSide, { backgroundColor: c.backgroundSelected }]}>
+                    <Image source={{ uri: photos[1] }} style={styles.fill} contentFit="cover" />
+                    {extra > 0 && (
+                      <View style={[styles.moreBadge, { backgroundColor: c.background }]}>
+                        <Text style={[styles.moreBadgeText, { color: c.text }]}>+{extra}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            <View style={styles.heroText}>
+              {!hasPhoto && profile?.avatarId != null && (
+                <View style={[styles.heroThumb, { backgroundColor: c.backgroundSelected }]}>
+                  <Image source={avatarSource(profile.avatarId)!} style={styles.fill} contentFit="cover" />
+                </View>
               )}
+              <View style={styles.flex}>
+                <Text style={[styles.heroName, { color: c.text, fontFamily: Fonts.serif }]}>
+                  {profile?.nickname ?? '프로필 없음'}
+                </Text>
+                <Text style={[styles.heroMeta, { color: c.textSecondary }]}>
+                  {hasPhoto
+                    ? [age != null ? `${age}세` : null, profile?.region].filter(Boolean).join(' · ')
+                    : '아직 사진이 없어요'}
+                </Text>
+              </View>
+              <Text style={[styles.heroLink, { color: c.primaryStrong }]}>{hasPhoto ? '미리보기 ›' : '사진 올리기 ›'}</Text>
             </View>
-          )}
-
-          <SafeAreaView edges={['top']} style={styles.coverTop}>
-            <View style={[styles.previewChip, { backgroundColor: c.background }]}>
-              <Text style={[styles.previewChipText, { color: c.text }]}>미리보기</Text>
-            </View>
-          </SafeAreaView>
-
-          <View style={[styles.coverScrim, { backgroundColor: c.background }]} />
-          <View style={styles.coverText}>
-            <Text style={[styles.coverName, { color: c.text, fontFamily: Fonts.serif }]}>
-              {profile?.nickname ?? '프로필 없음'}
-            </Text>
-            <Text style={[styles.coverMeta, { color: c.textSecondary }]}>
-              {[age != null ? `${age}세` : null, profile?.region].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        </SafeAreaView>
 
         {/* 다음 한 가지 — 완성도 퍼센트 대신 지금 할 행동 하나만 제안한다. */}
         {todo && (
@@ -125,18 +155,25 @@ export default function MyScreen() {
               <Text style={[styles.todoLabel, { color: c.text }]}>{todo.label}</Text>
               <Text style={[styles.todoHint, { color: c.textSecondary }]}>{todo.hint}</Text>
             </View>
-            <Text style={[styles.chevron, { color: c.primary }]}>›</Text>
+            <Text style={[styles.chevron, { color: c.primaryStrong }]}>›</Text>
           </Pressable>
         )}
 
+        {/* 편집 화면은 각자 자기 것만 다룬다 — 사진을 고치러 들어갔다가 기본 정보로 새지 않도록. */}
         <Section title="프로필" c={c}>
-          <Row label="프로필 편집" desc="사진, 기본 정보, 상세 소개" onPress={() => router.push('/my/edit-photos')} c={c} />
+          <Row label="사진" desc={`${photos.length}장 등록됨 · 올리고 지우기`} onPress={() => router.push('/my/edit-photos')} c={c} />
+          <Row label="기본 정보" desc="닉네임, 성별, 생년월일, 지역" onPress={() => router.push('/my/edit-basic')} c={c} />
+          <Row label="상세 소개" desc="자기소개, 키, 관심사, 취미, 강점" onPress={() => router.push('/my/edit-detail')} c={c} />
           <Row label="상대에게 보이는 화면" desc="내 프로필이 어떻게 보이는지 확인해요" onPress={() => router.push('/my/preview')} c={c} last />
         </Section>
 
         <Section title="매칭 설정" c={c}>
           <Row label="선호하는 이성" desc="나이, 지역 등 만나고 싶은 조건" onPress={() => router.push('/my/preferences')} c={c} />
           <Row label="지인 차단" desc="아는 사람에게 소개되지 않게 해요" onPress={() => router.push('/my/blocked')} c={c} last />
+        </Section>
+
+        <Section title="앱 설정" c={c}>
+          <Row label="화면 테마" desc={APPEARANCE_LABEL[mode]} onPress={() => router.push('/my/appearance')} c={c} last />
         </Section>
 
         <Section title="안내" c={c}>
@@ -188,7 +225,7 @@ function Row({
       ]}
     >
       <View style={styles.flex}>
-        <Text style={[styles.rowLabel, { color: danger ? c.primary : c.text }]}>{label}</Text>
+        <Text style={[styles.rowLabel, { color: danger ? c.primaryStrong : c.text }]}>{label}</Text>
         {desc ? <Text style={[styles.rowDesc, { color: c.textSecondary }]}>{desc}</Text> : null}
       </View>
       <Text style={[styles.chevron, { color: c.textSecondary }]}>›</Text>
@@ -196,25 +233,40 @@ function Row({
   );
 }
 
-const COVER_HEIGHT = 340;
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  content: { paddingBottom: 40 },
+  content: { paddingBottom: 40 }, // 실제 값은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
 
-  cover: { height: COVER_HEIGHT, justifyContent: 'flex-end' },
-  coverImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  coverAvatar: { width: 120, height: 120 },
-  coverTop: { position: 'absolute', top: 0, right: 0, left: 0, alignItems: 'flex-end', paddingHorizontal: 16 },
-  previewChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, opacity: 0.92 },
-  previewChipText: { fontSize: 12, fontWeight: '700' },
-  // 사진 위 글자의 가독성을 위해 아래쪽만 배경색으로 덮는다.
-  coverScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 96, opacity: 0.88 },
-  coverText: { paddingHorizontal: 20, paddingBottom: 16 },
-  coverName: { fontSize: 26, fontWeight: '700' },
-  coverMeta: { fontSize: 14, marginTop: 2 },
+  hero: {
+    marginTop: 12,
+    marginHorizontal: 20,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  // 대표 사진과 두 번째 사진을 얇은 간격으로 나란히 — 카드 배경이 그 사이로 비친다.
+  heroPhotos: { flexDirection: 'row', gap: 3 },
+  heroMain: { flex: 1.9 },
+  heroSide: { flex: 1 },
+  fill: { width: '100%', height: '100%' },
+  // 사진이 없을 때만 쓰는 아바타 썸네일. 이름 줄 왼쪽에 붙어 카드가 한 줄짜리로 압축된다.
+  heroThumb: { width: 52, height: 52, borderRadius: Radius.sm, overflow: 'hidden' },
+  moreBadge: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+    opacity: 0.92,
+  },
+  moreBadgeText: { fontSize: 11, fontWeight: '700' },
+  heroText: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingVertical: 16 },
+  heroName: { fontSize: 24, fontWeight: '700' },
+  heroMeta: { fontSize: 13.5, marginTop: 3 },
+  heroLink: { fontSize: 13, fontWeight: '700' },
 
   todo: {
     flexDirection: 'row',
@@ -223,7 +275,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginHorizontal: 20,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: Radius.md,
     borderWidth: 1,
   },
   todoLabel: { fontSize: 15, fontWeight: '700' },
@@ -231,7 +283,7 @@ const styles = StyleSheet.create({
 
   section: { marginTop: 26, paddingHorizontal: 20 },
   sectionHead: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, paddingLeft: 4 },
-  card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  card: { borderRadius: Radius.md, borderWidth: 1, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 15 },
   rowLabel: { fontSize: 15, fontWeight: '600' },
   rowDesc: { fontSize: 12.5, marginTop: 2 },

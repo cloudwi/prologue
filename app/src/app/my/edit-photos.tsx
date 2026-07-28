@@ -1,20 +1,21 @@
-import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MAX_PHOTOS, MIN_PHOTOS, PhotoGrid, pickPhotos } from '@/components/photo-grid';
 import { SubScreen } from '@/components/sub-screen';
-import { Colors } from '@/constants/theme';
+import { ApiError } from '@/lib/api';
 import { getMyProfile } from '@/lib/member';
 import { deletePhoto, uploadPhoto } from '@/lib/photo';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
- * 사진 편집.
+ * 사진 편집 — 올리기와 지우기만 한다.
+ * 다른 편집 화면으로 나가는 동선을 두지 않는다(예전에는 여기 "기본 정보 편집"이 붙어 있어,
+ * 기본 정보를 고치려면 사진 화면을 거쳐야 했다). 이동은 MY 허브에서만 한다.
  * 사진은 프로필 수정(PUT)이 아니라 전용 엔드포인트로 즉시 반영되므로 별도 저장 버튼이 없다.
  */
 export default function EditPhotosScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
-  const router = useRouter();
+  const c = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -42,16 +43,21 @@ export default function EditPhotosScreen() {
     const picked = await pickPhotos(MAX_PHOTOS - photos.length);
     if (picked.length === 0) return;
     setBusy(true);
+    // 한 장이 반려돼도 그 전에 올라간 사진은 반영해야 목록이 서버와 어긋나지 않는다.
+    let latest = photos;
     try {
-      let latest = photos;
       for (const uri of picked) {
         const res = await uploadPhoto(uri);
         latest = res.photoUrls;
       }
-      setPhotos(latest);
     } catch (e) {
-      Alert.alert('업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+      const rejected = e instanceof ApiError && e.code === 'PHOTO_REJECTED';
+      Alert.alert(
+        rejected ? '이 사진은 쓸 수 없어요' : '업로드 실패',
+        e instanceof Error ? e.message : '잠시 후 다시 시도해주세요',
+      );
     } finally {
+      setPhotos(latest);
       setBusy(false);
     }
   }
@@ -80,7 +86,8 @@ export default function EditPhotosScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={[styles.lead, { color: c.text }]}>
-            첫 번째 사진이 대표로 보여요. 꾹 눌러 순서를 바꾸는 기능은 준비 중이에요.
+            첫 번째 사진이 대표로 보여요. 얼굴이 잘 보이는 사진만 등록돼요.
+            {'\n'}꾹 눌러 순서를 바꾸는 기능은 준비 중이에요.
           </Text>
           <Text style={[styles.sub, { color: short ? c.primary : c.textSecondary }]}>
             {short
@@ -98,14 +105,6 @@ export default function EditPhotosScreen() {
               <Text style={{ color: c.textSecondary, fontSize: 13 }}>처리 중이에요</Text>
             </View>
           )}
-
-          <Pressable
-            onPress={() => router.push('/my/edit-basic')}
-            style={({ pressed }) => [styles.next, { borderColor: c.border, opacity: pressed ? 0.6 : 1 }]}
-          >
-            <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>기본 정보 편집</Text>
-            <Text style={{ color: c.textSecondary, fontSize: 22, fontWeight: '300' }}>›</Text>
-          </Pressable>
         </ScrollView>
       )}
     </SubScreen>
@@ -120,14 +119,4 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13, marginTop: 6 },
   grid: { marginTop: 18 },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
-  next: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 28,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderWidth: 1,
-    borderRadius: 12,
-  },
 });
