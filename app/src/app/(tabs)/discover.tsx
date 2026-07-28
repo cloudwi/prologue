@@ -11,15 +11,15 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
 import { Avatar } from '@/components/avatar';
-import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
+import { Fonts, type ThemeColors } from '@/constants/theme';
 import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
+import { useTheme } from '@/hooks/use-theme';
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
@@ -31,7 +31,7 @@ function peerMetaLabel(peer: Peer): string {
 }
 
 export default function DiscoverScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
 
   const [today, setToday] = useState<Today | null>(null);
   const [loading, setLoading] = useState(true);

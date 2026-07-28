@@ -10,15 +10,15 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Fonts } from '@/constants/theme';
+import { Fonts } from '@/constants/theme';
 import { getMessages, sendMessage, type Message } from '@/lib/conversation';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function ConversationScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
   const { id, nickname } = useLocalSearchParams<{ id: string; nickname?: string }>();
 

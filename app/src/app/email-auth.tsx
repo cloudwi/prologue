@@ -9,23 +9,23 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlaceholderInput } from '@/components/placeholder-input';
-import { Colors, Fonts } from '@/constants/theme';
+import { Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { requestCode, verifyCode } from '@/lib/auth';
 import { clearPendingEmail, getPendingEmail, savePendingEmail } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
+import { useTheme } from '@/hooks/use-theme';
 
 type Step = 'email' | 'code';
 
 const RESEND_SECONDS = 60;
 
 export default function EmailAuthScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
   // 메일의 "앱에서 바로 입력하기" 버튼으로 들어오면 코드가 실려 온다.
   const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();

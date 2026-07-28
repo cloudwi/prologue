@@ -11,7 +11,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
   type StyleProp,
   type TextStyle,
 } from 'react-native';
@@ -26,9 +25,11 @@ import { koreanManAge, parseBirthDigits } from '@/lib/birth-date';
 import { AvatarPicker, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
-import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
+import { Fonts, type ThemeColors } from '@/constants/theme';
+import { ApiError } from '@/lib/api';
 import { completeOnboarding, type Gender } from '@/lib/member';
 import { uploadPhoto } from '@/lib/photo';
+import { useTheme } from '@/hooks/use-theme';
 
 const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', hobbies: [], interests: [], strengths: [] };
 
@@ -69,7 +70,7 @@ type StepDef = {
 };
 
 export default function OnboardingScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
 
   const [nickname, setNickname] = useState('');
@@ -200,7 +201,7 @@ export default function OnboardingScreen() {
     {
       key: 'photos',
       title: '프로필 사진을 올려주세요',
-      subtitle: `최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.`,
+      subtitle: `최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.\n얼굴이 잘 보이는 사진만 등록돼요.`,
       valid: photos.length >= MIN_PHOTOS,
       content: (
         <PhotoGrid
@@ -318,14 +319,25 @@ export default function OnboardingScreen() {
     }
   }
 
-  /** 선택된 로컬 사진들을 순차 업로드. 하나라도 실패하면 false. */
+  /**
+   * 선택된 로컬 사진들을 순차 업로드. 하나라도 실패하면 false.
+   * 실패 시 이미 올라간 사진은 목록에서 빼둔다 — 다시 시도할 때 같은 사진이 두 번 올라가지 않게.
+   * 얼굴이 없어 반려된(422 PHOTO_REJECTED) 사진은 그 자리에서 빼서 다른 사진으로 고르게 한다.
+   */
   async function uploadPhotos(): Promise<boolean> {
-    for (let i = 0; i < photos.length; i++) {
-      setUploadProgress(`사진 업로드 중... (${i + 1}/${photos.length})`);
+    const pending = [...photos];
+    for (let i = 0; i < pending.length; i++) {
+      setUploadProgress(`사진 업로드 중... (${i + 1}/${pending.length})`);
       try {
-        await uploadPhoto(photos[i]);
+        await uploadPhoto(pending[i]);
       } catch (e) {
-        Alert.alert('사진 업로드 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+        const rejected = e instanceof ApiError && e.code === 'PHOTO_REJECTED';
+        setPhotos(pending.slice(rejected ? i + 1 : i));
+        setUploadProgress('');
+        Alert.alert(
+          rejected ? `${i + 1}번째 사진은 쓸 수 없어요` : '사진 업로드 실패',
+          e instanceof Error ? e.message : '잠시 후 다시 시도해주세요',
+        );
         return false;
       }
     }

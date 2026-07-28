@@ -1,10 +1,8 @@
-import { useColorScheme } from 'react-native';
-
 import { ComingSoon, SubScreen } from '@/components/sub-screen';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function BlockedScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   return (
     <SubScreen title="지인 차단" c={c}>
       <ComingSoon

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { PetalField } from '@/components/petal-field';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
+import { useAppearance } from '@/lib/appearance';
 import { getMyProfile } from '@/lib/member';
 
 // 흩날리는 꽃잎 색 — 테라코타 계열의 은은한 톤
@@ -19,7 +20,7 @@ const PETAL_TONES = {
 } as const;
 
 export default function LoginScreen() {
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { scheme } = useAppearance();
   const c = Colors[scheme];
   const router = useRouter();
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중

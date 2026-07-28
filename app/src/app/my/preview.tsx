@@ -8,18 +8,18 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from 'react-native';
 
 import { SubScreen } from '@/components/sub-screen';
 import { avatarSource } from '@/constants/avatars';
-import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
+import { Fonts, type ThemeColors } from '@/constants/theme';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { ageFrom } from '@/lib/profile-form';
+import { useTheme } from '@/hooks/use-theme';
 
 /** 상대에게 보이는 그대로의 내 프로필. 편집 요소를 두지 않는다. */
 export default function PreviewScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const [loading, setLoading] = useState(true);
   const [p, setP] = useState<MemberProfile | null>(null);
 

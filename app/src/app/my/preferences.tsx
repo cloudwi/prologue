@@ -1,10 +1,8 @@
-import { useColorScheme } from 'react-native';
-
 import { ComingSoon, SubScreen } from '@/components/sub-screen';
-import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function PreferencesScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   return (
     <SubScreen title="선호하는 이성" c={c}>
       <ComingSoon

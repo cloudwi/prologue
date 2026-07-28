@@ -9,19 +9,18 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from 'react-native';
 
 import { ProfileExtraFields, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { SubScreen } from '@/components/sub-screen';
-import { Colors } from '@/constants/theme';
 import { completeOnboarding, getMyProfile, type MemberProfile } from '@/lib/member';
 import { toRequest } from '@/lib/profile-form';
+import { useTheme } from '@/hooks/use-theme';
 
 const EMPTY: ProfileExtra = { avatarId: null, bio: '', height: '', hobbies: [], interests: [], strengths: [] };
 
 export default function EditDetailScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);

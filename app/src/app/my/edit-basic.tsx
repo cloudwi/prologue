@@ -11,18 +11,18 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from 'react-native';
 
 import { RegionPicker } from '@/components/region-picker';
 import { SubScreen } from '@/components/sub-screen';
-import { Colors, type ThemeColors } from '@/constants/theme';
+import { type ThemeColors } from '@/constants/theme';
 import { formatBirthDigits, isoToBirthDigits, parseBirthDigits, sanitizeBirthDigits } from '@/lib/birth-date';
 import { completeOnboarding, getMyProfile, type Gender, type MemberProfile } from '@/lib/member';
 import { toRequest } from '@/lib/profile-form';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function EditBasicScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);

@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Colors, Fonts, MaxContentWidth } from '@/constants/theme';
+import { Fonts, MaxContentWidth } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export type LegalSection = { heading: string; body: string };
 
@@ -16,7 +17,7 @@ export function LegalScreen({
   updatedAt: string;
   sections: LegalSection[];
 }) {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   const router = useRouter();
 
   return (

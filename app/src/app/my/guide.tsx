@@ -1,7 +1,8 @@
-import { ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { SubScreen } from '@/components/sub-screen';
-import { Colors, Fonts, type ThemeColors } from '@/constants/theme';
+import { Fonts, type ThemeColors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 const STEPS = [
   {
@@ -23,7 +24,7 @@ const STEPS = [
 ];
 
 export default function GuideScreen() {
-  const c = useColorScheme() === 'dark' ? Colors.dark : Colors.light;
+  const c = useTheme();
   return (
     <SubScreen title="프롤로그 사용법" c={c}>
       <ScrollView contentContainerStyle={styles.content}>
