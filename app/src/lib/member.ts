@@ -9,8 +9,6 @@ export type OnboardingProfile = {
   birthDate: string;
   preferredGender: Gender;
   region: string;
-  /** 프로필 이미지 URL 리스트 (최소 2장, 최대 6장). */
-  images: string[];
   bio?: string | null;
   heightCm?: number | null;
   hobbies?: string[];
@@ -19,7 +17,15 @@ export type OnboardingProfile = {
   avatarId?: number | null;
 };
 
-export type MemberProfile = Required<OnboardingProfile> & { accountId: string };
+/**
+ * 프로필 조회 응답. 사진은 프로필 수정(PUT)이 아니라 사진 전용 엔드포인트로 관리하므로
+ * 요청 타입(OnboardingProfile)에는 없고 응답에만 있다.
+ */
+export type MemberProfile = Required<OnboardingProfile> & {
+  accountId: string;
+  /** 프로필 사진 URL 목록(등록 순). 첫 장이 대표. */
+  photoUrls: string[];
+};
 
 /** 온보딩 프로필 생성/수정 (PUT /members/me, 인증 필요). */
 export async function completeOnboarding(profile: OnboardingProfile): Promise<MemberProfile> {
