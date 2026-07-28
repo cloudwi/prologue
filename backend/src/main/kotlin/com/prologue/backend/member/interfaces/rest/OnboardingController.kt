@@ -31,9 +31,6 @@ class OnboardingController(
     private val memberQueryService: MemberQueryService,
     private val memberPhotoService: MemberPhotoService,
 ) {
-    private companion object {
-        val ALLOWED_IMAGE_TYPES = setOf("image/jpeg", "image/png", "image/webp")
-    }
     /** 내 프로필 조회. 온보딩 완료 여부 판단용 — 없으면 404. */
     @GetMapping("/me")
     fun getMyProfile(authentication: Authentication): MemberProfileResponse {
@@ -76,12 +73,9 @@ class OnboardingController(
         @RequestParam("file") file: MultipartFile,
     ): MemberProfileResponse {
         if (file.isEmpty) throw MemberDomainException("이미지 파일이 비어 있습니다")
-        val contentType = file.contentType
-        if (contentType == null || contentType.lowercase() !in ALLOWED_IMAGE_TYPES) {
-            throw MemberDomainException("jpg/png/webp 이미지만 업로드할 수 있습니다")
-        }
+        // 형식 검사는 서비스에서 바이트로 한다 — 클라이언트가 보낸 Content-Type은 확장자 추측이라 자주 틀린다.
         val accountId = UUID.fromString(authentication.name)
-        val member = memberPhotoService.addPhoto(accountId, file.bytes, contentType.lowercase())
+        val member = memberPhotoService.addPhoto(accountId, file.bytes)
         return MemberProfileResponse.from(member)
     }
 

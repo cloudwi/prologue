@@ -1,6 +1,7 @@
 package com.prologue.backend.member.interfaces.rest
 
 import com.prologue.backend.auth.interfaces.rest.dto.ErrorResponse
+import com.prologue.backend.member.application.port.PhotoRejectedException
 import com.prologue.backend.member.application.port.PhotoUploadException
 import com.prologue.backend.member.application.port.StorageNotConfiguredException
 import com.prologue.backend.member.application.service.MemberNotOnboardedException
@@ -12,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 
 /**
  * member 인터페이스 계층 예외 → HTTP 응답. ResponseEntity로 직접 반환(=/error 포워드로 인한 403 방지).
@@ -35,12 +37,23 @@ class MemberExceptionHandler {
     fun handleStorageNotConfigured(e: StorageNotConfiguredException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ErrorResponse("STORAGE_NOT_CONFIGURED", e.message))
 
+    // 검수 탈락(얼굴 없음 등). message는 사용자에게 그대로 보여줄 안내 문구다.
+    @ExceptionHandler(PhotoRejectedException::class)
+    fun handlePhotoRejected(e: PhotoRejectedException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse("PHOTO_REJECTED", e.message))
+
     // [진단용] 저장소 업로드 실패 원인을 응답에 노출. 안정화 후 일반 메시지로 축소 예정.
     @ExceptionHandler(PhotoUploadException::class)
     fun handlePhotoUpload(e: PhotoUploadException): ResponseEntity<ErrorResponse> {
         log.error("사진 업로드 실패", e)
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ErrorResponse("PHOTO_UPLOAD_FAILED", e.message))
     }
+
+    // 용량 초과는 스프링이 컨트롤러 진입 전에 던진다. 잡지 않으면 500 "서버 오류"로 뭉개져 원인을 알 수 없다.
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleTooLarge(e: MaxUploadSizeExceededException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+            .body(ErrorResponse("PHOTO_TOO_LARGE", "사진 용량이 너무 커요. 조금 더 작은 사진으로 올려주세요"))
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> =

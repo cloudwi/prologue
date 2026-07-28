@@ -9,9 +9,9 @@ spring:
   flyway:
     enabled: true            # classpath:db/migration 의 V*.sql 자동 실행
   servlet:
-    multipart:               # 프로필 사진 업로드 크기 제한
-      max-file-size: 6MB
-      max-request-size: 6MB
+    multipart:               # 프로필 사진 업로드 크기 제한. 요즘 폰 사진은 6MB를 넘기는 일이 잦아 12MB로 둔다.
+      max-file-size: 12MB
+      max-request-size: 12MB
 
 # 프로필 사진 저장소(Supabase Storage HTTP API). Render가 SMTP는 막지만 오브젝트 스토리지는 HTTPS라 가능.
 # 환경변수 미설정 시 업로드는 503(STORAGE_NOT_CONFIGURED). 버킷은 public이어야 반환 URL로 조회됨.
@@ -21,6 +21,14 @@ supabase:
     url: ${SUPABASE_URL:}
     service-key: ${SUPABASE_SERVICE_KEY:}
     bucket: ${SUPABASE_STORAGE_BUCKET:profile-photos}
+
+# 프로필 사진 검수(Google Cloud Vision images:annotate) — 얼굴이 담긴 사진인지 + 선정성 판정.
+# 키가 없으면 검수를 건너뛰고 모두 통과시킨다(로컬·개발에서 업로드가 막히지 않도록). 호출 실패도 통과.
+# 과금은 기능 단위 — 사진 1장당 FACE_DETECTION + SAFE_SEARCH_DETECTION = 2유닛(월 1,000유닛 무료, 이후 1,000유닛당 $1.5).
+#   GOOGLE_VISION_API_KEY=<Cloud Vision API가 켜진 프로젝트의 API 키>
+photo:
+  inspection:
+    google-vision-api-key: ${GOOGLE_VISION_API_KEY:}
 
 # 이메일 인증코드 발송(Resend HTTP API). Render가 SMTP 포트를 막아 SMTP 대신 HTTPS로 발송.
 # RESEND_API_KEY 환경변수가 있을 때만 ResendEmailSender 활성(@ConditionalOnProperty),
