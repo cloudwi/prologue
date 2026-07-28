@@ -18,6 +18,15 @@ export default function RootLayout() {
             <Stack.Screen name="privacy" />
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="(tabs)" />
+            {/* MY 하위 화면 — 탭 위에 쌓여 뎁스를 만든다 */}
+            <Stack.Screen name="my/edit-photos" />
+            <Stack.Screen name="my/edit-basic" />
+            <Stack.Screen name="my/edit-detail" />
+            <Stack.Screen name="my/preview" />
+            <Stack.Screen name="my/preferences" />
+            <Stack.Screen name="my/blocked" />
+            <Stack.Screen name="my/guide" />
+            <Stack.Screen name="my/withdraw" />
             <Stack.Screen name="conversation/[id]" />
           </Stack>
           <StatusBar style="auto" />
