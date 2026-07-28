@@ -15,6 +15,12 @@ import java.util.UUID
  *
  * 환경변수: SUPABASE_URL, SUPABASE_SERVICE_KEY, (선택)SUPABASE_STORAGE_BUCKET(기본 profile-photos).
  * 버킷은 **public**이어야 반환 URL로 바로 조회된다. 사진마다 `{accountId}/{uuid}` 고유 경로에 저장한다.
+ *
+ * 인증 헤더는 `apikey`와 `Authorization: Bearer`를 **같은 값으로 함께** 보낸다.
+ * 새 형식 시크릿 키(`sb_secret_…`)는 JWT가 아니라서, apikey 없이 Bearer로만 보내면
+ * Storage가 JWT로 파싱하려다 403 "Invalid Compact JWS"로 거절한다
+ * (문서상 두 헤더 값이 정확히 같을 때만 Bearer 사용이 허용된다).
+ * legacy service_role JWT도 이 조합으로 그대로 동작한다.
  */
 @Component
 class SupabaseStorageAdapter(
@@ -34,6 +40,7 @@ class SupabaseStorageAdapter(
         try {
             client.post()
                 .uri("$base/storage/v1/object/$bucket/$path")
+                .header("apikey", serviceKey)
                 .header("Authorization", "Bearer $serviceKey")
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(bytes)
@@ -54,6 +61,7 @@ class SupabaseStorageAdapter(
         try {
             client.delete()
                 .uri("$base/storage/v1/object/$bucket/$path")
+                .header("apikey", serviceKey)
                 .header("Authorization", "Bearer $serviceKey")
                 .retrieve()
                 .toBodilessEntity()
