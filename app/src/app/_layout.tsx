@@ -39,6 +39,7 @@ function Navigation() {
         <Stack.Screen name="my/appearance" />
         <Stack.Screen name="my/guide" />
         <Stack.Screen name="my/withdraw" />
+        <Stack.Screen name="peer" />
         <Stack.Screen name="conversation/[id]" />
       </Stack>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />

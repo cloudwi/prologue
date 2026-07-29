@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -210,9 +210,7 @@ export default function DiscoverScreen() {
                   </Text>
                 </View>
               ) : (
-                peersData.peers.map((peer, i) => (
-                  <PeerCard key={peer.peerAnswerId ?? i} peer={peer} c={c} />
-                ))
+                <PeerCarousel peers={peersData.peers} c={c} />
               )}
             </View>
           </ScrollView>
@@ -222,31 +220,29 @@ export default function DiscoverScreen() {
   );
 }
 
-/** 상대 사진 갤러리 — 가로로 넘겨 보는 페이지 스크롤. 점 표시는 사진 위 유일한 오버레이다. */
-function PeerGallery({ photos, c }: { photos: string[]; c: ThemeColors }) {
+/** 상대 카드 캐러셀 — 옆 카드가 살짝 보이게 가로로 넘긴다. 한 명이면 그냥 꽉 채운다. */
+function PeerCarousel({ peers, c }: { peers: Peer[]; c: ThemeColors }) {
   const [width, setWidth] = useState(0);
-  const [page, setPage] = useState(0);
+  const cardWidth = peers.length > 1 ? width - 28 : width;
 
   return (
-    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ backgroundColor: c.backgroundSelected }}>
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {width > 0 && (
         <ScrollView
           horizontal
-          pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
+          snapToInterval={cardWidth + 12}
+          decelerationRate="fast"
+          disableIntervalMomentum
+          style={styles.carouselScroll}
+          contentContainerStyle={styles.carouselContent}
         >
-          {photos.map((url) => (
-            <Image key={url} source={{ uri: url }} style={[styles.peerPhoto, { width }]} contentFit="cover" transition={150} />
+          {peers.map((peer, i) => (
+            <View key={peer.peerAnswerId ?? i} style={{ width: cardWidth }}>
+              <PeerCard peer={peer} c={c} />
+            </View>
           ))}
         </ScrollView>
-      )}
-      {photos.length > 1 && (
-        <View style={styles.galleryDots} pointerEvents="none">
-          {photos.map((url, i) => (
-            <View key={url} style={[styles.galleryDot, { opacity: i === page ? 1 : 0.45 }]} />
-          ))}
-        </View>
       )}
     </View>
   );
@@ -254,12 +250,18 @@ function PeerGallery({ photos, c }: { photos: string[]; c: ThemeColors }) {
 
 /** 상대 1명 카드 — 하트/대화신청/답변 열람 상태를 카드별로 가진다. */
 function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
+  const router = useRouter();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  /** 상세 화면으로 — 나머지 사진과 프로필 전체는 거기서 본다. */
+  function openDetail() {
+    router.push({ pathname: '/peer', params: { data: JSON.stringify(peer) } });
+  }
 
   async function heart() {
     if (!peer.peerAnswerId || hearting || hearted) return;
@@ -295,10 +297,24 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
        * 사진이 카드의 첫인상 — 상대가 먼저 보이고, 답변은 그 아래에서 이어진다.
        * 글자는 사진 위에 얹지 않고 면에 앉힌다(MY 프로필 카드와 같은 규칙).
        */}
-      {peer.photoUrls.length > 0 && <PeerGallery photos={peer.photoUrls} c={c} />}
+      {peer.photoUrls.length > 0 && (
+        <Pressable onPress={openDetail}>
+          <Image
+            source={{ uri: peer.photoUrls[0] }}
+            style={[styles.peerPhoto, { backgroundColor: c.backgroundSelected }]}
+            contentFit="cover"
+            transition={150}
+          />
+          {peer.photoUrls.length > 1 && (
+            <View style={[styles.photoBadge, { backgroundColor: c.background }]}>
+              <Text style={[styles.photoBadgeText, { color: c.text }]}>+{peer.photoUrls.length - 1}</Text>
+            </View>
+          )}
+        </Pressable>
+      )}
 
       <View style={styles.peerBody}>
-        <View style={styles.peerHead}>
+        <Pressable onPress={openDetail} style={styles.peerHead}>
           {peer.photoUrls.length === 0 && <Avatar avatarId={peer.avatarId} size={46} c={c} />}
           <View style={styles.peerHeadBody}>
             {peer.nickname ? (
@@ -306,7 +322,8 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
             ) : null}
             <Text style={[styles.peerMeta, { color: c.textSecondary }]}>{peerMetaLabel(peer)}</Text>
           </View>
-        </View>
+          <Text style={[styles.peerDetailLink, { color: c.textSecondary }]}>›</Text>
+        </Pressable>
         {peer.bio ? <Text style={[styles.peerBio, { color: c.text }]}>{peer.bio}</Text> : null}
         {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
           <View style={styles.peerChips}>
@@ -413,29 +430,23 @@ const styles = StyleSheet.create({
   peerSection: { marginTop: 34 },
   peerEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 4 },
   peerSub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
-  peerCard: { borderRadius: Radius.lg, marginBottom: 14, overflow: 'hidden' },
-  // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 폭은 갤러리가 잰 카드 폭으로 채운다.
-  peerPhoto: { aspectRatio: 4 / 5 },
-  galleryDots: {
+  // 카드가 화면 가장자리 밑으로 흐르게 좌우 패딩을 상쇄한다 — 옆 카드가 살짝 보이는 게 넘길 수 있다는 신호.
+  carouselScroll: { marginHorizontal: -20, overflow: 'visible' },
+  carouselContent: { paddingHorizontal: 20, gap: 12 },
+  peerCard: { borderRadius: Radius.lg, overflow: 'hidden' },
+  // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
+  peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
+  photoBadge: {
     position: 'absolute',
-    bottom: 12,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 5,
+    right: 10,
+    bottom: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+    opacity: 0.92,
   },
-  // 사진 위라 테마와 무관하게 흰 점 — 은은한 그림자로 밝은 사진에서도 보인다.
-  galleryDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOpacity: 0.35,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-  },
+  photoBadgeText: { fontSize: 11, fontWeight: '700' },
+  peerDetailLink: { fontSize: 20, fontWeight: '300' },
   peerBody: { padding: 20 },
   peerName: { fontSize: 20, fontWeight: '700' },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
