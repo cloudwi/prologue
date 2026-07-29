@@ -6,18 +6,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 
-import { PetalField } from '@/components/petal-field';
+import { LetterField, type LetterTones } from '@/components/letter-field';
 import { Colors, Fonts } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { useAppearance } from '@/lib/appearance';
 import { getMyProfile } from '@/lib/member';
 
-// 흩날리는 꽃잎 색 — 테라코타 계열의 은은한 톤
-const PETAL_TONES = {
-  light: ['#E8A98F', '#EFC3AD', '#DFA37A', '#D9694C'],
-  dark: ['#E07A5C', '#B96A50', '#8A5642', '#E8A98F'],
-} as const;
+// 떨어지는 편지 봉투 색 — 차가운 바탕 위의 따뜻한 크림 종이 + 하트 씰(브랜드 마크와 같은 그림)
+const LETTER_TONES: Record<'light' | 'dark', LetterTones> = {
+  light: { paper: '#FBF5EA', flap: '#F1E7D5', seal: '#D9694C', edge: '#E2D6C2' },
+  dark: { paper: '#EFE7D8', flap: '#E0D5C0', seal: '#E07A5C', edge: '#C9BCA4' },
+};
 
 export default function LoginScreen() {
   const { scheme } = useAppearance();
@@ -57,7 +57,7 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
-      <PetalField tones={PETAL_TONES[scheme]} />
+      <LetterField tones={LETTER_TONES[scheme]} />
 
       <SafeAreaView style={styles.safe}>
         {/* 브랜드 */}
