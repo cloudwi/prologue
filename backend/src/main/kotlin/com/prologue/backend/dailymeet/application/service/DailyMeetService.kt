@@ -48,7 +48,7 @@ class DailyMeetService(
     }
 
     /**
-     * 오늘의 상대 — 매일 정오(KST)에 최대 3명이 공개된다.
+     * 오늘의 상대 — 매일 정오(KST)에 한 사람이 공개된다. 하루 한 문답, 하루 한 사람.
      * 프로필(성별·나이·키·소개·키워드)은 바로 보이고, 답변(글)은 Give&Take: 내가 오늘 답해야 열린다.
      * 공개된 상대는 그날 동안 고정(비독점: 같은 상대가 여러 명에게 노출 가능) + 공평 분배.
      */
@@ -65,7 +65,7 @@ class DailyMeetService(
             .mapNotNull { answerRepository.findById(it.peerAnswerId) }
             .toMutableList()
 
-        // 3명이 안 되면 후보에서 채운다
+        // 아직 공개된 상대가 없으면 후보에서 채운다
         if (revealed.size < REVEAL_COUNT) {
             val me = memberQueryService.findProfile(accountId)
                 ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
@@ -127,7 +127,7 @@ class DailyMeetService(
     companion object {
         private val KST = ZoneId.of("Asia/Seoul")
 
-        /** 하루에 공개되는 상대 수. */
-        private const val REVEAL_COUNT = 3
+        /** 하루에 공개되는 상대 수 — 한 사람에게 집중하는 페이스. */
+        private const val REVEAL_COUNT = 1
     }
 }

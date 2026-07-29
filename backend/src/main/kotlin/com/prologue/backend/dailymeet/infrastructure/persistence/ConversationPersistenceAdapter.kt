@@ -16,6 +16,9 @@ class ConversationPersistenceAdapter(
     override fun existsBetween(accountLow: UUID, accountHigh: UUID): Boolean =
         jpa.existsByAccountLowAndAccountHigh(accountLow, accountHigh)
 
+    override fun findBetween(accountLow: UUID, accountHigh: UUID): Conversation? =
+        jpa.findByAccountLowAndAccountHigh(accountLow, accountHigh)?.toDomain()
+
     override fun findByAccount(accountId: UUID): List<Conversation> =
         jpa.findByAccountLowOrAccountHighOrderByCreatedAtDesc(accountId, accountId).map { it.toDomain() }
 

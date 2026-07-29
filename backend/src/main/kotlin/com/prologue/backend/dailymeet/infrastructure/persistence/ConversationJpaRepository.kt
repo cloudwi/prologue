@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface ConversationJpaRepository : JpaRepository<ConversationJpaEntity, UUID> {
     fun existsByAccountLowAndAccountHigh(accountLow: UUID, accountHigh: UUID): Boolean
+    fun findByAccountLowAndAccountHigh(accountLow: UUID, accountHigh: UUID): ConversationJpaEntity?
     fun findByAccountLowOrAccountHighOrderByCreatedAtDesc(accountLow: UUID, accountHigh: UUID): List<ConversationJpaEntity>
 }

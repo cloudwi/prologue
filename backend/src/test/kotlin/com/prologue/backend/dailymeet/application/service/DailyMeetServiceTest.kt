@@ -131,7 +131,7 @@ class DailyMeetServiceTest {
     }
 
     @Test
-    fun `오늘의 상대 - 후보가 3명 이상이면 3명까지 공개하고 고정 저장`() {
+    fun `오늘의 상대 - 후보가 여럿이어도 한 명만 공개하고 고정 저장`() {
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
         val peers = (1..4).map { Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대 답변 $it", Instant.now()) }
         every { questionRepository.findAllOrdered() } returns listOf(question)
@@ -149,10 +149,10 @@ class DailyMeetServiceTest {
         val view = service.todayPeers(accountId, now = NOON)
 
         assertTrue(view.open)
-        assertEquals(3, view.peers.size)
-        assertEquals(3, saved.size)
+        assertEquals(1, view.peers.size)
+        assertEquals(1, saved.size)
         assertTrue(view.answerUnlocked)
-        assertEquals(3, view.peers.mapNotNull { it.peerAnswer }.size)
+        assertEquals(1, view.peers.mapNotNull { it.peerAnswer }.size)
     }
 
     @Test
@@ -175,7 +175,7 @@ class DailyMeetServiceTest {
     }
 
     @Test
-    fun `오늘의 상대 - 이미 공개된 상대는 그대로 유지하고 부족분만 채운다`() {
+    fun `오늘의 상대 - 이미 공개된 상대가 있으면 그대로 유지하고 더 채우지 않는다`() {
         val pinnedAnswerId = UUID.randomUUID()
         val pinnedAccount = UUID.randomUUID()
         val newAccount = UUID.randomUUID()
@@ -197,12 +197,10 @@ class DailyMeetServiceTest {
 
         val view = service.todayPeers(accountId, now = NOON)
 
-        assertEquals(2, view.peers.size)
+        // 하루 한 사람 — 고정된 상대만 유지하고 새로 채우지 않는다
+        assertEquals(1, view.peers.size)
         assertEquals("고정된 상대", view.peers[0].peerAnswer)
-        assertEquals("새 상대", view.peers[1].peerAnswer)
-        // 고정된 상대는 다시 저장하지 않는다
-        assertEquals(1, saved.size)
-        assertEquals(newAnswer.id, saved[0].peerAnswerId)
+        assertEquals(0, saved.size)
     }
 
     companion object {

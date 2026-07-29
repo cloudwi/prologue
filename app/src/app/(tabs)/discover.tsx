@@ -18,7 +18,6 @@ import { Image } from 'expo-image';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
-import { sendConversationRequest } from '@/lib/conversation';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -209,7 +208,7 @@ export default function DiscoverScreen() {
             <View style={styles.peerSection}>
               <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>오늘의 상대</Text>
               <Text style={[styles.peerSub, { color: c.textSecondary }]}>
-                매일 정오, 같은 질문에 답한 3명의 답변이 도착해요.
+                매일 정오, 같은 질문에 답한 한 사람이 도착해요.
               </Text>
 
               {peersLoading && !peersData ? (
@@ -270,8 +269,6 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
   const router = useRouter();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
-  const [requesting, setRequesting] = useState(false);
-  const [requested, setRequested] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -280,31 +277,25 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
     router.push({ pathname: '/peer', params: { data: JSON.stringify(peer) } });
   }
 
+  /** 하트 = 호감 표시. 서로 하트를 보냈으면 그 자리에서 대화가 열린다. */
   async function heart() {
     if (!peer.peerAnswerId || hearting || hearted) return;
     setHearting(true);
     try {
-      await sendHeart(peer.peerAnswerId);
+      const result = await sendHeart(peer.peerAnswerId);
       setHearted(true);
-      Alert.alert('하트를 보냈어요', '이 답변이 마음에 든다는 호감 표시예요.');
+      if (result.matched) {
+        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 대화가 열렸어요.', [
+          { text: '나중에', style: 'cancel' },
+          { text: '대화하러 가기', onPress: () => router.push('/chats') },
+        ]);
+      } else {
+        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 대화가 열려요.');
+      }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
       setHearting(false);
-    }
-  }
-
-  async function requestConversation() {
-    if (!peer.peerAnswerId || requesting || requested) return;
-    setRequesting(true);
-    try {
-      await sendConversationRequest(peer.peerAnswerId);
-      setRequested(true);
-      Alert.alert('대화 신청을 보냈어요', '상대가 수락하면 둘만의 문답이 시작돼요.');
-    } catch (e) {
-      Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-    } finally {
-      setRequesting(false);
     }
   }
 
@@ -381,32 +372,29 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
             </Pressable>
           )}
 
+          {/* 하트가 유일한 행동 — 서로 하트면 대화가 열린다. */}
           <View style={styles.peerActions}>
             <Pressable
               onPress={heart}
               disabled={hearting || hearted}
-              style={[styles.heart, { borderColor: c.primary, backgroundColor: hearted ? c.primary : 'transparent', opacity: hearting ? 0.6 : 1 }]}
+              style={[
+                styles.heart,
+                {
+                  backgroundColor: hearted ? c.backgroundSelected : c.primary,
+                  opacity: hearting ? 0.6 : 1,
+                },
+              ]}
             >
               {!hearting && (
                 <Image
                   source={require('@/assets/images/match-heart.png')}
                   style={styles.heartIcon}
                   contentFit="contain"
-                  tintColor={hearted ? c.primaryText : c.primary}
+                  tintColor={hearted ? c.textSecondary : c.primaryText}
                 />
               )}
-              <Text style={[styles.heartText, { color: hearted ? c.primaryText : c.primary }]}>
-                {hearted ? '호감 표시함' : hearting ? '...' : '하트'}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={requestConversation}
-              disabled={requesting || requested}
-              style={[styles.talk, { backgroundColor: c.primary, opacity: requesting ? 0.6 : 1 }]}
-            >
-              <Text style={[styles.talkText, { color: c.primaryText }]}>
-                {requested ? '신청함' : requesting ? '신청 중...' : '대화 신청'}
+              <Text style={[styles.heartText, { color: hearted ? c.textSecondary : c.primaryText }]}>
+                {hearted ? '호감을 보냈어요' : hearting ? '...' : '하트 보내기'}
               </Text>
             </Pressable>
           </View>
@@ -480,11 +468,9 @@ const styles = StyleSheet.create({
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
   peerActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  heart: { flexDirection: 'row', gap: 6, height: 48, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
+  heart: { flex: 1, flexDirection: 'row', gap: 7, height: 50, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   heartIcon: { width: 18, height: 18 },
   heartText: { fontSize: 15, fontWeight: '700' },
-  talk: { flex: 1, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  talkText: { fontSize: 15, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
