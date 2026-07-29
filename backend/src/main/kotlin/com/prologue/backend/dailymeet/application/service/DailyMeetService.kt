@@ -8,6 +8,7 @@ import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import com.prologue.backend.member.application.service.MemberQueryService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -25,6 +26,8 @@ class DailyMeetService(
     private val answerRepository: AnswerRepository,
     private val dailyRevealRepository: DailyRevealRepository,
     private val memberQueryService: MemberQueryService,
+    /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
+    @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
 ) {
     @Transactional(readOnly = true)
     fun today(accountId: UUID): TodayView {
@@ -54,7 +57,7 @@ class DailyMeetService(
         val answered = answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null
 
         // 정오 전에는 아직 공개 전
-        if (now.isBefore(REVEAL_TIME)) return TodayPeersView(open = false, answerUnlocked = answered, peers = emptyList())
+        if (now.isBefore(revealTime)) return TodayPeersView(open = false, answerUnlocked = answered, peers = emptyList())
 
         // 이미 공개된 상대는 그대로 고정
         val revealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id)
@@ -122,8 +125,7 @@ class DailyMeetService(
     companion object {
         private val KST = ZoneId.of("Asia/Seoul")
 
-        /** 오늘의 상대 공개 시각(정오)과 인원. */
-        private val REVEAL_TIME: LocalTime = LocalTime.NOON
+        /** 하루에 공개되는 상대 수. */
         private const val REVEAL_COUNT = 3
     }
 }
