@@ -1,5 +1,6 @@
 package com.prologue.backend.auth.interfaces.rest
 
+import com.prologue.backend.auth.application.service.InvalidRefreshTokenException
 import com.prologue.backend.auth.application.service.InvalidVerificationCodeException
 import com.prologue.backend.auth.application.service.TooManyRequestsException
 import com.prologue.backend.auth.domain.model.AuthDomainException
@@ -19,6 +20,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
  */
 @RestControllerAdvice(basePackages = ["com.prologue.backend.auth"])
 class AuthExceptionHandler {
+
+    @ExceptionHandler(InvalidRefreshTokenException::class)
+    fun handleInvalidRefresh(e: InvalidRefreshTokenException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErrorResponse("INVALID_REFRESH_TOKEN", e.message))
 
     @ExceptionHandler(InvalidVerificationCodeException::class)
     fun handleInvalidCode(e: InvalidVerificationCodeException): ResponseEntity<ErrorResponse> =

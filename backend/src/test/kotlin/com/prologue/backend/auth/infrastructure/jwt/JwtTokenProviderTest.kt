@@ -52,4 +52,19 @@ class JwtTokenProviderTest {
 
         assertNull(provider.resolveAuthentication(tokens.refreshToken))
     }
+
+    @Test
+    fun `refresh 토큰에서 계정 식별자를 복원한다`() {
+        val tokens = provider.issue(account)
+
+        assertEquals(account.id, provider.resolveRefreshSubject(tokens.refreshToken))
+    }
+
+    @Test
+    fun `access 토큰은 refresh로 인정되지 않는다`() {
+        val tokens = provider.issue(account)
+
+        assertNull(provider.resolveRefreshSubject(tokens.accessToken))
+        assertNull(provider.resolveRefreshSubject("not-a-jwt"))
+    }
 }

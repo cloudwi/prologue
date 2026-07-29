@@ -31,7 +31,8 @@ export default function LoginScreen() {
         const profile = await getMyProfile();
         if (active) router.replace(profile ? '/discover' : '/onboarding');
       } catch (e) {
-        if (e instanceof ApiError && e.status === 401) await clearTokens();
+        // 재발급까지 실패한 만료(401/403) — authedFetch가 토큰을 지웠으니 로그인 화면으로 남는다
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) await clearTokens();
         if (active) setChecking(false);
       }
     })();

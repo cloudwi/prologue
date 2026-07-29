@@ -70,6 +70,18 @@ class JwtTokenProvider(
         if (e is JwtException || e is IllegalArgumentException) null else throw e
     }
 
+    override fun resolveRefreshSubject(refreshToken: String): AccountId? = runCatching {
+        val claims = Jwts.parser()
+            .verifyWith(key)
+            .build()
+            .parseSignedClaims(refreshToken)
+            .payload
+        if (claims["type"] != TOKEN_TYPE_REFRESH) return null
+        AccountId.from(claims.subject)
+    }.getOrElse { e ->
+        if (e is JwtException || e is IllegalArgumentException) null else throw e
+    }
+
     private fun buildToken(
         subject: String,
         type: String,
