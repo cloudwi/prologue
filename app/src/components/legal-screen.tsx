@@ -1,6 +1,5 @@
-import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,17 +17,20 @@ export function LegalScreen({
   sections: LegalSection[];
 }) {
   const c = useTheme();
-  const router = useRouter();
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={[styles.back, { color: c.textSecondary }]}>← 뒤로</Text>
-          </Pressable>
-        </View>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: '',
+          headerBackButtonDisplayMode: 'minimal',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: c.background },
+          headerTintColor: c.text,
+        }}
+      />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>{title}</Text>
           <Text style={[styles.updated, { color: c.textSecondary }]}>시행일: {updatedAt}</Text>
           {sections.map((s) => (
@@ -37,17 +39,13 @@ export function LegalScreen({
               <Text style={[styles.body, { color: c.textSecondary }]}>{s.body}</Text>
             </View>
           ))}
-        </ScrollView>
-      </SafeAreaView>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  safe: { flex: 1, paddingHorizontal: 25 },
-  header: { height: 44, justifyContent: 'center' },
-  back: { fontSize: 15 },
   content: { paddingBottom: 40, maxWidth: MaxContentWidth, width: '100%', alignSelf: 'center' },
   title: { fontSize: 26, fontWeight: '700', marginTop: 8 },
   updated: { fontSize: 12, marginTop: 6 },

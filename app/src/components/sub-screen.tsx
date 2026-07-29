@@ -1,13 +1,13 @@
-import { useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts, type ThemeColors } from '@/constants/theme';
 
 /**
- * MY 하위 화면의 공통 틀. 뒤로가기 + 제목 + (선택) 우측 저장 버튼.
- * 저장은 각 화면 안에서만 일어난다 — 허브는 읽기 전용이다.
+ * MY 하위 화면의 공통 틀 — 네이티브 스택 헤더를 쓴다.
+ * 직접 그리던 "← 뒤로"보다 플랫폼 기본(iOS 셰브런+스와이프 백, Android 화살표+하드웨어 백)이 낫다.
+ * 저장은 headerRight로 올린다 — 저장은 각 화면 안에서만 일어나고 허브는 읽기 전용이다.
  */
 export function SubScreen({
   title,
@@ -24,36 +24,32 @@ export function SubScreen({
   saveDisabled?: boolean;
   saving?: boolean;
 }) {
-  const router = useRouter();
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
-      <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={[styles.back, { color: c.textSecondary }]}>← 뒤로</Text>
-          </Pressable>
-          <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={1}>
-            {title}
-          </Text>
-          {onSave ? (
-            <Pressable
-              onPress={onSave}
-              disabled={saveDisabled || saving}
-              hitSlop={12}
-              style={({ pressed }) => [{ opacity: saveDisabled || saving ? 0.35 : pressed ? 0.5 : 1 }]}
-            >
-              {saving ? (
-                <ActivityIndicator color={c.primary} />
-              ) : (
-                <Text style={[styles.save, { color: c.primary }]}>저장</Text>
-              )}
-            </Pressable>
-          ) : (
-            <View style={styles.spacer} />
-          )}
-        </View>
-        {children}
-      </SafeAreaView>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title,
+          headerBackButtonDisplayMode: 'minimal',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: c.background },
+          headerTintColor: c.text,
+          headerTitleStyle: { fontFamily: Fonts.serif, fontWeight: '700', color: c.text },
+          headerRight: onSave
+            ? () =>
+                saving ? (
+                  <ActivityIndicator color={c.primary} />
+                ) : (
+                  <Pressable onPress={onSave} disabled={saveDisabled} hitSlop={12}>
+                    <Text style={[styles.save, { color: c.primaryStrong, opacity: saveDisabled ? 0.35 : 1 }]}>
+                      저장
+                    </Text>
+                  </Pressable>
+                )
+            : undefined,
+        }}
+      />
+      {children}
     </View>
   );
 }
@@ -72,19 +68,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 14,
-    gap: 12,
-  },
-  back: { fontSize: 15, minWidth: 56 },
-  title: { flex: 1, fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  save: { fontSize: 15, fontWeight: '700', minWidth: 56, textAlign: 'right' },
-  spacer: { minWidth: 56 },
+  save: { fontSize: 15, fontWeight: '700' },
   soonTitle: { fontSize: 18, fontWeight: '700' },
   soonDesc: { fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 22 },
 });

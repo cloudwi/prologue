@@ -372,7 +372,7 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
             </Pressable>
           )}
 
-          {/* 하트가 유일한 행동 — 서로 하트면 대화가 열린다. */}
+          {/* 하트가 유일한 행동 — 서로 하트면 대화가 열린다. 크게 외칠 필요 없는 한 마디라 작게. */}
           <View style={styles.peerActions}>
             <Pressable
               onPress={heart}
@@ -467,10 +467,10 @@ const styles = StyleSheet.create({
   peerAnswer: { fontSize: 16, lineHeight: 25 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
-  peerActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  heart: { flex: 1, flexDirection: 'row', gap: 7, height: 50, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  heartIcon: { width: 18, height: 18 },
-  heartText: { fontSize: 15, fontWeight: '700' },
+  peerActions: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
+  heart: { flexDirection: 'row', gap: 6, height: 40, paddingHorizontal: 22, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  heartIcon: { width: 15, height: 15 },
+  heartText: { fontSize: 14, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });

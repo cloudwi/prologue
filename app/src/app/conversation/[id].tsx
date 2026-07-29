@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,7 +19,6 @@ import { useTheme } from '@/hooks/use-theme';
 
 export default function ConversationScreen() {
   const c = useTheme();
-  const router = useRouter();
   const { id, nickname } = useLocalSearchParams<{ id: string; nickname?: string }>();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -59,15 +58,19 @@ export default function ConversationScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: nickname ?? '대화',
+          headerBackButtonDisplayMode: 'minimal',
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: c.background },
+          headerTintColor: c.text,
+          headerTitleStyle: { fontFamily: Fonts.serif, fontWeight: '700', color: c.text },
+        }}
+      />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
-          <View style={[styles.topbar, { borderBottomColor: c.border }]}>
-            <Pressable onPress={() => router.back()} hitSlop={10}>
-              <Text style={{ color: c.text, fontSize: 16 }}>‹</Text>
-            </Pressable>
-            <Text style={[styles.topTitle, { color: c.text, fontFamily: Fonts.serif }]}>{nickname ?? '대화'}</Text>
-            <View style={{ width: 20 }} />
-          </View>
+        <SafeAreaView style={styles.flex} edges={['bottom']}>
 
           {loading ? (
             <View style={[styles.flex, styles.center]}>
