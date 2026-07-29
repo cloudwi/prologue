@@ -60,6 +60,18 @@ export default function PeerDetailScreen() {
 
           {peer.bio ? <Text style={[styles.bio, { color: c.text }]}>{peer.bio}</Text> : null}
 
+          {peer.letters.length > 0 && (
+            <View style={styles.letterSection}>
+              <Text style={[styles.sectionHead, { color: c.textSecondary }]}>미리 쓴 편지</Text>
+              {peer.letters.map((letter) => (
+                <View key={letter.questionId} style={[styles.letterCard, { backgroundColor: c.backgroundElement }]}>
+                  <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>{letter.question}</Text>
+                  <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{letter.content}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <Chips title="관심사" items={peer.interests} c={c} />
           <Chips title="취미" items={peer.hobbies} c={c} />
           <Chips title="강점" items={peer.strengths} c={c} />
@@ -102,6 +114,11 @@ const styles = StyleSheet.create({
   name: { fontSize: 26, fontWeight: '700' },
   meta: { fontSize: 14, marginTop: 4 },
   bio: { fontSize: 15, lineHeight: 23, marginTop: 16 },
+  letterSection: { marginTop: 26 },
+  sectionHead: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
+  letterCard: { borderRadius: Radius.md, padding: 20, marginBottom: 10 },
+  letterQuestion: { fontSize: 13, lineHeight: 19 },
+  letterContent: { fontSize: 15.5, lineHeight: 25, marginTop: 8 },
   chipSection: { marginTop: 22 },
   chipTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

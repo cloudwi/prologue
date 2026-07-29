@@ -37,6 +37,7 @@ function Navigation() {
         <Stack.Screen name="my/preferences" />
         <Stack.Screen name="my/blocked" />
         <Stack.Screen name="my/appearance" />
+        <Stack.Screen name="my/letters" />
         <Stack.Screen name="my/guide" />
         <Stack.Screen name="my/withdraw" />
         <Stack.Screen name="peer" />

@@ -19,6 +19,7 @@ import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { sendConversationRequest } from '@/lib/conversation';
+import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 
 function peerMetaLabel(peer: Peer): string {
@@ -95,6 +96,17 @@ export default function DiscoverScreen() {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  /** 오늘 쓴 답변을 그대로 프로필 편지로. 같은 질문이면 덮어쓰고, 3통이 넘으면 서버가 안내한다. */
+  async function promoteToProfile() {
+    if (!today?.questionId || !today.myAnswer) return;
+    try {
+      await writeLetter(today.questionId, today.myAnswer);
+      Alert.alert('프로필에 올렸어요', '상대가 내 프로필 상세에서 이 답변을 볼 수 있어요.');
+    } catch (e) {
+      Alert.alert('올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     }
   }
 
@@ -182,9 +194,14 @@ export default function DiscoverScreen() {
                     </Pressable>
                   )}
                 </View>
-                <Pressable onPress={startEdit} style={[styles.editBtn, { borderColor: c.border }]}>
-                  <Text style={[styles.editBtnText, { color: c.primaryStrong }]}>답변 수정하기</Text>
-                </Pressable>
+                <View style={styles.answerActions}>
+                  <Pressable onPress={startEdit} style={[styles.editBtn, styles.flex, { borderColor: c.border }]}>
+                    <Text style={[styles.editBtnText, { color: c.primaryStrong }]}>답변 수정하기</Text>
+                  </Pressable>
+                  <Pressable onPress={promoteToProfile} style={[styles.editBtn, styles.flex, { borderColor: c.border }]}>
+                    <Text style={[styles.editBtnText, { color: c.primaryStrong }]}>프로필에 올리기</Text>
+                  </Pressable>
+                </View>
               </>
             )}
 
@@ -418,7 +435,8 @@ const styles = StyleSheet.create({
   myAnswerCard: { borderRadius: Radius.md, padding: 20 },
   myAnswerText: { fontSize: 16, lineHeight: 25 },
   moreBtn: { marginTop: 8, alignSelf: 'flex-start' },
-  editBtn: { height: 44, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  answerActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  editBtn: { height: 44, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   editBtnText: { fontSize: 14, fontWeight: '700' },
   cancel: { alignSelf: 'center', marginTop: 14, padding: 6 },
   // 입력만 테두리를 남긴다 — "쓸 수 있는 곳"이라는 표시.

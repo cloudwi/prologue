@@ -26,6 +26,7 @@ class DailyMeetService(
     private val answerRepository: AnswerRepository,
     private val dailyRevealRepository: DailyRevealRepository,
     private val memberQueryService: MemberQueryService,
+    private val profileLetterService: ProfileLetterService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
     @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
 ) {
@@ -102,6 +103,7 @@ class DailyMeetService(
             answerUnlocked = answered,
             photoUrls = p?.photoUrls ?: emptyList(),
             nickname = p?.nickname,
+            letters = profileLetterService.lettersOf(peer.accountId),
             gender = p?.gender,
             age = p?.age(),
             region = p?.region,

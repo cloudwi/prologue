@@ -24,6 +24,8 @@ export type Peer = {
   /** 노출 순서대로의 프로필 사진. 가입 시 2장 필수라 비어 있는 건 옛 데이터뿐. */
   photoUrls: string[];
   nickname: string | null;
+  /** 미리 써둔 프로필 편지(질문+답). 자기소개를 대신한다. */
+  letters: { questionId: number; question: string; content: string }[];
   gender: 'MALE' | 'FEMALE' | null;
   /** 만 나이(서버 계산). */
   age: number | null;
