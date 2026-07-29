@@ -9,7 +9,8 @@ import { useTheme } from '@/hooks/use-theme';
 import type { Peer } from '@/lib/daily';
 
 /**
- * 오늘의 상대 프로필 상세 — 사진 전부와 프로필을 넉넉하게 본다.
+ * 오늘의 상대 프로필 상세 — 청첩장처럼 담백하게.
+ * 가운데 정렬 세리프, 하트 씰 구분선, 넉넉한 여백. 장식은 씰 하나로 충분하다.
  *
  * 상대는 개별 조회 API가 없어서(오늘의 상대는 목록으로만 내려온다)
  * 발견 탭이 이미 들고 있는 데이터를 params로 직렬화해 넘긴다. 조회 전용이라 충분하다.
@@ -43,65 +44,70 @@ export default function PeerDetailScreen() {
     peer.region,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join('  ·  ');
+
+  const keywords = [...peer.interests, ...peer.hobbies, ...peer.strengths];
 
   return (
-    <SubScreen title={peer.nickname ?? '프로필'} c={c}>
+    <SubScreen title="" c={c}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {peer.photoUrls.length > 0 && (
           <PhotoPager photos={peer.photoUrls} backgroundColor={c.backgroundSelected} />
         )}
 
-        <View style={styles.body}>
+        {/* 표지 — 이름과 한 줄 소개만 가운데에 */}
+        <View style={styles.cover}>
           {peer.nickname ? (
             <Text style={[styles.name, { color: c.text, fontFamily: Fonts.serif }]}>{peer.nickname}</Text>
           ) : null}
           <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text>
+        </View>
 
-          {peer.bio ? <Text style={[styles.bio, { color: c.text }]}>{peer.bio}</Text> : null}
+        <Seal c={c} />
 
-          {peer.letters.length > 0 && (
-            <View style={styles.letterSection}>
-              <Text style={[styles.sectionHead, { color: c.textSecondary }]}>미리 쓴 편지</Text>
-              {peer.letters.map((letter) => (
-                <View key={letter.questionId} style={[styles.letterCard, { backgroundColor: c.backgroundElement }]}>
-                  <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>{letter.question}</Text>
-                  <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{letter.content}</Text>
+        {peer.bio ? (
+          <Text style={[styles.bio, { color: c.text, fontFamily: Fonts.serif }]}>{peer.bio}</Text>
+        ) : null}
+
+        {/* 편지 — 질문과 답이 청첩장의 인사말처럼 이어진다 */}
+        {peer.letters.map((letter) => (
+          <View key={letter.questionId} style={styles.letter}>
+            <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>{letter.question}</Text>
+            <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{letter.content}</Text>
+          </View>
+        ))}
+
+        {peer.answerUnlocked && peer.peerAnswer ? (
+          <View style={styles.letter}>
+            <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>오늘의 답변</Text>
+            <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{peer.peerAnswer}</Text>
+          </View>
+        ) : null}
+
+        {keywords.length > 0 && (
+          <>
+            <Seal c={c} />
+            <View style={styles.chipWrap}>
+              {keywords.map((item) => (
+                <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
+                  <Text style={{ color: c.textSecondary, fontSize: 13 }}>{item}</Text>
                 </View>
               ))}
             </View>
-          )}
-
-          <Chips title="관심사" items={peer.interests} c={c} />
-          <Chips title="취미" items={peer.hobbies} c={c} />
-          <Chips title="강점" items={peer.strengths} c={c} />
-
-          {peer.answerUnlocked && peer.peerAnswer ? (
-            <View style={styles.answerSection}>
-              <Text style={[styles.answerHead, { color: c.textSecondary }]}>오늘의 답변</Text>
-              <View style={[styles.answerCard, { backgroundColor: c.backgroundElement }]}>
-                <Text style={[styles.answerText, { color: c.text, fontFamily: Fonts.serif }]}>{peer.peerAnswer}</Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
+          </>
+        )}
       </ScrollView>
     </SubScreen>
   );
 }
 
-function Chips({ title, items, c }: { title: string; items: string[]; c: ThemeColors }) {
-  if (!items || items.length === 0) return null;
+/** 청첩장의 구분 장식 — 가는 선 사이의 하트 씰. 브랜드 마크의 씰과 같은 자리다. */
+function Seal({ c }: { c: ThemeColors }) {
   return (
-    <View style={styles.chipSection}>
-      <Text style={[styles.chipTitle, { color: c.textSecondary }]}>{title}</Text>
-      <View style={styles.chipWrap}>
-        {items.map((item) => (
-          <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
-            <Text style={{ color: c.text, fontSize: 13 }}>{item}</Text>
-          </View>
-        ))}
-      </View>
+    <View style={styles.seal}>
+      <View style={[styles.sealLine, { backgroundColor: c.border }]} />
+      <Text style={[styles.sealHeart, { color: c.primary }]}>{'\u2665'}</Text>
+      <View style={[styles.sealLine, { backgroundColor: c.border }]} />
     </View>
   );
 }
@@ -109,22 +115,22 @@ function Chips({ title, items, c }: { title: string; items: string[]; c: ThemeCo
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  content: { paddingBottom: 48 },
-  body: { paddingHorizontal: 20, paddingTop: 20 },
-  name: { fontSize: 26, fontWeight: '700' },
-  meta: { fontSize: 14, marginTop: 4 },
-  bio: { fontSize: 15, lineHeight: 23, marginTop: 16 },
-  letterSection: { marginTop: 26 },
-  sectionHead: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
-  letterCard: { borderRadius: Radius.md, padding: 20, marginBottom: 10 },
-  letterQuestion: { fontSize: 13, lineHeight: 19 },
-  letterContent: { fontSize: 15.5, lineHeight: 25, marginTop: 8 },
-  chipSection: { marginTop: 22 },
-  chipTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill },
-  answerSection: { marginTop: 26 },
-  answerHead: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
-  answerCard: { borderRadius: Radius.md, padding: 20 },
-  answerText: { fontSize: 16, lineHeight: 26 },
+  content: { paddingBottom: 64 },
+
+  cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
+  name: { fontSize: 30, fontWeight: '700', letterSpacing: 1 },
+  meta: { fontSize: 13, letterSpacing: 1, marginTop: 10 },
+
+  seal: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 48, marginVertical: 30 },
+  sealLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  sealHeart: { fontSize: 11 },
+
+  bio: { fontSize: 15.5, lineHeight: 26, textAlign: 'center', paddingHorizontal: 36, marginBottom: 30 },
+
+  letter: { paddingHorizontal: 32, marginBottom: 34 },
+  letterQuestion: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  letterContent: { fontSize: 16, lineHeight: 28, textAlign: 'center', marginTop: 12 },
+
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28 },
+  chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
 });
