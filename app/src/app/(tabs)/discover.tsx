@@ -372,30 +372,27 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
             </Pressable>
           )}
 
-          {/* 하트가 유일한 행동 — 서로 하트면 대화가 열린다. 크게 외칠 필요 없는 한 마디라 작게. */}
+          {/*
+           * 하트가 유일한 행동 — 서로 하트면 대화가 열린다.
+           * 라벨은 없다: 하트 기호만으로 읽히고, 뜻은 누른 뒤의 알림이 가르친다.
+           */}
           <View style={styles.peerActions}>
             <Pressable
               onPress={heart}
               disabled={hearting || hearted}
+              accessibilityRole="button"
+              accessibilityLabel={hearted ? '호감을 보냈어요' : '하트 보내기'}
               style={[
                 styles.heart,
-                {
-                  backgroundColor: hearted ? c.backgroundSelected : c.primary,
-                  opacity: hearting ? 0.6 : 1,
-                },
+                { backgroundColor: hearted ? c.backgroundSelected : c.primary, opacity: hearting ? 0.6 : 1 },
               ]}
             >
-              {!hearting && (
-                <Image
-                  source={require('@/assets/images/match-heart.png')}
-                  style={styles.heartIcon}
-                  contentFit="contain"
-                  tintColor={hearted ? c.textSecondary : c.primaryText}
-                />
-              )}
-              <Text style={[styles.heartText, { color: hearted ? c.textSecondary : c.primaryText }]}>
-                {hearted ? '호감을 보냈어요' : hearting ? '...' : '하트 보내기'}
-              </Text>
+              <Image
+                source={require('@/assets/images/match-heart.png')}
+                style={styles.heartIcon}
+                contentFit="contain"
+                tintColor={hearted ? c.textSecondary : c.primaryText}
+              />
             </Pressable>
           </View>
         </>
@@ -468,9 +465,8 @@ const styles = StyleSheet.create({
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
   peerActions: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
-  heart: { flexDirection: 'row', gap: 6, height: 40, paddingHorizontal: 22, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  heartIcon: { width: 15, height: 15 },
-  heartText: { fontSize: 14, fontWeight: '700' },
+  heart: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  heartIcon: { width: 19, height: 19 },
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
