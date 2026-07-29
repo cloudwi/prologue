@@ -90,13 +90,15 @@ class DailyMeetService(
         return TodayPeersView(open = true, answerUnlocked = answered, peers = revealed.map { peerView(it, answered) })
     }
 
-    /** 상대 프로필(신원 비공개) + 답변(잠금 시 null). */
+    /** 상대 프로필(사진·닉네임 포함, 생년월일 등 원본은 비공개) + 답변(잠금 시 null). */
     private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
         return PeerView(
             peerAnswerId = peer.id,
             peerAnswer = if (answered) peer.content else null,
             answerUnlocked = answered,
+            photoUrls = p?.photoUrls ?: emptyList(),
+            nickname = p?.nickname,
             gender = p?.gender,
             age = p?.age(),
             region = p?.region,

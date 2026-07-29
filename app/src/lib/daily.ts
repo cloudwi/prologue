@@ -21,6 +21,9 @@ export type Peer = {
   peerAnswerId: string | null;
   peerAnswer: string | null;
   answerUnlocked: boolean;
+  /** 노출 순서대로의 프로필 사진. 가입 시 2장 필수라 비어 있는 건 옛 데이터뿐. */
+  photoUrls: string[];
+  nickname: string | null;
   gender: 'MALE' | 'FEMALE' | null;
   /** 만 나이(서버 계산). */
   age: number | null;

@@ -23,8 +23,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
-  if (peer.gender) parts.push(peer.gender === 'MALE' ? '남성' : '여성');
-  if (peer.age != null) parts.push(`만 ${peer.age}세`);
+  if (peer.age != null) parts.push(`${peer.age}세`);
   if (peer.heightCm) parts.push(`${peer.heightCm}cm`);
   if (peer.region) parts.push(peer.region.split(' ').slice(-1)[0]);
   return parts.join(' · ');
@@ -262,25 +261,36 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
 
   return (
     <View style={[styles.peerCard, { backgroundColor: c.backgroundElement }]}>
-      {/* 프로필 (신원 비공개 — 아바타·성별·나이 등) */}
-      <View style={styles.peerHead}>
-        <Avatar avatarId={peer.avatarId} size={46} c={c} />
-        <View style={styles.peerHeadBody}>
-          <Text style={[styles.peerMeta, { color: c.text }]}>{peerMetaLabel(peer)}</Text>
-          {peer.bio ? <Text style={[styles.peerBio, { color: c.textSecondary }]}>{peer.bio}</Text> : null}
-        </View>
-      </View>
-      {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
-        <View style={styles.peerChips}>
-          {[...peer.hobbies, ...peer.interests, ...peer.strengths].slice(0, 8).map((k) => (
-            <View key={k} style={[styles.peerChip, { backgroundColor: c.backgroundSelected }]}>
-              <Text style={{ color: c.textSecondary, fontSize: 12 }}>{k}</Text>
-            </View>
-          ))}
-        </View>
+      {/*
+       * 사진이 카드의 첫인상 — 상대가 먼저 보이고, 답변은 그 아래에서 이어진다.
+       * 글자는 사진 위에 얹지 않고 면에 앉힌다(MY 프로필 카드와 같은 규칙).
+       */}
+      {peer.photoUrls.length > 0 && (
+        <Image source={{ uri: peer.photoUrls[0] }} style={[styles.peerPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
       )}
 
-      <View style={[styles.peerDivider, { backgroundColor: c.border }]} />
+      <View style={styles.peerBody}>
+        <View style={styles.peerHead}>
+          {peer.photoUrls.length === 0 && <Avatar avatarId={peer.avatarId} size={46} c={c} />}
+          <View style={styles.peerHeadBody}>
+            {peer.nickname ? (
+              <Text style={[styles.peerName, { color: c.text, fontFamily: Fonts.serif }]}>{peer.nickname}</Text>
+            ) : null}
+            <Text style={[styles.peerMeta, { color: c.textSecondary }]}>{peerMetaLabel(peer)}</Text>
+          </View>
+        </View>
+        {peer.bio ? <Text style={[styles.peerBio, { color: c.text }]}>{peer.bio}</Text> : null}
+        {[...peer.hobbies, ...peer.interests, ...peer.strengths].length > 0 && (
+          <View style={styles.peerChips}>
+            {[...peer.hobbies, ...peer.interests, ...peer.strengths].slice(0, 5).map((k) => (
+              <View key={k} style={[styles.peerChip, { backgroundColor: c.backgroundSelected }]}>
+                <Text style={{ color: c.textSecondary, fontSize: 12 }}>{k}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={[styles.peerDivider, { backgroundColor: c.border }]} />
 
       {peer.answerUnlocked && peer.peerAnswer ? (
         <>
@@ -339,13 +349,14 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
             </Pressable>
           </View>
         </>
-      ) : (
-        <View style={styles.peerLock}>
-          <Text style={[styles.peerLockText, { color: c.textSecondary }]}>
-            오늘의 질문에 답하면{'\n'}이 상대의 답변이 열려요.
-          </Text>
-        </View>
-      )}
+        ) : (
+          <View style={styles.peerLock}>
+            <Text style={[styles.peerLockText, { color: c.textSecondary }]}>
+              오늘의 질문에 답하면{'\n'}이 상대의 답변이 열려요.
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -374,11 +385,15 @@ const styles = StyleSheet.create({
   peerSection: { marginTop: 34 },
   peerEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 4 },
   peerSub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
-  peerCard: { borderRadius: Radius.lg, padding: 20, marginBottom: 14 },
+  peerCard: { borderRadius: Radius.lg, marginBottom: 14, overflow: 'hidden' },
+  // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
+  peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
+  peerBody: { padding: 20 },
+  peerName: { fontSize: 20, fontWeight: '700' },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
   peerHeadBody: { flex: 1, marginLeft: 12 },
-  peerMeta: { fontSize: 15, fontWeight: '700' },
-  peerBio: { fontSize: 14, lineHeight: 21, marginTop: 4 },
+  peerMeta: { fontSize: 13.5, marginTop: 3 },
+  peerBio: { fontSize: 14.5, lineHeight: 22, marginTop: 12 },
   peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 14 },
   peerChip: { paddingHorizontal: 11, height: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   peerDivider: { height: StyleSheet.hairlineWidth, marginVertical: 18 },
@@ -393,6 +408,6 @@ const styles = StyleSheet.create({
   heartText: { fontSize: 15, fontWeight: '700' },
   talk: { flex: 1, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   talkText: { fontSize: 15, fontWeight: '700' },
-  peerEmpty: { alignItems: 'center', paddingVertical: 32 },
+  peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });

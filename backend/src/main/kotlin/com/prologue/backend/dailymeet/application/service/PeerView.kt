@@ -12,6 +12,9 @@ data class PeerView(
     val peerAnswerId: UUID?,
     val peerAnswer: String?,
     val answerUnlocked: Boolean,
+    /** 노출 순서대로의 프로필 사진. 가입 시 2장이 필수라 비어 있는 건 옛 데이터뿐이다. */
+    val photoUrls: List<String>,
+    val nickname: String?,
     val gender: Gender?,
     /** 만 나이(서버 계산). 생년월일 원본은 상대에게 노출하지 않는다. */
     val age: Int?,
