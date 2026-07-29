@@ -6,33 +6,11 @@ const posts = (await getCollection('blog'))
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .slice(0, 3);
 
-// 꽃잎 배치 — 빌드 시 고정된 의사 난수
-const petals = Array.from({ length: 12 }, (_, i) => {
-  const r = (n: number) => {
-    const x = Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453;
-    return x - Math.floor(x);
-  };
-  return {
-    left: `${Math.round(r(1) * 100)}%`,
-    size: `${Math.round(9 + r(2) * 9)}px`,
-    duration: `${(8 + r(3) * 8).toFixed(1)}s`,
-    delay: `-${(r(4) * 12).toFixed(1)}s`,
-  };
-});
-
 const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <Base>
   <section class="hero">
-    {
-      petals.map((p) => (
-        <span
-          class="petal"
-          style={`left:${p.left};width:${p.size};height:${p.size};animation-duration:${p.duration};animation-delay:${p.delay};`}
-        />
-      ))
-    }
     <img src="/brand-mark.png" alt="프롤로그 브랜드 마크" class="brand-mark" />
     <h1>
       하루 한 문답으로 알아가는,<br />

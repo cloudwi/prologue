@@ -185,42 +185,6 @@ img {
   text-indent: 0.5em;
 }
 
-/* 흩날리는 꽃잎 */
-.petal {
-  position: absolute;
-  top: -30px;
-  background: var(--terracotta-soft);
-  border-radius: 100% 15% 100% 15%;
-  pointer-events: none;
-  animation: petal-fall linear infinite;
-}
-
-@keyframes petal-fall {
-  0% {
-    transform: translate3d(0, -5vh, 0) rotate(0deg);
-    opacity: 0;
-  }
-  8% {
-    opacity: 0.8;
-  }
-  50% {
-    transform: translate3d(-40px, 45vh, 0) rotate(200deg);
-  }
-  90% {
-    opacity: 0.7;
-  }
-  100% {
-    transform: translate3d(30px, 95vh, 0) rotate(420deg);
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .petal {
-    display: none;
-  }
-}
-
 /* ── 섹션 ── */
 .section {
   padding: 90px 0;
