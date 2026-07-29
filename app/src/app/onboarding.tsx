@@ -31,28 +31,12 @@ import { completeOnboarding, type Gender } from '@/lib/member';
 import { uploadPhoto } from '@/lib/photo';
 import { useTheme } from '@/hooks/use-theme';
 
-const EMPTY_EXTRA: ProfileExtra = { avatarId: null, bio: '', height: '', hobbies: [], interests: [], strengths: [] };
+const EMPTY_EXTRA: ProfileExtra = { avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
 
 /** 닉네임 placeholder 예시 풀 (화면 진입 시 랜덤). */
 const NICKNAME_EXAMPLES = [
   '봄날의곰', '책읽는여우', '느긋한고양이', '바다보는사람', '새벽의산책',
   '조용한위로', '별보는밤', '따뜻한문장', '오후의햇살', '깊은밤라디오',
-];
-
-/** 자기소개 예시 풀 (영감용 — 탭해도 채워지지 않는다). */
-const BIO_EXAMPLES = [
-  '평일엔 열심히 일하고, 주말 아침엔 한강을 달려요. 달리고 나서 마시는 커피 한 잔이 일주일의 낙이에요.',
-  '지도를 켜고 안 가본 동네 카페를 찾아다니는 게 취미예요. 조용한 공간에서 나누는 긴 대화를 좋아해요.',
-  '요리하는 걸 좋아해서 주말마다 새 레시피에 도전해요. 언젠가 제가 만든 파스타를 대접하고 싶네요.',
-  '퇴근길엔 이어폰 끼고 한 정거장 먼저 내려서 걸어요. 그 30분이 하루 중 제일 소중한 시간이에요.',
-  '집에선 영화와 책, 밖에선 등산과 캠핑 — 조용함과 활발함 사이 어딘가에 있는 사람이에요.',
-  '동네 맛집 지도를 채워가는 재미로 살아요. 좋은 사람과 맛있는 걸 먹을 때 제일 행복해요.',
-  '식물 키우는 재미에 푹 빠져 있어요. 아침에 창가 화분들 돌보는 걸로 하루를 시작해요.',
-  '전시 보러 다니는 걸 좋아해요. 좋았던 작품 이야기를 밤새 나눌 수 있는 사람이면 더 좋아요.',
-  '운동으로 하루를 마무리해요. 몸을 움직이고 나면 마음도 단정해지는 기분이라서요.',
-  '주말마다 필름 카메라 들고 골목을 걸어요. 같은 풍경도 천천히 보면 다르게 보이더라고요.',
-  '새로운 걸 배우는 중이에요. 요즘은 클라이밍 — 시작한 지 얼마 안 됐지만 제일 기다려지는 시간이에요.',
-  '반려견 산책이 하루의 시작과 끝이에요. 강아지 좋아하시면 이미 절반은 통한 거예요.',
 ];
 
 /** 한 화면에 한 질문씩 보여주는 스텝 정의. */
@@ -95,11 +79,6 @@ export default function OnboardingScreen() {
   const [nameSuggestions] = useState(() =>
     [...NICKNAME_EXAMPLES].sort(() => Math.random() - 0.5).slice(0, 3),
   );
-  // 자기소개 예시 3개 (영감용)
-  const [bioExamples] = useState(() =>
-    [...BIO_EXAMPLES].sort(() => Math.random() - 0.5).slice(0, 3),
-  );
-
   const patchExtra = (patch: Partial<ProfileExtra>) => setExtra((prev) => ({ ...prev, ...patch }));
 
   // 스텝 전환 시 질문 블록이 아래에서 살짝 떠오르며 나타난다 — 장면이 넘어가는 호흡.
@@ -227,38 +206,6 @@ export default function OnboardingScreen() {
       optional: true,
       filled: extra.avatarId != null,
       content: <AvatarPicker value={extra.avatarId} onChange={(avatarId) => patchExtra({ avatarId })} c={c} />,
-    },
-    {
-      key: 'bio',
-      title: '한 문장으로 나를 소개해주세요',
-      optional: true,
-      filled: extra.bio.trim().length > 0,
-      content: (
-        <>
-          <PlaceholderInput
-            value={extra.bio}
-            onChangeText={(t) => patchExtra({ bio: t })}
-            placeholder="나를 한 문장으로 소개해보세요"
-            placeholderTextColor={c.textSecondary}
-            multiline
-            maxLength={100}
-            autoFocus
-            style={[styles.bio, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
-          />
-          <Text style={[styles.counter, { color: c.textSecondary }]}>{extra.bio.length}/100</Text>
-          <Text style={[styles.suggestHint, { color: c.textSecondary }]}>이런 식으로 써보세요</Text>
-          {bioExamples.map((ex) => (
-            <View
-              key={ex}
-              style={[styles.bioExample, { borderColor: c.border, backgroundColor: c.backgroundElement }]}
-            >
-              <Text lineBreakStrategyIOS="hangul-word" style={{ color: c.textSecondary, fontSize: 14, lineHeight: 21 }}>
-                “{ex}”
-              </Text>
-            </View>
-          ))}
-        </>
-      ),
     },
     {
       key: 'height',
@@ -528,10 +475,8 @@ const styles = StyleSheet.create({
   hint: { fontSize: 13, marginTop: 6 },
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
   suggestHint: { fontSize: 13, marginTop: 16, marginBottom: 8 },
-  bioExample: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 },
   suggestRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   suggestChip: { paddingHorizontal: 14, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  bio: { minHeight: 72, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

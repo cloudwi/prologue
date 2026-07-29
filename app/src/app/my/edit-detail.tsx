@@ -17,7 +17,7 @@ import { completeOnboarding, getMyProfile, type MemberProfile } from '@/lib/memb
 import { toRequest } from '@/lib/profile-form';
 import { useTheme } from '@/hooks/use-theme';
 
-const EMPTY: ProfileExtra = { avatarId: null, bio: '', height: '', hobbies: [], interests: [], strengths: [] };
+const EMPTY: ProfileExtra = { avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
 
 export default function EditDetailScreen() {
   const c = useTheme();
@@ -37,7 +37,6 @@ export default function EditDetailScreen() {
         setBase(p);
         setExtra({
           avatarId: p.avatarId ?? null,
-          bio: p.bio ?? '',
           height: p.heightCm != null ? String(p.heightCm) : '',
           hobbies: p.hobbies ?? [],
           interests: p.interests ?? [],

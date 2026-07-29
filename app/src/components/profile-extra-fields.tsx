@@ -4,14 +4,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HeightPicker } from '@/components/height-picker';
 import { KeywordChips } from '@/components/keyword-chips';
-import { PlaceholderInput } from '@/components/placeholder-input';
 import { AVATARS } from '@/constants/avatars';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import type { ThemeColors } from '@/constants/theme';
 
 export type ProfileExtra = {
   avatarId: number | null;
-  bio: string;
   height: string; // 입력 편의를 위해 문자열로 다룸
   hobbies: string[];
   interests: string[];
@@ -31,19 +29,6 @@ export function ProfileExtraFields({
     <View>
       <Field label="아바타 (나를 닮은 아이콘)" c={c}>
         <AvatarPicker value={value.avatarId} onChange={(avatarId) => onChange({ avatarId })} c={c} />
-      </Field>
-
-      <Field label="자기소개 (선택)" c={c}>
-        <PlaceholderInput
-          value={value.bio}
-          onChangeText={(t) => onChange({ bio: t })}
-          placeholder="나를 한 문장으로 소개해보세요"
-          placeholderTextColor={c.textSecondary}
-          multiline
-          maxLength={100}
-          style={[styles.bio, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
-        />
-        <Text style={[styles.counter, { color: c.textSecondary }]}>{value.bio.length}/100</Text>
       </Field>
 
       <Field label="키 (선택)" c={c}>
@@ -92,11 +77,14 @@ export function AvatarPicker({
   );
 }
 
-/** ProfileExtra → API 필드로 변환. */
+/**
+ * ProfileExtra → API 필드로 변환.
+ * bio는 다루지 않는다 — 자기소개는 짧은 상자 대신 매일의 문답(편지)으로 쌓인다.
+ * 여기서 키를 빼면 toRequest가 기존 저장값을 그대로 보존한다.
+ */
 export function toProfilePayload(v: ProfileExtra) {
   return {
     avatarId: v.avatarId,
-    bio: v.bio.trim() || null,
     heightCm: /^\d{2,3}$/.test(v.height) ? Number(v.height) : null,
     hobbies: v.hobbies,
     interests: v.interests,
@@ -117,8 +105,6 @@ const styles = StyleSheet.create({
   field: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
-  bio: { minHeight: 72, borderRadius: 12, borderWidth: 1, padding: 14, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
-  counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   avatarRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

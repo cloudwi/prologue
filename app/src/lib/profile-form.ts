@@ -27,7 +27,8 @@ export type NextStep = { label: string; hint: string; href: string };
 /**
  * 프로필에서 지금 채우면 가장 도움이 되는 항목 하나.
  * 진행률 막대는 "무엇을 해야 하는지"를 알려주지 않아서, 다음 행동 하나만 제안한다.
- * 노출 효과가 큰 순서(사진 → 소개 → 관심사 → 취미 → 강점 → 아바타)로 검사한다.
+ * 노출 효과가 큰 순서(사진 → 관심사 → 취미 → 강점 → 아바타)로 검사한다.
+ * 자기소개 항목은 없다 — 소개는 매일의 문답(편지)으로 쌓인다.
  */
 export function nextStep(p: MemberProfile): NextStep | null {
   const photos = p.photoUrls?.length ?? 0;
@@ -36,9 +37,6 @@ export function nextStep(p: MemberProfile): NextStep | null {
   }
   if (photos < 4) {
     return { label: '사진을 한 장 더 올려보세요', hint: '여러 장일수록 대화로 이어질 확률이 높아요', href: '/my/edit-photos' };
-  }
-  if (!p.bio?.trim()) {
-    return { label: '자기소개를 한 문장 적어보세요', hint: '가장 먼저 읽히는 문장이에요', href: '/my/edit-detail' };
   }
   if ((p.interests?.length ?? 0) === 0) {
     return { label: '관심사를 골라보세요', hint: '대화가 시작되는 지점이 돼요', href: '/my/edit-detail' };
