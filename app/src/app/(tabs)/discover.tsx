@@ -222,6 +222,36 @@ export default function DiscoverScreen() {
   );
 }
 
+/** 상대 사진 갤러리 — 가로로 넘겨 보는 페이지 스크롤. 점 표시는 사진 위 유일한 오버레이다. */
+function PeerGallery({ photos, c }: { photos: string[]; c: ThemeColors }) {
+  const [width, setWidth] = useState(0);
+  const [page, setPage] = useState(0);
+
+  return (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ backgroundColor: c.backgroundSelected }}>
+      {width > 0 && (
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
+        >
+          {photos.map((url) => (
+            <Image key={url} source={{ uri: url }} style={[styles.peerPhoto, { width }]} contentFit="cover" transition={150} />
+          ))}
+        </ScrollView>
+      )}
+      {photos.length > 1 && (
+        <View style={styles.galleryDots} pointerEvents="none">
+          {photos.map((url, i) => (
+            <View key={url} style={[styles.galleryDot, { opacity: i === page ? 1 : 0.45 }]} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 /** 상대 1명 카드 — 하트/대화신청/답변 열람 상태를 카드별로 가진다. */
 function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
   const [hearted, setHearted] = useState(false);
@@ -265,9 +295,7 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
        * 사진이 카드의 첫인상 — 상대가 먼저 보이고, 답변은 그 아래에서 이어진다.
        * 글자는 사진 위에 얹지 않고 면에 앉힌다(MY 프로필 카드와 같은 규칙).
        */}
-      {peer.photoUrls.length > 0 && (
-        <Image source={{ uri: peer.photoUrls[0] }} style={[styles.peerPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
-      )}
+      {peer.photoUrls.length > 0 && <PeerGallery photos={peer.photoUrls} c={c} />}
 
       <View style={styles.peerBody}>
         <View style={styles.peerHead}>
@@ -386,8 +414,28 @@ const styles = StyleSheet.create({
   peerEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 4 },
   peerSub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
   peerCard: { borderRadius: Radius.lg, marginBottom: 14, overflow: 'hidden' },
-  // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
-  peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
+  // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 폭은 갤러리가 잰 카드 폭으로 채운다.
+  peerPhoto: { aspectRatio: 4 / 5 },
+  galleryDots: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  // 사진 위라 테마와 무관하게 흰 점 — 은은한 그림자로 밝은 사진에서도 보인다.
+  galleryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+  },
   peerBody: { padding: 20 },
   peerName: { fontSize: 20, fontWeight: '700' },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
