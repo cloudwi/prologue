@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PhotoPager } from '@/components/photo-pager';
 import { avatarSource } from '@/constants/avatars';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
@@ -77,7 +78,6 @@ export default function MyScreen() {
   const photos = profile?.photoUrls ?? [];
   const age = profile ? ageFrom(profile.birthDate) : null;
   const todo = profile ? nextStep(profile) : null;
-  const extra = photos.length - 2;
   const hasPhoto = photos.length > 0;
 
   return (
@@ -90,38 +90,17 @@ export default function MyScreen() {
         <SafeAreaView edges={['top']}>
           {/*
            * 프로필 카드 — 사진과 이름을 한 장의 카드로 묶는다.
-           * 예전에는 사진이 화면 끝까지 각지게 깔리고 그 위에 글자가 떠 있어서
-           * 아래 둥근 메뉴 카드들과 따로 노는 인상이었다.
-           * 사진은 가입 시 2장이 필수라 대표 + 두 번째를 나란히 보여줄 수 있다.
+           * 사진은 옆으로 넘겨 보는 페이저: 카드 전체를 누르게 하면 사진을 넘기려다
+           * 상세로 튕겨 들어가서, 누르는 곳은 아래 이름 줄 하나로 좁혔다.
            */}
-          <Pressable
-            onPress={() => router.push(hasPhoto ? '/my/preview' : '/my/edit-photos')}
-            style={({ pressed }) => [
-              styles.hero,
-              { backgroundColor: c.backgroundElement, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
+          <View style={[styles.hero, { backgroundColor: c.backgroundElement }]}>
             {/* 사진이 없으면 사진 자리를 아예 만들지 않는다 — 빈 상자 가운데 아바타만 덩그러니 놓이는 게 더 초라하다. */}
-            {hasPhoto && (
-              <View style={[styles.heroPhotos, { aspectRatio: photos.length > 1 ? 1.2 : 1.35 }]}>
-                <View style={[styles.heroMain, { backgroundColor: c.backgroundSelected }]}>
-                  <Image source={{ uri: photos[0] }} style={styles.fill} contentFit="cover" />
-                </View>
+            {hasPhoto && <PhotoPager photos={photos} backgroundColor={c.backgroundSelected} />}
 
-                {photos[1] && (
-                  <View style={[styles.heroSide, { backgroundColor: c.backgroundSelected }]}>
-                    <Image source={{ uri: photos[1] }} style={styles.fill} contentFit="cover" />
-                    {extra > 0 && (
-                      <View style={[styles.moreBadge, { backgroundColor: c.background }]}>
-                        <Text style={[styles.moreBadgeText, { color: c.text }]}>+{extra}</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-
-            <View style={styles.heroText}>
+            <Pressable
+              onPress={() => router.push(hasPhoto ? '/my/preview' : '/my/edit-photos')}
+              style={({ pressed }) => [styles.heroText, { opacity: pressed ? 0.6 : 1 }]}
+            >
               {!hasPhoto && profile?.avatarId != null && (
                 <View style={[styles.heroThumb, { backgroundColor: c.backgroundSelected }]}>
                   <Image source={avatarSource(profile.avatarId)!} style={styles.fill} contentFit="cover" />
@@ -138,8 +117,8 @@ export default function MyScreen() {
                 </Text>
               </View>
               <Text style={[styles.heroLink, { color: c.primaryStrong }]}>{hasPhoto ? '미리보기 ›' : '사진 올리기 ›'}</Text>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         </SafeAreaView>
 
         {/* 다음 한 가지 — 완성도 퍼센트 대신 지금 할 행동 하나만 제안한다. */}
@@ -257,23 +236,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
-  // 대표 사진과 두 번째 사진을 얇은 간격으로 나란히 — 카드 배경이 그 사이로 비친다.
-  heroPhotos: { flexDirection: 'row', gap: 3 },
-  heroMain: { flex: 1.9 },
-  heroSide: { flex: 1 },
   fill: { width: '100%', height: '100%' },
   // 사진이 없을 때만 쓰는 아바타 썸네일. 이름 줄 왼쪽에 붙어 카드가 한 줄짜리로 압축된다.
   heroThumb: { width: 52, height: 52, borderRadius: Radius.sm, overflow: 'hidden' },
-  moreBadge: {
-    position: 'absolute',
-    right: 8,
-    bottom: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: Radius.pill,
-    opacity: 0.92,
-  },
-  moreBadgeText: { fontSize: 11, fontWeight: '700' },
   heroText: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 18 },
   heroName: { fontSize: 24, fontWeight: '700' },
   heroMeta: { fontSize: 13.5, marginTop: 4 },
