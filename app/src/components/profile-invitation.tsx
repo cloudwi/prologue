@@ -46,6 +46,11 @@ export function ProfileInvitation({
 
       <Seal c={c} />
 
+      {/* 인사 — 편지는 인사로 시작한다. 쓸 말이 있는 사람에게만. */}
+      {letters.length > 0 && (
+        <Text style={[styles.greeting, { color: c.textSecondary, fontFamily: Fonts.serif }]}>안녕하세요,</Text>
+      )}
+
       {letters.map((block, i) => (
         <View key={block.key}>
           <View style={styles.letter}>
@@ -93,6 +98,14 @@ export function ProfileInvitation({
           </View>
         </>
       )}
+
+      {/* 서명 — 부치는 사람이 보여야 편지다. */}
+      {nickname && (
+        <View style={styles.signature}>
+          <Text style={[styles.signatureLead, { color: c.textSecondary }]}>마음을 담아,</Text>
+          <Text style={[styles.signatureName, { color: c.text, fontFamily: Fonts.serif }]}>{nickname} 드림</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -135,10 +148,16 @@ const styles = StyleSheet.create({
   sealLine: { flex: 1, height: StyleSheet.hairlineWidth },
   sealHeart: { fontSize: 11 },
 
+  greeting: { fontSize: 15, textAlign: 'center', marginBottom: 26 },
+
   letter: { paddingHorizontal: 32, marginBottom: 34 },
   letterQuestion: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
   letterContent: { fontSize: 16, lineHeight: 28, textAlign: 'center', marginTop: 12 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
+
+  signature: { alignItems: 'center', marginTop: 44 },
+  signatureLead: { fontSize: 12.5, letterSpacing: 0.5 },
+  signatureName: { fontSize: 19, fontWeight: '700', marginTop: 6 },
 });
