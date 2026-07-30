@@ -44,7 +44,7 @@ export function ProfileInvitation({
         <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text>
       </View>
 
-      <Seal c={c} />
+      <Divider c={c} />
 
       {/* 인사 — 편지는 인사로 시작한다. 쓸 말이 있는 사람에게만. */}
       {letters.length > 0 && (
@@ -88,7 +88,7 @@ export function ProfileInvitation({
 
       {keywords.length > 0 && (
         <>
-          <Seal c={c} />
+          <Divider c={c} />
           <View style={styles.chipWrap}>
             {keywords.map((item) => (
               <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
@@ -123,13 +123,11 @@ function scatter(photoCount: number, blockCount: number, seed: string): number[]
   return slots;
 }
 
-/** 청첩장의 구분 장식 — 가는 선 사이의 하트 씰. 브랜드 마크의 씰과 같은 자리다. */
-function Seal({ c }: { c: ThemeColors }) {
+/** 구분 장식 — 짧은 가는 선 하나. 청첩장의 여백을 가르는 데는 이걸로 충분하다. */
+function Divider({ c }: { c: ThemeColors }) {
   return (
-    <View style={styles.seal}>
-      <View style={[styles.sealLine, { backgroundColor: c.border }]} />
-      <Text style={[styles.sealHeart, { color: c.primary }]}>{'\u2665'}</Text>
-      <View style={[styles.sealLine, { backgroundColor: c.border }]} />
+    <View style={styles.divider}>
+      <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
     </View>
   );
 }
@@ -144,9 +142,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 30, fontWeight: '700', letterSpacing: 1 },
   meta: { fontSize: 13, letterSpacing: 1, marginTop: 10 },
 
-  seal: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 48, marginVertical: 30 },
-  sealLine: { flex: 1, height: StyleSheet.hairlineWidth },
-  sealHeart: { fontSize: 11 },
+  divider: { alignItems: 'center', marginVertical: 30 },
+  dividerLine: { width: 40, height: StyleSheet.hairlineWidth },
 
   greeting: { fontSize: 15, textAlign: 'center', marginBottom: 26 },
 
