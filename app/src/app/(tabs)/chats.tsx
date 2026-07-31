@@ -129,7 +129,7 @@ export default function ChatsScreen() {
                     {h.photoUrl ? (
                       <Image
                         source={{ uri: h.photoUrl }}
-                        style={[styles.heartPhoto, { backgroundColor: c.backgroundSelected }]}
+                        style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
                         contentFit="cover"
                         transition={150}
                       />
@@ -202,7 +202,16 @@ export default function ChatsScreen() {
                     onPress={() => openConversation(cv)}
                     style={[styles.convCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}
                   >
-                    <Avatar avatarId={cv.avatarId} nickname={cv.nickname} size={48} c={c} />
+                    {cv.photoUrl ? (
+                      <Image
+                        source={{ uri: cv.photoUrl }}
+                        style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
+                        contentFit="cover"
+                        transition={150}
+                      />
+                    ) : (
+                      <Avatar avatarId={cv.avatarId} nickname={cv.nickname} size={48} c={c} />
+                    )}
                     <View style={styles.convBody}>
                       <Text style={[styles.convName, { color: c.text }]}>{cv.nickname}</Text>
                       <Text style={[styles.convMeta, { color: c.textSecondary }]}>
@@ -228,7 +237,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 25, paddingTop: 12, paddingBottom: 40 },
   sectionEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
   heartCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 12 },
-  heartPhoto: { width: 48, height: 48, borderRadius: 24 },
+  profilePhoto: { width: 48, height: 48, borderRadius: 24 },
   heartBackBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   heartBackIcon: { width: 17, height: 17 },
   reqCard: { borderRadius: 16, borderWidth: 1, padding: 18, marginBottom: 14 },

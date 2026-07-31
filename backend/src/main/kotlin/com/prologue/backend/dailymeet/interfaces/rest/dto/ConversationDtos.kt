@@ -62,6 +62,8 @@ data class ConversationResponse(
     val age: Int,
     val region: String,
     val avatarId: Int?,
+    /** 대표 사진(첫 장). null이면 아바타로 대신 그린다(옛 데이터). */
+    val photoUrl: String?,
 ) {
     companion object {
         fun from(v: ConversationView) = ConversationResponse(
@@ -72,6 +74,7 @@ data class ConversationResponse(
             age = v.age,
             region = v.region,
             avatarId = v.avatarId,
+            photoUrl = v.photoUrl,
         )
     }
 }

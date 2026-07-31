@@ -37,6 +37,8 @@ export type Conversation = {
   age: number;
   region: string;
   avatarId: number | null;
+  /** 대표 사진(첫 장). null이면 아바타로 대신 그린다(옛 데이터). */
+  photoUrl: string | null;
 };
 
 /** 내 대화 목록 (GET /conversations). */

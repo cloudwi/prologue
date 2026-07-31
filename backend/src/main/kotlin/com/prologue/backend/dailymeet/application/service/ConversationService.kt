@@ -33,6 +33,8 @@ data class ConversationView(
     val age: Int,
     val region: String,
     val avatarId: Int?,
+    /** 대표 사진(첫 장). 사진이 필수라 비어 있는 건 옛 데이터뿐 — 그땐 아바타로 대신한다. */
+    val photoUrl: String?,
     val createdAt: Instant,
 )
 
@@ -123,6 +125,7 @@ class ConversationService(
                 age = profile.age(),
                 region = profile.region,
                 avatarId = profile.avatarId,
+                photoUrl = profile.photoUrls.firstOrNull(),
                 createdAt = conv.createdAt,
             )
         }
