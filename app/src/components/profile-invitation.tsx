@@ -110,15 +110,22 @@ export function ProfileInvitation({
   );
 }
 
-/** 사진 n장을 블록 0..blockCount-1 뒤에 뿌릴 위치. 시드 기반 의사 난수 — 항상 같은 배치. */
+/**
+ * 사진 n장을 블록 0..blockCount-1 뒤에 뿌릴 위치. 시드 고정 배치는 유지하되,
+ * 블록을 사진 수만큼 구간으로 나눠 구간마다 한 장씩 놓는다 — 순수 난수는 슬롯이
+ * 한곳에 몰려 사진이 연달아 나온 뒤에야 글이 시작되는 배치가 나올 수 있어서.
+ * 구간 안에서 어디에 놓일지만 시드가 정한다.
+ */
 function scatter(photoCount: number, blockCount: number, seed: string): number[] {
   if (photoCount === 0 || blockCount === 0) return [];
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   const slots: number[] = [];
   for (let i = 0; i < photoCount; i++) {
+    const lo = Math.floor((i * blockCount) / photoCount);
+    const hi = Math.floor(((i + 1) * blockCount) / photoCount);
     h = (h * 1103515245 + 12345) >>> 0;
-    slots.push(h % blockCount);
+    slots.push(lo + (h % Math.max(1, hi - lo)));
   }
   return slots;
 }
