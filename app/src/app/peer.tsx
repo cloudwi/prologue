@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -9,6 +9,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { sendConversationRequest } from '@/lib/conversation';
 import { sendHeart, type Peer } from '@/lib/daily';
+import { getStampBalance } from '@/lib/stamps';
 
 /**
  * 오늘의 상대 프로필 상세 — 청첩장 조판(ProfileInvitation).
@@ -28,6 +29,7 @@ export default function PeerDetailScreen() {
   const [hearting, setHearting] = useState(false);
   const [requested, setRequested] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [stamps, setStamps] = useState<number | null>(null);
 
   const peer = useMemo<Peer | null>(() => {
     try {
@@ -36,6 +38,13 @@ export default function PeerDetailScreen() {
       return null;
     }
   }, [data]);
+
+  // 대화 신청 확인 문구에 남은 우표를 보여주기 위해 미리 읽는다. 실패해도 버튼은 살아 있다.
+  const canAct = Boolean(peer?.answerUnlocked && peer?.peerAnswerId);
+  useEffect(() => {
+    if (!canAct) return;
+    getStampBalance().then(setStamps).catch(() => {});
+  }, [canAct]);
 
   if (!peer) {
     return (
@@ -88,19 +97,33 @@ export default function PeerDetailScreen() {
     }
   }
 
-  /** 대화 신청 — 상호 하트 없이 문을 두드린다. 상대가 수락해야 열린다. (출시 시 재화 소모 자리) */
+  /** 대화 신청 — 상호 하트 없이 문을 두드린다. 우표 1장을 쓰고, 상대가 수락해야 열린다. */
   async function requestConversation() {
     if (!peer?.peerAnswerId || requesting || requested) return;
     setRequesting(true);
     try {
       await sendConversationRequest(peer.peerAnswerId);
       setRequested(true);
+      setStamps((n) => (n != null ? Math.max(0, n - 1) : n));
       Alert.alert('대화를 신청했어요', '상대가 수락하면 대화가 열려요.');
     } catch (e) {
       Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
       setRequesting(false);
     }
+  }
+
+  /** 우표를 쓰는 행동이라 한 번 확인한다 — 남은 우표를 함께 보여주고. */
+  function confirmRequest() {
+    if (requesting || requested) return;
+    Alert.alert(
+      '대화 신청',
+      stamps != null ? `우표 1장을 사용해요. (남은 우표 ${stamps}장)` : '우표 1장을 사용해요.',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '신청하기', onPress: requestConversation },
+      ],
+    );
   }
 
   return (
@@ -117,7 +140,7 @@ export default function PeerDetailScreen() {
         />
         {peer.answerUnlocked && peer.peerAnswerId && (
           <Pressable
-            onPress={requestConversation}
+            onPress={confirmRequest}
             disabled={requesting || requested}
             accessibilityRole="button"
             style={[

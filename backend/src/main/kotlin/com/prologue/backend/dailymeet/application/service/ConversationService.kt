@@ -50,8 +50,9 @@ class ConversationService(
     private val requestRepository: ConversationRequestRepository,
     private val conversationRepository: ConversationRepository,
     private val profileLetterService: ProfileLetterService,
+    private val stampService: StampService,
 ) {
-    /** 상대 답변(peerAnswerId)을 보고 대화를 신청한다. */
+    /** 상대 답변(peerAnswerId)을 보고 대화를 신청한다. 우표 1장을 쓴다 — 편지를 부치는 값. */
     @Transactional
     fun sendRequest(requesterAccountId: UUID, peerAnswerId: UUID): UUID {
         val peerAnswer = answerRepository.findById(peerAnswerId)
@@ -64,6 +65,8 @@ class ConversationService(
         if (requestRepository.existsPending(requesterAccountId, addresseeId)) {
             throw DailyMeetException("이미 대화를 신청했어요")
         }
+        // 검증을 모두 통과한 뒤에 소모 — 같은 트랜잭션이라 신청 저장이 실패하면 우표도 돌아간다.
+        stampService.spendOne(requesterAccountId, StampService.REASON_CONVERSATION_REQUEST)
         val saved = requestRepository.save(
             ConversationRequest.create(requesterAccountId, addresseeId, peerAnswer.questionId),
         )

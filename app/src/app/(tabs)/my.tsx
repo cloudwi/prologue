@@ -20,6 +20,7 @@ import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { ageFrom, nextStep } from '@/lib/profile-form';
+import { getStampBalance } from '@/lib/stamps';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -35,11 +36,15 @@ export default function MyScreen() {
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
+  const [stamps, setStamps] = useState<number | null>(null);
 
   // 하위 편집 화면에서 돌아오면 다시 읽어 최신 상태를 반영한다.
   useFocusEffect(
     useCallback(() => {
       let active = true;
+      getStampBalance()
+        .then((n) => active && setStamps(n))
+        .catch(() => {}); // 우표는 보조 정보 — 실패해도 화면은 유지
       (async () => {
         try {
           const p = await getMyProfile();
@@ -158,6 +163,14 @@ export default function MyScreen() {
         </Section>
 
         <Section title="매칭" c={c}>
+          <Row
+            label="우표"
+            value={stamps != null ? `${stamps}장` : undefined}
+            onPress={() =>
+              Alert.alert('우표', '대화 신청에 1장씩 쓰여요.\n충전은 출시 후에 열릴 예정이에요.')
+            }
+            c={c}
+          />
           <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
           <Row label="지인 차단" onPress={() => router.push('/my/blocked')} c={c} last />
         </Section>
