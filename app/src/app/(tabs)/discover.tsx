@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { isSessionExpired } from '@/lib/api';
-import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
+import { answerToday, getPeers, getToday, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -271,39 +271,15 @@ function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string 
   );
 }
 
-/** 상대 1명 카드 — 하트/대화신청/답변 열람 상태를 카드별로 가진다. */
+/** 상대 1명 카드 — 답변 열람 상태를 카드별로 가진다. 하트는 상세(청첩장)의 플로팅 버튼에서만. */
 function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; c: ThemeColors }) {
   const router = useRouter();
-  const [hearted, setHearted] = useState(false);
-  const [hearting, setHearting] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  /** 상세 화면으로 — 나머지 사진과 프로필 전체는 거기서 본다. 오늘의 질문도 함께 넘긴다. */
+  /** 상세 화면으로 — 나머지 사진과 프로필 전체, 하트는 거기서. 오늘의 질문도 함께 넘긴다. */
   function openDetail() {
     router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question: question ?? '' } });
-  }
-
-  /** 하트 = 호감 표시. 서로 하트를 보냈으면 그 자리에서 대화가 열린다. */
-  async function heart() {
-    if (!peer.peerAnswerId || hearting || hearted) return;
-    setHearting(true);
-    try {
-      const result = await sendHeart(peer.peerAnswerId);
-      setHearted(true);
-      if (result.matched) {
-        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 대화가 열렸어요.', [
-          { text: '나중에', style: 'cancel' },
-          { text: '대화하러 가기', onPress: () => router.push('/chats') },
-        ]);
-      } else {
-        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 대화가 열려요.');
-      }
-    } catch (e) {
-      Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-    } finally {
-      setHearting(false);
-    }
   }
 
   return (
@@ -383,29 +359,10 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
             </Pressable>
           )}
 
-          {/*
-           * 하트가 유일한 행동 — 서로 하트면 대화가 열린다.
-           * 라벨은 없다: 하트 기호만으로 읽히고, 뜻은 누른 뒤의 알림이 가르친다.
-           */}
-          <View style={styles.peerActions}>
-            <Pressable
-              onPress={heart}
-              disabled={hearting || hearted}
-              accessibilityRole="button"
-              accessibilityLabel={hearted ? '호감을 보냈어요' : '하트 보내기'}
-              style={[
-                styles.heart,
-                { backgroundColor: hearted ? c.backgroundSelected : c.primary, opacity: hearting ? 0.6 : 1 },
-              ]}
-            >
-              <Image
-                source={require('@/assets/images/match-heart.png')}
-                style={styles.heartIcon}
-                contentFit="contain"
-                tintColor={hearted ? c.textSecondary : c.primaryText}
-              />
-            </Pressable>
-          </View>
+          {/* 하트는 여기 없다 — 프로필을 끝까지 읽는 상세의 플로팅 버튼이 유일한 호감 행동. */}
+          <Pressable onPress={openDetail} style={styles.detailCta} hitSlop={6}>
+            <Text style={[styles.detailCtaText, { color: c.primaryStrong }]}>프로필 전체 보기 ›</Text>
+          </Pressable>
         </>
         ) : (
           <View style={styles.peerLock}>
@@ -476,9 +433,8 @@ const styles = StyleSheet.create({
   peerAnswer: { fontSize: 16, lineHeight: 25 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
-  peerActions: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
-  heart: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  heartIcon: { width: 19, height: 19 },
+  detailCta: { alignSelf: 'center', marginTop: 16, padding: 4 },
+  detailCtaText: { fontSize: 14, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });
