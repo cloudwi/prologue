@@ -152,11 +152,11 @@ const styles = StyleSheet.create({
   divider: { alignItems: 'center', marginVertical: 30 },
   dividerLine: { width: 40, height: StyleSheet.hairlineWidth },
 
-  greeting: { fontSize: 15, textAlign: 'center', marginBottom: 26 },
+  greeting: { fontSize: 16, textAlign: 'center', marginBottom: 26 },
 
   letter: { paddingHorizontal: 32, marginBottom: 34 },
   letterQuestion: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
-  letterContent: { fontSize: 16, lineHeight: 28, textAlign: 'center', marginTop: 12 },
+  letterContent: { fontSize: 17, lineHeight: 30, textAlign: 'center', marginTop: 12 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
