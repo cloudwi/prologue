@@ -38,11 +38,21 @@ export function ProfileInvitation({
         <Image source={{ uri: cover }} style={[styles.photo, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
       )}
 
-      {/* 표지 — 이름과 한 줄 정보만 가운데에 */}
+      {/* 표지 — 이름과 한 줄 정보, 그 아래 키워드. 긴 글 전에 훑는 요약은 표지 몫이다. */}
       <View style={styles.cover}>
         {nickname ? <Text style={[styles.name, { color: c.text, fontFamily: Fonts.serif }]}>{nickname}</Text> : null}
         <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text>
       </View>
+
+      {keywords.length > 0 && (
+        <View style={styles.chipWrap}>
+          {keywords.map((item) => (
+            <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
+              <Text style={{ color: c.textSecondary, fontSize: 13 }}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <Divider c={c} />
 
@@ -85,19 +95,6 @@ export function ProfileInvitation({
             transition={150}
           />
         ))}
-
-      {keywords.length > 0 && (
-        <>
-          <Divider c={c} />
-          <View style={styles.chipWrap}>
-            {keywords.map((item) => (
-              <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
-                <Text style={{ color: c.textSecondary, fontSize: 13 }}>{item}</Text>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
 
       {/* 서명 — 부치는 사람이 보여야 편지다. */}
       {nickname && (
@@ -158,7 +155,7 @@ const styles = StyleSheet.create({
   letterQuestion: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
   letterContent: { fontSize: 17, lineHeight: 30, textAlign: 'center', marginTop: 12 },
 
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
 
   signature: { alignItems: 'center', marginTop: 44 },
