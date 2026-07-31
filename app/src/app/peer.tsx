@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   heartFab: {
     position: 'absolute',
-    alignSelf: 'center',
+    right: 22,
     width: 54,
     height: 54,
     borderRadius: 27,
