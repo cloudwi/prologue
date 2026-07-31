@@ -16,7 +16,7 @@ import type { Peer } from '@/lib/daily';
  */
 export default function PeerDetailScreen() {
   const c = useTheme();
-  const { data } = useLocalSearchParams<{ data?: string }>();
+  const { data, question } = useLocalSearchParams<{ data?: string; question?: string }>();
 
   const peer = useMemo<Peer | null>(() => {
     try {
@@ -50,7 +50,9 @@ export default function PeerDetailScreen() {
     letters.push({ key: `letter-${letter.questionId}`, question: letter.question, content: letter.content });
   }
   if (peer.answerUnlocked && peer.peerAnswer) {
-    letters.push({ key: 'today', question: '오늘의 답변', content: peer.peerAnswer });
+    // 오늘의 질문을 함께 — 답변만 있으면 무슨 물음에 대한 답인지 끊긴다.
+    const todayQuestion = typeof question === 'string' && question.length > 0 ? question : '오늘의 답변';
+    letters.push({ key: 'today', question: todayQuestion, content: peer.peerAnswer });
   }
 
   return (

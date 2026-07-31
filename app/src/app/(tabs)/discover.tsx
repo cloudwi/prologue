@@ -226,7 +226,7 @@ export default function DiscoverScreen() {
                   </Text>
                 </View>
               ) : (
-                <PeerCarousel peers={peersData.peers} c={c} />
+                <PeerCarousel peers={peersData.peers} question={today?.content ?? null} c={c} />
               )}
             </View>
           </ScrollView>
@@ -237,7 +237,7 @@ export default function DiscoverScreen() {
 }
 
 /** 상대 카드 캐러셀 — 옆 카드가 살짝 보이게 가로로 넘긴다. 한 명이면 그냥 꽉 채운다. */
-function PeerCarousel({ peers, c }: { peers: Peer[]; c: ThemeColors }) {
+function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string | null; c: ThemeColors }) {
   const [width, setWidth] = useState(0);
   const cardWidth = peers.length > 1 ? width - 28 : width;
 
@@ -255,7 +255,7 @@ function PeerCarousel({ peers, c }: { peers: Peer[]; c: ThemeColors }) {
         >
           {peers.map((peer, i) => (
             <View key={peer.peerAnswerId ?? i} style={{ width: cardWidth }}>
-              <PeerCard peer={peer} c={c} />
+              <PeerCard peer={peer} question={question} c={c} />
             </View>
           ))}
         </ScrollView>
@@ -265,16 +265,16 @@ function PeerCarousel({ peers, c }: { peers: Peer[]; c: ThemeColors }) {
 }
 
 /** 상대 1명 카드 — 하트/대화신청/답변 열람 상태를 카드별로 가진다. */
-function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
+function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; c: ThemeColors }) {
   const router = useRouter();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  /** 상세 화면으로 — 나머지 사진과 프로필 전체는 거기서 본다. */
+  /** 상세 화면으로 — 나머지 사진과 프로필 전체는 거기서 본다. 오늘의 질문도 함께 넘긴다. */
   function openDetail() {
-    router.push({ pathname: '/peer', params: { data: JSON.stringify(peer) } });
+    router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question: question ?? '' } });
   }
 
   /** 하트 = 호감 표시. 서로 하트를 보냈으면 그 자리에서 대화가 열린다. */
@@ -347,6 +347,10 @@ function PeerCard({ peer, c }: { peer: Peer; c: ThemeColors }) {
 
       {peer.answerUnlocked && peer.peerAnswer ? (
         <>
+          {/* 답변만 있으면 무슨 질문에 대한 답인지 끊긴다 — 질문을 먼저 보여준다. */}
+          {question ? (
+            <Text style={[styles.peerAnswerQuestion, { color: c.textSecondary }]}>{question}</Text>
+          ) : null}
           <Pressable onPress={() => setRevealed(true)} disabled={revealed}>
             <Text
               numberOfLines={revealed ? (expanded ? undefined : 6) : 4}
@@ -461,6 +465,7 @@ const styles = StyleSheet.create({
   peerDivider: { height: StyleSheet.hairlineWidth, marginVertical: 18 },
   peerLock: { alignItems: 'center', paddingVertical: 14 },
   peerLockText: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  peerAnswerQuestion: { fontSize: 13, lineHeight: 19, marginBottom: 8 },
   peerAnswer: { fontSize: 16, lineHeight: 25 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 14, fontWeight: '700' },
