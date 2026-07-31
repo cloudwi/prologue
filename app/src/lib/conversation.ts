@@ -1,4 +1,5 @@
 import { authedRequest } from './api';
+import type { Peer } from './daily';
 import type { Gender } from './member';
 
 /** 상대 답변을 보고 대화 신청 (POST /conversations/requests). */
@@ -44,6 +45,14 @@ export type Conversation = {
 /** 내 대화 목록 (GET /conversations). */
 export async function getConversations(): Promise<Conversation[]> {
   return authedRequest('GET', '/conversations');
+}
+
+/**
+ * 대화 상대의 프로필 상세 (GET /conversations/{id}/peer, 참여자만).
+ * 오늘의 답변 필드는 비어 온다 — 상세 화면(청첩장)이 그대로 그릴 수 있는 Peer 모양.
+ */
+export async function getConversationPeer(conversationId: string): Promise<Peer> {
+  return authedRequest('GET', `/conversations/${conversationId}/peer`);
 }
 
 export type Message = {

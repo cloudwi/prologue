@@ -9,6 +9,7 @@ import com.prologue.backend.dailymeet.interfaces.rest.dto.ConversationRequestCre
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ConversationResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.MessageBody
 import com.prologue.backend.dailymeet.interfaces.rest.dto.MessageResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.PeerResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedRequestResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
@@ -66,6 +67,13 @@ class ConversationController(
     fun conversations(authentication: Authentication): List<ConversationResponse> {
         val me = UUID.fromString(authentication.name)
         return conversationService.myConversations(me).map(ConversationResponse::from)
+    }
+
+    /** 대화 상대의 프로필 상세 — 대화 참여자만. */
+    @GetMapping("/{id}/peer")
+    fun peerProfile(authentication: Authentication, @PathVariable id: String): PeerResponse {
+        val me = UUID.fromString(authentication.name)
+        return PeerResponse.from(conversationService.peerProfile(me, parseUuid(id, "잘못된 대화 식별자")))
     }
 
     /** 대화방 메시지 목록. */

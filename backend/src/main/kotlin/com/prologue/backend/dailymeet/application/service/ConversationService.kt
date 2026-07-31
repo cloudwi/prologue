@@ -49,6 +49,7 @@ class ConversationService(
     private val memberQueryService: MemberQueryService,
     private val requestRepository: ConversationRequestRepository,
     private val conversationRepository: ConversationRepository,
+    private val profileLetterService: ProfileLetterService,
 ) {
     /** 상대 답변(peerAnswerId)을 보고 대화를 신청한다. */
     @Transactional
@@ -129,6 +130,36 @@ class ConversationService(
                 createdAt = conv.createdAt,
             )
         }
+
+    /**
+     * 대화 상대의 프로필 상세(청첩장) — 대화 참여자만 볼 수 있다.
+     * 오늘의 답변 필드는 비운다(여긴 이미 매칭된 사이, 문답은 대화방에서 이어진다).
+     */
+    @Transactional(readOnly = true)
+    fun peerProfile(accountId: UUID, conversationId: UUID): PeerView {
+        val conv = conversationRepository.findByAccount(accountId).firstOrNull { it.id == conversationId }
+            ?: throw DailyMeetException("대화를 찾을 수 없어요")
+        val peerId = if (conv.accountLow == accountId) conv.accountHigh else conv.accountLow
+        val p = memberQueryService.findProfile(peerId) ?: throw DailyMeetException("상대 프로필을 찾을 수 없어요")
+        return PeerView(
+            peerAnswerId = null,
+            peerAnswer = null,
+            answerUnlocked = false,
+            photoUrls = p.photoUrls,
+            nickname = p.nickname,
+            letters = profileLetterService.lettersOf(peerId),
+            gender = p.gender,
+            age = p.age(),
+            region = p.region,
+            bio = p.bio,
+            heightCm = p.heightCm,
+            bodyType = p.bodyType,
+            hobbies = p.hobbies,
+            interests = p.interests,
+            strengths = p.strengths,
+            avatarId = p.avatarId,
+        )
+    }
 
     private fun low(a: UUID, b: UUID): UUID = if (a.toString() <= b.toString()) a else b
     private fun high(a: UUID, b: UUID): UUID = if (a.toString() <= b.toString()) b else a

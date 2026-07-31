@@ -9,6 +9,7 @@ import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   acceptRequest,
+  getConversationPeer,
   getConversations,
   getReceivedRequests,
   rejectRequest,
@@ -79,6 +80,20 @@ export default function ChatsScreen() {
 
   function openConversation(cv: Conversation) {
     router.push({ pathname: '/conversation/[id]', params: { id: cv.conversationId, nickname: cv.nickname } });
+  }
+
+  /** 사진을 누르면 상대 프로필 상세(청첩장)로 — 카드 나머지는 대화방으로. */
+  async function openPeerProfile(cv: Conversation) {
+    if (busy) return;
+    setBusy(cv.conversationId);
+    try {
+      const peer = await getConversationPeer(cv.conversationId);
+      router.push({ pathname: '/peer', params: { data: JSON.stringify(peer) } });
+    } catch (e) {
+      Alert.alert('프로필을 불러오지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
+    } finally {
+      setBusy(null);
+    }
   }
 
   /** 받은 하트에 하트를 돌려보낸다 — 상대는 이미 나를 좋아하니 그 자리에서 매칭된다. */
@@ -202,16 +217,23 @@ export default function ChatsScreen() {
                     onPress={() => openConversation(cv)}
                     style={[styles.convCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}
                   >
-                    {cv.photoUrl ? (
-                      <Image
-                        source={{ uri: cv.photoUrl }}
-                        style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
-                        contentFit="cover"
-                        transition={150}
-                      />
-                    ) : (
-                      <Avatar avatarId={cv.avatarId} nickname={cv.nickname} size={48} c={c} />
-                    )}
+                    <Pressable
+                      onPress={() => openPeerProfile(cv)}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${cv.nickname}님의 프로필 보기`}
+                    >
+                      {cv.photoUrl ? (
+                        <Image
+                          source={{ uri: cv.photoUrl }}
+                          style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
+                          contentFit="cover"
+                          transition={150}
+                        />
+                      ) : (
+                        <Avatar avatarId={cv.avatarId} nickname={cv.nickname} size={48} c={c} />
+                      )}
+                    </Pressable>
                     <View style={styles.convBody}>
                       <Text style={[styles.convName, { color: c.text }]}>{cv.nickname}</Text>
                       <Text style={[styles.convMeta, { color: c.textSecondary }]}>
