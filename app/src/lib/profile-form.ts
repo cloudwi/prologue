@@ -28,7 +28,7 @@ export type NextStep = { label: string; hint: string; href: string };
  * 프로필에서 지금 채우면 가장 도움이 되는 항목 하나.
  * 진행률 막대는 "무엇을 해야 하는지"를 알려주지 않아서, 다음 행동 하나만 제안한다.
  * 노출 효과가 큰 순서(사진 → 관심사 → 취미 → 강점 → 아바타)로 검사한다.
- * 자기소개 항목은 없다 — 소개는 매일의 문답(편지)으로 쌓인다.
+ * 자기소개 항목은 없다 — 소개는 매일의 문답으로 쌓인다.
  */
 export function nextStep(p: MemberProfile): NextStep | null {
   const photos = p.photoUrls?.length ?? 0;

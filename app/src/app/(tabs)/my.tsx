@@ -147,7 +147,7 @@ export default function MyScreen() {
           <Row label="사진" value={`${photos.length}장`} onPress={() => router.push('/my/edit-photos')} c={c} />
           <Row label="기본 정보" onPress={() => router.push('/my/edit-basic')} c={c} />
           <Row label="상세 소개" onPress={() => router.push('/my/edit-detail')} c={c} />
-          <Row label="프로필 편지" onPress={() => router.push('/my/letters')} c={c} />
+          <Row label="프로필 문답" onPress={() => router.push('/my/letters')} c={c} />
           <Row label="상대에게 보이는 화면" onPress={() => router.push('/my/preview')} c={c} last />
         </Section>
 

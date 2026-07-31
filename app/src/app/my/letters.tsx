@@ -27,8 +27,8 @@ import {
 } from '@/lib/letters';
 
 /**
- * 프로필 편지 — 질문을 골라 미리 써두는 자기소개(최대 3통, 400자).
- * 한 번에 한 통씩 쓴다: 질문 고르기 → 쓰기 → 저장. 저장 즉시 반영이라 별도 저장 버튼이 없다.
+ * 프로필 문답 — 질문을 골라 미리 써두는 자기소개(최대 3개, 400자).
+ * 한 번에 하나씩 쓴다: 질문 고르기 → 쓰기 → 저장. 저장 즉시 반영이라 별도 저장 버튼이 없다.
  */
 export default function LettersScreen() {
   const c = useTheme();
@@ -38,7 +38,7 @@ export default function LettersScreen() {
   const [letters, setLetters] = useState<ProfileLetter[]>([]);
   const [questions, setQuestions] = useState<LetterQuestion[]>([]);
 
-  /** 지금 쓰는 중인 편지. questionId가 null이면 질문 고르는 단계. */
+  /** 지금 쓰는 중인 문답. questionId가 null이면 질문 고르는 단계. */
   const [editing, setEditing] = useState<{ questionId: number | null; draft: string } | null>(null);
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function LettersScreen() {
   }
 
   function confirmRemove(letter: ProfileLetter) {
-    Alert.alert('편지 삭제', '이 편지를 프로필에서 내릴까요?', [
+    Alert.alert('문답 삭제', '이 문답을 프로필에서 내릴까요?', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -96,7 +96,7 @@ export default function LettersScreen() {
 
   if (loading) {
     return (
-      <SubScreen title="프로필 편지" c={c}>
+      <SubScreen title="프로필 문답" c={c}>
         <View style={[styles.flex, styles.center]}>
           <ActivityIndicator color={c.primary} />
         </View>
@@ -107,7 +107,7 @@ export default function LettersScreen() {
   // ── 쓰기 단계 ──
   if (editing && editing.questionId != null && editingQuestion) {
     return (
-      <SubScreen title="편지 쓰기" c={c}>
+      <SubScreen title="문답 쓰기" c={c}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={[styles.questionCard, { backgroundColor: c.backgroundElement }]}>
@@ -176,7 +176,7 @@ export default function LettersScreen() {
 
   // ── 목록 ──
   return (
-    <SubScreen title="프로필 편지" c={c}>
+    <SubScreen title="프로필 문답" c={c}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.lead, { color: c.textSecondary }]}>
           질문을 골라 미리 써두는 나의 소개예요. 상대의 프로필 상세에서 함께 보여요.
@@ -205,7 +205,7 @@ export default function LettersScreen() {
           >
             <Text style={[styles.addPlus, { color: c.primary }]}>+</Text>
             <Text style={[styles.addLabel, { color: c.textSecondary }]}>
-              편지 쓰기 ({letters.length}/{LETTER_MAX})
+              문답 쓰기 ({letters.length}/{LETTER_MAX})
             </Text>
           </Pressable>
         )}

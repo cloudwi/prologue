@@ -1,7 +1,7 @@
 import { authedRequest } from './api';
 
 /**
- * 프로필 편지 — 질문 풀에서 골라 미리 써두는 자기소개(최대 3통, 400자).
+ * 프로필 문답 — 질문 풀에서 골라 미리 써두는 자기소개(최대 3개, 400자).
  * 오늘의 문답에 쓴 답변을 그대로 프로필에 올릴 때도 같은 write를 쓴다.
  */
 
@@ -25,7 +25,7 @@ export async function getLetterQuestions(): Promise<LetterQuestion[]> {
   return res.questions;
 }
 
-/** 내가 써둔 편지 목록 (GET /profile-letters). */
+/** 내가 써둔 문답 목록 (GET /profile-letters). */
 export async function getMyLetters(): Promise<ProfileLetter[]> {
   const res = await authedRequest<{ letters: ProfileLetter[] }>('GET', '/profile-letters');
   return res.letters;

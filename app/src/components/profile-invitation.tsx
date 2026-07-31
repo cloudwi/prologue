@@ -74,7 +74,7 @@ export function ProfileInvitation({
         </View>
       ))}
 
-      {/* 편지가 없어 자리를 못 얻은 사진들은 키워드 앞에 이어 붙인다 */}
+      {/* 문답이 없어 자리를 못 얻은 사진들은 키워드 앞에 이어 붙인다 */}
       {letters.length === 0 &&
         restPhotos.map((url) => (
           <Image

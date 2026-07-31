@@ -79,7 +79,7 @@ export function AvatarPicker({
 
 /**
  * ProfileExtra → API 필드로 변환.
- * bio는 다루지 않는다 — 자기소개는 짧은 상자 대신 매일의 문답(편지)으로 쌓인다.
+ * bio는 다루지 않는다 — 자기소개는 짧은 상자 대신 매일의 문답으로 쌓인다.
  * 여기서 키를 빼면 toRequest가 기존 저장값을 그대로 보존한다.
  */
 export function toProfilePayload(v: ProfileExtra) {

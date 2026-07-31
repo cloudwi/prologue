@@ -98,7 +98,7 @@ export default function DiscoverScreen() {
     }
   }
 
-  /** 오늘 쓴 답변을 그대로 프로필 편지로. 같은 질문이면 덮어쓰고, 3통이 넘으면 서버가 안내한다. */
+  /** 오늘 쓴 답변을 그대로 프로필 문답으로. 같은 질문이면 덮어쓰고, 3개가 넘으면 서버가 안내한다. */
   async function promoteToProfile() {
     if (!today?.questionId || !today.myAnswer) return;
     try {
