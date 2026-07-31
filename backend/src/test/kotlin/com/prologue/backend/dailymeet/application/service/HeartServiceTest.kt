@@ -7,10 +7,14 @@ import com.prologue.backend.dailymeet.domain.model.Heart
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.ConversationRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
+import com.prologue.backend.member.application.service.MemberQueryService
+import com.prologue.backend.member.domain.model.Gender
+import com.prologue.backend.member.domain.model.Member
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,7 +28,8 @@ class HeartServiceTest {
     private val answerRepository = mockk<AnswerRepository>()
     private val heartRepository = mockk<HeartRepository>(relaxed = true)
     private val conversationRepository = mockk<ConversationRepository>(relaxed = true)
-    private val service = HeartService(answerRepository, heartRepository, conversationRepository)
+    private val memberQueryService = mockk<MemberQueryService>()
+    private val service = HeartService(answerRepository, heartRepository, conversationRepository, memberQueryService)
 
     private val me = UUID.randomUUID()
     private val peer = UUID.randomUUID()
@@ -91,5 +96,52 @@ class HeartServiceTest {
 
         assertEquals(existingId, result.conversationId)
         verify(exactly = 0) { conversationRepository.save(any()) }
+    }
+
+    // ── 받은 하트 목록 ──
+
+    private fun memberOf(accountId: UUID, nickname: String) = Member.reconstitute(
+        accountId = accountId,
+        nickname = nickname,
+        gender = Gender.FEMALE,
+        birthDate = LocalDate.of(1997, 3, 22),
+        preferredGender = Gender.MALE,
+        region = "서울 마포구",
+        createdAt = Instant.now(),
+        photoUrls = listOf("https://example.com/1.jpg"),
+    )
+
+    @Test
+    fun `받은 하트는 보낸 사람 요약과 돌려보낼 답변 id를 담는다`() {
+        val senderAnswerId = UUID.randomUUID()
+        every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
+        every { heartRepository.existsFromTo(me, peer) } returns false
+        every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns
+            Answer.reconstitute(senderAnswerId, peer, 1L, "상대 답변", Instant.now())
+
+        val result = service.receivedHearts(me)
+
+        assertEquals(1, result.size)
+        assertEquals("고요한아침", result[0].nickname)
+        assertEquals(senderAnswerId, result[0].peerAnswerId)
+    }
+
+    @Test
+    fun `이미 서로 하트를 보낸 상대는 받은 하트에서 빠진다`() {
+        every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
+        every { heartRepository.existsFromTo(me, peer) } returns true
+
+        assertTrue(service.receivedHearts(me).isEmpty())
+    }
+
+    @Test
+    fun `같은 사람이 여러 날 보낸 하트는 한 줄로 합쳐진다`() {
+        every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L), Heart.send(peer, me, 2L))
+        every { heartRepository.existsFromTo(me, peer) } returns false
+        every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns null
+
+        assertEquals(1, service.receivedHearts(me).size)
     }
 }

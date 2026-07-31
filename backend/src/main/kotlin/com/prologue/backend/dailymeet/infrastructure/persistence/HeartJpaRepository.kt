@@ -5,6 +5,7 @@ import java.util.UUID
 
 interface HeartJpaRepository : JpaRepository<HeartJpaEntity, UUID> {
     fun existsByFromAccountIdAndToAccountId(fromAccountId: UUID, toAccountId: UUID): Boolean
+    fun findByToAccountIdOrderByCreatedAtDesc(toAccountId: UUID): List<HeartJpaEntity>
     fun existsByFromAccountIdAndToAccountIdAndQuestionId(
         fromAccountId: UUID,
         toAccountId: UUID,

@@ -7,6 +7,7 @@ import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PeersResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedHeartsResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TodayResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
@@ -64,5 +65,12 @@ class DailyMeetController(
             throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
         }
         return HeartResponse.from(heartService.heart(accountId, peerAnswerId))
+    }
+
+    /** 나에게 하트를 보낸 사람들(아직 상호 아님). 하트를 돌려보내면 그 자리에서 매칭. */
+    @GetMapping("/hearts/received")
+    fun receivedHearts(authentication: Authentication): ReceivedHeartsResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return ReceivedHeartsResponse.from(heartService.receivedHearts(accountId))
     }
 }

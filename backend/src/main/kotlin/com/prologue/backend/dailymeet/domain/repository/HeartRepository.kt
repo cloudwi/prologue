@@ -9,4 +9,7 @@ interface HeartRepository {
 
     /** 질문과 무관하게 from→to 하트가 하나라도 있는지. 상호 호감(매칭) 판정에 쓴다. */
     fun existsFromTo(fromAccountId: UUID, toAccountId: UUID): Boolean
+
+    /** 내가 받은 하트 전부, 최신순. */
+    fun findAllTo(toAccountId: UUID): List<Heart>
 }

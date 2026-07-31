@@ -62,3 +62,20 @@ export type HeartResult = {
 export async function sendHeart(peerAnswerId: string): Promise<HeartResult> {
   return authedRequest<HeartResult>('POST', '/daily/today/heart', { peerAnswerId });
 }
+
+export type ReceivedHeart = {
+  nickname: string;
+  age: number;
+  region: string;
+  avatarId: number | null;
+  photoUrl: string | null;
+  /** 하트를 돌려보낼 상대 답변 id. null이면 되보내기 불가(옛 데이터). */
+  peerAnswerId: string | null;
+  createdAt: string;
+};
+
+/** 나에게 하트를 보낸 사람들 — 아직 상호 아님 (GET /daily/hearts/received). */
+export async function getReceivedHearts(): Promise<ReceivedHeart[]> {
+  const res = await authedRequest<{ hearts: ReceivedHeart[] }>('GET', '/daily/hearts/received');
+  return res.hearts;
+}

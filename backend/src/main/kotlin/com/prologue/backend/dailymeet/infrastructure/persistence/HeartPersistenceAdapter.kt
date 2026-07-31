@@ -19,6 +19,9 @@ class HeartPersistenceAdapter(
     override fun existsFromTo(fromAccountId: UUID, toAccountId: UUID): Boolean =
         jpa.existsByFromAccountIdAndToAccountId(fromAccountId, toAccountId)
 
+    override fun findAllTo(toAccountId: UUID): List<Heart> =
+        jpa.findByToAccountIdOrderByCreatedAtDesc(toAccountId).map { it.toDomain() }
+
     private fun Heart.toEntity(): HeartJpaEntity =
         HeartJpaEntity(
             id = id,
