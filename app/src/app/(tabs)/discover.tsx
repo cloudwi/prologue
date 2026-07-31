@@ -17,6 +17,7 @@ import { Image } from 'expo-image';
 
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { isSessionExpired } from '@/lib/api';
 import { answerToday, getPeers, getToday, sendHeart, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
@@ -32,6 +33,7 @@ function peerMetaLabel(peer: Peer): string {
 export default function DiscoverScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const [today, setToday] = useState<Today | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,12 @@ export default function DiscoverScreen() {
         setDraft(t.myAnswer ?? '');
         loadPeers(); // 답변 전에도 상대 프로필은 미리보기
       } catch (e) {
-        if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+        if (!active) return;
+        if (isSessionExpired(e)) {
+          router.replace('/'); // 세션 만료 — 에러 알림 대신 로그인으로
+          return;
+        }
+        Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       } finally {
         if (active) setLoading(false);
       }

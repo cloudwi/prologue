@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PhotoPager } from '@/components/photo-pager';
 import { avatarSource } from '@/constants/avatars';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { isSessionExpired } from '@/lib/api';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
@@ -44,7 +45,12 @@ export default function MyScreen() {
           const p = await getMyProfile();
           if (active) setProfile(p);
         } catch (e) {
-          if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+          if (!active) return;
+          if (isSessionExpired(e)) {
+            router.replace('/'); // 세션 만료 — "HTTP 403" 알림 대신 로그인으로
+            return;
+          }
+          Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
         } finally {
           if (active) setLoading(false);
         }

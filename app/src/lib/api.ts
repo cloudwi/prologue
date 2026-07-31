@@ -17,6 +17,14 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * 재발급까지 실패한 인증 실패(=세션 만료) 판정.
+ * 이 시점엔 authedFetch가 죽은 토큰을 이미 지웠다 — 화면은 에러 알림 대신 로그인으로 보내야 한다.
+ */
+export function isSessionExpired(e: unknown): boolean {
+  return e instanceof ApiError && (e.status === 401 || e.status === 403);
+}
+
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
