@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { ProfileInvitation, type InvitationLetter } from '@/components/profile-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
+import { sendConversationRequest } from '@/lib/conversation';
 import { sendHeart, type Peer } from '@/lib/daily';
 
 /**
@@ -14,7 +15,8 @@ import { sendHeart, type Peer } from '@/lib/daily';
  *
  * 상대는 개별 조회 API가 없어서(오늘의 상대는 목록으로만 내려온다)
  * 발견 탭이 이미 들고 있는 데이터를 params로 직렬화해 넘긴다. 조회 전용이라 충분하다.
- * 하트는 여기서도 보낼 수 있다(플로팅 버튼) — 편지를 끝까지 읽은 자리가 마음을 정하는 자리다.
+ * 행동은 두 가지, 편지를 끝까지 읽은 자리에서: 하트(가벼운 신호, 서로면 대화) +
+ * 대화 신청(상호 없이 문 두드리기, 수락 필요 — 출시 시 재화 게이트가 붙는 자리).
  * 서버가 멱등이라 카드와 상세의 하트 상태가 어긋나도 안전하다.
  */
 export default function PeerDetailScreen() {
@@ -24,6 +26,8 @@ export default function PeerDetailScreen() {
   const { data, question } = useLocalSearchParams<{ data?: string; question?: string }>();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
+  const [requested, setRequested] = useState(false);
+  const [requesting, setRequesting] = useState(false);
 
   const peer = useMemo<Peer | null>(() => {
     try {
@@ -84,6 +88,21 @@ export default function PeerDetailScreen() {
     }
   }
 
+  /** 대화 신청 — 상호 하트 없이 문을 두드린다. 상대가 수락해야 열린다. (출시 시 재화 소모 자리) */
+  async function requestConversation() {
+    if (!peer?.peerAnswerId || requesting || requested) return;
+    setRequesting(true);
+    try {
+      await sendConversationRequest(peer.peerAnswerId);
+      setRequested(true);
+      Alert.alert('대화를 신청했어요', '상대가 수락하면 대화가 열려요.');
+    } catch (e) {
+      Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally {
+      setRequesting(false);
+    }
+  }
+
   return (
     <SubScreen title="" c={c}>
       <View style={styles.flex}>
@@ -96,6 +115,27 @@ export default function PeerDetailScreen() {
           seed={peer.peerAnswerId ?? peer.nickname ?? ''}
           c={c}
         />
+        {peer.answerUnlocked && peer.peerAnswerId && (
+          <Pressable
+            onPress={requestConversation}
+            disabled={requesting || requested}
+            accessibilityRole="button"
+            style={[
+              styles.requestPill,
+              {
+                bottom: insets.bottom + 24 + 5,
+                backgroundColor: c.background,
+                borderColor: c.border,
+                opacity: requesting ? 0.6 : 1,
+                shadowColor: c.text,
+              },
+            ]}
+          >
+            <Text style={[styles.requestPillText, { color: requested ? c.textSecondary : c.primaryStrong }]}>
+              {requested ? '신청 완료' : '대화 신청'}
+            </Text>
+          </Pressable>
+        )}
         {peer.answerUnlocked && peer.peerAnswerId && (
           <Pressable
             onPress={heart}
@@ -142,4 +182,19 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   heartFabIcon: { width: 21, height: 21 },
+  requestPill: {
+    position: 'absolute',
+    left: 22,
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  requestPillText: { fontSize: 14.5, fontWeight: '700' },
 });
