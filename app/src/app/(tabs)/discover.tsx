@@ -309,7 +309,7 @@ function PastPeerCard({ item, c }: { item: PastPeer; c: ThemeColors }) {
         <Image source={{ uri: photo }} style={[styles.pastPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
       ) : (
         <View style={[styles.pastPhoto, styles.pastAvatarWrap, { backgroundColor: c.backgroundSelected }]}>
-          <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname} size={44} c={c} />
+          <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname ?? undefined} size={44} c={c} />
         </View>
       )}
       <Text numberOfLines={1} style={[styles.pastName, { color: c.text }]}>
