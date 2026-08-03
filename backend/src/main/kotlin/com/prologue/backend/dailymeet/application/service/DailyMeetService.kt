@@ -99,21 +99,43 @@ class DailyMeetService(
     /**
      * 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 공개분 제외), 최신 공개 순.
      * 하루가 지났다고 인연이 증발하지 않게, 소개는 짧은 여운을 남긴다.
-     * 답변 열람은 그 질문의 Give&Take 그대로: 그날 내가 답했으면 열려 있다.
+     * 같은 상대가 여러 날 공개됐으면 한 사람으로 묶고 그동안의 문답을 목록으로 잇는다.
+     * 답변 열람은 각 질문의 Give&Take 그대로: 그날 내가 답했으면 열려 있다.
      */
     @Transactional(readOnly = true)
     fun pastPeers(accountId: UUID): List<PastPeerView> {
         val today = pickTodayQuestion()
         val questions = questionRepository.findAllOrdered().associateBy { it.id }
-        return dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_WINDOW))
+        val reveals = dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_WINDOW))
             .filter { it.questionId != today.id }
-            .mapNotNull { reveal ->
-                val answer = answerRepository.findById(reveal.peerAnswerId) ?: return@mapNotNull null
-                val answered = answerRepository.findByAccountIdAndQuestionId(accountId, reveal.questionId) != null
+            .mapNotNull { reveal -> answerRepository.findById(reveal.peerAnswerId)?.let { reveal to it } }
+
+        // 같은 질문이 여러 공개에 걸릴 수 있으니 열람 여부는 질문별로 한 번만 판정한다
+        val answeredByQuestion = reveals.map { (reveal, _) -> reveal.questionId }.distinct()
+            .associateWith { answerRepository.findByAccountIdAndQuestionId(accountId, it) != null }
+
+        // findRecentByViewer가 최신순이라 묶어도 최신 공개 순이 유지된다
+        return reveals
+            .groupBy { (_, answer) -> answer.accountId }
+            .map { (_, grouped) ->
+                // 행동(하트·대화 신청)은 열려 있는 답변에 걸린다 — 최신 공개가 잠겨 있어도
+                // 예전에 열린 답변이 있으면 그쪽을 대표로 삼아 인연이 끊기지 않게 한다.
+                val (latestReveal, _) = grouped.first()
+                val (_, actionable) = grouped.firstOrNull { (reveal, _) -> answeredByQuestion[reveal.questionId] == true }
+                    ?: grouped.first()
                 PastPeerView(
-                    question = questions[reveal.questionId]?.content ?: "",
-                    revealedAt = reveal.createdAt,
-                    peer = peerView(answer, answered),
+                    question = questions[latestReveal.questionId]?.content ?: "",
+                    revealedAt = latestReveal.createdAt,
+                    peer = peerView(actionable, answeredByQuestion[actionable.questionId] == true),
+                    answers = grouped.map { (reveal, answer) ->
+                        val unlocked = answeredByQuestion[reveal.questionId] == true
+                        PastAnswerView(
+                            question = questions[reveal.questionId]?.content ?: "",
+                            content = if (unlocked) answer.content else null,
+                            unlocked = unlocked,
+                            revealedAt = reveal.createdAt,
+                        )
+                    },
                 )
             }
     }
@@ -159,9 +181,18 @@ class DailyMeetService(
     }
 }
 
-/** 지난 상대 한 명 — 그날의 질문·공개 시각과 함께. */
+/** 지난 상대 한 명 — 그날의 질문·공개 시각과 함께. 여러 날 공개됐으면 문답이 쌓인다. */
 data class PastPeerView(
     val question: String,
     val revealedAt: java.time.Instant,
     val peer: PeerView,
+    val answers: List<PastAnswerView>,
+)
+
+/** 지난 상대가 남긴 문답 하나 — 열람은 그 질문의 Give&Take 그대로(잠기면 content는 null). */
+data class PastAnswerView(
+    val question: String,
+    val content: String?,
+    val unlocked: Boolean,
+    val revealedAt: java.time.Instant,
 )

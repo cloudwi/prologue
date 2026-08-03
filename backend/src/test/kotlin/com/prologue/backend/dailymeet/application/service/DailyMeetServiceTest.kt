@@ -16,6 +16,7 @@ import io.mockk.slot
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -223,6 +224,44 @@ class DailyMeetServiceTest {
 
         assertEquals(1, result.size)
         assertNull(result[0].peer.peerAnswer) // 그날 내가 답하지 않았으면 잠김 그대로
+    }
+
+    @Test
+    fun `지난 상대 - 같은 상대가 여러 날 공개되면 한 명으로 묶여 문답이 쌓인다`() {
+        every { questionRepository.findAllOrdered() } returns
+            listOf(Question(1L, "질문 하나"), Question(2L, "질문 둘"), Question(3L, "질문 셋"))
+        // 오늘의 질문은 날짜로 결정되므로, 오늘이 아닌 두 질문을 골라 지난 공개로 쓴다
+        val todayId = LocalDate.now(ZoneId.of("Asia/Seoul")).toEpochDay() % 3 + 1
+        val (lockedQid, openQid) = listOf(1L, 2L, 3L).filter { it != todayId }
+
+        val peerAccount = UUID.randomUUID()
+        val lockedAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, lockedQid, "잠긴 답", Instant.now())
+        val openAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, openQid, "열린 답", Instant.now())
+        every { dailyRevealRepository.findRecentByViewer(accountId, any()) } returns listOf(
+            // 최신 공개 — 그날 나는 답하지 않았다
+            DailyReveal.reconstitute(UUID.randomUUID(), accountId, lockedQid, lockedAnswer.id!!, Instant.now()),
+            // 하루 전 공개 — 그날 나는 답했다
+            DailyReveal.reconstitute(UUID.randomUUID(), accountId, openQid, openAnswer.id!!, Instant.now().minusSeconds(86_400)),
+        )
+        every { answerRepository.findById(lockedAnswer.id) } returns lockedAnswer
+        every { answerRepository.findById(openAnswer.id) } returns openAnswer
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, lockedQid) } returns null
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, openQid) } returns
+            Answer.reconstitute(UUID.randomUUID(), accountId, openQid, "내 답", Instant.now())
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+
+        val result = service.pastPeers(accountId)
+
+        assertEquals(1, result.size) // 두 번 공개됐지만 카드는 한 사람
+        val view = result[0]
+        assertEquals(2, view.answers.size)
+        assertFalse(view.answers[0].unlocked) // 최신 공개분 — Give&Take로 잠김
+        assertNull(view.answers[0].content)
+        assertTrue(view.answers[1].unlocked)
+        assertEquals("열린 답", view.answers[1].content)
+        // 행동(하트·대화 신청)은 열려 있는 답변에 걸린다 — 최신이 잠겨 있어도 인연은 살아 있다
+        assertTrue(view.peer.answerUnlocked)
+        assertEquals(openAnswer.id, view.peer.peerAnswerId)
     }
 
     companion object {

@@ -298,9 +298,13 @@ function daysAgoLabel(revealedAt: string): string {
 function PastPeerCard({ item, c }: { item: PastPeer; c: ThemeColors }) {
   const router = useRouter();
   const photo = item.peer.photoUrls[0];
+  const unlockedCount = (item.answers ?? []).filter((a) => a.unlocked && a.content).length;
 
   function openDetail() {
-    router.push({ pathname: '/peer', params: { data: JSON.stringify(item.peer), question: item.question } });
+    router.push({
+      pathname: '/peer',
+      params: { data: JSON.stringify(item.peer), question: item.question, answers: JSON.stringify(item.answers ?? []) },
+    });
   }
 
   return (
@@ -315,7 +319,10 @@ function PastPeerCard({ item, c }: { item: PastPeer; c: ThemeColors }) {
       <Text numberOfLines={1} style={[styles.pastName, { color: c.text }]}>
         {item.peer.nickname ?? '이름 없음'}
       </Text>
-      <Text style={[styles.pastDay, { color: c.textSecondary }]}>{daysAgoLabel(item.revealedAt)}</Text>
+      <Text style={[styles.pastDay, { color: c.textSecondary }]}>
+        {daysAgoLabel(item.revealedAt)}
+        {unlockedCount > 1 ? ` · 답변 ${unlockedCount}` : ''}
+      </Text>
     </Pressable>
   );
 }

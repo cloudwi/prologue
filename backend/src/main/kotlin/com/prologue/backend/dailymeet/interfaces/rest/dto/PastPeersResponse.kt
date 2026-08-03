@@ -11,12 +11,30 @@ data class PastPeersResponse(
         val question: String,
         val revealedAt: Instant,
         val peer: PeerResponse,
+        /** 이 상대가 남긴 문답 목록(최신 공개 순). 잠긴 답변은 content가 null. */
+        val answers: List<AnswerItem>,
+    )
+
+    data class AnswerItem(
+        val question: String,
+        val content: String?,
+        val unlocked: Boolean,
+        val revealedAt: Instant,
     )
 
     companion object {
         fun from(views: List<PastPeerView>): PastPeersResponse =
             PastPeersResponse(
-                views.map { Item(question = it.question, revealedAt = it.revealedAt, peer = PeerResponse.from(it.peer)) },
+                views.map { view ->
+                    Item(
+                        question = view.question,
+                        revealedAt = view.revealedAt,
+                        peer = PeerResponse.from(view.peer),
+                        answers = view.answers.map {
+                            AnswerItem(question = it.question, content = it.content, unlocked = it.unlocked, revealedAt = it.revealedAt)
+                        },
+                    )
+                },
             )
     }
 }

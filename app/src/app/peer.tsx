@@ -8,7 +8,7 @@ import { ProfileInvitation, type InvitationLetter } from '@/components/profile-i
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { sendConversationRequest } from '@/lib/conversation';
-import { sendHeart, type Peer } from '@/lib/daily';
+import { sendHeart, type PastAnswer, type Peer } from '@/lib/daily';
 import { getStampBalance } from '@/lib/stamps';
 
 /**
@@ -24,7 +24,7 @@ export default function PeerDetailScreen() {
   const c = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data, question } = useLocalSearchParams<{ data?: string; question?: string }>();
+  const { data, question, answers } = useLocalSearchParams<{ data?: string; question?: string; answers?: string }>();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
   const [requested, setRequested] = useState(false);
@@ -38,6 +38,16 @@ export default function PeerDetailScreen() {
       return null;
     }
   }, [data]);
+
+  // 지난 상대는 그동안의 문답 목록을 함께 넘긴다 — 없으면(오늘의 상대·대화 목록) 빈 배열.
+  const pastAnswers = useMemo<PastAnswer[]>(() => {
+    try {
+      const parsed = JSON.parse(typeof answers === 'string' ? answers : '');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, [answers]);
 
   // 대화 신청 확인 문구에 남은 우표를 보여주기 위해 미리 읽는다. 실패해도 버튼은 살아 있다.
   const canAct = Boolean(peer?.answerUnlocked && peer?.peerAnswerId);
@@ -69,7 +79,11 @@ export default function PeerDetailScreen() {
   for (const letter of peer.letters) {
     letters.push({ key: `letter-${letter.questionId}`, question: letter.question, content: letter.content });
   }
-  if (peer.answerUnlocked && peer.peerAnswer) {
+  const unlockedPast = pastAnswers.filter((a) => a.unlocked && a.content);
+  if (unlockedPast.length > 0) {
+    // 지난 상대 — 그동안 열린 문답을 최신 공개 순으로 이어 붙인다.
+    unlockedPast.forEach((a, i) => letters.push({ key: `past-${i}`, question: a.question, content: a.content! }));
+  } else if (peer.answerUnlocked && peer.peerAnswer) {
     // 오늘의 질문을 함께 — 답변만 있으면 무슨 물음에 대한 답인지 끊긴다.
     const todayQuestion = typeof question === 'string' && question.length > 0 ? question : '오늘의 답변';
     letters.push({ key: 'today', question: todayQuestion, content: peer.peerAnswer });
