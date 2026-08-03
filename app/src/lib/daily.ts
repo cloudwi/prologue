@@ -51,6 +51,19 @@ export async function getPeers(): Promise<TodayPeers> {
   return authedRequest<TodayPeers>('GET', '/daily/today/peers');
 }
 
+export type PastPeer = {
+  /** 그날의 질문 — 상세 화면 답변 블록의 라벨. */
+  question: string;
+  revealedAt: string;
+  peer: Peer;
+};
+
+/** 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 제외, GET /daily/past-peers). */
+export async function getPastPeers(): Promise<PastPeer[]> {
+  const res = await authedRequest<{ peers: PastPeer[] }>('GET', '/daily/past-peers');
+  return res.peers;
+}
+
 export type HeartResult = {
   hearted: boolean;
   /** 서로 하트를 보내 대화가 열렸는지. */

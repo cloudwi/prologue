@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { isSessionExpired } from '@/lib/api';
-import { answerToday, getPeers, getToday, type Peer, type Today, type TodayPeers } from '@/lib/daily';
+import { answerToday, getPastPeers, getPeers, getToday, type PastPeer, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -43,6 +43,7 @@ export default function DiscoverScreen() {
   const [peersData, setPeersData] = useState<TodayPeers | null>(null);
   const [peersLoading, setPeersLoading] = useState(false);
   const [answerExpanded, setAnswerExpanded] = useState(false);
+  const [pastPeers, setPastPeers] = useState<PastPeer[]>([]);
 
   async function loadPeers() {
     setPeersLoading(true);
@@ -64,6 +65,7 @@ export default function DiscoverScreen() {
         setToday(t);
         setDraft(t.myAnswer ?? '');
         loadPeers(); // 답변 전에도 상대 프로필은 미리보기
+        getPastPeers().then((p) => active && setPastPeers(p)).catch(() => {}); // 지난 상대는 보조 정보
       } catch (e) {
         if (!active) return;
         if (isSessionExpired(e)) {
@@ -236,6 +238,21 @@ export default function DiscoverScreen() {
                 <PeerCarousel peers={peersData.peers} question={today?.content ?? null} c={c} />
               )}
             </View>
+
+            {/* 지난 상대 — 최근 3일. 소개가 하루 만에 증발하지 않게 짧은 여운을 남긴다. */}
+            {pastPeers.length > 0 && (
+              <View style={styles.peerSection}>
+                <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>지난 상대</Text>
+                <Text style={[styles.peerSub, { color: c.textSecondary }]}>
+                  최근 3일 동안 소개된 상대예요.
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pastRow}>
+                  {pastPeers.map((p, i) => (
+                    <PastPeerCard key={p.peer.peerAnswerId ?? i} item={p} c={c} />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -268,6 +285,38 @@ function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string 
         </ScrollView>
       )}
     </View>
+  );
+}
+
+/** 며칠 전 공개됐는지 — 어제/2일 전/3일 전. */
+function daysAgoLabel(revealedAt: string): string {
+  const days = Math.max(1, Math.round((Date.now() - new Date(revealedAt).getTime()) / 86_400_000));
+  return days === 1 ? '어제' : `${days}일 전`;
+}
+
+/** 지난 상대 미니 카드 — 사진과 이름만. 자세한 건 상세(청첩장)에서. */
+function PastPeerCard({ item, c }: { item: PastPeer; c: ThemeColors }) {
+  const router = useRouter();
+  const photo = item.peer.photoUrls[0];
+
+  function openDetail() {
+    router.push({ pathname: '/peer', params: { data: JSON.stringify(item.peer), question: item.question } });
+  }
+
+  return (
+    <Pressable onPress={openDetail} style={({ pressed }) => [styles.pastCard, { opacity: pressed ? 0.7 : 1 }]}>
+      {photo ? (
+        <Image source={{ uri: photo }} style={[styles.pastPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+      ) : (
+        <View style={[styles.pastPhoto, styles.pastAvatarWrap, { backgroundColor: c.backgroundSelected }]}>
+          <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname} size={44} c={c} />
+        </View>
+      )}
+      <Text numberOfLines={1} style={[styles.pastName, { color: c.text }]}>
+        {item.peer.nickname ?? '이름 없음'}
+      </Text>
+      <Text style={[styles.pastDay, { color: c.textSecondary }]}>{daysAgoLabel(item.revealedAt)}</Text>
+    </Pressable>
   );
 }
 
@@ -437,4 +486,11 @@ const styles = StyleSheet.create({
   detailCtaText: { fontSize: 14, fontWeight: '700' },
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
+
+  pastRow: { gap: 12, paddingRight: 20 },
+  pastCard: { width: 104 },
+  pastPhoto: { width: 104, height: 130, borderRadius: Radius.md },
+  pastAvatarWrap: { alignItems: 'center', justifyContent: 'center' },
+  pastName: { fontSize: 13.5, fontWeight: '600', marginTop: 7 },
+  pastDay: { fontSize: 12, marginTop: 2 },
 });

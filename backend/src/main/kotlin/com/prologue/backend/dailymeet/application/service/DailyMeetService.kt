@@ -11,6 +11,7 @@ import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -95,6 +96,28 @@ class DailyMeetService(
         return TodayPeersView(open = true, answerUnlocked = answered, peers = revealed.map { peerView(it, answered) })
     }
 
+    /**
+     * 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 공개분 제외), 최신 공개 순.
+     * 하루가 지났다고 인연이 증발하지 않게, 소개는 짧은 여운을 남긴다.
+     * 답변 열람은 그 질문의 Give&Take 그대로: 그날 내가 답했으면 열려 있다.
+     */
+    @Transactional(readOnly = true)
+    fun pastPeers(accountId: UUID): List<PastPeerView> {
+        val today = pickTodayQuestion()
+        val questions = questionRepository.findAllOrdered().associateBy { it.id }
+        return dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_WINDOW))
+            .filter { it.questionId != today.id }
+            .mapNotNull { reveal ->
+                val answer = answerRepository.findById(reveal.peerAnswerId) ?: return@mapNotNull null
+                val answered = answerRepository.findByAccountIdAndQuestionId(accountId, reveal.questionId) != null
+                PastPeerView(
+                    question = questions[reveal.questionId]?.content ?: "",
+                    revealedAt = reveal.createdAt,
+                    peer = peerView(answer, answered),
+                )
+            }
+    }
+
     /** 상대 프로필(사진·닉네임 포함, 생년월일 등 원본은 비공개) + 답변(잠금 시 null). */
     private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
@@ -130,5 +153,15 @@ class DailyMeetService(
 
         /** 하루에 공개되는 상대 수 — 답하면 두 사람을 만나는 페이스. */
         private const val REVEAL_COUNT = 2
+
+        /** 지난 상대를 보여주는 기간 — 소개의 여운은 사흘. */
+        private val PAST_PEER_WINDOW: java.time.Duration = java.time.Duration.ofDays(3)
     }
 }
+
+/** 지난 상대 한 명 — 그날의 질문·공개 시각과 함께. */
+data class PastPeerView(
+    val question: String,
+    val revealedAt: java.time.Instant,
+    val peer: PeerView,
+)

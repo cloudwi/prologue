@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.PastPeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedHeartsResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TodayResponse
@@ -39,6 +40,13 @@ class DailyMeetController(
     fun peers(authentication: Authentication): PeersResponse {
         val accountId = UUID.fromString(authentication.name)
         return PeersResponse.from(dailyMeetService.todayPeers(accountId))
+    }
+
+    /** 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 제외), 최신 공개 순. */
+    @GetMapping("/past-peers")
+    fun pastPeers(authentication: Authentication): PastPeersResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return PastPeersResponse.from(dailyMeetService.pastPeers(accountId))
     }
 
     /** 오늘의 질문에 답변(작성/수정). 답변 후 갱신된 현황 반환. */

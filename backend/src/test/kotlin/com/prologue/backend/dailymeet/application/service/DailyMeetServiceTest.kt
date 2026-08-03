@@ -204,6 +204,27 @@ class DailyMeetServiceTest {
         assertEquals(1, saved.size)
     }
 
+    @Test
+    fun `지난 상대 - 3일 창 안의 공개 기록을 돌려주되 오늘 질문 분은 뺀다`() {
+        // 질문 풀이 [1,2]면 오늘은 그중 하나 — 두 질문 모두의 공개 기록을 넣으면 오늘 것만 빠져 1건이 남는다
+        val q2 = Question(2L, "어제의 질문")
+        val peerAccount = UUID.randomUUID()
+        val pastAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 2L, "어제의 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question, q2)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, any()) } returns null // 내 답 없음
+        every { dailyRevealRepository.findRecentByViewer(accountId, any()) } returns listOf(
+            DailyReveal.reconstitute(UUID.randomUUID(), accountId, 1L, UUID.randomUUID(), Instant.now()),
+            DailyReveal.reconstitute(UUID.randomUUID(), accountId, 2L, pastAnswer.id!!, Instant.now()),
+        )
+        every { answerRepository.findById(any()) } returns pastAnswer
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+
+        val result = service.pastPeers(accountId)
+
+        assertEquals(1, result.size)
+        assertNull(result[0].peer.peerAnswer) // 그날 내가 답하지 않았으면 잠김 그대로
+    }
+
     companion object {
         private val NOON = LocalTime.NOON
     }
