@@ -51,8 +51,11 @@ export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
+    /**
+     * 2026-08-03 결정: 세리프 조판(New York)을 접고 기본 글씨체로 통일 — design/README.md '글씨체'.
+     * 참조하는 화면이 많아 키는 남기고 값만 기본체로 둔다. 세리프로 되돌리려면 'ui-serif'.
+     */
+    serif: 'system-ui',
     /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
@@ -60,13 +63,13 @@ export const Fonts = Platform.select({
   },
   default: {
     sans: 'normal',
-    serif: 'serif',
+    serif: 'normal', // 2026-08-03: 기본 글씨체 통일 (위 ios.serif 주석 참고)
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
     sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
+    serif: 'var(--font-display)', // 2026-08-03: 기본 글씨체 통일 (위 ios.serif 주석 참고)
     rounded: 'var(--font-rounded)',
     mono: 'var(--font-mono)',
   },
