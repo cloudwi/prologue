@@ -1,6 +1,7 @@
 package com.prologue.backend.dailymeet.infrastructure.persistence
 
 import com.prologue.backend.dailymeet.domain.model.StampWallet
+import com.prologue.backend.dailymeet.domain.repository.StampLedgerEntry
 import com.prologue.backend.dailymeet.domain.repository.StampLedgerRepository
 import com.prologue.backend.dailymeet.domain.repository.StampWalletRepository
 import org.springframework.data.jpa.repository.JpaRepository
@@ -9,7 +10,9 @@ import java.time.Instant
 import java.util.UUID
 
 interface StampWalletJpaRepository : JpaRepository<StampWalletJpaEntity, UUID>
-interface StampLedgerJpaRepository : JpaRepository<StampLedgerJpaEntity, UUID>
+interface StampLedgerJpaRepository : JpaRepository<StampLedgerJpaEntity, UUID> {
+    fun findTop50ByAccountIdOrderByCreatedAtDesc(accountId: UUID): List<StampLedgerJpaEntity>
+}
 
 @Repository
 class StampPersistenceAdapter(
@@ -33,6 +36,11 @@ class StampPersistenceAdapter(
     override fun append(accountId: UUID, amount: Int, reason: String) {
         ledgerJpa.save(StampLedgerJpaEntity(accountId = accountId, amount = amount, reason = reason, createdAt = Instant.now()))
     }
+
+    override fun findRecent(accountId: UUID, limit: Int): List<StampLedgerEntry> =
+        ledgerJpa.findTop50ByAccountIdOrderByCreatedAtDesc(accountId)
+            .take(limit)
+            .map { StampLedgerEntry(it.amount, it.reason, it.createdAt) }
 
     private fun StampWalletJpaEntity.toDomain(): StampWallet =
         StampWallet.reconstitute(accountId, balance, createdAt, updatedAt)

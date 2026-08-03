@@ -19,6 +19,14 @@ class StampService(
     @Transactional
     fun balance(accountId: UUID): Int = walletOf(accountId).balance
 
+    /** 지갑 화면용 — 잔액 + 최근 증감 내역. */
+    @Transactional
+    fun wallet(accountId: UUID): StampWalletView =
+        StampWalletView(
+            balance = walletOf(accountId).balance,
+            history = ledgerRepository.findRecent(accountId, HISTORY_LIMIT),
+        )
+
     @Transactional
     fun spendOne(accountId: UUID, reason: String) {
         val wallet = walletOf(accountId)
@@ -36,5 +44,11 @@ class StampService(
     companion object {
         const val REASON_WELCOME = "WELCOME"
         const val REASON_CONVERSATION_REQUEST = "CONVERSATION_REQUEST"
+        private const val HISTORY_LIMIT = 50
     }
 }
+
+data class StampWalletView(
+    val balance: Int,
+    val history: List<com.prologue.backend.dailymeet.domain.repository.StampLedgerEntry>,
+)

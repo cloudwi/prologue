@@ -162,15 +162,17 @@ export default function MyScreen() {
           <Row label="상대에게 보이는 화면" onPress={() => router.push('/my/preview')} c={c} last />
         </Section>
 
-        <Section title="매칭" c={c}>
+        <Section title="지갑" c={c}>
           <Row
             label="우표"
             value={stamps != null ? `${stamps}장` : undefined}
-            onPress={() =>
-              Alert.alert('우표', '대화 신청에 1장씩 쓰여요.\n충전은 출시 후에 열릴 예정이에요.')
-            }
+            onPress={() => router.push('/my/stamps')}
             c={c}
+            last
           />
+        </Section>
+
+        <Section title="매칭" c={c}>
           <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
           <Row label="지인 차단" onPress={() => router.push('/my/blocked')} c={c} last />
         </Section>

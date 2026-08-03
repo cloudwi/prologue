@@ -10,3 +10,32 @@ export async function getStampBalance(): Promise<number> {
   const res = await authedRequest<{ balance: number }>('GET', '/stamps');
   return res.balance;
 }
+
+export type StampHistoryItem = {
+  amount: number;
+  reason: 'WELCOME' | 'CONVERSATION_REQUEST' | (string & {});
+  createdAt: string;
+};
+
+export type StampWallet = {
+  balance: number;
+  /** 최근 증감 내역, 최신순(최대 50건). */
+  history: StampHistoryItem[];
+};
+
+/** 지갑 화면 — 잔액 + 사용 내역 (GET /stamps/wallet). */
+export async function getStampWallet(): Promise<StampWallet> {
+  return authedRequest('GET', '/stamps/wallet');
+}
+
+/** 내역 사유 → 사용자 문구. 모르는 사유는 그대로 보여주기보다 중립 문구로. */
+export function stampReasonLabel(reason: string): string {
+  switch (reason) {
+    case 'WELCOME':
+      return '환영 우표';
+    case 'CONVERSATION_REQUEST':
+      return '대화 신청';
+    default:
+      return '우표 변동';
+  }
+}
