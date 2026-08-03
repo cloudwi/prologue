@@ -35,6 +35,15 @@ class StampService(
         ledgerRepository.append(accountId, -1, reason)
     }
 
+    /** 우표 지급 — 이벤트 보상 등. 반드시 원장에 출처를 남긴다. */
+    @Transactional
+    fun grantTo(accountId: UUID, amount: Int, reason: String) {
+        val wallet = walletOf(accountId)
+        wallet.grant(amount)
+        walletRepository.save(wallet)
+        ledgerRepository.append(accountId, amount, reason)
+    }
+
     private fun walletOf(accountId: UUID): StampWallet =
         walletRepository.findByAccountId(accountId)
             ?: walletRepository.save(StampWallet.open(accountId)).also {
@@ -44,6 +53,7 @@ class StampService(
     companion object {
         const val REASON_WELCOME = "WELCOME"
         const val REASON_CONVERSATION_REQUEST = "CONVERSATION_REQUEST"
+        const val REASON_EVENT = "EVENT"
         private const val HISTORY_LIMIT = 50
     }
 }
