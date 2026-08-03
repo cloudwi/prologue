@@ -178,7 +178,7 @@ const API_BASE = 'https://prologue-backend.onrender.com';
         if (!email) return;
         $('send-code').disabled = true;
         try {
-          await api('/auth/request-code', { method: 'POST', body: JSON.stringify({ email }) });
+          await api('/auth/email/request-code', { method: 'POST', body: JSON.stringify({ email }) });
           $('code-row').hidden = false;
           $('login-msg').textContent = '메일로 6자리 코드를 보냈어요.';
           $('code').focus();
@@ -198,7 +198,7 @@ const API_BASE = 'https://prologue-backend.onrender.com';
         }
         $('verify').disabled = true;
         try {
-          const data = await api('/auth/verify', { method: 'POST', body: JSON.stringify({ email, code }) });
+          const data = await api('/auth/email/verify', { method: 'POST', body: JSON.stringify({ email, code }) });
           token = data.accessToken;
           localStorage.setItem(TOKEN_KEY, token);
           await showPanel();
