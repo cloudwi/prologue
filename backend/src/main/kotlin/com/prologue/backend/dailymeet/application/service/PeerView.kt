@@ -31,7 +31,7 @@ data class PeerView(
 )
 
 /**
- * 오늘의 상대 목록. 매일 정오(KST) 전에는 [open]=false, 공개 후에는 최대 3명의 [peers].
+ * 오늘의 상대 목록. 매일 정오(KST) 전에는 [open]=false, 공개 후에는 최대 2명의 [peers].
  */
 data class TodayPeersView(
     val open: Boolean,

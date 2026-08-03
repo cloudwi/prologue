@@ -42,11 +42,11 @@ export type TodayPeers = {
   /** 정오(KST) 전에는 false — 아직 공개 전. */
   open: boolean;
   answerUnlocked: boolean;
-  /** 공개된 상대, 최대 3명. */
+  /** 공개된 상대, 최대 2명. */
   peers: Peer[];
 };
 
-/** 오늘의 상대 목록 (매일 정오 공개, 최대 3명, GET /daily/today/peers). */
+/** 오늘의 상대 목록 (매일 정오 공개, 최대 2명, GET /daily/today/peers). */
 export async function getPeers(): Promise<TodayPeers> {
   return authedRequest<TodayPeers>('GET', '/daily/today/peers');
 }

@@ -48,9 +48,10 @@ class DailyMeetService(
     }
 
     /**
-     * 오늘의 상대 — 매일 정오(KST)에 한 사람이 공개된다. 하루 한 문답, 하루 한 사람.
+     * 오늘의 상대 — 매일 정오(KST)에 두 사람이 공개된다.
      * 프로필(성별·나이·키·소개·키워드)은 바로 보이고, 답변(글)은 Give&Take: 내가 오늘 답해야 열린다.
      * 공개된 상대는 그날 동안 고정(비독점: 같은 상대가 여러 명에게 노출 가능) + 공평 분배.
+     * 정오에 부족했으면 이후 조회 때마다 후보가 생기는 대로 채운다 — 먼저 답한 사람도 결국 소개받는다.
      */
     @Transactional
     fun todayPeers(accountId: UUID, now: LocalTime = LocalTime.now(KST)): TodayPeersView {
@@ -127,7 +128,7 @@ class DailyMeetService(
     companion object {
         private val KST = ZoneId.of("Asia/Seoul")
 
-        /** 하루에 공개되는 상대 수 — 한 사람에게 집중하는 페이스. */
-        private const val REVEAL_COUNT = 1
+        /** 하루에 공개되는 상대 수 — 답하면 두 사람을 만나는 페이스. */
+        private const val REVEAL_COUNT = 2
     }
 }

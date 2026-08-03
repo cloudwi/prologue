@@ -34,7 +34,7 @@ class DailyMeetController(
         return TodayResponse.from(dailyMeetService.today(accountId))
     }
 
-    /** 오늘의 상대 목록 (매일 정오 공개, 최대 3명, 답변은 내가 먼저 답해야 열람 가능). */
+    /** 오늘의 상대 목록 (매일 정오 공개, 최대 2명, 답변은 내가 먼저 답해야 열람 가능). */
     @GetMapping("/today/peers")
     fun peers(authentication: Authentication): PeersResponse {
         val accountId = UUID.fromString(authentication.name)
