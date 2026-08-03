@@ -35,7 +35,30 @@ export function stampReasonLabel(reason: string): string {
       return '환영 우표';
     case 'CONVERSATION_REQUEST':
       return '대화 신청';
+    case 'EVENT':
+      return '이벤트 지급';
     default:
       return '우표 변동';
   }
+}
+
+export type StampEventSubmission = {
+  id: string;
+  url: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | (string & {});
+  /** 승인 시 지급된 우표 수. 그 외엔 null. */
+  grantedAmount: number | null;
+  createdAt: string;
+};
+
+/** 내 이벤트 제출 이력, 최신순 (GET /stamps/events). */
+export async function getStampEvents(): Promise<StampEventSubmission[]> {
+  const res = await authedRequest<{ submissions: StampEventSubmission[] }>('GET', '/stamps/events');
+  return res.submissions;
+}
+
+/** 블로그 후기 링크 제출 (POST /stamps/events). 갱신된 제출 이력을 돌려준다. */
+export async function submitStampEvent(url: string): Promise<StampEventSubmission[]> {
+  const res = await authedRequest<{ submissions: StampEventSubmission[] }>('POST', '/stamps/events', { url });
+  return res.submissions;
 }
