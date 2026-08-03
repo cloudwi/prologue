@@ -20,6 +20,7 @@ import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/the
 import { isSessionExpired } from '@/lib/api';
 import { answerToday, getPastPeers, getPeers, getToday, type PastPeer, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
+import { getStampBalance } from '@/lib/stamps';
 import { useTheme } from '@/hooks/use-theme';
 
 function peerMetaLabel(peer: Peer): string {
@@ -44,6 +45,7 @@ export default function DiscoverScreen() {
   const [peersLoading, setPeersLoading] = useState(false);
   const [answerExpanded, setAnswerExpanded] = useState(false);
   const [pastPeers, setPastPeers] = useState<PastPeer[]>([]);
+  const [stamps, setStamps] = useState<number | null>(null);
 
   async function loadPeers() {
     setPeersLoading(true);
@@ -86,8 +88,15 @@ export default function DiscoverScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!peersData?.open || peersData.peers.length === 0) loadPeers();
-       
+
     }, [peersData?.open, peersData?.peers.length]),
+  );
+
+  // 우표 잔액 — 대화 신청 뒤 돌아와도 맞게, 탭에 들어올 때마다 갱신. 실패하면 칩을 숨긴다.
+  useFocusEffect(
+    useCallback(() => {
+      getStampBalance().then(setStamps).catch(() => {});
+    }, []),
   );
 
   async function submit() {
@@ -147,8 +156,27 @@ export default function DiscoverScreen() {
             contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}
             keyboardShouldPersistTaps="handled"
           >
-            {/* 오늘의 문답 */}
-            <Text style={[styles.sectionEyebrow, { color: c.primaryStrong }]}>오늘의 문답</Text>
+            {/* 오늘의 문답 — 오른쪽에 우표 잔액. 재화는 조용히, 그러나 보이게. */}
+            <View style={styles.topRow}>
+              <Text style={[styles.sectionEyebrow, { color: c.primaryStrong, marginBottom: 0 }]}>오늘의 문답</Text>
+              {stamps != null && (
+                <Pressable
+                  onPress={() => router.push('/my/stamps')}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`남은 우표 ${stamps}장, 지갑 열기`}
+                  style={({ pressed }) => [styles.stampChip, { borderColor: c.border, opacity: pressed ? 0.6 : 1 }]}
+                >
+                  <Image
+                    source={require('@/assets/images/stamp.png')}
+                    style={styles.stampChipIcon}
+                    contentFit="contain"
+                    tintColor={c.primaryStrong}
+                  />
+                  <Text style={[styles.stampChipText, { color: c.text }]}>{stamps}</Text>
+                </Pressable>
+              )}
+            </View>
             <View style={[styles.questionCard, { backgroundColor: c.backgroundElement }]}>
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>{today?.content}</Text>
             </View>
@@ -438,6 +466,18 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingTop: 16 }, // 아래 여백은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
   sectionEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 10 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  stampChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  stampChipIcon: { width: 13, height: 13 },
+  stampChipText: { fontSize: 13, fontWeight: '700' },
   questionCard: { borderRadius: Radius.md, padding: 20, marginBottom: 16 },
   question: { fontSize: 19, fontWeight: '600', lineHeight: 28 },
   answeredTag: { fontSize: 13, fontWeight: '600', marginBottom: 10 },
