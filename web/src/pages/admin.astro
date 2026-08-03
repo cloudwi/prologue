@@ -16,12 +16,6 @@ const API_BASE = 'https://prologue-backend.onrender.com';
     <meta name="robots" content="noindex,nofollow" />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
-    />
   </head>
   <body class="admin-body">
     <main class="admin-wrap">
@@ -217,6 +211,13 @@ const API_BASE = 'https://prologue-backend.onrender.com';
     </script>
 
     <style>
+      /* 운영 도구는 멋 부리지 않는다 — 제목까지 시스템 기본 글씨체로 통일. */
+      .admin-body,
+      .admin-body h1,
+      .admin-body h2 {
+        font-family:
+          -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      }
       .admin-body {
         min-height: 100vh;
         padding: 48px 20px;
