@@ -154,6 +154,12 @@ export default function PeerDetailScreen() {
               },
             ]}
           >
+            <Image
+              source={require('@/assets/images/stamp.png')}
+              style={styles.requestPillIcon}
+              contentFit="contain"
+              tintColor={requested ? c.textSecondary : c.primaryStrong}
+            />
             <Text style={[styles.requestPillText, { color: requested ? c.textSecondary : c.primaryStrong }]}>
               {requested ? '신청 완료' : '대화 신청'}
             </Text>
@@ -209,15 +215,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 22,
     height: 44,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     borderRadius: 22,
     borderWidth: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 7,
     shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },
+  requestPillIcon: { width: 16, height: 16 },
   requestPillText: { fontSize: 14.5, fontWeight: '700' },
 });

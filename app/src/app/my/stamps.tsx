@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
@@ -40,6 +41,12 @@ export default function StampsScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           {/* 잔액 — 이 화면의 주인공. 숫자 하나를 크게. */}
           <View style={[styles.balanceCard, { backgroundColor: c.backgroundElement }]}>
+            <Image
+              source={require('@/assets/images/stamp.png')}
+              style={styles.stampIcon}
+              contentFit="contain"
+              tintColor={c.primaryStrong}
+            />
             <Text style={[styles.balanceNumber, { color: c.text, fontFamily: Fonts.serif }]}>
               {wallet?.balance ?? 0}
               <Text style={[styles.balanceUnit, { color: c.textSecondary }]}> 장</Text>
@@ -89,6 +96,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   balanceCard: { borderRadius: Radius.md, alignItems: 'center', paddingVertical: 36, marginBottom: 28 },
+  stampIcon: { width: 40, height: 40, marginBottom: 14 },
   balanceNumber: { fontSize: 44, fontWeight: '700' },
   balanceUnit: { fontSize: 18, fontWeight: '400' },
   balanceHint: { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 14 },
