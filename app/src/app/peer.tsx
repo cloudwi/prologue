@@ -79,10 +79,17 @@ export default function PeerDetailScreen() {
   for (const letter of peer.letters) {
     letters.push({ key: `letter-${letter.questionId}`, question: letter.question, content: letter.content });
   }
-  const unlockedPast = pastAnswers.filter((a) => a.unlocked && a.content);
-  if (unlockedPast.length > 0) {
-    // 지난 상대 — 그동안 열린 문답을 최신 공개 순으로 이어 붙인다.
-    unlockedPast.forEach((a, i) => letters.push({ key: `past-${i}`, question: a.question, content: a.content! }));
+  if (pastAnswers.length > 0) {
+    // 지난 상대 — 그동안의 문답을 최신 공개 순으로 이어 붙인다.
+    // 잠긴 날도 질문은 보여준다: 무슨 물음으로 만났는지는 인연의 맥락이라, 답만 잠근다.
+    pastAnswers.forEach((a, i) =>
+      letters.push({
+        key: `past-${i}`,
+        question: a.question,
+        content: a.unlocked && a.content ? a.content : '',
+        locked: !(a.unlocked && a.content),
+      }),
+    );
   } else if (peer.answerUnlocked && peer.peerAnswer) {
     // 오늘의 질문을 함께 — 답변만 있으면 무슨 물음에 대한 답인지 끊긴다.
     const todayQuestion = typeof question === 'string' && question.length > 0 ? question : '오늘의 답변';

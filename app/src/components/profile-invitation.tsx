@@ -9,7 +9,13 @@ import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
  * 대표 사진은 표지, 나머지 사진은 글 블록 사이에 화보처럼 흩는다(시드 고정 배치).
  */
 
-export type InvitationLetter = { key: string; question: string | null; content: string };
+export type InvitationLetter = {
+  key: string;
+  question: string | null;
+  content: string;
+  /** 잠긴 문답 — 질문은 보이되 답 대신 잠김 안내를 놓는다(지난 상대의 Give&Take). */
+  locked?: boolean;
+};
 
 export function ProfileInvitation({
   nickname,
@@ -67,7 +73,13 @@ export function ProfileInvitation({
             {block.question ? (
               <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>{block.question}</Text>
             ) : null}
-            <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{block.content}</Text>
+            {block.locked ? (
+              <Text style={[styles.letterLocked, { color: c.textSecondary }]}>
+                그날 질문에 답하지 않아{'\n'}잠긴 채로 남은 답장이에요
+              </Text>
+            ) : (
+              <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{block.content}</Text>
+            )}
           </View>
           {photoSlots
             .map((slot, photoIndex) => ({ slot, photoIndex }))
@@ -154,6 +166,7 @@ const styles = StyleSheet.create({
   letter: { paddingHorizontal: 32, marginBottom: 34 },
   letterQuestion: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
   letterContent: { fontSize: 17, lineHeight: 30, textAlign: 'center', marginTop: 12 },
+  letterLocked: { fontSize: 14, lineHeight: 23, textAlign: 'center', marginTop: 12, opacity: 0.7 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
