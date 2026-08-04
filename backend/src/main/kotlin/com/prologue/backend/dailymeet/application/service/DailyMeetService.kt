@@ -140,6 +140,23 @@ class DailyMeetService(
             }
     }
 
+    /**
+     * 내가 남긴 답 — 역대 답변 전부를 질문과 함께 최신순으로.
+     * 본인 전용 기록이다: 상대에게는 past-peers의 짧은 창(3일)만 보이고, 이 전체 목록은 절대 내려가지 않는다.
+     */
+    @Transactional(readOnly = true)
+    fun myAnswers(accountId: UUID): List<MyAnswerView> {
+        val questions = questionRepository.findAllOrdered().associateBy { it.id }
+        return answerRepository.findAllByAccountId(accountId).map { answer ->
+            MyAnswerView(
+                questionId = answer.questionId,
+                question = questions[answer.questionId]?.content ?: "",
+                content = answer.content,
+                answeredAt = answer.createdAt,
+            )
+        }
+    }
+
     /** 상대 프로필(사진·닉네임 포함, 생년월일 등 원본은 비공개) + 답변(잠금 시 null). */
     private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
@@ -187,6 +204,14 @@ data class PastPeerView(
     val revealedAt: java.time.Instant,
     val peer: PeerView,
     val answers: List<PastAnswerView>,
+)
+
+/** 내가 남긴 답변 하나 — 그날의 질문과 답한 시각. 본인에게만 보이므로 날짜를 그대로 드러낸다. */
+data class MyAnswerView(
+    val questionId: Long,
+    val question: String,
+    val content: String,
+    val answeredAt: java.time.Instant,
 )
 
 /** 지난 상대가 남긴 문답 하나 — 열람은 그 질문의 Give&Take 그대로(잠기면 content는 null). */

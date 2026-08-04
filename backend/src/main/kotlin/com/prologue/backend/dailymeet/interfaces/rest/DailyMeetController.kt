@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.MyAnswersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PastPeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedHeartsResponse
@@ -47,6 +48,13 @@ class DailyMeetController(
     fun pastPeers(authentication: Authentication): PastPeersResponse {
         val accountId = UUID.fromString(authentication.name)
         return PastPeersResponse.from(dailyMeetService.pastPeers(accountId))
+    }
+
+    /** 내가 남긴 답 — 역대 답변 전부(질문 포함), 최신순. 본인 전용. */
+    @GetMapping("/my-answers")
+    fun myAnswers(authentication: Authentication): MyAnswersResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return MyAnswersResponse.from(dailyMeetService.myAnswers(accountId))
     }
 
     /** 오늘의 질문에 답변(작성/수정). 답변 후 갱신된 현황 반환. */

@@ -13,4 +13,7 @@ interface AnswerRepository {
 
     /** 같은 질문에 대한 '나 외의' 모든 답변. 성별·선호 필터링/페어링용. */
     fun findOthers(questionId: Long, excludeAccountId: UUID): List<Answer>
+
+    /** 한 사람이 남긴 모든 답변, 최신순. 본인 전용 기록 조회용. */
+    fun findAllByAccountId(accountId: UUID): List<Answer>
 }

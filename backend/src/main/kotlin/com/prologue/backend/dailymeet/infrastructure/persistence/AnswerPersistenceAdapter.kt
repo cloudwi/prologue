@@ -25,6 +25,9 @@ class AnswerPersistenceAdapter(
     override fun findOthers(questionId: Long, excludeAccountId: UUID): List<Answer> =
         jpa.findByQuestionIdAndAccountIdNot(questionId, excludeAccountId).map { it.toDomain() }
 
+    override fun findAllByAccountId(accountId: UUID): List<Answer> =
+        jpa.findByAccountIdOrderByCreatedAtDesc(accountId).map { it.toDomain() }
+
     private fun Answer.toEntity(): AnswerJpaEntity =
         AnswerJpaEntity(
             id = id,

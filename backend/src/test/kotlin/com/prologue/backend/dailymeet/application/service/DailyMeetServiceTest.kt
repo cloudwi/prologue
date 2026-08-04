@@ -93,6 +93,22 @@ class DailyMeetServiceTest {
     }
 
     @Test
+    fun `내가 남긴 답 - 질문을 붙여 저장소가 준 최신순 그대로 돌려준다`() {
+        val old = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "첫날의 답", Instant.parse("2026-08-01T03:00:00Z"))
+        val recent = Answer.reconstitute(UUID.randomUUID(), accountId, 2L, "둘째 날의 답", Instant.parse("2026-08-02T03:00:00Z"))
+        every { questionRepository.findAllOrdered() } returns listOf(question, Question(2L, "두 번째 질문"))
+        every { answerRepository.findAllByAccountId(accountId) } returns listOf(recent, old)
+
+        val views = service.myAnswers(accountId)
+
+        assertEquals(2, views.size)
+        assertEquals("두 번째 질문", views[0].question)
+        assertEquals("둘째 날의 답", views[0].content)
+        assertEquals(question.content, views[1].question)
+        assertEquals("첫날의 답", views[1].content)
+    }
+
+    @Test
     fun `질문 풀이 비어있으면 예외`() {
         every { questionRepository.findAllOrdered() } returns emptyList()
 
