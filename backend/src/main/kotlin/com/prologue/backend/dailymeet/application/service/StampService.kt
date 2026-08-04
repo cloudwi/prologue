@@ -52,7 +52,6 @@ class StampService(
 
     companion object {
         const val REASON_WELCOME = "WELCOME"
-        const val REASON_CONVERSATION_REQUEST = "CONVERSATION_REQUEST"
         const val REASON_EVENT = "EVENT"
         const val REASON_MAIL = "MAIL"
         private const val HISTORY_LIMIT = 50

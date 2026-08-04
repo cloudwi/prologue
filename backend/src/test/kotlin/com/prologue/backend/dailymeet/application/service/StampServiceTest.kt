@@ -38,10 +38,10 @@ class StampServiceTest {
         every { walletRepository.findByAccountId(me) } returns wallet
         every { walletRepository.save(any()) } answers { firstArg() }
 
-        service.spendOne(me, StampService.REASON_CONVERSATION_REQUEST)
+        service.spendOne(me, StampService.REASON_MAIL)
 
         assertEquals(1, wallet.balance)
-        verify { ledgerRepository.append(me, -1, StampService.REASON_CONVERSATION_REQUEST) }
+        verify { ledgerRepository.append(me, -1, StampService.REASON_MAIL) }
     }
 
     @Test
@@ -49,7 +49,7 @@ class StampServiceTest {
         val wallet = StampWallet.reconstitute(me, 0, Instant.now(), Instant.now())
         every { walletRepository.findByAccountId(me) } returns wallet
 
-        assertFailsWith<DailyMeetException> { service.spendOne(me, StampService.REASON_CONVERSATION_REQUEST) }
+        assertFailsWith<DailyMeetException> { service.spendOne(me, StampService.REASON_MAIL) }
         verify(exactly = 0) { ledgerRepository.append(any(), any(), any()) }
     }
 }
