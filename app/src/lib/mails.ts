@@ -39,6 +39,8 @@ export type ReceivedMail = {
   content: string;
   phone: string | null;
   kakaoId: string | null;
+  /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 불가(답이 없는 옛 데이터). */
+  peerAnswerId: string | null;
   createdAt: string;
 };
 

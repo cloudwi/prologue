@@ -130,8 +130,11 @@ class MailServiceTest {
     @Test
     fun `받은 편지에는 보낸 사람 요약과 연락처가 실린다`() {
         val mail = Mail.reconstitute(UUID.randomUUID(), senderId, recipientId, "연락 주세요", "01012345678", null, Instant.now())
+        val senderAnswerId = UUID.randomUUID()
         every { mailRepository.findAllByRecipient(recipientId) } returns listOf(mail)
         every { memberQueryService.findProfile(senderId) } returns sender()
+        every { answerRepository.findAllByAccountId(senderId) } returns
+            listOf(Answer.reconstitute(senderAnswerId, senderId, 1L, "보낸 사람의 답", Instant.now()))
 
         val views = service.received(recipientId)
 
@@ -139,6 +142,7 @@ class MailServiceTest {
         assertEquals("발신인", views[0].nickname)
         assertEquals("연락 주세요", views[0].content)
         assertEquals("01012345678", views[0].phone)
+        assertEquals(senderAnswerId, views[0].peerAnswerId) // 프로필 상세로 들어갈 손잡이
         assertNull(views[0].kakaoId)
     }
 }

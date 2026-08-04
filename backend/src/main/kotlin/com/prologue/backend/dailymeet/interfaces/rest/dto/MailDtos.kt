@@ -48,6 +48,8 @@ data class ReceivedMailsResponse(
         val content: String,
         val phone: String?,
         val kakaoId: String?,
+        /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 버튼을 숨긴다. */
+        val peerAnswerId: String?,
         val createdAt: Instant,
     )
 
@@ -65,6 +67,7 @@ data class ReceivedMailsResponse(
                         content = it.content,
                         phone = it.phone,
                         kakaoId = it.kakaoId,
+                        peerAnswerId = it.peerAnswerId?.toString(),
                         createdAt = it.createdAt,
                     )
                 },

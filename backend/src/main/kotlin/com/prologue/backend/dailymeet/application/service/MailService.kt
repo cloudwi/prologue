@@ -25,6 +25,8 @@ data class ReceivedMailView(
     val content: String,
     val phone: String?,
     val kakaoId: String?,
+    /** 보낸 사람의 최근 답변 id — 프로필 상세로 들어가는 손잡이. 답이 없으면 null(진입 불가). */
+    val peerAnswerId: UUID?,
     val createdAt: Instant,
 )
 
@@ -112,6 +114,7 @@ class MailService(
                 content = mail.content,
                 phone = mail.phone,
                 kakaoId = mail.kakaoId,
+                peerAnswerId = answerRepository.findAllByAccountId(mail.senderAccountId).firstOrNull()?.id,
                 createdAt = mail.createdAt,
             )
         }

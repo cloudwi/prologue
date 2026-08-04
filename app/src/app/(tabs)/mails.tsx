@@ -52,12 +52,12 @@ export default function MailsScreen() {
     });
   }
 
-  /** 하트 카드 → 상대 프로필 상세(청첩장). 하트만 보고 정하기엔 아쉬우니 사람을 먼저 보여준다. */
-  async function openHeartProfile(h: ReceivedHeart) {
-    if (!h.peerAnswerId || busy) return;
-    setBusy(`profile-${h.peerAnswerId}`);
+  /** 카드 → 상대 프로필 상세(청첩장). 하트든 편지든, 이름만 보고 정하기엔 아쉬우니 사람을 먼저 보여준다. */
+  async function openPeerDetail(peerAnswerId: string | null) {
+    if (!peerAnswerId || busy) return;
+    setBusy(`profile-${peerAnswerId}`);
     try {
-      const { question, peer } = await getPeerProfile(h.peerAnswerId);
+      const { question, peer } = await getPeerProfile(peerAnswerId);
       router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question } });
     } catch (e) {
       Alert.alert('프로필을 불러오지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
@@ -113,7 +113,7 @@ export default function MailsScreen() {
                 {hearts.map((h, i) => (
                   <Pressable
                     key={h.peerAnswerId ?? `${h.nickname}-${i}`}
-                    onPress={() => openHeartProfile(h)}
+                    onPress={() => openPeerDetail(h.peerAnswerId)}
                     disabled={!h.peerAnswerId}
                     accessibilityRole="button"
                     accessibilityLabel={`${h.nickname}님의 프로필 보기`}
@@ -176,7 +176,14 @@ export default function MailsScreen() {
                 </Text>
                 {mails.map((m) => (
                   <View key={m.mailId} style={[styles.mailCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
-                    <View style={styles.mailHead}>
+                    {/* 머리(사진·이름)를 누르면 보낸 사람의 프로필 상세로. */}
+                    <Pressable
+                      onPress={() => openPeerDetail(m.peerAnswerId)}
+                      disabled={!m.peerAnswerId}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${m.nickname}님의 프로필 보기`}
+                      style={({ pressed }) => [styles.mailHead, { opacity: pressed ? 0.7 : 1 }]}
+                    >
                       {m.photoUrl ? (
                         <Image
                           source={{ uri: m.photoUrl }}
@@ -193,7 +200,7 @@ export default function MailsScreen() {
                           만 {m.age}세 · {m.region} · {dateFmt.format(new Date(m.createdAt))}
                         </Text>
                       </View>
-                    </View>
+                    </Pressable>
 
                     <Text style={[styles.mailContent, { color: c.text, fontFamily: Fonts.serif }]}>{m.content}</Text>
 
