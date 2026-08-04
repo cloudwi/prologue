@@ -35,6 +35,36 @@ data class SendMailResponse(
     }
 }
 
+/** 내가 보낸 편지 — 부친 뒤에는 고칠 수 없는 기록. 없으면 mail=null. */
+data class SentMailToResponse(
+    val mail: Item?,
+) {
+    data class Item(
+        val mailId: String,
+        val recipientNickname: String?,
+        val content: String,
+        val phone: String?,
+        val kakaoId: String?,
+        val createdAt: Instant,
+    )
+
+    companion object {
+        fun from(view: com.prologue.backend.dailymeet.application.service.SentMailView?): SentMailToResponse =
+            SentMailToResponse(
+                view?.let {
+                    Item(
+                        mailId = it.mailId.toString(),
+                        recipientNickname = it.recipientNickname,
+                        content = it.content,
+                        phone = it.phone,
+                        kakaoId = it.kakaoId,
+                        createdAt = it.createdAt,
+                    )
+                },
+            )
+    }
+}
+
 data class ReceivedMailsResponse(
     val mails: List<Item>,
 ) {
@@ -50,6 +80,8 @@ data class ReceivedMailsResponse(
         val kakaoId: String?,
         /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 버튼을 숨긴다. */
         val peerAnswerId: String?,
+        /** 내가 이미 답장(편지)을 보냈는지 — true면 답장 버튼 대신 보낸 편지 확인. */
+        val replied: Boolean,
         val createdAt: Instant,
     )
 
@@ -68,6 +100,7 @@ data class ReceivedMailsResponse(
                         phone = it.phone,
                         kakaoId = it.kakaoId,
                         peerAnswerId = it.peerAnswerId?.toString(),
+                        replied = it.replied,
                         createdAt = it.createdAt,
                     )
                 },

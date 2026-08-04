@@ -49,11 +49,11 @@ export default function MailsScreen() {
     }, [load]),
   );
 
-  /** 편지 쓰기로. */
+  /** 편지 쓰기로 — 이미 보낸 상대면 쓰기 대신 보낸 편지 확인으로. */
   function openCompose(h: ReceivedHeart) {
     if (!h.peerAnswerId) return;
     router.push({
-      pathname: '/mail-compose',
+      pathname: h.mailSent ? '/mail-view' : '/mail-compose',
       params: { peerAnswerId: h.peerAnswerId, nickname: h.nickname },
     });
   }
@@ -149,14 +149,16 @@ export default function MailsScreen() {
                       </Text>
                     </View>
                     {h.peerAnswerId &&
-                      (h.mutual ? (
+                      (h.mailSent || h.mutual ? (
                         <Pressable
                           onPress={() => openCompose(h)}
                           accessibilityRole="button"
-                          accessibilityLabel={`${h.nickname}님에게 편지 쓰기`}
-                          style={[styles.mailBtn, { borderColor: c.primaryStrong }]}
+                          accessibilityLabel={h.mailSent ? `${h.nickname}님에게 보낸 편지 확인` : `${h.nickname}님에게 편지 쓰기`}
+                          style={[styles.mailBtn, { borderColor: h.mailSent ? c.border : c.primaryStrong }]}
                         >
-                          <Text style={[styles.mailBtnText, { color: c.primaryStrong }]}>편지 쓰기</Text>
+                          <Text style={[styles.mailBtnText, { color: h.mailSent ? c.textSecondary : c.primaryStrong }]}>
+                            {h.mailSent ? '편지 확인' : '편지 쓰기'}
+                          </Text>
                         </Pressable>
                       ) : (
                         <Pressable
@@ -228,22 +230,28 @@ export default function MailsScreen() {
                       )}
                     </View>
 
-                    {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장). */}
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: '/mail-compose',
-                          params: { replyMailId: m.mailId, nickname: m.nickname },
-                        })
-                      }
-                      accessibilityRole="button"
-                      style={({ pressed }) => [
-                        styles.replyBtn,
-                        { borderColor: c.border, opacity: pressed ? 0.7 : 1 },
-                      ]}
-                    >
-                      <Text style={[styles.replyBtnText, { color: c.primaryStrong }]}>답장하기</Text>
-                    </Pressable>
+                    {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장).
+                        이미 보냈으면 다시 쓰는 대신 보낸 편지를 보여준다 — 부친 편지는 고칠 수 없다. */}
+                    {m.replied && !m.peerAnswerId ? null : (
+                      <Pressable
+                        onPress={() =>
+                          router.push(
+                            m.replied
+                              ? { pathname: '/mail-view', params: { peerAnswerId: m.peerAnswerId!, nickname: m.nickname } }
+                              : { pathname: '/mail-compose', params: { replyMailId: m.mailId, nickname: m.nickname } },
+                          )
+                        }
+                        accessibilityRole="button"
+                        style={({ pressed }) => [
+                          styles.replyBtn,
+                          { borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                        ]}
+                      >
+                        <Text style={[styles.replyBtnText, { color: m.replied ? c.textSecondary : c.primaryStrong }]}>
+                          {m.replied ? '보낸 편지 확인' : '답장하기'}
+                        </Text>
+                      </Pressable>
+                    )}
                   </View>
                 ))}
               </>

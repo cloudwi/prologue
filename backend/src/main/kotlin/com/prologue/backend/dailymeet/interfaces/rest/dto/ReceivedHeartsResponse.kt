@@ -16,6 +16,8 @@ data class ReceivedHeartsResponse(
         val peerAnswerId: String?,
         /** 서로 하트 — true면 하트 되보내기 대신 편지 쓰기 차례다. */
         val mutual: Boolean,
+        /** 내가 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
+        val mailSent: Boolean,
         val createdAt: Instant,
     )
 
@@ -31,6 +33,7 @@ data class ReceivedHeartsResponse(
                         photoUrl = it.photoUrl,
                         peerAnswerId = it.peerAnswerId?.toString(),
                         mutual = it.mutual,
+                        mailSent = it.mailSent,
                         createdAt = it.createdAt,
                     )
                 },

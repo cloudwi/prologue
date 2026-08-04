@@ -22,10 +22,13 @@ data class PeerResponse(
     val interests: List<String>,
     val strengths: List<String>,
     val avatarId: Int?,
+    /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
+    val mailSent: Boolean,
 ) {
     companion object {
         fun from(view: PeerView): PeerResponse =
             PeerResponse(
+                mailSent = view.mailSent,
                 peerAnswerId = view.peerAnswerId?.toString(),
                 peerAnswer = view.peerAnswer,
                 answerUnlocked = view.answerUnlocked,

@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedMailsResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReplyMailRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.SendMailRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.SendMailResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.SentMailToResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
@@ -57,6 +58,21 @@ class MailController(
         return SendMailResponse.from(
             mailService.reply(accountId, id, request.content, request.includePhone, request.kakaoId),
         )
+    }
+
+    /** 내가 이 상대(답변 주인)에게 보낸 편지 — 보낸 편지 확인 화면용. 없으면 mail=null. */
+    @GetMapping("/sent-to/{peerAnswerId}")
+    fun sentTo(
+        authentication: Authentication,
+        @PathVariable peerAnswerId: String,
+    ): SentMailToResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val answerId = try {
+            UUID.fromString(peerAnswerId)
+        } catch (e: IllegalArgumentException) {
+            throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
+        }
+        return SentMailToResponse.from(mailService.sentTo(accountId, answerId))
     }
 
     /** 받은 편지 목록, 최신순. */

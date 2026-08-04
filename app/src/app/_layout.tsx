@@ -45,6 +45,7 @@ function Navigation() {
         <Stack.Screen name="peer" />
         <Stack.Screen name="past-peers" />
         <Stack.Screen name="mail-compose" />
+        <Stack.Screen name="mail-view" />
       </Stack>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>

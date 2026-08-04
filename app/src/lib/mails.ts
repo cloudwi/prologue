@@ -41,6 +41,8 @@ export type ReceivedMail = {
   kakaoId: string | null;
   /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 불가(답이 없는 옛 데이터). */
   peerAnswerId: string | null;
+  /** 내가 이미 답장(편지)을 보냈는지 — true면 답장 버튼 대신 보낸 편지 확인. */
+  replied: boolean;
   createdAt: string;
 };
 
@@ -48,4 +50,19 @@ export type ReceivedMail = {
 export async function getReceivedMails(): Promise<ReceivedMail[]> {
   const res = await authedRequest<{ mails: ReceivedMail[] }>('GET', '/mails/received');
   return res.mails;
+}
+
+export type SentMail = {
+  mailId: string;
+  recipientNickname: string | null;
+  content: string;
+  phone: string | null;
+  kakaoId: string | null;
+  createdAt: string;
+};
+
+/** 내가 이 상대(답변 주인)에게 보낸 편지 — 없으면 null (GET /mails/sent-to/{peerAnswerId}). */
+export async function getSentMailTo(peerAnswerId: string): Promise<SentMail | null> {
+  const res = await authedRequest<{ mail: SentMail | null }>('GET', `/mails/sent-to/${peerAnswerId}`);
+  return res.mail;
 }

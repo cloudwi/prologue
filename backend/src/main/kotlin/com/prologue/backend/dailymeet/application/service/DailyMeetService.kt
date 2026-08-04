@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyReveal
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
+import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.beans.factory.annotation.Value
@@ -26,6 +27,7 @@ class DailyMeetService(
     private val questionRepository: QuestionRepository,
     private val answerRepository: AnswerRepository,
     private val dailyRevealRepository: DailyRevealRepository,
+    private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
     private val profileLetterService: ProfileLetterService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
@@ -93,7 +95,7 @@ class DailyMeetService(
             }
         }
 
-        return TodayPeersView(open = true, answerUnlocked = answered, peers = revealed.map { peerView(it, answered) })
+        return TodayPeersView(open = true, answerUnlocked = answered, peers = revealed.map { peerView(accountId, it, answered) })
     }
 
     /**
@@ -126,7 +128,7 @@ class DailyMeetService(
                 PastPeerView(
                     question = questions[latestReveal.questionId]?.content ?: "",
                     revealedAt = latestReveal.createdAt,
-                    peer = peerView(actionable, answeredByQuestion[actionable.questionId] == true),
+                    peer = peerView(accountId, actionable, answeredByQuestion[actionable.questionId] == true),
                     answers = grouped.map { (reveal, answer) ->
                         val unlocked = answeredByQuestion[reveal.questionId] == true
                         PastAnswerView(
@@ -170,14 +172,15 @@ class DailyMeetService(
         val questions = questionRepository.findAllOrdered().associateBy { it.id }
         return PeerProfileView(
             question = questions[answer.questionId]?.content ?: "",
-            peer = peerView(answer, answered),
+            peer = peerView(accountId, answer, answered),
         )
     }
 
     /** 상대 프로필(사진·닉네임 포함, 생년월일 등 원본은 비공개) + 답변(잠금 시 null). */
-    private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
+    private fun peerView(viewerAccountId: UUID, peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
         return PeerView(
+            mailSent = mailRepository.existsBySenderAndRecipient(viewerAccountId, peer.accountId),
             peerAnswerId = peer.id,
             peerAnswer = if (answered) peer.content else null,
             answerUnlocked = answered,

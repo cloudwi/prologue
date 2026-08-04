@@ -4,6 +4,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Heart
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
+import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,6 +20,7 @@ import java.util.UUID
 class HeartService(
     private val answerRepository: AnswerRepository,
     private val heartRepository: HeartRepository,
+    private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
 ) {
     /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 서로의 마음을 안 것. */
@@ -55,6 +57,7 @@ class HeartService(
                     // 하트를 보냈다 = 그 질문에 답해 잠금을 풀었다 — 답이 없는 경우는 옛 데이터뿐.
                     peerAnswerId = answerRepository.findByAccountIdAndQuestionId(heart.fromAccountId, heart.questionId)?.id,
                     mutual = heartRepository.existsFromTo(accountId, heart.fromAccountId),
+                    mailSent = mailRepository.existsBySenderAndRecipient(accountId, heart.fromAccountId),
                     createdAt = heart.createdAt,
                 )
             }
@@ -70,6 +73,8 @@ data class ReceivedHeartView(
     val peerAnswerId: UUID?,
     /** 서로 하트를 주고받았는지 — true면 하트 되보내기 대신 편지를 보낼 차례다. */
     val mutual: Boolean,
+    /** 내가 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
+    val mailSent: Boolean,
     val createdAt: Instant,
 )
 

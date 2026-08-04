@@ -19,6 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class MailServiceTest {
 
@@ -132,6 +133,7 @@ class MailServiceTest {
         val mail = Mail.reconstitute(UUID.randomUUID(), senderId, recipientId, "연락 주세요", "01012345678", null, Instant.now())
         val senderAnswerId = UUID.randomUUID()
         every { mailRepository.findAllByRecipient(recipientId) } returns listOf(mail)
+        every { mailRepository.existsBySenderAndRecipient(recipientId, senderId) } returns true
         every { memberQueryService.findProfile(senderId) } returns sender()
         every { answerRepository.findAllByAccountId(senderId) } returns
             listOf(Answer.reconstitute(senderAnswerId, senderId, 1L, "보낸 사람의 답", Instant.now()))
@@ -143,6 +145,7 @@ class MailServiceTest {
         assertEquals("연락 주세요", views[0].content)
         assertEquals("01012345678", views[0].phone)
         assertEquals(senderAnswerId, views[0].peerAnswerId) // 프로필 상세로 들어갈 손잡이
+        assertTrue(views[0].replied) // 이미 답장했으면 답장 버튼 대신 보낸 편지 확인
         assertNull(views[0].kakaoId)
     }
 }

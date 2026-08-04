@@ -36,6 +36,8 @@ export type Peer = {
   interests: string[];
   strengths: string[];
   avatarId: number | null;
+  /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
+  mailSent: boolean;
 };
 
 export type TodayPeers = {
@@ -119,6 +121,8 @@ export type ReceivedHeart = {
   peerAnswerId: string | null;
   /** 서로 하트 — true면 하트 되보내기 대신 편지 쓰기 차례. */
   mutual: boolean;
+  /** 내가 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
+  mailSent: boolean;
   createdAt: string;
 };
 

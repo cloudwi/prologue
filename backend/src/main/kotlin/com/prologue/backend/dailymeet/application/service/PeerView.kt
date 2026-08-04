@@ -28,6 +28,8 @@ data class PeerView(
     val interests: List<String>,
     val strengths: List<String>,
     val avatarId: Int?,
+    /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
+    val mailSent: Boolean = false,
 )
 
 /**

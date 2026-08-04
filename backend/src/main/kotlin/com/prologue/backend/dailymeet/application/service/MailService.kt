@@ -14,6 +14,16 @@ data class SendMailResult(
     val mailId: UUID,
 )
 
+/** 내가 보낸 편지 한 통 — 부친 뒤에는 고칠 수 없는 기록이라 읽기 전용이다. */
+data class SentMailView(
+    val mailId: UUID,
+    val recipientNickname: String?,
+    val content: String,
+    val phone: String?,
+    val kakaoId: String?,
+    val createdAt: Instant,
+)
+
 /** 받은 편지 한 통 — 보낸 사람 요약과 내용·연락처가 바로 보인다. */
 data class ReceivedMailView(
     val mailId: UUID,
@@ -27,6 +37,8 @@ data class ReceivedMailView(
     val kakaoId: String?,
     /** 보낸 사람의 최근 답변 id — 프로필 상세로 들어가는 손잡이. 답이 없으면 null(진입 불가). */
     val peerAnswerId: UUID?,
+    /** 내가 이 사람에게 이미 편지를 보냈는지 — true면 답장 대신 보낸 편지 확인. */
+    val replied: Boolean,
     val createdAt: Instant,
 )
 
@@ -115,7 +127,24 @@ class MailService(
                 phone = mail.phone,
                 kakaoId = mail.kakaoId,
                 peerAnswerId = answerRepository.findAllByAccountId(mail.senderAccountId).firstOrNull()?.id,
+                replied = mailRepository.existsBySenderAndRecipient(accountId, mail.senderAccountId),
                 createdAt = mail.createdAt,
             )
         }
+
+    /** 내가 이 상대(답변 주인)에게 보낸 편지 — 없으면 null. */
+    @Transactional(readOnly = true)
+    fun sentTo(accountId: UUID, peerAnswerId: UUID): SentMailView? {
+        val peerAnswer = answerRepository.findById(peerAnswerId)
+            ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
+        val mail = mailRepository.findBySenderAndRecipient(accountId, peerAnswer.accountId) ?: return null
+        return SentMailView(
+            mailId = requireNotNull(mail.id),
+            recipientNickname = memberQueryService.findProfile(mail.recipientAccountId)?.nickname,
+            content = mail.content,
+            phone = mail.phone,
+            kakaoId = mail.kakaoId,
+            createdAt = mail.createdAt,
+        )
+    }
 }

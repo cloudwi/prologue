@@ -84,11 +84,11 @@ export default function PeerDetailScreen() {
     letters.push({ key: 'today', question: todayQuestion, content: peer.peerAnswer });
   }
 
-  /** 편지 쓰기 화면으로. */
+  /** 편지 쓰기 화면으로 — 이미 보낸 상대면 쓰기 대신 보낸 편지 확인으로. */
   function openCompose() {
     if (!peer?.peerAnswerId) return;
     router.push({
-      pathname: '/mail-compose',
+      pathname: peer.mailSent ? '/mail-view' : '/mail-compose',
       params: { peerAnswerId: peer.peerAnswerId, nickname: peer.nickname ?? '' },
     });
   }
@@ -145,9 +145,11 @@ export default function PeerDetailScreen() {
               source={require('@/assets/images/stamp.png')}
               style={styles.requestPillIcon}
               contentFit="contain"
-              tintColor={c.primaryStrong}
+              tintColor={peer.mailSent ? c.textSecondary : c.primaryStrong}
             />
-            <Text style={[styles.requestPillText, { color: c.primaryStrong }]}>편지 보내기</Text>
+            <Text style={[styles.requestPillText, { color: peer.mailSent ? c.textSecondary : c.primaryStrong }]}>
+              {peer.mailSent ? '편지 확인' : '편지 보내기'}
+            </Text>
           </Pressable>
         )}
         {peer.answerUnlocked && peer.peerAnswerId && (
