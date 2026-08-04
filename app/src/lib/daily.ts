@@ -74,6 +74,19 @@ export async function getPastPeers(): Promise<PastPeer[]> {
   return res.peers;
 }
 
+export type MyAnswer = {
+  questionId: number;
+  question: string;
+  content: string;
+  answeredAt: string;
+};
+
+/** 내가 남긴 답 — 역대 답변 전부(질문 포함), 최신순. 본인 전용 (GET /daily/my-answers). */
+export async function getMyAnswers(): Promise<MyAnswer[]> {
+  const res = await authedRequest<{ answers: MyAnswer[] }>('GET', '/daily/my-answers');
+  return res.answers;
+}
+
 export type HeartResult = {
   hearted: boolean;
   /** 서로 하트를 보내 대화가 열렸는지. */
