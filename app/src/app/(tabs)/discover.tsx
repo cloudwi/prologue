@@ -274,11 +274,7 @@ export default function DiscoverScreen() {
                 <Text style={[styles.peerSub, { color: c.textSecondary }]}>
                   최근 3일 동안 소개된 상대예요.
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pastRow}>
-                  {pastPeers.map((p, i) => (
-                    <PastPeerCard key={p.peer.peerAnswerId ?? i} item={p} c={c} />
-                  ))}
-                </ScrollView>
+                <PastPeerGrid items={pastPeers} c={c} />
               </View>
             )}
           </ScrollView>
@@ -322,11 +318,29 @@ function daysAgoLabel(revealedAt: string): string {
   return days === 1 ? '어제' : `${days}일 전`;
 }
 
-/** 지난 상대 미니 카드 — 사진과 이름만. 자세한 건 상세(청첩장)에서. */
-function PastPeerCard({ item, c }: { item: PastPeer; c: ThemeColors }) {
+/** 지난 상대 그리드 — 한 줄 세 명씩 세로로 쌓는다. 가로 스크롤은 뒤에 누가 더 있는지 보이지 않았다. */
+function PastPeerGrid({ items, c }: { items: PastPeer[]; c: ThemeColors }) {
+  const [width, setWidth] = useState(0);
+  const cardWidth = (width - PAST_GRID_GAP * (PAST_GRID_COLUMNS - 1)) / PAST_GRID_COLUMNS;
+
+  return (
+    <View style={styles.pastGrid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 &&
+        items.map((p, i) => <PastPeerCard key={p.peer.peerAnswerId ?? i} item={p} width={cardWidth} c={c} />)}
+    </View>
+  );
+}
+
+const PAST_GRID_COLUMNS = 3;
+const PAST_GRID_GAP = 12;
+
+/** 지난 상대 미니 카드 — 사진과 이름만. 자세한 건 상세(청첩장)에서. 폭은 그리드가 계산해 내려준다. */
+function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: ThemeColors }) {
   const router = useRouter();
   const photo = item.peer.photoUrls[0];
   const unlockedCount = (item.answers ?? []).filter((a) => a.unlocked && a.content).length;
+  // 가로 카드 시절의 104×130 비율을 그대로 가져간다.
+  const photoSize = { width, height: width * 1.25 };
 
   function openDetail() {
     router.push({
@@ -336,11 +350,11 @@ function PastPeerCard({ item, c }: { item: PastPeer; c: ThemeColors }) {
   }
 
   return (
-    <Pressable onPress={openDetail} style={({ pressed }) => [styles.pastCard, { opacity: pressed ? 0.7 : 1 }]}>
+    <Pressable onPress={openDetail} style={({ pressed }) => [{ width, opacity: pressed ? 0.7 : 1 }]}>
       {photo ? (
-        <Image source={{ uri: photo }} style={[styles.pastPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+        <Image source={{ uri: photo }} style={[styles.pastPhoto, photoSize, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
       ) : (
-        <View style={[styles.pastPhoto, styles.pastAvatarWrap, { backgroundColor: c.backgroundSelected }]}>
+        <View style={[styles.pastPhoto, photoSize, styles.pastAvatarWrap, { backgroundColor: c.backgroundSelected }]}>
           <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname ?? undefined} size={44} c={c} />
         </View>
       )}
@@ -534,9 +548,8 @@ const styles = StyleSheet.create({
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
-  pastRow: { gap: 12, paddingRight: 20 },
-  pastCard: { width: 104 },
-  pastPhoto: { width: 104, height: 130, borderRadius: Radius.md },
+  pastGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: PAST_GRID_GAP },
+  pastPhoto: { borderRadius: Radius.md },
   pastAvatarWrap: { alignItems: 'center', justifyContent: 'center' },
   pastName: { fontSize: 13.5, fontWeight: '600', marginTop: 7 },
   pastDay: { fontSize: 12, marginTop: 2 },
