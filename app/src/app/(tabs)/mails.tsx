@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { Avatar } from '@/components/avatar';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
 import { getReceivedMails, type ReceivedMail } from '@/lib/mails';
 import { formatPhoneDigits } from '@/lib/phone';
@@ -30,12 +31,17 @@ export default function MailsScreen() {
       const [h, m] = await Promise.all([getReceivedHearts(), getReceivedMails()]);
       setHearts(h);
       setMails(m);
-    } catch {
-      // 무시 — 빈 상태로 둠
+    } catch (e) {
+      // 세션 만료를 조용히 삼키면 화면이 멈춘 것처럼 보인다 — 로그인으로 보낸다.
+      if (isSessionExpired(e)) {
+        router.replace('/');
+        return;
+      }
+      // 그 외 실패는 무시 — 빈 상태로 둠
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,6 +66,10 @@ export default function MailsScreen() {
       const { question, peer } = await getPeerProfile(peerAnswerId);
       router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question } });
     } catch (e) {
+      if (isSessionExpired(e)) {
+        router.replace('/');
+        return;
+      }
       Alert.alert('프로필을 불러오지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
     } finally {
       setBusy(null);
