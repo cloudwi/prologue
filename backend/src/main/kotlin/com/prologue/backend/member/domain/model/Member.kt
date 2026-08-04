@@ -10,8 +10,8 @@ import java.util.UUID
  * 소개팅 프로필 애그리거트 루트.
  * 인증(Account)과 1:1로 대응하며 [accountId]로 연결된다. (auth 컨텍스트와는 ID 참조로만 결합)
  *
- * 필수: 닉네임 · 성별 · 생년월일 · 선호 성별 · 지역.
- * 선택(프로필 풍부화): 자기소개 · 키 · 체형 · 취미/관심사/장점 키워드.
+ * 필수: 닉네임 · 성별 · 생년월일 · 선호 성별 · 지역 · 전화번호(신규 가입부터).
+ * 선택(프로필 풍부화): 자기소개 · 키 · 체형 · 취미/관심사/장점 키워드 · 카카오톡 ID.
  */
 class Member private constructor(
     val accountId: UUID,
@@ -29,6 +29,8 @@ class Member private constructor(
     strengths: List<String>,
     avatarId: Int?,
     photoUrls: List<String>,
+    phone: String?,
+    kakaoId: String?,
 ) {
     var nickname: String = nickname
         private set
@@ -53,6 +55,14 @@ class Member private constructor(
     var strengths: List<String> = strengths
         private set
     var avatarId: Int? = avatarId
+        private set
+
+    /** 전화번호(숫자만 저장). 편지에 실어 보내는 연락처 — 신규 가입은 필수, 이전 회원만 null일 수 있다. */
+    var phone: String? = phone
+        private set
+
+    /** 카카오톡 ID(선택). 편지에 전화번호 대신 실을 수 있다. */
+    var kakaoId: String? = kakaoId
         private set
 
     /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최대 [MAX_PHOTOS]장, 전용 업로드 엔드포인트에서 갱신된다. */
@@ -89,6 +99,7 @@ class Member private constructor(
         birthDate: LocalDate,
         preferredGender: Gender,
         region: String,
+        phone: String,
         bio: String? = null,
         heightCm: Int? = null,
         bodyType: BodyType? = null,
@@ -96,6 +107,7 @@ class Member private constructor(
         interests: List<String> = emptyList(),
         strengths: List<String> = emptyList(),
         avatarId: Int? = null,
+        kakaoId: String? = null,
     ) {
         validate(nickname, birthDate, region, bio, heightCm, avatarId)
         this.nickname = nickname.trim()
@@ -103,6 +115,8 @@ class Member private constructor(
         this.birthDate = birthDate
         this.preferredGender = preferredGender
         this.region = region.trim()
+        this.phone = normalizePhone(phone)
+        this.kakaoId = normalizeKakaoId(kakaoId)
         this.bio = bio?.trim()?.ifBlank { null }
         this.heightCm = heightCm
         this.bodyType = bodyType
@@ -121,6 +135,7 @@ class Member private constructor(
         private const val MIN_BIRTH_YEAR = 1920
         private const val BIO_MAX = 100
         private const val KEYWORD_MAX = 15
+        private const val KAKAO_ID_MAX = 30
         private val KST = ZoneId.of("Asia/Seoul")
 
         fun register(
@@ -130,6 +145,7 @@ class Member private constructor(
             birthDate: LocalDate,
             preferredGender: Gender,
             region: String,
+            phone: String,
             bio: String? = null,
             heightCm: Int? = null,
             bodyType: BodyType? = null,
@@ -137,6 +153,7 @@ class Member private constructor(
             interests: List<String> = emptyList(),
             strengths: List<String> = emptyList(),
             avatarId: Int? = null,
+            kakaoId: String? = null,
             photoUrls: List<String> = emptyList(),
             now: Instant = Instant.now(),
         ): Member {
@@ -152,6 +169,8 @@ class Member private constructor(
                 bio?.trim()?.ifBlank { null }, heightCm, bodyType,
                 normalizeKeywords(hobbies), normalizeKeywords(interests), normalizeKeywords(strengths), avatarId,
                 photoUrls = photoUrls,
+                phone = normalizePhone(phone),
+                kakaoId = normalizeKakaoId(kakaoId),
             )
         }
 
@@ -172,13 +191,31 @@ class Member private constructor(
             strengths: List<String> = emptyList(),
             avatarId: Int? = null,
             photoUrls: List<String> = emptyList(),
+            phone: String? = null,
+            kakaoId: String? = null,
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
             bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
+            phone, kakaoId,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =
             keywords.map { it.trim() }.filter { it.isNotBlank() }.distinct().take(KEYWORD_MAX)
+
+        /** 하이픈·공백을 걷어내고 숫자만 남긴다. 휴대폰 번호(01x) 형태만 허용. */
+        private fun normalizePhone(phone: String): String {
+            val digits = phone.filter { it.isDigit() }
+            if (!digits.matches(Regex("^01[016789]\\d{7,8}$"))) {
+                throw MemberDomainException("전화번호가 올바르지 않습니다")
+            }
+            return digits
+        }
+
+        private fun normalizeKakaoId(kakaoId: String?): String? {
+            val trimmed = kakaoId?.trim()?.ifBlank { null } ?: return null
+            if (trimmed.length > KAKAO_ID_MAX) throw MemberDomainException("카카오톡 ID는 ${KAKAO_ID_MAX}자 이하여야 합니다")
+            return trimmed
+        }
 
         private fun validate(nickname: String, birthDate: LocalDate, region: String, bio: String?, heightCm: Int?, avatarId: Int?, now: Instant = Instant.now()) {
             if (avatarId != null && (avatarId < 1 || avatarId > 4)) throw MemberDomainException("아바타가 올바르지 않습니다")

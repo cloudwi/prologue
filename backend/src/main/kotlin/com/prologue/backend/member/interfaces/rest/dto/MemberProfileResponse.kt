@@ -21,6 +21,9 @@ data class MemberProfileResponse(
     val avatarId: Int?,
     /** 프로필 사진 URL 목록(등록 순). */
     val photoUrls: List<String>,
+    /** 내 연락처(본인 조회 전용 응답이라 노출해도 안전). 이전 회원은 전화번호가 비어 있을 수 있다. */
+    val phone: String?,
+    val kakaoId: String?,
 ) {
     companion object {
         fun from(member: Member): MemberProfileResponse =
@@ -39,6 +42,8 @@ data class MemberProfileResponse(
                 strengths = member.strengths,
                 avatarId = member.avatarId,
                 photoUrls = member.photoUrls,
+                phone = member.phone,
+                kakaoId = member.kakaoId,
             )
     }
 }

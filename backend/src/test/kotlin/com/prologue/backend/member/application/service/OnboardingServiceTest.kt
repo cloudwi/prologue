@@ -26,6 +26,7 @@ class OnboardingServiceTest {
         birthDate = LocalDate.of(1995, 5, 14),
         preferredGender = Gender.FEMALE,
         region = "서울",
+        phone = "010-1234-5678",
     )
 
     @Test
@@ -61,6 +62,7 @@ class OnboardingServiceTest {
 
         assertEquals("프롤", result.nickname) // 수정 반영
         assertEquals("서울", result.region)
+        assertEquals("01012345678", result.phone) // 하이픈을 걷어내고 숫자만 저장
         assertEquals(accountId, result.accountId)
     }
 }

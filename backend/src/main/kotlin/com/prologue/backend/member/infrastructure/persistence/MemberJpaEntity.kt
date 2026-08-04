@@ -66,4 +66,11 @@ class MemberJpaEntity(
     /** 사진 공개 URL 목록(콤마 조인, 등록 순). 최대 6장. */
     @Column(name = "photo_urls", columnDefinition = "text")
     var photoUrls: String? = null,
+
+    /** 전화번호(숫자만). 신규 가입은 필수 — 이전 회원 행만 null. */
+    @Column(name = "phone", length = 20)
+    var phone: String? = null,
+
+    @Column(name = "kakao_id", length = 30)
+    var kakaoId: String? = null,
 )

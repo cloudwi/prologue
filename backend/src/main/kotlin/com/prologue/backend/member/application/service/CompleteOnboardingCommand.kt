@@ -13,6 +13,7 @@ data class CompleteOnboardingCommand(
     val birthDate: LocalDate,
     val preferredGender: Gender,
     val region: String,
+    val phone: String,
     val bio: String? = null,
     val heightCm: Int? = null,
     val bodyType: BodyType? = null,
@@ -20,4 +21,5 @@ data class CompleteOnboardingCommand(
     val interests: List<String> = emptyList(),
     val strengths: List<String> = emptyList(),
     val avatarId: Int? = null,
+    val kakaoId: String? = null,
 )

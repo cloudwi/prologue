@@ -34,6 +34,8 @@ class MemberPersistenceAdapter(
             strengths = strengths.joinToString(",").ifBlank { null },
             avatarId = avatarId,
             photoUrls = photoUrls.joinToString(",").ifBlank { null },
+            phone = phone,
+            kakaoId = kakaoId,
         )
 
     private fun MemberJpaEntity.toDomain(): Member =
@@ -53,6 +55,8 @@ class MemberPersistenceAdapter(
             strengths = splitKeywords(strengths),
             avatarId = avatarId,
             photoUrls = splitKeywords(photoUrls),
+            phone = phone,
+            kakaoId = kakaoId,
         )
 
     private fun splitKeywords(joined: String?): List<String> =

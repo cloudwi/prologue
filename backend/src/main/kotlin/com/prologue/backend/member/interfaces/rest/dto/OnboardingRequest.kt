@@ -25,6 +25,10 @@ data class OnboardingRequest(
     @field:NotBlank(message = "지역은 필수입니다")
     val region: String,
 
+    /** 전화번호 — 편지에 실어 보낼 연락처라 가입 시 필수. 형식 검증은 도메인에서 한다. */
+    @field:NotBlank(message = "전화번호는 필수입니다")
+    val phone: String,
+
     // 사진은 이 요청이 아니라 POST/DELETE /members/me/photos 로 관리한다.
     // (과거 여기에 images 필드가 있었으나 컨트롤러가 읽지 않으면서 검증만 걸려 모든 요청이 400이 됐다)
 
@@ -36,4 +40,5 @@ data class OnboardingRequest(
     val interests: List<String> = emptyList(),
     val strengths: List<String> = emptyList(),
     val avatarId: Int? = null,
+    val kakaoId: String? = null,
 )
