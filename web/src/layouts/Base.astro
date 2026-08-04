@@ -10,6 +10,10 @@ const {
   title = '프롤로그 — 하루 한 문답, 가치관 블라인드 소개팅',
   description = '하루 한 문답으로 알아가는, 가치관이 꼭 맞는 소중한 인연. 가치관 블라인드 소개팅, 프롤로그.',
 } = Astro.props;
+
+// 공유 미리보기용 절대 URL — site는 astro.config에서 관리(도메인 교체 시 그쪽만 갱신).
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const ogImageUrl = new URL('/og.png', Astro.site);
 ---
 
 <!doctype html>
@@ -19,9 +23,21 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="프롤로그" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="하루 한 문답으로 닿는 인연 — 가치관으로 만나는 소개팅, 프롤로그" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
     <link rel="icon" href="/favicon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
