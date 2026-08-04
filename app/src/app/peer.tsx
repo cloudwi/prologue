@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -7,17 +7,15 @@ import { Image } from 'expo-image';
 import { ProfileInvitation, type InvitationLetter } from '@/components/profile-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
-import { sendConversationRequest } from '@/lib/conversation';
 import { sendHeart, type PastAnswer, type Peer } from '@/lib/daily';
-import { getStampBalance } from '@/lib/stamps';
 
 /**
  * 오늘의 상대 프로필 상세 — 청첩장 조판(ProfileInvitation).
  *
  * 상대는 개별 조회 API가 없어서(오늘의 상대는 목록으로만 내려온다)
  * 발견 탭이 이미 들고 있는 데이터를 params로 직렬화해 넘긴다. 조회 전용이라 충분하다.
- * 행동은 두 가지, 편지를 끝까지 읽은 자리에서: 하트(가벼운 신호, 서로면 대화) +
- * 대화 신청(상호 없이 문 두드리기, 수락 필요 — 출시 시 재화 게이트가 붙는 자리).
+ * 행동은 두 가지, 편지를 끝까지 읽은 자리에서: 하트(가벼운 신호, 서로면 편지가 무료) +
+ * 편지 보내기(연락처를 건네는 한 통 — 상호 하트면 무료, 아니면 우표 1장).
  * 서버가 멱등이라 카드와 상세의 하트 상태가 어긋나도 안전하다.
  */
 export default function PeerDetailScreen() {
@@ -27,9 +25,7 @@ export default function PeerDetailScreen() {
   const { data, question, answers } = useLocalSearchParams<{ data?: string; question?: string; answers?: string }>();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
-  const [requested, setRequested] = useState(false);
-  const [requesting, setRequesting] = useState(false);
-  const [stamps, setStamps] = useState<number | null>(null);
+  const [matched, setMatched] = useState(false);
 
   const peer = useMemo<Peer | null>(() => {
     try {
@@ -48,13 +44,6 @@ export default function PeerDetailScreen() {
       return [];
     }
   }, [answers]);
-
-  // 대화 신청 확인 문구에 남은 우표를 보여주기 위해 미리 읽는다. 실패해도 버튼은 살아 있다.
-  const canAct = Boolean(peer?.answerUnlocked && peer?.peerAnswerId);
-  useEffect(() => {
-    if (!canAct) return;
-    getStampBalance().then(setStamps).catch(() => {});
-  }, [canAct]);
 
   if (!peer) {
     return (
@@ -96,7 +85,20 @@ export default function PeerDetailScreen() {
     letters.push({ key: 'today', question: todayQuestion, content: peer.peerAnswer });
   }
 
-  /** 하트 = 호감 표시. 서로 하트를 보냈으면 그 자리에서 대화가 열린다. */
+  /** 편지 쓰기 화면으로 — 상호 하트를 이미 아는 경우 무료임을 문구에 반영한다. */
+  function openCompose(free: boolean) {
+    if (!peer?.peerAnswerId) return;
+    router.push({
+      pathname: '/mail-compose',
+      params: {
+        peerAnswerId: peer.peerAnswerId,
+        nickname: peer.nickname ?? '',
+        ...(free ? { mutual: '1' } : {}),
+      },
+    });
+  }
+
+  /** 하트 = 호감 표시. 서로 하트를 보냈으면 편지가 무료가 된다. */
   async function heart() {
     if (!peer?.peerAnswerId || hearting || hearted) return;
     setHearting(true);
@@ -104,47 +106,19 @@ export default function PeerDetailScreen() {
       const result = await sendHeart(peer.peerAnswerId);
       setHearted(true);
       if (result.matched) {
-        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 대화가 열렸어요.', [
+        setMatched(true);
+        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 이제 우표 없이 편지를 보낼 수 있어요.', [
           { text: '나중에', style: 'cancel' },
-          { text: '대화하러 가기', onPress: () => router.push('/chats') },
+          { text: '편지 쓰기', onPress: () => openCompose(true) },
         ]);
       } else {
-        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 대화가 열려요.');
+        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 우표 없이 편지를 보낼 수 있어요.');
       }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
       setHearting(false);
     }
-  }
-
-  /** 대화 신청 — 상호 하트 없이 문을 두드린다. 우표 1장을 쓰고, 상대가 수락해야 열린다. */
-  async function requestConversation() {
-    if (!peer?.peerAnswerId || requesting || requested) return;
-    setRequesting(true);
-    try {
-      await sendConversationRequest(peer.peerAnswerId);
-      setRequested(true);
-      setStamps((n) => (n != null ? Math.max(0, n - 1) : n));
-      Alert.alert('대화를 신청했어요', '상대가 수락하면 대화가 열려요.');
-    } catch (e) {
-      Alert.alert('신청 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-    } finally {
-      setRequesting(false);
-    }
-  }
-
-  /** 우표를 쓰는 행동이라 한 번 확인한다 — 남은 우표를 함께 보여주고. */
-  function confirmRequest() {
-    if (requesting || requested) return;
-    Alert.alert(
-      '대화 신청',
-      stamps != null ? `우표 1장을 사용해요. (남은 우표 ${stamps}장)` : '우표 1장을 사용해요.',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '신청하기', onPress: requestConversation },
-      ],
-    );
   }
 
   return (
@@ -161,8 +135,7 @@ export default function PeerDetailScreen() {
         />
         {peer.answerUnlocked && peer.peerAnswerId && (
           <Pressable
-            onPress={confirmRequest}
-            disabled={requesting || requested}
+            onPress={() => openCompose(matched)}
             accessibilityRole="button"
             style={[
               styles.requestPill,
@@ -170,7 +143,6 @@ export default function PeerDetailScreen() {
                 bottom: insets.bottom + 24 + 5,
                 backgroundColor: c.background,
                 borderColor: c.border,
-                opacity: requesting ? 0.6 : 1,
                 shadowColor: c.text,
               },
             ]}
@@ -179,11 +151,9 @@ export default function PeerDetailScreen() {
               source={require('@/assets/images/stamp.png')}
               style={styles.requestPillIcon}
               contentFit="contain"
-              tintColor={requested ? c.textSecondary : c.primaryStrong}
+              tintColor={c.primaryStrong}
             />
-            <Text style={[styles.requestPillText, { color: requested ? c.textSecondary : c.primaryStrong }]}>
-              {requested ? '신청 완료' : '대화 신청'}
-            </Text>
+            <Text style={[styles.requestPillText, { color: c.primaryStrong }]}>편지 보내기</Text>
           </Pressable>
         )}
         {peer.answerUnlocked && peer.peerAnswerId && (

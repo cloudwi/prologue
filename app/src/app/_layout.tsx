@@ -43,7 +43,7 @@ function Navigation() {
         <Stack.Screen name="my/withdraw" />
         <Stack.Screen name="peer" />
         <Stack.Screen name="past-peers" />
-        <Stack.Screen name="conversation/[id]" />
+        <Stack.Screen name="mail-compose" />
       </Stack>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>

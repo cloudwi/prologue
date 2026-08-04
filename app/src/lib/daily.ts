@@ -89,12 +89,11 @@ export async function getMyAnswers(): Promise<MyAnswer[]> {
 
 export type HeartResult = {
   hearted: boolean;
-  /** 서로 하트를 보내 대화가 열렸는지. */
+  /** 서로 하트 — 편지를 우표 없이 보낼 수 있다. */
   matched: boolean;
-  conversationId: string | null;
 };
 
-/** 상대 답변에 하트(호감 표시). 서로 하트면 대화가 열린다 (POST /daily/today/heart). */
+/** 상대 답변에 하트(호감 표시). 서로 하트면 편지가 무료가 된다 (POST /daily/today/heart). */
 export async function sendHeart(peerAnswerId: string): Promise<HeartResult> {
   return authedRequest<HeartResult>('POST', '/daily/today/heart', { peerAnswerId });
 }
@@ -105,12 +104,14 @@ export type ReceivedHeart = {
   region: string;
   avatarId: number | null;
   photoUrl: string | null;
-  /** 하트를 돌려보낼 상대 답변 id. null이면 되보내기 불가(옛 데이터). */
+  /** 행동 대상 상대 답변 id. null이면 버튼을 숨긴다(옛 데이터). */
   peerAnswerId: string | null;
+  /** 서로 하트 — true면 하트 되보내기 대신 편지 쓰기 차례. */
+  mutual: boolean;
   createdAt: string;
 };
 
-/** 나에게 하트를 보낸 사람들 — 아직 상호 아님 (GET /daily/hearts/received). */
+/** 나에게 하트를 보낸 사람들 — 상호가 된 상대도 남는다 (GET /daily/hearts/received). */
 export async function getReceivedHearts(): Promise<ReceivedHeart[]> {
   const res = await authedRequest<{ hearts: ReceivedHeart[] }>('GET', '/daily/hearts/received');
   return res.hearts;
