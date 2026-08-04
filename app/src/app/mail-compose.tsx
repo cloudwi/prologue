@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts';
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
 import { sendMail } from '@/lib/mails';
@@ -27,6 +28,7 @@ const CONTENT_MAX = 300;
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
  * 한 통에 우표 1장 — 서로 하트여도 부치는 값은 같다.
+ * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
 export default function MailComposeScreen() {
   const c = useTheme();
@@ -43,6 +45,8 @@ export default function MailComposeScreen() {
   const [myPhone, setMyPhone] = useState<string | null>(null);
   const [stamps, setStamps] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
+  // 초안을 읽기 전에는 자동 저장을 멈춰둔다 — 빈 값이 초안을 덮어쓰지 않게.
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +65,43 @@ export default function MailComposeScreen() {
     };
   }, []);
 
+  // 쓰다 만 초안이 있으면 이어 쓴다.
+  useEffect(() => {
+    if (!peerAnswerId) {
+      setDraftLoaded(true);
+      return;
+    }
+    let active = true;
+    loadMailDraft(peerAnswerId)
+      .then((draft) => {
+        if (active && draft) setContent((prev) => (prev.length > 0 ? prev : draft));
+      })
+      .catch(() => {})
+      .finally(() => active && setDraftLoaded(true));
+    return () => {
+      active = false;
+    };
+  }, [peerAnswerId]);
+
+  // 자동 임시저장 — 입력이 멎고 잠시 뒤 기기에 남긴다. 비우면 초안도 지워진다.
+  useEffect(() => {
+    if (!draftLoaded || !peerAnswerId) return;
+    const timer = setTimeout(() => void saveMailDraft(peerAnswerId, content).catch(() => {}), 600);
+    return () => clearTimeout(timer);
+  }, [content, draftLoaded, peerAnswerId]);
+
+  // 화면을 나갈 때 마지막 입력을 놓치지 않게 한 번 더 저장한다(디바운스 꼬리 유실 방지).
+  // 이미 부친 편지는 초안을 되살리면 안 되므로 건너뛴다.
+  const flushRef = useRef({ peerAnswerId, content, draftLoaded, sent: false });
+  flushRef.current = { ...flushRef.current, peerAnswerId, content, draftLoaded };
+  useEffect(
+    () => () => {
+      const f = flushRef.current;
+      if (f.draftLoaded && f.peerAnswerId && !f.sent) void saveMailDraft(f.peerAnswerId, f.content).catch(() => {});
+    },
+    [],
+  );
+
   const hasContact = (includePhone && !!myPhone) || kakaoId.trim().length > 0;
   const canSend = !!peerAnswerId && content.trim().length > 0 && hasContact && !sending;
 
@@ -69,6 +110,8 @@ export default function MailComposeScreen() {
     setSending(true);
     try {
       await sendMail(peerAnswerId!, content.trim(), includePhone && !!myPhone, kakaoId.trim() || null);
+      flushRef.current.sent = true;
+      void clearMailDraft(peerAnswerId!).catch(() => {}); // 부친 편지의 초안은 지운다
       Alert.alert('편지를 보냈어요', '우표 1장을 사용했어요.', [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -114,9 +157,14 @@ export default function MailComposeScreen() {
               placeholderTextColor={c.textSecondary}
               style={[styles.body, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
             />
-            <Text style={[styles.counter, { color: c.textSecondary }]}>
-              {content.length}/{CONTENT_MAX}
-            </Text>
+            <View style={styles.counterRow}>
+              <Text style={[styles.draftHint, { color: c.textSecondary }]}>
+                {content.trim().length > 0 ? '쓰다 나가도 임시저장돼요' : ''}
+              </Text>
+              <Text style={[styles.counter, { color: c.textSecondary }]}>
+                {content.length}/{CONTENT_MAX}
+              </Text>
+            </View>
 
             {/* 함께 보낼 연락처 — 하나 이상 필수. 전화번호 값은 서버가 내 프로필에서 읽는다. */}
             <Text style={[styles.sectionLabel, { color: c.textSecondary }]}>함께 보낼 연락처</Text>
@@ -204,7 +252,9 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlignVertical: 'top',
   },
-  counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
+  counterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  draftHint: { fontSize: 12 },
+  counter: { fontSize: 12, textAlign: 'right' },
 
   sectionLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginTop: 22, marginBottom: 8 },
   contactRow: {
