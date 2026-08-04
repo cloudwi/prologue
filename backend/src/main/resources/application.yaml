@@ -44,6 +44,13 @@ photo:
 resend:
   from: ${RESEND_FROM:프롤로그 <onboarding@resend.dev>}
 
+# 앱스토어 심사용 데모 계정 — 이 이메일은 메일 발송 없이 아래 고정 코드로 로그인된다.
+# 심사 통과 후엔 이 블록을 지우고 배포하면 통로가 닫힌다(앱 업데이트 심사 때 다시 필요하니 그때 복구).
+# 급하게 끌 일이 생기면 Render에 REVIEW_CODE= (빈 값) 환경변수를 넣어도 된다.
+review:
+  email: ${REVIEW_EMAIL:review@prologue.day}
+  code: ${REVIEW_CODE:741930}
+
 # 인증코드 메일의 "앱에서 바로 입력하기" 버튼이 가리키는 웹 주소.
 # 휴대폰이면 이 페이지가 앱을 열어 코드를 자동 입력하고, 앱이 없거나 데스크탑이면 복사 버튼을 보여준다.
 # 도메인 구입 후 WEB_BASE_URL 환경변수로 교체.

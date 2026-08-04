@@ -156,4 +156,50 @@ class EmailAuthServiceTest {
         }
         verify(exactly = 0) { tokenProvider.issue(any()) }
     }
+
+    // --- 심사용 데모 계정 ---
+
+    private val reviewService = EmailAuthService(
+        accountRepository, codeRepository, codeGenerator, codeHasher, emailSender, tokenProvider,
+        reviewEmail = "review@prologue.day",
+        reviewCode = "741930",
+    )
+
+    @Test
+    fun `심사용 이메일은 requestCode에서 코드 저장·발송을 건너뛴다`() {
+        reviewService.requestCode(RequestCodeCommand("review@prologue.day"))
+
+        verify(exactly = 0) { codeRepository.save(any()) }
+        verify(exactly = 0) { emailSender.sendVerificationCode(any(), any()) }
+    }
+
+    @Test
+    fun `심사용 이메일은 저장된 코드 없이 고정 코드로 로그인된다`() {
+        val account = persistedAccount(email = "review@prologue.day")
+        every { accountRepository.findByEmail("review@prologue.day") } returns account
+        every { tokenProvider.issue(account) } returns tokens
+
+        val result = reviewService.verify(VerifyCodeCommand("review@prologue.day", "741930"))
+
+        assertEquals(account.id, result.accountId)
+        assertFalse(result.isNewUser)
+        verify(exactly = 0) { codeRepository.findLatestActiveByEmail(any()) }
+    }
+
+    @Test
+    fun `심사용 이메일도 코드가 틀리면 InvalidVerificationCode`() {
+        assertFailsWith<InvalidVerificationCodeException> {
+            reviewService.verify(VerifyCodeCommand("review@prologue.day", "000000"))
+        }
+        verify(exactly = 0) { tokenProvider.issue(any()) }
+    }
+
+    @Test
+    fun `일반 이메일은 review 설정이 있어도 기존 검증 경로를 탄다`() {
+        every { codeRepository.findLatestActiveByEmail("user@example.com") } returns null
+
+        assertFailsWith<InvalidVerificationCodeException> {
+            reviewService.verify(VerifyCodeCommand("user@example.com", "741930"))
+        }
+    }
 }

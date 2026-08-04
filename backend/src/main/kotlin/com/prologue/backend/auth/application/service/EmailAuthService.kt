@@ -9,6 +9,7 @@ import com.prologue.backend.auth.domain.model.AuthDomainException
 import com.prologue.backend.auth.domain.model.VerificationCode
 import com.prologue.backend.auth.domain.repository.AccountRepository
 import com.prologue.backend.auth.domain.repository.VerificationCodeRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -31,12 +32,19 @@ class EmailAuthService(
     private val codeHasher: CodeHasher,
     private val emailSender: EmailSender,
     private val tokenProvider: TokenProvider,
+    // 앱스토어 심사용 데모 계정. 이 이메일은 메일 발송 없이 고정 코드로 로그인된다.
+    // 심사가 끝나면 yaml의 review 블록을 지우고 배포하는 것으로 통로가 사라진다(코드가 빈 값이면 비활성).
+    @Value("\${review.email:}") private val reviewEmail: String = "",
+    @Value("\${review.code:}") private val reviewCode: String = "",
 ) {
     /** 인증코드 발송. */
     @Transactional
     fun requestCode(command: RequestCodeCommand) {
         val email = Account.normalizeEmail(command.email)
         val now = Instant.now()
+
+        // 심사용 계정은 실제 발송을 건너뛴다 — 심사관은 전달받은 고정 코드를 그대로 입력한다.
+        if (isReviewAccount(email)) return
 
         // 이메일 폭탄 방지: 직전 코드가 아직 살아있고 재발송 간격이 안 지났으면 거부
         val latest = verificationCodeRepository.findLatestActiveByEmail(email)
@@ -62,6 +70,12 @@ class EmailAuthService(
         val email = Account.normalizeEmail(command.email)
         val now = Instant.now()
 
+        // 심사용 계정: 저장된 코드 없이 고정 코드만 대조한다.
+        if (isReviewAccount(email)) {
+            if (command.code != reviewCode) throw InvalidVerificationCodeException()
+            return login(email, now)
+        }
+
         val code = verificationCodeRepository.findLatestActiveByEmail(email)
             ?: throw InvalidVerificationCodeException()
 
@@ -81,7 +95,11 @@ class EmailAuthService(
         verificationCodeRepository.save(code)
         verificationCodeRepository.deleteByEmail(email)
 
-        // 계정 find-or-create
+        return login(email, now)
+    }
+
+    /** 계정 find-or-create 후 JWT 발급. */
+    private fun login(email: String, now: Instant): LoginResult {
         val existing = accountRepository.findByEmail(email)
         val isNewUser = existing == null
         val account = existing?.also { ensureLoginable(it) }
@@ -90,6 +108,10 @@ class EmailAuthService(
         val accountId = requireNotNull(account.id) { "영속화된 계정은 반드시 id를 가진다" }
         return LoginResult(accountId = accountId, tokens = tokenProvider.issue(account), isNewUser = isNewUser)
     }
+
+    private fun isReviewAccount(normalizedEmail: String): Boolean =
+        reviewCode.isNotBlank() && reviewEmail.isNotBlank() &&
+            normalizedEmail == Account.normalizeEmail(reviewEmail)
 
     private fun ensureLoginable(account: Account) {
         if (!account.isActive()) {
