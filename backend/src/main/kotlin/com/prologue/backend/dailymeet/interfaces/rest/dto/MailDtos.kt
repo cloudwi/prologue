@@ -17,6 +17,15 @@ data class SendMailRequest(
     val kakaoId: String? = null,
 )
 
+/** 답장 요청 — 상대는 경로의 원본 편지에서 정해지므로 본문에는 내용·연락처만. */
+data class ReplyMailRequest(
+    @field:NotBlank(message = "편지 내용을 적어주세요")
+    val content: String,
+
+    val includePhone: Boolean = false,
+    val kakaoId: String? = null,
+)
+
 data class SendMailResponse(
     val mailId: String,
 ) {

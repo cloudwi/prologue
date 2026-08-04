@@ -157,6 +157,23 @@ class DailyMeetService(
         }
     }
 
+    /**
+     * 답변 id로 상대 프로필 상세 — 편지함(받은 하트) 카드에서 프로필로 들어갈 때.
+     * 답변 열람은 그 질문의 Give&Take 그대로: 그날 내가 답했으면 열려 있다.
+     */
+    @Transactional(readOnly = true)
+    fun peerProfile(accountId: UUID, peerAnswerId: UUID): PeerProfileView {
+        val answer = answerRepository.findById(peerAnswerId)
+            ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
+        if (answer.accountId == accountId) throw DailyMeetException("내 프로필이에요")
+        val answered = answerRepository.findByAccountIdAndQuestionId(accountId, answer.questionId) != null
+        val questions = questionRepository.findAllOrdered().associateBy { it.id }
+        return PeerProfileView(
+            question = questions[answer.questionId]?.content ?: "",
+            peer = peerView(answer, answered),
+        )
+    }
+
     /** 상대 프로필(사진·닉네임 포함, 생년월일 등 원본은 비공개) + 답변(잠금 시 null). */
     private fun peerView(peer: com.prologue.backend.dailymeet.domain.model.Answer, answered: Boolean): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
@@ -197,6 +214,12 @@ class DailyMeetService(
         private val PAST_PEER_WINDOW: java.time.Duration = java.time.Duration.ofDays(3)
     }
 }
+
+/** 답변 id로 조회한 상대 프로필 — 그 답의 질문을 함께(상세 화면의 문답 라벨). */
+data class PeerProfileView(
+    val question: String,
+    val peer: PeerView,
+)
 
 /** 지난 상대 한 명 — 그날의 질문·공개 시각과 함께. 여러 날 공개됐으면 문답이 쌓인다. */
 data class PastPeerView(

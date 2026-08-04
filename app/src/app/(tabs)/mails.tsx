@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { Avatar } from '@/components/avatar';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
+import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
 import { getReceivedMails, type ReceivedMail } from '@/lib/mails';
 import { formatPhoneDigits } from '@/lib/phone';
 
@@ -50,6 +50,20 @@ export default function MailsScreen() {
       pathname: '/mail-compose',
       params: { peerAnswerId: h.peerAnswerId, nickname: h.nickname },
     });
+  }
+
+  /** 하트 카드 → 상대 프로필 상세(청첩장). 하트만 보고 정하기엔 아쉬우니 사람을 먼저 보여준다. */
+  async function openHeartProfile(h: ReceivedHeart) {
+    if (!h.peerAnswerId || busy) return;
+    setBusy(`profile-${h.peerAnswerId}`);
+    try {
+      const { question, peer } = await getPeerProfile(h.peerAnswerId);
+      router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question } });
+    } catch (e) {
+      Alert.alert('프로필을 불러오지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
+    } finally {
+      setBusy(null);
+    }
   }
 
   /** 받은 하트에 하트를 돌려보낸다 — 상대는 이미 나를 좋아하니 그 자리에서 상호가 된다. */
@@ -97,9 +111,16 @@ export default function MailsScreen() {
               <>
                 <Text style={[styles.sectionEyebrow, { color: c.primary }]}>나에게 온 하트 {hearts.length}</Text>
                 {hearts.map((h, i) => (
-                  <View
+                  <Pressable
                     key={h.peerAnswerId ?? `${h.nickname}-${i}`}
-                    style={[styles.heartCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}
+                    onPress={() => openHeartProfile(h)}
+                    disabled={!h.peerAnswerId}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${h.nickname}님의 프로필 보기`}
+                    style={({ pressed }) => [
+                      styles.heartCard,
+                      { backgroundColor: c.backgroundElement, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                    ]}
                   >
                     {h.photoUrl ? (
                       <Image
@@ -143,7 +164,7 @@ export default function MailsScreen() {
                           />
                         </Pressable>
                       ))}
-                  </View>
+                  </Pressable>
                 ))}
               </>
             )}
@@ -189,6 +210,23 @@ export default function MailsScreen() {
                         </Text>
                       )}
                     </View>
+
+                    {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장). */}
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/mail-compose',
+                          params: { replyMailId: m.mailId, nickname: m.nickname },
+                        })
+                      }
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.replyBtn,
+                        { borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.replyBtnText, { color: c.primaryStrong }]}>답장하기</Text>
+                    </Pressable>
                   </View>
                 ))}
               </>
@@ -223,6 +261,8 @@ const styles = StyleSheet.create({
   mailContent: { fontSize: 15.5, lineHeight: 25, marginTop: 14 },
   contactBox: { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, gap: 6 },
   contactLine: { fontSize: 14, fontVariant: ['tabular-nums'] },
+  replyBtn: { height: 42, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  replyBtnText: { fontSize: 14, fontWeight: '700' },
 
   emptyTitle: { fontSize: 20, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   emptyText: { fontSize: 14, lineHeight: 22, textAlign: 'center' },

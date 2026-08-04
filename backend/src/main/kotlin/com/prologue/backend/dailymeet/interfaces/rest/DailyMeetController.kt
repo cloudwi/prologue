@@ -8,12 +8,14 @@ import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.HeartResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.MyAnswersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PastPeersResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.PeerProfileResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedHeartsResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TodayResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -48,6 +50,21 @@ class DailyMeetController(
     fun pastPeers(authentication: Authentication): PastPeersResponse {
         val accountId = UUID.fromString(authentication.name)
         return PastPeersResponse.from(dailyMeetService.pastPeers(accountId))
+    }
+
+    /** 답변 id로 상대 프로필 상세 — 편지함(받은 하트)에서 프로필로 들어갈 때. */
+    @GetMapping("/peers/{peerAnswerId}")
+    fun peerProfile(
+        authentication: Authentication,
+        @PathVariable peerAnswerId: String,
+    ): PeerProfileResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val answerId = try {
+            UUID.fromString(peerAnswerId)
+        } catch (e: IllegalArgumentException) {
+            throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
+        }
+        return PeerProfileResponse.from(dailyMeetService.peerProfile(accountId, answerId))
     }
 
     /** 내가 남긴 답 — 역대 답변 전부(질문 포함), 최신순. 본인 전용. */

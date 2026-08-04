@@ -74,6 +74,17 @@ export async function getPastPeers(): Promise<PastPeer[]> {
   return res.peers;
 }
 
+export type PeerProfile = {
+  /** 그 답변의 질문 — 상세 화면 문답 라벨. */
+  question: string;
+  peer: Peer;
+};
+
+/** 답변 id로 상대 프로필 상세 — 편지함(받은 하트)에서 프로필로 들어갈 때 (GET /daily/peers/{id}). */
+export async function getPeerProfile(peerAnswerId: string): Promise<PeerProfile> {
+  return authedRequest<PeerProfile>('GET', `/daily/peers/${peerAnswerId}`);
+}
+
 export type MyAnswer = {
   questionId: number;
   question: string;

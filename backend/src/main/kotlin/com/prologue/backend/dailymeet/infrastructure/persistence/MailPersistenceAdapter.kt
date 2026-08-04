@@ -13,6 +13,9 @@ class MailPersistenceAdapter(
     override fun save(mail: Mail): Mail =
         jpa.save(mail.toEntity()).toDomain()
 
+    override fun findById(id: UUID): Mail? =
+        jpa.findById(id).orElse(null)?.toDomain()
+
     override fun existsBySenderAndRecipient(senderAccountId: UUID, recipientAccountId: UUID): Boolean =
         jpa.existsBySenderAccountIdAndRecipientAccountId(senderAccountId, recipientAccountId)
 

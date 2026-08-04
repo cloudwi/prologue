@@ -19,6 +19,16 @@ export async function sendMail(
   return authedRequest<SendMailResult>('POST', '/mails', { peerAnswerId, content, includePhone, kakaoId });
 }
 
+/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장도 한 통의 편지 — 우표 1장. */
+export async function sendMailReply(
+  mailId: string,
+  content: string,
+  includePhone: boolean,
+  kakaoId: string | null,
+): Promise<SendMailResult> {
+  return authedRequest<SendMailResult>('POST', `/mails/${mailId}/reply`, { content, includePhone, kakaoId });
+}
+
 export type ReceivedMail = {
   mailId: string;
   nickname: string;

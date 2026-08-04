@@ -46,6 +46,17 @@ data class PeerResponse(
     }
 }
 
+/** 답변 id로 조회한 상대 프로필 — 그 답의 질문을 함께. */
+data class PeerProfileResponse(
+    val question: String,
+    val peer: PeerResponse,
+) {
+    companion object {
+        fun from(view: com.prologue.backend.dailymeet.application.service.PeerProfileView): PeerProfileResponse =
+            PeerProfileResponse(view.question, PeerResponse.from(view.peer))
+    }
+}
+
 /** 오늘의 상대 목록 — 정오 전에는 open=false, 공개 후 최대 3명. */
 data class PeersResponse(
     val open: Boolean,

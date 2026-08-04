@@ -19,7 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts';
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
-import { sendMail } from '@/lib/mails';
+import { sendMail, sendMailReply } from '@/lib/mails';
 import { getStampBalance } from '@/lib/stamps';
 
 const CONTENT_MAX = 300;
@@ -27,16 +27,20 @@ const CONTENT_MAX = 300;
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
- * 한 통에 우표 1장 — 서로 하트여도 부치는 값은 같다.
+ * 한 통에 우표 1장 — 서로 하트여도, 답장이어도 부치는 값은 같다.
+ * 상대는 둘 중 하나로 정해진다: 답변 id(peerAnswerId) 또는 답장할 원본 편지(replyMailId).
  * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
 export default function MailComposeScreen() {
   const c = useTheme();
   const router = useRouter();
-  const { peerAnswerId, nickname } = useLocalSearchParams<{
+  const { peerAnswerId, replyMailId, nickname } = useLocalSearchParams<{
     peerAnswerId?: string;
+    replyMailId?: string;
     nickname?: string;
   }>();
+  // 임시저장 키 — 일반 편지는 상대 답변 id, 답장은 원본 편지 id로 구분한다.
+  const draftKey = peerAnswerId ?? (replyMailId ? `reply-${replyMailId}` : undefined);
 
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
@@ -67,12 +71,12 @@ export default function MailComposeScreen() {
 
   // 쓰다 만 초안이 있으면 이어 쓴다.
   useEffect(() => {
-    if (!peerAnswerId) {
+    if (!draftKey) {
       setDraftLoaded(true);
       return;
     }
     let active = true;
-    loadMailDraft(peerAnswerId)
+    loadMailDraft(draftKey)
       .then((draft) => {
         if (active && draft) setContent((prev) => (prev.length > 0 ? prev : draft));
       })
@@ -81,37 +85,41 @@ export default function MailComposeScreen() {
     return () => {
       active = false;
     };
-  }, [peerAnswerId]);
+  }, [draftKey]);
 
   // 자동 임시저장 — 입력이 멎고 잠시 뒤 기기에 남긴다. 비우면 초안도 지워진다.
   useEffect(() => {
-    if (!draftLoaded || !peerAnswerId) return;
-    const timer = setTimeout(() => void saveMailDraft(peerAnswerId, content).catch(() => {}), 600);
+    if (!draftLoaded || !draftKey) return;
+    const timer = setTimeout(() => void saveMailDraft(draftKey, content).catch(() => {}), 600);
     return () => clearTimeout(timer);
-  }, [content, draftLoaded, peerAnswerId]);
+  }, [content, draftLoaded, draftKey]);
 
   // 화면을 나갈 때 마지막 입력을 놓치지 않게 한 번 더 저장한다(디바운스 꼬리 유실 방지).
   // 이미 부친 편지는 초안을 되살리면 안 되므로 건너뛴다.
-  const flushRef = useRef({ peerAnswerId, content, draftLoaded, sent: false });
-  flushRef.current = { ...flushRef.current, peerAnswerId, content, draftLoaded };
+  const flushRef = useRef({ draftKey, content, draftLoaded, sent: false });
+  flushRef.current = { ...flushRef.current, draftKey, content, draftLoaded };
   useEffect(
     () => () => {
       const f = flushRef.current;
-      if (f.draftLoaded && f.peerAnswerId && !f.sent) void saveMailDraft(f.peerAnswerId, f.content).catch(() => {});
+      if (f.draftLoaded && f.draftKey && !f.sent) void saveMailDraft(f.draftKey, f.content).catch(() => {});
     },
     [],
   );
 
   const hasContact = (includePhone && !!myPhone) || kakaoId.trim().length > 0;
-  const canSend = !!peerAnswerId && content.trim().length > 0 && hasContact && !sending;
+  const canSend = (!!peerAnswerId || !!replyMailId) && content.trim().length > 0 && hasContact && !sending;
 
   async function send() {
     if (!canSend) return;
     setSending(true);
     try {
-      await sendMail(peerAnswerId!, content.trim(), includePhone && !!myPhone, kakaoId.trim() || null);
+      const body = content.trim();
+      const withPhone = includePhone && !!myPhone;
+      const kakao = kakaoId.trim() || null;
+      if (replyMailId) await sendMailReply(replyMailId, body, withPhone, kakao);
+      else await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
-      void clearMailDraft(peerAnswerId!).catch(() => {}); // 부친 편지의 초안은 지운다
+      if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
       Alert.alert('편지를 보냈어요', '우표 1장을 사용했어요.', [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');

@@ -103,6 +103,31 @@ class MailServiceTest {
     }
 
     @Test
+    fun `받은 편지에 답장하면 원본 발신인에게 우표 1장으로 보내진다`() {
+        val mailId = UUID.randomUUID()
+        val original = Mail.reconstitute(mailId, recipientId, senderId, "먼저 보낸 편지", "01099998888", null, Instant.now())
+        every { mailRepository.findById(mailId) } returns original
+        every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
+        every { memberQueryService.findProfile(senderId) } returns sender()
+        stubSaved()
+
+        service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
+
+        verify(exactly = 1) { stampService.spendOne(senderId, StampService.REASON_MAIL) }
+    }
+
+    @Test
+    fun `내가 받은 편지가 아니면 답장할 수 없다`() {
+        val mailId = UUID.randomUUID()
+        val othersMail = Mail.reconstitute(mailId, recipientId, UUID.randomUUID(), "남의 편지", "01000000000", null, Instant.now())
+        every { mailRepository.findById(mailId) } returns othersMail
+
+        assertFailsWith<DailyMeetException> {
+            service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
+        }
+    }
+
+    @Test
     fun `받은 편지에는 보낸 사람 요약과 연락처가 실린다`() {
         val mail = Mail.reconstitute(UUID.randomUUID(), senderId, recipientId, "연락 주세요", "01012345678", null, Instant.now())
         every { mailRepository.findAllByRecipient(recipientId) } returns listOf(mail)

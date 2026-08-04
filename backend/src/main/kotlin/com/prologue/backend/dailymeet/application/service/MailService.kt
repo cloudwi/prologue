@@ -51,7 +51,31 @@ class MailService(
     ): SendMailResult {
         val peerAnswer = answerRepository.findById(peerAnswerId)
             ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
-        val recipientId = peerAnswer.accountId
+        return sendTo(senderAccountId, peerAnswer.accountId, content, includePhone, kakaoId)
+    }
+
+    /** 받은 편지에 답장한다 — 상대는 원본 편지의 발신인. 답장도 한 통의 편지라 값은 같다. */
+    @Transactional
+    fun reply(
+        accountId: UUID,
+        mailId: UUID,
+        content: String,
+        includePhone: Boolean,
+        kakaoId: String?,
+    ): SendMailResult {
+        val original = mailRepository.findById(mailId)
+            ?: throw DailyMeetException("편지를 찾을 수 없어요")
+        if (original.recipientAccountId != accountId) throw DailyMeetException("내가 받은 편지에만 답장할 수 있어요")
+        return sendTo(accountId, original.senderAccountId, content, includePhone, kakaoId)
+    }
+
+    private fun sendTo(
+        senderAccountId: UUID,
+        recipientId: UUID,
+        content: String,
+        includePhone: Boolean,
+        kakaoId: String?,
+    ): SendMailResult {
         if (senderAccountId == recipientId) throw DailyMeetException("자신에게는 편지를 보낼 수 없어요")
         if (mailRepository.existsBySenderAndRecipient(senderAccountId, recipientId)) {
             throw DailyMeetException("이미 편지를 보낸 상대예요")
