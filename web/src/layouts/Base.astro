@@ -13,7 +13,8 @@ const {
 
 // 공유 미리보기용 절대 URL — site는 astro.config에서 관리(도메인 교체 시 그쪽만 갱신).
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
-const ogImageUrl = new URL('/og.png', Astro.site);
+// 쿼리는 캐시 버스터 — 이미지를 바꾸면 숫자를 올린다(카카오 등이 이미지 URL 단위로 캐싱).
+const ogImageUrl = new URL('/og.png?v=2', Astro.site);
 ---
 
 <!doctype html>
