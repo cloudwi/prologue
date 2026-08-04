@@ -267,14 +267,38 @@ export default function DiscoverScreen() {
               )}
             </View>
 
-            {/* 지난 상대 — 최근 3일. 소개가 하루 만에 증발하지 않게 짧은 여운을 남긴다. */}
+            {/* 지난 상대 — 전체 그리드는 하위 화면으로. 발견은 "오늘"로 끝나고, 여운은 한 줄 뒤에 접어둔다. */}
             {pastPeers.length > 0 && (
               <View style={styles.peerSection}>
-                <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>지난 상대</Text>
-                <Text style={[styles.peerSub, { color: c.textSecondary }]}>
-                  최근 3일 동안 소개된 상대예요.
-                </Text>
-                <PastPeerGrid items={pastPeers} c={c} />
+                <Pressable
+                  onPress={() => router.push('/past-peers')}
+                  style={({ pressed }) => [
+                    styles.pastEntry,
+                    { backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <View style={styles.pastFaces}>
+                    {pastPeers.slice(0, 3).map((p, i) => (
+                      <View
+                        key={p.peer.peerAnswerId ?? i}
+                        style={[
+                          styles.pastFace,
+                          { backgroundColor: c.backgroundSelected, borderColor: c.backgroundElement },
+                          i > 0 && styles.pastFaceOverlap,
+                        ]}
+                      >
+                        {p.peer.photoUrls[0] ? (
+                          <Image source={{ uri: p.peer.photoUrls[0] }} style={styles.pastFaceFill} contentFit="cover" />
+                        ) : (
+                          <Avatar avatarId={p.peer.avatarId} nickname={p.peer.nickname ?? undefined} size={26} c={c} />
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={[styles.pastEntryLabel, { color: c.text }]}>지난 상대</Text>
+                  <Text style={[styles.pastEntryCount, { color: c.textSecondary }]}>{pastPeers.length}명</Text>
+                  <Text style={[styles.pastEntryChevron, { color: c.textSecondary }]}>›</Text>
+                </Pressable>
               </View>
             )}
           </ScrollView>
@@ -309,63 +333,6 @@ function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string 
         </ScrollView>
       )}
     </View>
-  );
-}
-
-/** 며칠 전 공개됐는지 — 어제/2일 전/3일 전. */
-function daysAgoLabel(revealedAt: string): string {
-  const days = Math.max(1, Math.round((Date.now() - new Date(revealedAt).getTime()) / 86_400_000));
-  return days === 1 ? '어제' : `${days}일 전`;
-}
-
-/** 지난 상대 그리드 — 한 줄 세 명씩 세로로 쌓는다. 가로 스크롤은 뒤에 누가 더 있는지 보이지 않았다. */
-function PastPeerGrid({ items, c }: { items: PastPeer[]; c: ThemeColors }) {
-  const [width, setWidth] = useState(0);
-  const cardWidth = (width - PAST_GRID_GAP * (PAST_GRID_COLUMNS - 1)) / PAST_GRID_COLUMNS;
-
-  return (
-    <View style={styles.pastGrid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {width > 0 &&
-        items.map((p, i) => <PastPeerCard key={p.peer.peerAnswerId ?? i} item={p} width={cardWidth} c={c} />)}
-    </View>
-  );
-}
-
-const PAST_GRID_COLUMNS = 3;
-const PAST_GRID_GAP = 12;
-
-/** 지난 상대 미니 카드 — 사진과 이름만. 자세한 건 상세(청첩장)에서. 폭은 그리드가 계산해 내려준다. */
-function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: ThemeColors }) {
-  const router = useRouter();
-  const photo = item.peer.photoUrls[0];
-  const unlockedCount = (item.answers ?? []).filter((a) => a.unlocked && a.content).length;
-  // 가로 카드 시절의 104×130 비율을 그대로 가져간다.
-  const photoSize = { width, height: width * 1.25 };
-
-  function openDetail() {
-    router.push({
-      pathname: '/peer',
-      params: { data: JSON.stringify(item.peer), question: item.question, answers: JSON.stringify(item.answers ?? []) },
-    });
-  }
-
-  return (
-    <Pressable onPress={openDetail} style={({ pressed }) => [{ width, opacity: pressed ? 0.7 : 1 }]}>
-      {photo ? (
-        <Image source={{ uri: photo }} style={[styles.pastPhoto, photoSize, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
-      ) : (
-        <View style={[styles.pastPhoto, photoSize, styles.pastAvatarWrap, { backgroundColor: c.backgroundSelected }]}>
-          <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname ?? undefined} size={44} c={c} />
-        </View>
-      )}
-      <Text numberOfLines={1} style={[styles.pastName, { color: c.text }]}>
-        {item.peer.nickname ?? '이름 없음'}
-      </Text>
-      <Text style={[styles.pastDay, { color: c.textSecondary }]}>
-        {daysAgoLabel(item.revealedAt)}
-        {unlockedCount > 1 ? ` · 답변 ${unlockedCount}` : ''}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -548,9 +515,12 @@ const styles = StyleSheet.create({
   peerEmpty: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   peerEmptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
-  pastGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: PAST_GRID_GAP },
-  pastPhoto: { borderRadius: Radius.md },
-  pastAvatarWrap: { alignItems: 'center', justifyContent: 'center' },
-  pastName: { fontSize: 13.5, fontWeight: '600', marginTop: 7 },
-  pastDay: { fontSize: 12, marginTop: 2 },
+  pastEntry: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: Radius.md, paddingHorizontal: 16, paddingVertical: 14 },
+  pastFaces: { flexDirection: 'row' },
+  pastFace: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  pastFaceOverlap: { marginLeft: -10 },
+  pastFaceFill: { width: '100%', height: '100%' },
+  pastEntryLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
+  pastEntryCount: { fontSize: 14 },
+  pastEntryChevron: { fontSize: 20, fontWeight: '300' },
 });
