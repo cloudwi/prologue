@@ -11,6 +11,7 @@ import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
 import { formatPhoneDigits } from '@/lib/phone';
+import { promptReport } from '@/lib/reports';
 
 /**
  * 편지함 — 인앱 채팅 없이, 마음이 닿은 흔적이 도착하는 곳.
@@ -334,6 +335,16 @@ export default function MailsScreen() {
                             </Text>
                           </Pressable>
                         )}
+
+                        {/* 신고 — 발밑에 조용히. */}
+                        <Pressable
+                          onPress={() => promptReport({ mailId: m.mailId })}
+                          hitSlop={10}
+                          accessibilityRole="button"
+                          style={styles.reportLink}
+                        >
+                          <Text style={[styles.reportLinkText, { color: c.textSecondary }]}>이 편지 신고하기</Text>
+                        </Pressable>
                       </>
                     )}
                   </View>
@@ -383,4 +394,7 @@ const styles = StyleSheet.create({
 
   emptyTitle: { fontSize: 20, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   emptyText: { fontSize: 14, lineHeight: 22, textAlign: 'center' },
+
+  reportLink: { alignItems: 'center', marginTop: 14 },
+  reportLinkText: { fontSize: 12, textDecorationLine: 'underline' },
 });

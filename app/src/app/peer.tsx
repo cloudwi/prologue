@@ -8,6 +8,7 @@ import { ProfileInvitation, type InvitationLetter } from '@/components/profile-i
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { sendHeart, type PastAnswer, type Peer } from '@/lib/daily';
+import { promptReport } from '@/lib/reports';
 
 /**
  * 오늘의 상대 프로필 상세 — 청첩장 조판(ProfileInvitation).
@@ -126,6 +127,7 @@ export default function PeerDetailScreen() {
           keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}
           seed={peer.peerAnswerId ?? peer.nickname ?? ''}
           c={c}
+          onReport={peer.peerAnswerId ? () => promptReport({ peerAnswerId: peer.peerAnswerId! }) : undefined}
         />
         {peer.answerUnlocked && peer.peerAnswerId && (
           <Pressable

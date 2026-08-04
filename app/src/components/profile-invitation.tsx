@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
 
@@ -25,6 +25,7 @@ export function ProfileInvitation({
   keywords,
   seed,
   c,
+  onReport,
 }: {
   nickname: string | null;
   meta: string;
@@ -34,6 +35,8 @@ export function ProfileInvitation({
   /** 사진 배치용 시드 — 같은 프로필은 항상 같은 배치. */
   seed: string;
   c: ThemeColors;
+  /** 신고 진입점 — 상대 프로필에서만 넘긴다(내 미리보기에는 없음). */
+  onReport?: () => void;
 }) {
   const [cover, ...restPhotos] = photoUrls;
   const photoSlots = scatter(restPhotos.length, letters.length, seed);
@@ -115,6 +118,13 @@ export function ProfileInvitation({
           <Text style={[styles.signatureName, { color: c.text, fontFamily: Fonts.serif }]}>{nickname} 드림</Text>
         </View>
       )}
+
+      {/* 신고 — 발밑에 조용히. 필요한 사람에게만 보이면 되는 문이다. */}
+      {onReport && (
+        <Pressable onPress={onReport} hitSlop={10} accessibilityRole="button" style={styles.report}>
+          <Text style={[styles.reportText, { color: c.textSecondary }]}>이 프로필 신고하기</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -174,4 +184,7 @@ const styles = StyleSheet.create({
   signature: { alignItems: 'center', marginTop: 44 },
   signatureLead: { fontSize: 12.5, letterSpacing: 0.5 },
   signatureName: { fontSize: 19, fontWeight: '700', marginTop: 6 },
+
+  report: { alignItems: 'center', marginTop: 36 },
+  reportText: { fontSize: 12.5, textDecorationLine: 'underline' },
 });
