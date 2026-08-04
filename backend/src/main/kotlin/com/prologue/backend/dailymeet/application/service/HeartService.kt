@@ -1,10 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
-import com.prologue.backend.dailymeet.domain.model.Conversation
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Heart
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
-import com.prologue.backend.dailymeet.domain.repository.ConversationRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.stereotype.Service
@@ -14,17 +12,16 @@ import java.util.UUID
 
 /**
  * 하트(호감) 유스케이스.
- * 하트는 호감 표시이고, **서로** 하트를 보냈으면 그 자리에서 대화가 열린다 — 매칭의 유일한 경로.
+ * 하트는 호감 표시이고, **서로** 하트를 보냈으면 편지를 우표 없이 보낼 수 있다 — 연결은 편지가 맡는다.
  * 상호 판정은 질문과 무관하다: 어제의 하트와 오늘의 하트가 만나도 호감은 호감이다.
  */
 @Service
 class HeartService(
     private val answerRepository: AnswerRepository,
     private val heartRepository: HeartRepository,
-    private val conversationRepository: ConversationRepository,
     private val memberQueryService: MemberQueryService,
 ) {
-    /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 대화를 만들고 그 id를 돌려준다. */
+    /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 편지가 무료가 된다. */
     @Transactional
     fun heart(fromAccountId: UUID, peerAnswerId: UUID): HeartResult {
         val peerAnswer = answerRepository.findById(peerAnswerId)
@@ -36,28 +33,16 @@ class HeartService(
             heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
         }
 
-        // 상대도 나에게 하트를 보낸 적이 있으면 — 서로 호감. 대화를 연다(이미 있으면 그 대화).
-        if (!heartRepository.existsFromTo(toAccountId, fromAccountId)) {
-            return HeartResult(hearted = true, matched = false, conversationId = null)
-        }
-        val (low, high) = if (fromAccountId.toString() <= toAccountId.toString()) {
-            fromAccountId to toAccountId
-        } else {
-            toAccountId to fromAccountId
-        }
-        val conversation = conversationRepository.findBetween(low, high)
-            ?: conversationRepository.save(Conversation.between(fromAccountId, toAccountId))
-        return HeartResult(hearted = true, matched = true, conversationId = conversation.id)
+        return HeartResult(hearted = true, matched = heartRepository.existsFromTo(toAccountId, fromAccountId))
     }
 
     /**
-     * 나에게 하트를 보낸 사람들 — 아직 상호가 아닌 하트만(서로 하트면 이미 대화 목록에 있다).
-     * 계정 id는 노출하지 않고, 돌려보낼 대상으로 상대 답변 id(불투명 식별자)를 준다.
+     * 나에게 하트를 보낸 사람들 — 상호 하트가 된 사람도 남는다(편지를 보낼 상대라서).
+     * 계정 id는 노출하지 않고, 행동 대상으로 상대 답변 id(불투명 식별자)를 준다.
      */
     @Transactional(readOnly = true)
     fun receivedHearts(accountId: UUID): List<ReceivedHeartView> =
         heartRepository.findAllTo(accountId)
-            .filterNot { heartRepository.existsFromTo(accountId, it.fromAccountId) }
             .distinctBy { it.fromAccountId } // 같은 사람이 여러 날 보냈어도 한 줄
             .mapNotNull { heart ->
                 val sender = memberQueryService.findProfile(heart.fromAccountId) ?: return@mapNotNull null
@@ -69,12 +54,13 @@ class HeartService(
                     photoUrl = sender.photoUrls.firstOrNull(),
                     // 하트를 보냈다 = 그 질문에 답해 잠금을 풀었다 — 답이 없는 경우는 옛 데이터뿐.
                     peerAnswerId = answerRepository.findByAccountIdAndQuestionId(heart.fromAccountId, heart.questionId)?.id,
+                    mutual = heartRepository.existsFromTo(accountId, heart.fromAccountId),
                     createdAt = heart.createdAt,
                 )
             }
 }
 
-/** 받은 하트 한 줄 — 보낸 사람 요약 + 하트를 돌려보낼 답변 id(null이면 되보내기 불가). */
+/** 받은 하트 한 줄 — 보낸 사람 요약 + 행동 대상 답변 id(null이면 행동 불가). 상호면 편지 차례. */
 data class ReceivedHeartView(
     val nickname: String,
     val age: Int,
@@ -82,11 +68,13 @@ data class ReceivedHeartView(
     val avatarId: Int?,
     val photoUrl: String?,
     val peerAnswerId: UUID?,
+    /** 서로 하트를 주고받았는지 — true면 우표 없이 편지를 보낼 수 있다. */
+    val mutual: Boolean,
     val createdAt: Instant,
 )
 
 data class HeartResult(
     val hearted: Boolean,
+    /** 서로 하트 — 편지가 무료가 된다. */
     val matched: Boolean,
-    val conversationId: UUID?,
 )

@@ -1,11 +1,9 @@
 package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.Answer
-import com.prologue.backend.dailymeet.domain.model.Conversation
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Heart
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
-import com.prologue.backend.dailymeet.domain.repository.ConversationRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.domain.model.Gender
@@ -20,16 +18,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HeartServiceTest {
 
     private val answerRepository = mockk<AnswerRepository>()
     private val heartRepository = mockk<HeartRepository>(relaxed = true)
-    private val conversationRepository = mockk<ConversationRepository>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
-    private val service = HeartService(answerRepository, heartRepository, conversationRepository, memberQueryService)
+    private val service = HeartService(answerRepository, heartRepository, memberQueryService)
 
     private val me = UUID.randomUUID()
     private val peer = UUID.randomUUID()
@@ -52,7 +48,7 @@ class HeartServiceTest {
     }
 
     @Test
-    fun `한쪽만 하트면 호감만 기록되고 대화는 열리지 않는다`() {
+    fun `한쪽만 하트면 호감만 기록되고 매칭은 아니다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { heartRepository.exists(me, peer, 1L) } returns false
         every { heartRepository.existsFromTo(peer, me) } returns false
@@ -61,41 +57,18 @@ class HeartServiceTest {
 
         assertTrue(result.hearted)
         assertFalse(result.matched)
-        assertNull(result.conversationId)
         verify { heartRepository.save(any<Heart>()) }
-        verify(exactly = 0) { conversationRepository.save(any()) }
     }
 
     @Test
-    fun `서로 하트면 대화가 열린다`() {
+    fun `서로 하트면 매칭 - 편지가 무료가 된다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { heartRepository.exists(me, peer, 1L) } returns false
         every { heartRepository.existsFromTo(peer, me) } returns true
-        every { conversationRepository.findBetween(any(), any()) } returns null
-        val conversationId = UUID.randomUUID()
-        every { conversationRepository.save(any()) } answers {
-            Conversation.reconstitute(conversationId, me, peer, Instant.now())
-        }
 
         val result = service.heart(me, peerAnswerId)
 
         assertTrue(result.matched)
-        assertEquals(conversationId, result.conversationId)
-    }
-
-    @Test
-    fun `이미 대화가 있으면 그 대화를 돌려준다 - 중복 생성 없음`() {
-        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
-        every { heartRepository.exists(me, peer, 1L) } returns true
-        every { heartRepository.existsFromTo(peer, me) } returns true
-        val existingId = UUID.randomUUID()
-        every { conversationRepository.findBetween(any(), any()) } returns
-            Conversation.reconstitute(existingId, me, peer, Instant.now())
-
-        val result = service.heart(me, peerAnswerId)
-
-        assertEquals(existingId, result.conversationId)
-        verify(exactly = 0) { conversationRepository.save(any()) }
     }
 
     // ── 받은 하트 목록 ──
@@ -112,7 +85,7 @@ class HeartServiceTest {
     )
 
     @Test
-    fun `받은 하트는 보낸 사람 요약과 돌려보낼 답변 id를 담는다`() {
+    fun `받은 하트는 보낸 사람 요약과 행동 대상 답변 id를 담는다`() {
         val senderAnswerId = UUID.randomUUID()
         every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
         every { heartRepository.existsFromTo(me, peer) } returns false
@@ -125,14 +98,22 @@ class HeartServiceTest {
         assertEquals(1, result.size)
         assertEquals("고요한아침", result[0].nickname)
         assertEquals(senderAnswerId, result[0].peerAnswerId)
+        assertFalse(result[0].mutual)
     }
 
     @Test
-    fun `이미 서로 하트를 보낸 상대는 받은 하트에서 빠진다`() {
+    fun `서로 하트가 된 상대도 남되 mutual로 표시된다 - 편지를 보낼 차례라서`() {
+        val senderAnswerId = UUID.randomUUID()
         every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
         every { heartRepository.existsFromTo(me, peer) } returns true
+        every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns
+            Answer.reconstitute(senderAnswerId, peer, 1L, "상대 답변", Instant.now())
 
-        assertTrue(service.receivedHearts(me).isEmpty())
+        val result = service.receivedHearts(me)
+
+        assertEquals(1, result.size)
+        assertTrue(result[0].mutual)
     }
 
     @Test
