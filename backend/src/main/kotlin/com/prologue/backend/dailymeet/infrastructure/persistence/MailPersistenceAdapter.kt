@@ -1,6 +1,7 @@
 package com.prologue.backend.dailymeet.infrastructure.persistence
 
 import com.prologue.backend.dailymeet.domain.model.Mail
+import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
@@ -23,7 +24,9 @@ class MailPersistenceAdapter(
         jpa.findBySenderAccountIdAndRecipientAccountId(senderAccountId, recipientAccountId)?.toDomain()
 
     override fun findAllByRecipient(recipientAccountId: UUID): List<Mail> =
-        jpa.findByRecipientAccountIdOrderByCreatedAtDesc(recipientAccountId).map { it.toDomain() }
+        // 거절한 편지는 조용히 사라진 것 — 받은 목록에 다시 올리지 않는다.
+        jpa.findByRecipientAccountIdAndStatusNotOrderByCreatedAtDesc(recipientAccountId, MailStatus.DECLINED.name)
+            .map { it.toDomain() }
 
     private fun Mail.toEntity(): MailJpaEntity =
         MailJpaEntity(
@@ -33,6 +36,7 @@ class MailPersistenceAdapter(
             content = content,
             phone = phone,
             kakaoId = kakaoId,
+            status = status.name,
             createdAt = createdAt,
         )
 
@@ -44,6 +48,7 @@ class MailPersistenceAdapter(
             content = content,
             phone = phone,
             kakaoId = kakaoId,
+            status = MailStatus.valueOf(status),
             createdAt = createdAt,
         )
 }

@@ -3,6 +3,7 @@ package com.prologue.backend.dailymeet.application.service
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Mail
+import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
@@ -44,9 +45,12 @@ class MailServiceTest {
         val saved = slot<Mail>()
         every { mailRepository.save(capture(saved)) } answers {
             val m = saved.captured
-            Mail.reconstitute(UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.createdAt)
+            Mail.reconstitute(m.id ?: UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.status, m.createdAt)
         }
     }
+
+    private fun mailOf(id: UUID, sender: UUID, recipient: UUID, status: MailStatus = MailStatus.OPENED): Mail =
+        Mail.reconstitute(id, sender, recipient, "연락 주세요", "01012345678", null, status, Instant.now())
 
     @Test
     fun `편지 한 통에 우표 1장을 쓴다`() {
@@ -106,8 +110,7 @@ class MailServiceTest {
     @Test
     fun `받은 편지에 답장하면 원본 발신인에게 우표 1장으로 보내진다`() {
         val mailId = UUID.randomUUID()
-        val original = Mail.reconstitute(mailId, recipientId, senderId, "먼저 보낸 편지", "01099998888", null, Instant.now())
-        every { mailRepository.findById(mailId) } returns original
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, senderId)
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
         every { memberQueryService.findProfile(senderId) } returns sender()
         stubSaved()
@@ -120,8 +123,7 @@ class MailServiceTest {
     @Test
     fun `내가 받은 편지가 아니면 답장할 수 없다`() {
         val mailId = UUID.randomUUID()
-        val othersMail = Mail.reconstitute(mailId, recipientId, UUID.randomUUID(), "남의 편지", "01000000000", null, Instant.now())
-        every { mailRepository.findById(mailId) } returns othersMail
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, UUID.randomUUID())
 
         assertFailsWith<DailyMeetException> {
             service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
@@ -129,8 +131,59 @@ class MailServiceTest {
     }
 
     @Test
+    fun `봉투 상태의 편지는 요약만 보이고 내용과 연락처는 감춰진다`() {
+        val mail = mailOf(UUID.randomUUID(), senderId, recipientId, MailStatus.PENDING)
+        every { mailRepository.findAllByRecipient(recipientId) } returns listOf(mail)
+        every { mailRepository.existsBySenderAndRecipient(recipientId, senderId) } returns false
+        every { memberQueryService.findProfile(senderId) } returns sender()
+        every { answerRepository.findAllByAccountId(senderId) } returns emptyList()
+
+        val views = service.received(recipientId)
+
+        assertEquals(MailStatus.PENDING, views[0].status)
+        assertNull(views[0].content)
+        assertNull(views[0].phone)
+    }
+
+    @Test
+    fun `봉투를 열면 내용과 연락처가 채워진다`() {
+        val mailId = UUID.randomUUID()
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, senderId, recipientId, MailStatus.PENDING)
+        every { mailRepository.existsBySenderAndRecipient(recipientId, senderId) } returns false
+        every { memberQueryService.findProfile(senderId) } returns sender()
+        every { answerRepository.findAllByAccountId(senderId) } returns emptyList()
+        stubSaved()
+
+        val view = service.open(recipientId, mailId)
+
+        assertEquals(MailStatus.OPENED, view.status)
+        assertEquals("연락 주세요", view.content)
+        assertEquals("01012345678", view.phone)
+    }
+
+    @Test
+    fun `거절하면 받은 목록에 다시 올라오지 않는다 - 저장은 DECLINED로`() {
+        val mailId = UUID.randomUUID()
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, senderId, recipientId, MailStatus.PENDING)
+        val saved = slot<Mail>()
+        every { mailRepository.save(capture(saved)) } answers { saved.captured }
+
+        service.decline(recipientId, mailId)
+
+        assertEquals(MailStatus.DECLINED, saved.captured.status)
+    }
+
+    @Test
+    fun `이미 열어본 편지는 거절할 수 없다`() {
+        val mailId = UUID.randomUUID()
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, senderId, recipientId, MailStatus.OPENED)
+
+        assertFailsWith<DailyMeetException> { service.decline(recipientId, mailId) }
+    }
+
+    @Test
     fun `받은 편지에는 보낸 사람 요약과 연락처가 실린다`() {
-        val mail = Mail.reconstitute(UUID.randomUUID(), senderId, recipientId, "연락 주세요", "01012345678", null, Instant.now())
+        val mail = mailOf(UUID.randomUUID(), senderId, recipientId)
         val senderAnswerId = UUID.randomUUID()
         every { mailRepository.findAllByRecipient(recipientId) } returns listOf(mail)
         every { mailRepository.existsBySenderAndRecipient(recipientId, senderId) } returns true

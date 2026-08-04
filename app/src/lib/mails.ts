@@ -36,7 +36,9 @@ export type ReceivedMail = {
   region: string;
   avatarId: number | null;
   photoUrl: string | null;
-  content: string;
+  /** PENDING = 봉투(내용·연락처 null), OPENED = 열어본 편지. 거절한 편지는 목록에 안 온다. */
+  status: 'PENDING' | 'OPENED';
+  content: string | null;
   phone: string | null;
   kakaoId: string | null;
   /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 불가(답이 없는 옛 데이터). */
@@ -50,6 +52,16 @@ export type ReceivedMail = {
 export async function getReceivedMails(): Promise<ReceivedMail[]> {
   const res = await authedRequest<{ mails: ReceivedMail[] }>('GET', '/mails/received');
   return res.mails;
+}
+
+/** 봉투 열기 (POST /mails/{id}/open) — 내용·연락처가 채워진 편지를 돌려받는다. */
+export async function openMail(mailId: string): Promise<ReceivedMail> {
+  return authedRequest<ReceivedMail>('POST', `/mails/${mailId}/open`);
+}
+
+/** 조용히 거절 (POST /mails/{id}/decline) — 목록에서 사라지고 상대에겐 알리지 않는다. */
+export async function declineMail(mailId: string): Promise<void> {
+  await authedRequest<void>('POST', `/mails/${mailId}/decline`);
 }
 
 export type SentMail = {

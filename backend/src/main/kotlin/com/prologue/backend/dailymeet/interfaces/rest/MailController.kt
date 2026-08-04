@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.MailService
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
+import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedMailItem
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedMailsResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReplyMailRequest
 import com.prologue.backend.dailymeet.interfaces.rest.dto.SendMailRequest
@@ -80,5 +81,31 @@ class MailController(
     fun received(authentication: Authentication): ReceivedMailsResponse {
         val accountId = UUID.fromString(authentication.name)
         return ReceivedMailsResponse.from(mailService.received(accountId))
+    }
+
+    /** 봉투를 연다 — 열린 편지(내용·연락처 포함)를 돌려준다. */
+    @PostMapping("/{mailId}/open")
+    fun open(
+        authentication: Authentication,
+        @PathVariable mailId: String,
+    ): ReceivedMailItem {
+        val accountId = UUID.fromString(authentication.name)
+        return ReceivedMailItem.from(mailService.open(accountId, parseMailId(mailId)))
+    }
+
+    /** 조용히 거절 — 목록에서 사라지고 보낸 사람에게는 알리지 않는다. */
+    @PostMapping("/{mailId}/decline")
+    fun decline(
+        authentication: Authentication,
+        @PathVariable mailId: String,
+    ) {
+        val accountId = UUID.fromString(authentication.name)
+        mailService.decline(accountId, parseMailId(mailId))
+    }
+
+    private fun parseMailId(mailId: String): UUID = try {
+        UUID.fromString(mailId)
+    } catch (e: IllegalArgumentException) {
+        throw DailyMeetException("편지 식별자가 올바르지 않습니다")
     }
 }

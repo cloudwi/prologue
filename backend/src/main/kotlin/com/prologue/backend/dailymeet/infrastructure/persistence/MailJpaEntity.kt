@@ -37,6 +37,9 @@ class MailJpaEntity(
     @Column(name = "kakao_id", length = 30)
     val kakaoId: String? = null,
 
+    @Column(name = "status", nullable = false, length = 10)
+    var status: String = "PENDING",
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
 )

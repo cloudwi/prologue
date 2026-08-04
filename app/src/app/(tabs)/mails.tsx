@@ -9,7 +9,7 @@ import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
-import { getReceivedMails, type ReceivedMail } from '@/lib/mails';
+import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
 import { formatPhoneDigits } from '@/lib/phone';
 
 /**
@@ -94,6 +94,42 @@ export default function MailsScreen() {
     } finally {
       setBusy(null);
     }
+  }
+
+  /** 봉투 열기 — 열린 편지로 그 자리에서 바뀐다. */
+  async function openEnvelope(m: ReceivedMail) {
+    if (busy) return;
+    setBusy(`open-${m.mailId}`);
+    try {
+      const opened = await openMail(m.mailId);
+      setMails((prev) => prev.map((x) => (x.mailId === m.mailId ? opened : x)));
+    } catch (e) {
+      Alert.alert('열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** 거절 — 조용히 사라진다. 상대에게는 알리지 않는다. */
+  function confirmDecline(m: ReceivedMail) {
+    Alert.alert('편지를 거절할까요?', '거절한 편지는 사라져요. 상대에게는 알리지 않아요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '거절하기',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(`decline-${m.mailId}`);
+          try {
+            await declineMail(m.mailId);
+            setMails((prev) => prev.filter((x) => x.mailId !== m.mailId));
+          } catch (e) {
+            Alert.alert('거절하지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
+          } finally {
+            setBusy(null);
+          }
+        },
+      },
+    ]);
   }
 
   const isEmpty = hearts.length === 0 && mails.length === 0;
@@ -214,43 +250,83 @@ export default function MailsScreen() {
                       </View>
                     </Pressable>
 
-                    <Text style={[styles.mailContent, { color: c.text, fontFamily: Fonts.serif }]}>{m.content}</Text>
+                    {m.status === 'PENDING' ? (
+                      <>
+                        {/* 봉투 — 열어야 내용과 연락처가 보인다. 여는 것도 마음의 선택이라서. */}
+                        <View style={[styles.sealedBox, { backgroundColor: c.backgroundSelected }]}>
+                          <Text style={[styles.sealedText, { color: c.text, fontFamily: Fonts.serif }]}>
+                            편지가 도착했어요
+                          </Text>
+                          <Text style={[styles.sealedHint, { color: c.textSecondary }]}>
+                            열어보면 메시지와 연락처가 보여요.
+                          </Text>
+                        </View>
+                        <View style={styles.sealedActions}>
+                          <Pressable
+                            onPress={() => confirmDecline(m)}
+                            disabled={busy != null}
+                            accessibilityRole="button"
+                            style={({ pressed }) => [
+                              styles.declineBtn,
+                              { borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                            ]}
+                          >
+                            <Text style={{ color: c.textSecondary, fontWeight: '700' }}>거절</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => openEnvelope(m)}
+                            disabled={busy != null}
+                            accessibilityRole="button"
+                            style={({ pressed }) => [
+                              styles.openBtn,
+                              { backgroundColor: c.primary, opacity: pressed || busy === `open-${m.mailId}` ? 0.7 : 1 },
+                            ]}
+                          >
+                            <Text style={{ color: c.primaryText, fontWeight: '700' }}>열어보기</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[styles.mailContent, { color: c.text, fontFamily: Fonts.serif }]}>{m.content}</Text>
 
-                    {/* 연락처 — 보낸 사람이 스스로 건넨 것이라 바로 보인다. 길게 눌러 복사. */}
-                    <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
-                      {m.phone && (
-                        <Text selectable style={[styles.contactLine, { color: c.text }]}>
-                          전화번호  {formatPhoneDigits(m.phone)}
-                        </Text>
-                      )}
-                      {m.kakaoId && (
-                        <Text selectable style={[styles.contactLine, { color: c.text }]}>
-                          카카오톡  {m.kakaoId}
-                        </Text>
-                      )}
-                    </View>
+                        {/* 연락처 — 보낸 사람이 스스로 건넨 것이라 열면 바로 보인다. 길게 눌러 복사. */}
+                        <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
+                          {m.phone && (
+                            <Text selectable style={[styles.contactLine, { color: c.text }]}>
+                              전화번호  {formatPhoneDigits(m.phone)}
+                            </Text>
+                          )}
+                          {m.kakaoId && (
+                            <Text selectable style={[styles.contactLine, { color: c.text }]}>
+                              카카오톡  {m.kakaoId}
+                            </Text>
+                          )}
+                        </View>
 
-                    {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장).
-                        이미 보냈으면 다시 쓰는 대신 보낸 편지를 보여준다 — 부친 편지는 고칠 수 없다. */}
-                    {m.replied && !m.peerAnswerId ? null : (
-                      <Pressable
-                        onPress={() =>
-                          router.push(
-                            m.replied
-                              ? { pathname: '/mail-view', params: { peerAnswerId: m.peerAnswerId!, nickname: m.nickname } }
-                              : { pathname: '/mail-compose', params: { replyMailId: m.mailId, nickname: m.nickname } },
-                          )
-                        }
-                        accessibilityRole="button"
-                        style={({ pressed }) => [
-                          styles.replyBtn,
-                          { borderColor: c.border, opacity: pressed ? 0.7 : 1 },
-                        ]}
-                      >
-                        <Text style={[styles.replyBtnText, { color: m.replied ? c.textSecondary : c.primaryStrong }]}>
-                          {m.replied ? '보낸 편지 확인' : '답장하기'}
-                        </Text>
-                      </Pressable>
+                        {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장).
+                            이미 보냈으면 다시 쓰는 대신 보낸 편지를 보여준다 — 부친 편지는 고칠 수 없다. */}
+                        {m.replied && !m.peerAnswerId ? null : (
+                          <Pressable
+                            onPress={() =>
+                              router.push(
+                                m.replied
+                                  ? { pathname: '/mail-view', params: { peerAnswerId: m.peerAnswerId!, nickname: m.nickname } }
+                                  : { pathname: '/mail-compose', params: { replyMailId: m.mailId, nickname: m.nickname } },
+                              )
+                            }
+                            accessibilityRole="button"
+                            style={({ pressed }) => [
+                              styles.replyBtn,
+                              { borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                            ]}
+                          >
+                            <Text style={[styles.replyBtnText, { color: m.replied ? c.textSecondary : c.primaryStrong }]}>
+                              {m.replied ? '보낸 편지 확인' : '답장하기'}
+                            </Text>
+                          </Pressable>
+                        )}
+                      </>
                     )}
                   </View>
                 ))}
@@ -288,6 +364,13 @@ const styles = StyleSheet.create({
   contactLine: { fontSize: 14, fontVariant: ['tabular-nums'] },
   replyBtn: { height: 42, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   replyBtnText: { fontSize: 14, fontWeight: '700' },
+
+  sealedBox: { borderRadius: Radius.md, alignItems: 'center', paddingVertical: 22, marginTop: 14 },
+  sealedText: { fontSize: 16, fontWeight: '700' },
+  sealedHint: { fontSize: 12.5, marginTop: 6 },
+  sealedActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  declineBtn: { flex: 1, height: 44, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  openBtn: { flex: 2, height: 44, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
 
   emptyTitle: { fontSize: 20, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   emptyText: { fontSize: 14, lineHeight: 22, textAlign: 'center' },

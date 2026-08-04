@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Mail
+import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
@@ -24,7 +25,10 @@ data class SentMailView(
     val createdAt: Instant,
 )
 
-/** 받은 편지 한 통 — 보낸 사람 요약과 내용·연락처가 바로 보인다. */
+/**
+ * 받은 편지 한 통 — 봉투(PENDING) 상태에서는 보낸 사람 요약만 보이고
+ * 내용·연락처는 null. 열어야(OPENED) 채워진다.
+ */
 data class ReceivedMailView(
     val mailId: UUID,
     val nickname: String,
@@ -32,7 +36,8 @@ data class ReceivedMailView(
     val region: String,
     val avatarId: Int?,
     val photoUrl: String?,
-    val content: String,
+    val status: MailStatus,
+    val content: String?,
     val phone: String?,
     val kakaoId: String?,
     /** 보낸 사람의 최근 답변 id — 프로필 상세로 들어가는 손잡이. 답이 없으면 null(진입 불가). */
@@ -111,26 +116,50 @@ class MailService(
         return SendMailResult(mailId = requireNotNull(saved.id))
     }
 
-    /** 받은 편지 목록, 최신순. 연락처는 바로 보인다 — 보낸 사람이 스스로 건넨 것이라서. */
+    /** 받은 편지 목록, 최신순. 봉투는 요약만, 열린 편지는 내용·연락처까지. 거절한 편지는 아예 없다. */
     @Transactional(readOnly = true)
     fun received(accountId: UUID): List<ReceivedMailView> =
-        mailRepository.findAllByRecipient(accountId).mapNotNull { mail ->
-            val sender = memberQueryService.findProfile(mail.senderAccountId) ?: return@mapNotNull null
-            ReceivedMailView(
-                mailId = requireNotNull(mail.id),
-                nickname = sender.nickname,
-                age = sender.age(),
-                region = sender.region,
-                avatarId = sender.avatarId,
-                photoUrl = sender.photoUrls.firstOrNull(),
-                content = mail.content,
-                phone = mail.phone,
-                kakaoId = mail.kakaoId,
-                peerAnswerId = answerRepository.findAllByAccountId(mail.senderAccountId).firstOrNull()?.id,
-                replied = mailRepository.existsBySenderAndRecipient(accountId, mail.senderAccountId),
-                createdAt = mail.createdAt,
-            )
-        }
+        mailRepository.findAllByRecipient(accountId).mapNotNull { mail -> receivedView(accountId, mail) }
+
+    /** 봉투를 연다 — 열린 편지 뷰를 돌려준다(멱등). */
+    @Transactional
+    fun open(accountId: UUID, mailId: UUID): ReceivedMailView {
+        val mail = mailRepository.findById(mailId) ?: throw DailyMeetException("편지를 찾을 수 없어요")
+        if (mail.recipientAccountId != accountId) throw DailyMeetException("내가 받은 편지만 열 수 있어요")
+        mail.open()
+        val saved = mailRepository.save(mail)
+        return receivedView(accountId, saved) ?: throw DailyMeetException("보낸 사람의 프로필을 찾을 수 없어요")
+    }
+
+    /** 조용히 거절한다 — 목록에서 사라지고, 보낸 사람에게는 알리지 않는다. */
+    @Transactional
+    fun decline(accountId: UUID, mailId: UUID) {
+        val mail = mailRepository.findById(mailId) ?: throw DailyMeetException("편지를 찾을 수 없어요")
+        if (mail.recipientAccountId != accountId) throw DailyMeetException("내가 받은 편지만 거절할 수 있어요")
+        mail.decline()
+        mailRepository.save(mail)
+    }
+
+    private fun receivedView(accountId: UUID, mail: Mail): ReceivedMailView? {
+        val sender = memberQueryService.findProfile(mail.senderAccountId) ?: return null
+        val opened = mail.status == MailStatus.OPENED
+        return ReceivedMailView(
+            mailId = requireNotNull(mail.id),
+            nickname = sender.nickname,
+            age = sender.age(),
+            region = sender.region,
+            avatarId = sender.avatarId,
+            photoUrl = sender.photoUrls.firstOrNull(),
+            status = mail.status,
+            // 봉투 상태에서는 내용과 연락처를 감춘다 — 여는 선택이 의미를 가지려면.
+            content = if (opened) mail.content else null,
+            phone = if (opened) mail.phone else null,
+            kakaoId = if (opened) mail.kakaoId else null,
+            peerAnswerId = answerRepository.findAllByAccountId(mail.senderAccountId).firstOrNull()?.id,
+            replied = mailRepository.existsBySenderAndRecipient(accountId, mail.senderAccountId),
+            createdAt = mail.createdAt,
+        )
+    }
 
     /** 내가 이 상대(답변 주인)에게 보낸 편지 — 없으면 null. */
     @Transactional(readOnly = true)

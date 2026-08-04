@@ -65,45 +65,49 @@ data class SentMailToResponse(
     }
 }
 
-data class ReceivedMailsResponse(
-    val mails: List<Item>,
+/** 받은 편지 한 통 — 봉투(PENDING)면 내용·연락처가 null, 열어야(OPENED) 채워진다. */
+data class ReceivedMailItem(
+    val mailId: String,
+    val nickname: String,
+    val age: Int,
+    val region: String,
+    val avatarId: Int?,
+    val photoUrl: String?,
+    val status: String,
+    val content: String?,
+    val phone: String?,
+    val kakaoId: String?,
+    /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 버튼을 숨긴다. */
+    val peerAnswerId: String?,
+    /** 내가 이미 답장(편지)을 보냈는지 — true면 답장 버튼 대신 보낸 편지 확인. */
+    val replied: Boolean,
+    val createdAt: Instant,
 ) {
-    data class Item(
-        val mailId: String,
-        val nickname: String,
-        val age: Int,
-        val region: String,
-        val avatarId: Int?,
-        val photoUrl: String?,
-        val content: String,
-        val phone: String?,
-        val kakaoId: String?,
-        /** 보낸 사람 프로필 상세로 들어갈 답변 id. null이면 진입 버튼을 숨긴다. */
-        val peerAnswerId: String?,
-        /** 내가 이미 답장(편지)을 보냈는지 — true면 답장 버튼 대신 보낸 편지 확인. */
-        val replied: Boolean,
-        val createdAt: Instant,
-    )
+    companion object {
+        fun from(it: ReceivedMailView): ReceivedMailItem =
+            ReceivedMailItem(
+                mailId = it.mailId.toString(),
+                nickname = it.nickname,
+                age = it.age,
+                region = it.region,
+                avatarId = it.avatarId,
+                photoUrl = it.photoUrl,
+                status = it.status.name,
+                content = it.content,
+                phone = it.phone,
+                kakaoId = it.kakaoId,
+                peerAnswerId = it.peerAnswerId?.toString(),
+                replied = it.replied,
+                createdAt = it.createdAt,
+            )
+    }
+}
 
+data class ReceivedMailsResponse(
+    val mails: List<ReceivedMailItem>,
+) {
     companion object {
         fun from(views: List<ReceivedMailView>): ReceivedMailsResponse =
-            ReceivedMailsResponse(
-                views.map {
-                    Item(
-                        mailId = it.mailId.toString(),
-                        nickname = it.nickname,
-                        age = it.age,
-                        region = it.region,
-                        avatarId = it.avatarId,
-                        photoUrl = it.photoUrl,
-                        content = it.content,
-                        phone = it.phone,
-                        kakaoId = it.kakaoId,
-                        peerAnswerId = it.peerAnswerId?.toString(),
-                        replied = it.replied,
-                        createdAt = it.createdAt,
-                    )
-                },
-            )
+            ReceivedMailsResponse(views.map(ReceivedMailItem::from))
     }
 }
