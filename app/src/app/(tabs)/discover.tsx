@@ -470,7 +470,8 @@ const styles = StyleSheet.create({
   editBtnText: { fontSize: 14, fontWeight: '700' },
   cancel: { alignSelf: 'center', marginTop: 14, padding: 6 },
   // 입력만 테두리를 남긴다 — "쓸 수 있는 곳"이라는 표시.
-  input: { minHeight: 140, borderRadius: Radius.md, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
+  // 답 쓰는 자리가 이 화면의 주인공 — 아래가 빌 바에는 쓰는 칸이 넉넉한 게 낫다.
+  input: { minHeight: 200, borderRadius: Radius.md, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   submit: { height: 56, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   submitText: { fontSize: 16, fontWeight: '700' },
