@@ -4,10 +4,12 @@ import com.prologue.backend.member.application.service.CompleteOnboardingCommand
 import com.prologue.backend.member.application.service.MemberPhotoService
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.application.service.OnboardingService
+import com.prologue.backend.member.application.service.WithdrawService
 import com.prologue.backend.member.domain.model.MemberDomainException
 import com.prologue.backend.member.interfaces.rest.dto.MemberProfileResponse
 import com.prologue.backend.member.interfaces.rest.dto.OnboardingRequest
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
@@ -30,7 +33,16 @@ class OnboardingController(
     private val onboardingService: OnboardingService,
     private val memberQueryService: MemberQueryService,
     private val memberPhotoService: MemberPhotoService,
+    private val withdrawService: WithdrawService,
 ) {
+    /** 회원 탈퇴 — 계정과 모든 데이터를 되돌릴 수 없게 지운다. */
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun withdraw(authentication: Authentication) {
+        val accountId = UUID.fromString(authentication.name)
+        withdrawService.withdraw(accountId)
+    }
+
     /** 내 프로필 조회. 온보딩 완료 여부 판단용 — 없으면 404. */
     @GetMapping("/me")
     fun getMyProfile(authentication: Authentication): MemberProfileResponse {

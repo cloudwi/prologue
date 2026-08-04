@@ -38,6 +38,11 @@ export async function completeOnboarding(profile: OnboardingProfile): Promise<Me
   return authedRequest<MemberProfile>('PUT', '/members/me', profile);
 }
 
+/** 회원 탈퇴 — 계정과 모든 데이터를 되돌릴 수 없게 지운다 (DELETE /members/me). */
+export async function deleteAccount(): Promise<void> {
+  await authedRequest<void>('DELETE', '/members/me');
+}
+
 /** 내 프로필 조회. 아직 온보딩 전이면 null. (GET /members/me, 404 → null) */
 export async function getMyProfile(): Promise<MemberProfile | null> {
   try {
