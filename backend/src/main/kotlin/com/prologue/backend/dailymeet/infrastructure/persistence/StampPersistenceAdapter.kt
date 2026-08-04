@@ -12,6 +12,7 @@ import java.util.UUID
 interface StampWalletJpaRepository : JpaRepository<StampWalletJpaEntity, UUID>
 interface StampLedgerJpaRepository : JpaRepository<StampLedgerJpaEntity, UUID> {
     fun findTop50ByAccountIdOrderByCreatedAtDesc(accountId: UUID): List<StampLedgerJpaEntity>
+    fun findTopByAccountIdAndReasonOrderByCreatedAtDesc(accountId: UUID, reason: String): StampLedgerJpaEntity?
 }
 
 @Repository
@@ -36,6 +37,9 @@ class StampPersistenceAdapter(
     override fun append(accountId: UUID, amount: Int, reason: String) {
         ledgerJpa.save(StampLedgerJpaEntity(accountId = accountId, amount = amount, reason = reason, createdAt = Instant.now()))
     }
+
+    override fun latestAt(accountId: UUID, reason: String): Instant? =
+        ledgerJpa.findTopByAccountIdAndReasonOrderByCreatedAtDesc(accountId, reason)?.createdAt
 
     override fun findRecent(accountId: UUID, limit: Int): List<StampLedgerEntry> =
         ledgerJpa.findTop50ByAccountIdOrderByCreatedAtDesc(accountId)

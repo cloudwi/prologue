@@ -56,7 +56,7 @@ export default function StampsScreen() {
               <Text style={[styles.balanceUnit, { color: c.textSecondary }]}> 장</Text>
             </Text>
             <Text style={[styles.balanceHint, { color: c.textSecondary }]}>
-              편지 한 통에 우표 1장이 쓰여요.{'\n'}충전은 출시 후에 열릴 예정이에요.
+              편지 한 통에 우표 1장이 쓰여요.{'\n'}매주 1장씩 새로 채워져요.
             </Text>
           </View>
 

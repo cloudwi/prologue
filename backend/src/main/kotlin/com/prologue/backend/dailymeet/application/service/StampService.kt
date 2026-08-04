@@ -5,6 +5,10 @@ import com.prologue.backend.dailymeet.domain.repository.StampLedgerRepository
 import com.prologue.backend.dailymeet.domain.repository.StampWalletRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 
 /**
@@ -44,17 +48,41 @@ class StampService(
         ledgerRepository.append(accountId, amount, reason)
     }
 
-    private fun walletOf(accountId: UUID): StampWallet =
-        walletRepository.findByAccountId(accountId)
-            ?: walletRepository.save(StampWallet.open(accountId)).also {
+    private fun walletOf(accountId: UUID): StampWallet {
+        val wallet = walletRepository.findByAccountId(accountId)
+            ?: return walletRepository.save(StampWallet.open(accountId)).also {
                 ledgerRepository.append(accountId, StampWallet.WELCOME_STAMPS, REASON_WELCOME)
             }
+        topUpWeekly(accountId, wallet)
+        return wallet
+    }
+
+    /**
+     * 주간 지급 — 결제(IAP)가 없는 동안 매주 1장. 스케줄러 없이 지갑을 여는 순간 이번 주 몫을 채운다.
+     * 기준은 KST 월요일 0시, 환영 우표를 받은 주는 이미 받은 것으로 친다.
+     */
+    private fun topUpWeekly(accountId: UUID, wallet: StampWallet) {
+        val weekStart = LocalDate.now(KST)
+            .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            .atStartOfDay(KST)
+            .toInstant()
+        val last = ledgerRepository.latestAt(accountId, REASON_WEEKLY)
+            ?: ledgerRepository.latestAt(accountId, REASON_WELCOME)
+        if (last == null || last.isBefore(weekStart)) {
+            wallet.grant(WEEKLY_AMOUNT)
+            walletRepository.save(wallet)
+            ledgerRepository.append(accountId, WEEKLY_AMOUNT, REASON_WEEKLY)
+        }
+    }
 
     companion object {
         const val REASON_WELCOME = "WELCOME"
         const val REASON_EVENT = "EVENT"
         const val REASON_MAIL = "MAIL"
+        const val REASON_WEEKLY = "WEEKLY"
+        private const val WEEKLY_AMOUNT = 1
         private const val HISTORY_LIMIT = 50
+        private val KST = ZoneId.of("Asia/Seoul")
     }
 }
 

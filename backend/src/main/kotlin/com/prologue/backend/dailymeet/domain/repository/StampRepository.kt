@@ -21,4 +21,7 @@ interface StampLedgerRepository {
 
     /** 최근 내역, 최신순. */
     fun findRecent(accountId: UUID, limit: Int): List<StampLedgerEntry>
+
+    /** 특정 사유의 마지막 기록 시각 — 주간 지급처럼 "이번 주에 받았나"를 판정할 때. */
+    fun latestAt(accountId: UUID, reason: String): java.time.Instant?
 }

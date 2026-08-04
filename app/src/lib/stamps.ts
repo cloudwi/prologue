@@ -37,6 +37,8 @@ export function stampReasonLabel(reason: string): string {
       return '대화 신청'; // 편지 도입 전의 내역 — 라벨은 남긴다
     case 'MAIL':
       return '편지 보내기';
+    case 'WEEKLY':
+      return '주간 우표';
     case 'EVENT':
       return '이벤트 지급';
     default:
