@@ -1,0 +1,66 @@
+package com.prologue.backend.dailymeet.interfaces.rest.dto
+
+import com.prologue.backend.dailymeet.application.service.ReceivedMailView
+import com.prologue.backend.dailymeet.application.service.SendMailResult
+import jakarta.validation.constraints.NotBlank
+import java.time.Instant
+
+/** 편지 보내기 요청. 전화번호는 본문이 아니라 프로필에서 읽는다(위조 방지) — 포함 여부만 받는다. */
+data class SendMailRequest(
+    @field:NotBlank(message = "상대 답변 식별자가 필요합니다")
+    val peerAnswerId: String,
+
+    @field:NotBlank(message = "편지 내용을 적어주세요")
+    val content: String,
+
+    val includePhone: Boolean = false,
+    val kakaoId: String? = null,
+)
+
+data class SendMailResponse(
+    val mailId: String,
+    /** 상호 하트라 우표를 쓰지 않았는지. */
+    val freeByMatch: Boolean,
+) {
+    companion object {
+        fun from(result: SendMailResult): SendMailResponse =
+            SendMailResponse(result.mailId.toString(), result.freeByMatch)
+    }
+}
+
+data class ReceivedMailsResponse(
+    val mails: List<Item>,
+) {
+    data class Item(
+        val mailId: String,
+        val nickname: String,
+        val age: Int,
+        val region: String,
+        val avatarId: Int?,
+        val photoUrl: String?,
+        val content: String,
+        val phone: String?,
+        val kakaoId: String?,
+        val createdAt: Instant,
+    )
+
+    companion object {
+        fun from(views: List<ReceivedMailView>): ReceivedMailsResponse =
+            ReceivedMailsResponse(
+                views.map {
+                    Item(
+                        mailId = it.mailId.toString(),
+                        nickname = it.nickname,
+                        age = it.age,
+                        region = it.region,
+                        avatarId = it.avatarId,
+                        photoUrl = it.photoUrl,
+                        content = it.content,
+                        phone = it.phone,
+                        kakaoId = it.kakaoId,
+                        createdAt = it.createdAt,
+                    )
+                },
+            )
+    }
+}
