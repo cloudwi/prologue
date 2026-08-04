@@ -258,7 +258,7 @@ export default function MailsScreen() {
                             편지가 도착했어요
                           </Text>
                           <Text style={[styles.sealedHint, { color: c.textSecondary }]}>
-                            열어보면 메시지와 연락처가 보여요.
+                            열어보면 메시지를 읽을 수 있어요.
                           </Text>
                         </View>
                         <View style={styles.sealedActions}>
@@ -290,19 +290,27 @@ export default function MailsScreen() {
                       <>
                         <Text style={[styles.mailContent, { color: c.text, fontFamily: Fonts.serif }]}>{m.content}</Text>
 
-                        {/* 연락처 — 보낸 사람이 스스로 건넨 것이라 열면 바로 보인다. 길게 눌러 복사. */}
-                        <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
-                          {m.phone && (
-                            <Text selectable style={[styles.contactLine, { color: c.text }]}>
-                              전화번호  {formatPhoneDigits(m.phone)}
+                        {/* 연락처 — 답장(내 연락처를 건네는 것)을 해야 열린다. 열리면 길게 눌러 복사. */}
+                        {m.phone || m.kakaoId ? (
+                          <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
+                            {m.phone && (
+                              <Text selectable style={[styles.contactLine, { color: c.text }]}>
+                                전화번호  {formatPhoneDigits(m.phone)}
+                              </Text>
+                            )}
+                            {m.kakaoId && (
+                              <Text selectable style={[styles.contactLine, { color: c.text }]}>
+                                카카오톡  {m.kakaoId}
+                              </Text>
+                            )}
+                          </View>
+                        ) : (
+                          <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
+                            <Text style={[styles.contactLocked, { color: c.textSecondary }]}>
+                              답장을 보내면 상대의 연락처가 열려요. 답장은 한 번뿐이에요.
                             </Text>
-                          )}
-                          {m.kakaoId && (
-                            <Text selectable style={[styles.contactLine, { color: c.text }]}>
-                              카카오톡  {m.kakaoId}
-                            </Text>
-                          )}
-                        </View>
+                          </View>
+                        )}
 
                         {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장).
                             이미 보냈으면 다시 쓰는 대신 보낸 편지를 보여준다 — 부친 편지는 고칠 수 없다. */}
@@ -362,6 +370,7 @@ const styles = StyleSheet.create({
   mailContent: { fontSize: 15.5, lineHeight: 25, marginTop: 14 },
   contactBox: { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, gap: 6 },
   contactLine: { fontSize: 14, fontVariant: ['tabular-nums'] },
+  contactLocked: { fontSize: 13, lineHeight: 19 },
   replyBtn: { height: 42, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   replyBtnText: { fontSize: 14, fontWeight: '700' },
 

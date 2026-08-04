@@ -143,6 +143,7 @@ class MailService(
     private fun receivedView(accountId: UUID, mail: Mail): ReceivedMailView? {
         val sender = memberQueryService.findProfile(mail.senderAccountId) ?: return null
         val opened = mail.status == MailStatus.OPENED
+        val replied = mailRepository.existsBySenderAndRecipient(accountId, mail.senderAccountId)
         return ReceivedMailView(
             mailId = requireNotNull(mail.id),
             nickname = sender.nickname,
@@ -151,12 +152,14 @@ class MailService(
             avatarId = sender.avatarId,
             photoUrl = sender.photoUrls.firstOrNull(),
             status = mail.status,
-            // 봉투 상태에서는 내용과 연락처를 감춘다 — 여는 선택이 의미를 가지려면.
+            // 봉투 상태에서는 내용을 감춘다 — 여는 선택이 의미를 가지려면.
             content = if (opened) mail.content else null,
-            phone = if (opened) mail.phone else null,
-            kakaoId = if (opened) mail.kakaoId else null,
+            // 연락처는 답장해야 열린다 — 내 연락처를 건네야 상대의 연락처도 받는 교환.
+            // 먼저 보낸 쪽은 이미 건넸으므로(replied=true) 답장을 열면 바로 보인다.
+            phone = if (opened && replied) mail.phone else null,
+            kakaoId = if (opened && replied) mail.kakaoId else null,
             peerAnswerId = answerRepository.findAllByAccountId(mail.senderAccountId).firstOrNull()?.id,
-            replied = mailRepository.existsBySenderAndRecipient(accountId, mail.senderAccountId),
+            replied = replied,
             createdAt = mail.createdAt,
         )
     }

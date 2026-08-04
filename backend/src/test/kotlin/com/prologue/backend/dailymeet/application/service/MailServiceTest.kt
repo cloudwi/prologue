@@ -146,7 +146,7 @@ class MailServiceTest {
     }
 
     @Test
-    fun `봉투를 열면 내용과 연락처가 채워진다`() {
+    fun `봉투를 열면 내용은 보이되 연락처는 답장 전이라 감춰진다`() {
         val mailId = UUID.randomUUID()
         every { mailRepository.findById(mailId) } returns mailOf(mailId, senderId, recipientId, MailStatus.PENDING)
         every { mailRepository.existsBySenderAndRecipient(recipientId, senderId) } returns false
@@ -158,7 +158,20 @@ class MailServiceTest {
 
         assertEquals(MailStatus.OPENED, view.status)
         assertEquals("연락 주세요", view.content)
-        assertEquals("01012345678", view.phone)
+        assertNull(view.phone) // 연락처는 답장(내 연락처를 건네는 것)을 해야 열린다
+    }
+
+    @Test
+    fun `답장한 뒤에는 상대의 연락처가 보인다`() {
+        val mail = mailOf(UUID.randomUUID(), senderId, recipientId, MailStatus.OPENED)
+        every { mailRepository.findAllByRecipient(recipientId) } returns listOf(mail)
+        every { mailRepository.existsBySenderAndRecipient(recipientId, senderId) } returns true
+        every { memberQueryService.findProfile(senderId) } returns sender()
+        every { answerRepository.findAllByAccountId(senderId) } returns emptyList()
+
+        val views = service.received(recipientId)
+
+        assertEquals("01012345678", views[0].phone)
     }
 
     @Test

@@ -154,7 +154,9 @@ export default function MailComposeScreen() {
               <Text style={[styles.to, { color: c.text, fontFamily: Fonts.serif }]}>{nickname}님께</Text>
             ) : null}
             <Text style={[styles.lead, { color: c.textSecondary }]}>
-              이 편지가 전해지면 대화는 앱 밖에서 이어져요.{'\n'}짧은 인사와 함께 연락처를 건네보세요.
+              {replyMailId
+                ? '답장은 한 번만 보낼 수 있어요.\n내 연락처를 건네면 상대의 연락처도 열려요.'
+                : '이 편지가 전해지면 대화는 앱 밖에서 이어져요.\n짧은 인사와 함께 연락처를 건네보세요.'}
             </Text>
 
             <TextInput
