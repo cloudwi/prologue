@@ -92,7 +92,7 @@ export default function DiscoverScreen() {
     }, [peersData?.open, peersData?.peers.length]),
   );
 
-  // 우표 잔액 — 대화 신청 뒤 돌아와도 맞게, 탭에 들어올 때마다 갱신. 실패하면 칩을 숨긴다.
+  // 우표 잔액 — 편지를 보내고 돌아와도 맞게, 탭에 들어올 때마다 갱신. 실패하면 칩을 숨긴다.
   useFocusEffect(
     useCallback(() => {
       getStampBalance().then(setStamps).catch(() => {});

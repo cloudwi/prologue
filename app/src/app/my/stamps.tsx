@@ -96,7 +96,7 @@ export default function StampsScreen() {
                 <Text style={[styles.balanceUnit, { color: c.textSecondary }]}> 장</Text>
               </Text>
               <Text style={[styles.balanceHint, { color: c.textSecondary }]}>
-                대화 신청 한 번에 우표 1장이 쓰여요.{'\n'}충전은 출시 후에 열릴 예정이에요.
+                편지 한 통에 우표 1장이 쓰여요. 서로 하트면 무료예요.{'\n'}충전은 출시 후에 열릴 예정이에요.
               </Text>
             </View>
 

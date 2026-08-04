@@ -1,7 +1,7 @@
 import { authedRequest } from './api';
 
 /**
- * 우표 — 대화 신청 같은 유료 행동의 재화. 대화 신청 1건 = 우표 1장.
+ * 우표 — 편지 같은 유료 행동의 재화. 편지 한 통 = 우표 1장(상호 하트면 무료).
  * 지갑은 서버에서 첫 접근에 환영 3장과 함께 열린다. 충전(IAP)은 출시 직전에 붙는다.
  */
 
@@ -34,7 +34,9 @@ export function stampReasonLabel(reason: string): string {
     case 'WELCOME':
       return '환영 우표';
     case 'CONVERSATION_REQUEST':
-      return '대화 신청';
+      return '대화 신청'; // 편지 도입 전의 내역 — 라벨은 남긴다
+    case 'MAIL':
+      return '편지 보내기';
     case 'EVENT':
       return '이벤트 지급';
     default:
