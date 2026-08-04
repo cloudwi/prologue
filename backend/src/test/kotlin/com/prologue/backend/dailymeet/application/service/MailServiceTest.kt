@@ -4,7 +4,6 @@ import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Mail
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
-import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.domain.model.Gender
@@ -19,18 +18,15 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class MailServiceTest {
 
     private val answerRepository = mockk<AnswerRepository>()
-    private val heartRepository = mockk<HeartRepository>()
     private val mailRepository = mockk<MailRepository>()
     private val memberQueryService = mockk<MemberQueryService>()
     private val stampService = mockk<StampService>(relaxed = true)
-    private val service = MailService(answerRepository, heartRepository, mailRepository, memberQueryService, stampService)
+    private val service = MailService(answerRepository, mailRepository, memberQueryService, stampService)
 
     private val senderId = UUID.randomUUID()
     private val recipientId = UUID.randomUUID()
@@ -52,31 +48,27 @@ class MailServiceTest {
     }
 
     @Test
-    fun `상호 하트가 아니면 우표를 쓰고 보낸다`() {
+    fun `편지 한 통에 우표 1장을 쓴다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
         every { memberQueryService.findProfile(senderId) } returns sender()
-        every { heartRepository.existsFromTo(any(), any()) } returns false
         stubSaved()
 
-        val result = service.send(senderId, peerAnswerId, "만나서 반가웠어요", includePhone = true, kakaoId = null)
+        service.send(senderId, peerAnswerId, "만나서 반가웠어요", includePhone = true, kakaoId = null)
 
-        assertFalse(result.freeByMatch)
         verify(exactly = 1) { stampService.spendOne(senderId, StampService.REASON_MAIL) }
     }
 
     @Test
-    fun `상호 하트면 우표 없이 보낸다`() {
+    fun `카카오톡 ID만 실어도 보내진다 - 우표는 똑같이 쓴다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
-        every { heartRepository.existsFromTo(senderId, recipientId) } returns true
-        every { heartRepository.existsFromTo(recipientId, senderId) } returns true
         stubSaved()
 
         val result = service.send(senderId, peerAnswerId, "안녕하세요", includePhone = false, kakaoId = "kakao_id")
 
-        assertTrue(result.freeByMatch)
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        assertEquals(36, result.mailId.toString().length)
+        verify(exactly = 1) { stampService.spendOne(senderId, StampService.REASON_MAIL) }
     }
 
     @Test
@@ -94,7 +86,6 @@ class MailServiceTest {
     fun `연락처를 하나도 싣지 않으면 예외`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
-        every { heartRepository.existsFromTo(any(), any()) } returns true
 
         assertFailsWith<DailyMeetException> {
             service.send(senderId, peerAnswerId, "안녕하세요", includePhone = false, kakaoId = "  ")

@@ -26,17 +26,15 @@ const CONTENT_MAX = 300;
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
- * 상호 하트면 우표 없이(mutual 파라미터로 미리 알면 문구에 반영), 아니면 우표 1장.
+ * 한 통에 우표 1장 — 서로 하트여도 부치는 값은 같다.
  */
 export default function MailComposeScreen() {
   const c = useTheme();
   const router = useRouter();
-  const { peerAnswerId, nickname, mutual } = useLocalSearchParams<{
+  const { peerAnswerId, nickname } = useLocalSearchParams<{
     peerAnswerId?: string;
     nickname?: string;
-    mutual?: string;
   }>();
-  const isMutual = mutual === '1';
 
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
@@ -57,11 +55,11 @@ export default function MailComposeScreen() {
       })
       .catch(() => active && setMyPhone(null))
       .finally(() => active && setLoading(false));
-    if (!isMutual) getStampBalance().then((n) => active && setStamps(n)).catch(() => {});
+    getStampBalance().then((n) => active && setStamps(n)).catch(() => {});
     return () => {
       active = false;
     };
-  }, [isMutual]);
+  }, []);
 
   const hasContact = (includePhone && !!myPhone) || kakaoId.trim().length > 0;
   const canSend = !!peerAnswerId && content.trim().length > 0 && hasContact && !sending;
@@ -70,12 +68,8 @@ export default function MailComposeScreen() {
     if (!canSend) return;
     setSending(true);
     try {
-      const result = await sendMail(peerAnswerId!, content.trim(), includePhone && !!myPhone, kakaoId.trim() || null);
-      Alert.alert(
-        '편지를 보냈어요',
-        result.freeByMatch ? '서로 하트를 주고받은 사이라 우표 없이 보냈어요.' : '우표 1장을 사용했어요.',
-        [{ text: '확인', onPress: () => router.back() }],
-      );
+      await sendMail(peerAnswerId!, content.trim(), includePhone && !!myPhone, kakaoId.trim() || null);
+      Alert.alert('편지를 보냈어요', '우표 1장을 사용했어요.', [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -83,18 +77,12 @@ export default function MailComposeScreen() {
     }
   }
 
-  /** 우표를 쓰는 행동이라 한 번 확인한다. 상호 하트면 확인 없이 바로. */
+  /** 우표를 쓰는 행동이라 한 번 확인한다 — 남은 우표를 함께 보여주고. */
   function confirmSend() {
     if (!canSend) return;
-    if (isMutual) {
-      void send();
-      return;
-    }
     Alert.alert(
       '편지 보내기',
-      stamps != null
-        ? `우표 1장을 사용해요. (남은 우표 ${stamps}장)\n서로 하트를 주고받은 사이라면 우표 없이 보내져요.`
-        : '우표 1장을 사용해요.\n서로 하트를 주고받은 사이라면 우표 없이 보내져요.',
+      stamps != null ? `우표 1장을 사용해요. (남은 우표 ${stamps}장)` : '우표 1장을 사용해요.',
       [
         { text: '취소', style: 'cancel' },
         { text: '보내기', onPress: () => void send() },
@@ -189,7 +177,7 @@ export default function MailComposeScreen() {
               style={[styles.submit, { backgroundColor: c.primary, opacity: canSend ? 1 : 0.5 }]}
             >
               <Text style={[styles.submitText, { color: c.primaryText }]}>
-                {sending ? '보내는 중...' : isMutual ? '우표 없이 보내기' : '우표 1장으로 보내기'}
+                {sending ? '보내는 중...' : '우표 1장으로 보내기'}
               </Text>
             </Pressable>
           </View>

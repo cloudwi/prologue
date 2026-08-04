@@ -13,7 +13,7 @@ import { formatPhoneDigits } from '@/lib/phone';
 
 /**
  * 편지함 — 인앱 채팅 없이, 마음이 닿은 흔적이 도착하는 곳.
- * 나에게 온 하트(되보내면 상호 → 편지가 무료)와 받은 편지(내용·연락처 바로 보임)가 쌓인다.
+ * 나에게 온 하트(되보내면 서로 하트 → 편지 쓸 차례)와 받은 편지(내용·연락처 바로 보임)가 쌓인다.
  * 편지를 받았다면 다음 대화는 앱 밖(전화·카카오톡)에서 이어진다.
  */
 export default function MailsScreen() {
@@ -43,12 +43,12 @@ export default function MailsScreen() {
     }, [load]),
   );
 
-  /** 편지 쓰기로 — 하트 목록에서 오는 경우라 상호 여부를 안다. */
+  /** 편지 쓰기로. */
   function openCompose(h: ReceivedHeart) {
     if (!h.peerAnswerId) return;
     router.push({
       pathname: '/mail-compose',
-      params: { peerAnswerId: h.peerAnswerId, nickname: h.nickname, ...(h.mutual ? { mutual: '1' } : {}) },
+      params: { peerAnswerId: h.peerAnswerId, nickname: h.nickname },
     });
   }
 
@@ -59,9 +59,9 @@ export default function MailsScreen() {
     try {
       const result = await sendHeart(h.peerAnswerId);
       if (result.matched) {
-        Alert.alert('서로 호감이에요!', `이제 ${h.nickname}님에게 우표 없이 편지를 보낼 수 있어요.`, [
+        Alert.alert('서로 호감이에요!', `${h.nickname}님에게 편지로 연락처를 건네보세요.`, [
           { text: '나중에', style: 'cancel' },
-          { text: '편지 쓰기', onPress: () => openCompose({ ...h, mutual: true }) },
+          { text: '편지 쓰기', onPress: () => openCompose(h) },
         ]);
       }
       await load();
@@ -114,7 +114,7 @@ export default function MailsScreen() {
                     <View style={styles.rowBody}>
                       <Text style={[styles.rowName, { color: c.text }]}>{h.nickname}</Text>
                       <Text style={[styles.rowMeta, { color: c.textSecondary }]}>
-                        {h.mutual ? '서로 하트 · 편지가 무료예요' : `만 ${h.age}세 · ${h.region}`}
+                        {h.mutual ? '서로 하트 · 편지를 보낼 차례예요' : `만 ${h.age}세 · ${h.region}`}
                       </Text>
                     </View>
                     {h.peerAnswerId &&

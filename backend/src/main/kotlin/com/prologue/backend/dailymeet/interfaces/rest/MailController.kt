@@ -22,7 +22,7 @@ import java.util.UUID
 class MailController(
     private val mailService: MailService,
 ) {
-    /** 편지 보내기. 상호 하트면 무료, 아니면 우표 1장. */
+    /** 편지 보내기. 한 통에 우표 1장. */
     @PostMapping
     fun send(
         authentication: Authentication,

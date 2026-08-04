@@ -3,7 +3,6 @@ package com.prologue.backend.dailymeet.application.service
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Mail
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
-import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.stereotype.Service
@@ -11,10 +10,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-/** 보낸 결과 — 상호 하트면 우표를 쓰지 않는다. */
 data class SendMailResult(
     val mailId: UUID,
-    val freeByMatch: Boolean,
 )
 
 /** 받은 편지 한 통 — 보낸 사람 요약과 내용·연락처가 바로 보인다. */
@@ -33,12 +30,12 @@ data class ReceivedMailView(
 
 /**
  * 편지 유스케이스 — 인앱 채팅 대신 연락처(전화번호/카카오톡 ID)를 건넨다.
- * 상호 하트면 무료, 아니면 우표 1장. 전화번호는 위조를 막기 위해 요청이 아니라 프로필에서 읽는다.
+ * 한 통에 우표 1장 — 상호 하트여도 마찬가지(하트는 신호일 뿐, 부치는 값은 같다).
+ * 전화번호는 위조를 막기 위해 요청이 아니라 프로필에서 읽는다.
  */
 @Service
 class MailService(
     private val answerRepository: AnswerRepository,
-    private val heartRepository: HeartRepository,
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
     private val stampService: StampService,
@@ -67,15 +64,13 @@ class MailService(
             null
         }
 
-        val mutualHeart = heartRepository.existsFromTo(senderAccountId, recipientId) &&
-            heartRepository.existsFromTo(recipientId, senderAccountId)
         // 검증을 모두 통과한 뒤에 소모 — 같은 트랜잭션이라 저장이 실패하면 우표도 돌아간다.
-        if (!mutualHeart) stampService.spendOne(senderAccountId, StampService.REASON_MAIL)
+        stampService.spendOne(senderAccountId, StampService.REASON_MAIL)
 
         val saved = mailRepository.save(
             Mail.write(senderAccountId, recipientId, content, phone, kakaoId),
         )
-        return SendMailResult(mailId = requireNotNull(saved.id), freeByMatch = mutualHeart)
+        return SendMailResult(mailId = requireNotNull(saved.id))
     }
 
     /** 받은 편지 목록, 최신순. 연락처는 바로 보인다 — 보낸 사람이 스스로 건넨 것이라서. */

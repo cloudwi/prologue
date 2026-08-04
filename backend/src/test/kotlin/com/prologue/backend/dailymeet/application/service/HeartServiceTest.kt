@@ -61,7 +61,7 @@ class HeartServiceTest {
     }
 
     @Test
-    fun `서로 하트면 매칭 - 편지가 무료가 된다`() {
+    fun `서로 하트면 매칭 - 마음이 통했다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { heartRepository.exists(me, peer, 1L) } returns false
         every { heartRepository.existsFromTo(peer, me) } returns true
@@ -102,7 +102,7 @@ class HeartServiceTest {
     }
 
     @Test
-    fun `서로 하트가 된 상대도 남되 mutual로 표시된다 - 편지를 보낼 차례라서`() {
+    fun `서로 하트가 된 상대도 받은 하트에 남되 mutual로 표시된다`() {
         val senderAnswerId = UUID.randomUUID()
         every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
         every { heartRepository.existsFromTo(me, peer) } returns true

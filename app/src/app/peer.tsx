@@ -14,8 +14,8 @@ import { sendHeart, type PastAnswer, type Peer } from '@/lib/daily';
  *
  * 상대는 개별 조회 API가 없어서(오늘의 상대는 목록으로만 내려온다)
  * 발견 탭이 이미 들고 있는 데이터를 params로 직렬화해 넘긴다. 조회 전용이라 충분하다.
- * 행동은 두 가지, 편지를 끝까지 읽은 자리에서: 하트(가벼운 신호, 서로면 편지가 무료) +
- * 편지 보내기(연락처를 건네는 한 통 — 상호 하트면 무료, 아니면 우표 1장).
+ * 행동은 두 가지, 편지를 끝까지 읽은 자리에서: 하트(가벼운 신호) +
+ * 편지 보내기(연락처를 건네는 한 통, 우표 1장).
  * 서버가 멱등이라 카드와 상세의 하트 상태가 어긋나도 안전하다.
  */
 export default function PeerDetailScreen() {
@@ -25,7 +25,6 @@ export default function PeerDetailScreen() {
   const { data, question, answers } = useLocalSearchParams<{ data?: string; question?: string; answers?: string }>();
   const [hearted, setHearted] = useState(false);
   const [hearting, setHearting] = useState(false);
-  const [matched, setMatched] = useState(false);
 
   const peer = useMemo<Peer | null>(() => {
     try {
@@ -85,20 +84,16 @@ export default function PeerDetailScreen() {
     letters.push({ key: 'today', question: todayQuestion, content: peer.peerAnswer });
   }
 
-  /** 편지 쓰기 화면으로 — 상호 하트를 이미 아는 경우 무료임을 문구에 반영한다. */
-  function openCompose(free: boolean) {
+  /** 편지 쓰기 화면으로. */
+  function openCompose() {
     if (!peer?.peerAnswerId) return;
     router.push({
       pathname: '/mail-compose',
-      params: {
-        peerAnswerId: peer.peerAnswerId,
-        nickname: peer.nickname ?? '',
-        ...(free ? { mutual: '1' } : {}),
-      },
+      params: { peerAnswerId: peer.peerAnswerId, nickname: peer.nickname ?? '' },
     });
   }
 
-  /** 하트 = 호감 표시. 서로 하트를 보냈으면 편지가 무료가 된다. */
+  /** 하트 = 호감 표시. 서로 하트면 마음이 통한 것 — 편지로 이어가면 된다. */
   async function heart() {
     if (!peer?.peerAnswerId || hearting || hearted) return;
     setHearting(true);
@@ -106,13 +101,12 @@ export default function PeerDetailScreen() {
       const result = await sendHeart(peer.peerAnswerId);
       setHearted(true);
       if (result.matched) {
-        setMatched(true);
-        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 이제 우표 없이 편지를 보낼 수 있어요.', [
+        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 편지로 연락처를 건네보세요.', [
           { text: '나중에', style: 'cancel' },
-          { text: '편지 쓰기', onPress: () => openCompose(true) },
+          { text: '편지 쓰기', onPress: openCompose },
         ]);
       } else {
-        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 우표 없이 편지를 보낼 수 있어요.');
+        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 서로의 마음을 알 수 있어요.');
       }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -135,7 +129,7 @@ export default function PeerDetailScreen() {
         />
         {peer.answerUnlocked && peer.peerAnswerId && (
           <Pressable
-            onPress={() => openCompose(matched)}
+            onPress={openCompose}
             accessibilityRole="button"
             style={[
               styles.requestPill,

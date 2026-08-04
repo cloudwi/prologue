@@ -4,7 +4,7 @@ import com.prologue.backend.dailymeet.application.service.HeartResult
 
 data class HeartResponse(
     val hearted: Boolean,
-    /** 서로 하트 — 편지를 우표 없이 보낼 수 있다. */
+    /** 서로 하트 — 마음이 통했다. */
     val matched: Boolean,
 ) {
     companion object {

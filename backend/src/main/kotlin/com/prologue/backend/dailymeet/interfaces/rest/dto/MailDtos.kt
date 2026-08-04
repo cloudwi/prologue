@@ -19,12 +19,10 @@ data class SendMailRequest(
 
 data class SendMailResponse(
     val mailId: String,
-    /** 상호 하트라 우표를 쓰지 않았는지. */
-    val freeByMatch: Boolean,
 ) {
     companion object {
         fun from(result: SendMailResult): SendMailResponse =
-            SendMailResponse(result.mailId.toString(), result.freeByMatch)
+            SendMailResponse(result.mailId.toString())
     }
 }
 

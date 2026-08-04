@@ -7,11 +7,9 @@ import { authedRequest } from './api';
 
 export type SendMailResult = {
   mailId: string;
-  /** 상호 하트라 우표를 쓰지 않았는지. */
-  freeByMatch: boolean;
 };
 
-/** 편지 보내기 (POST /mails). 상호 하트면 무료, 아니면 우표 1장. 전화번호는 서버가 내 프로필에서 읽는다. */
+/** 편지 보내기 (POST /mails). 한 통에 우표 1장. 전화번호는 서버가 내 프로필에서 읽는다. */
 export async function sendMail(
   peerAnswerId: string,
   content: string,

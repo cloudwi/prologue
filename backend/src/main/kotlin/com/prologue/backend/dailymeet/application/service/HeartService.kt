@@ -12,7 +12,7 @@ import java.util.UUID
 
 /**
  * 하트(호감) 유스케이스.
- * 하트는 호감 표시이고, **서로** 하트를 보냈으면 편지를 우표 없이 보낼 수 있다 — 연결은 편지가 맡는다.
+ * 하트는 가벼운 신호다 — **서로** 하트를 보냈으면 마음이 통한 것. 연결(연락처 교환)은 편지가 맡는다.
  * 상호 판정은 질문과 무관하다: 어제의 하트와 오늘의 하트가 만나도 호감은 호감이다.
  */
 @Service
@@ -21,7 +21,7 @@ class HeartService(
     private val heartRepository: HeartRepository,
     private val memberQueryService: MemberQueryService,
 ) {
-    /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 편지가 무료가 된다. */
+    /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 서로의 마음을 안 것. */
     @Transactional
     fun heart(fromAccountId: UUID, peerAnswerId: UUID): HeartResult {
         val peerAnswer = answerRepository.findById(peerAnswerId)
@@ -68,13 +68,13 @@ data class ReceivedHeartView(
     val avatarId: Int?,
     val photoUrl: String?,
     val peerAnswerId: UUID?,
-    /** 서로 하트를 주고받았는지 — true면 우표 없이 편지를 보낼 수 있다. */
+    /** 서로 하트를 주고받았는지 — true면 하트 되보내기 대신 편지를 보낼 차례다. */
     val mutual: Boolean,
     val createdAt: Instant,
 )
 
 data class HeartResult(
     val hearted: Boolean,
-    /** 서로 하트 — 편지가 무료가 된다. */
+    /** 서로 하트 — 마음이 통했다. */
     val matched: Boolean,
 )
