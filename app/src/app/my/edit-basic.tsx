@@ -18,6 +18,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { type ThemeColors } from '@/constants/theme';
 import { formatBirthDigits, isoToBirthDigits, parseBirthDigits, sanitizeBirthDigits } from '@/lib/birth-date';
 import { completeOnboarding, getMyProfile, type Gender, type MemberProfile } from '@/lib/member';
+import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/lib/phone';
 import { toRequest } from '@/lib/profile-form';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -34,6 +35,8 @@ export default function EditBasicScreen() {
   const [birthDigits, setBirthDigits] = useState('');
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [region, setRegion] = useState('');
+  const [phoneDigits, setPhoneDigits] = useState('');
+  const [kakaoId, setKakaoId] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -47,6 +50,8 @@ export default function EditBasicScreen() {
         setBirthDigits(isoToBirthDigits(p.birthDate));
         setPreferredGender(p.preferredGender);
         setRegion(p.region);
+        setPhoneDigits(p.phone ?? '');
+        setKakaoId(p.kakaoId ?? '');
       } catch (e) {
         if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       } finally {
@@ -65,7 +70,8 @@ export default function EditBasicScreen() {
     gender != null &&
     birthDate != null &&
     preferredGender != null &&
-    region.trim().length > 0;
+    region.trim().length > 0 &&
+    isValidPhoneDigits(phoneDigits);
 
   async function save() {
     if (!canSave || saving) return;
@@ -79,6 +85,8 @@ export default function EditBasicScreen() {
           birthDate: birthDate!,
           preferredGender: preferredGender!,
           region: region.trim(),
+          phone: phoneDigits,
+          kakaoId: kakaoId.trim() || null,
         }),
       );
       router.back();
@@ -130,6 +138,35 @@ export default function EditBasicScreen() {
 
             <Field label="지역" c={c}>
               <RegionPicker value={region || null} onChange={setRegion} c={c} />
+            </Field>
+
+            {/* 연락처 — 프로필에 공개되지 않고, 편지에 실을 때만 상대에게 전해진다. */}
+            <Field label="전화번호" c={c}>
+              <TextInput
+                value={formatPhoneDigits(phoneDigits)}
+                onChangeText={(t) => setPhoneDigits(sanitizePhoneDigits(t))}
+                keyboardType="phone-pad"
+                maxLength={13}
+                placeholder="010-0000-0000"
+                placeholderTextColor={c.textSecondary}
+                style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+              />
+              <Text style={[styles.fieldHint, { color: c.textSecondary }]}>
+                프로필에 공개되지 않아요. 편지에 담기로 한 경우에만 상대에게 전해져요.
+              </Text>
+            </Field>
+
+            <Field label="카카오톡 ID (선택)" c={c}>
+              <TextInput
+                value={kakaoId}
+                onChangeText={setKakaoId}
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={30}
+                placeholder="편지에 전화번호 대신 담을 수 있어요"
+                placeholderTextColor={c.textSecondary}
+                style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+              />
             </Field>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -191,6 +228,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
   field: { marginBottom: 22 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  fieldHint: { fontSize: 12.5, lineHeight: 18, marginTop: 7 },
   input: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, fontSize: 16 },
   toggleRow: { flexDirection: 'row', gap: 10 },
   toggle: { flex: 1, height: 50, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

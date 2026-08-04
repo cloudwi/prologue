@@ -12,6 +12,9 @@ export function toRequest(p: MemberProfile, patch: Partial<OnboardingProfile> = 
     birthDate: p.birthDate,
     preferredGender: p.preferredGender,
     region: p.region,
+    // 이전 회원은 아직 전화번호가 없을 수 있다 — 그 상태로 저장하면 서버가 등록을 요구한다(기본 정보에서 채움).
+    phone: p.phone ?? '',
+    kakaoId: p.kakaoId,
     bio: p.bio,
     heightCm: p.heightCm,
     hobbies: p.hobbies,
@@ -31,6 +34,10 @@ export type NextStep = { label: string; hint: string; href: string };
  * 자기소개 항목은 없다 — 소개는 매일의 문답으로 쌓인다.
  */
 export function nextStep(p: MemberProfile): NextStep | null {
+  // 전화번호는 편지(연락처 교환)의 재료라 가장 먼저 챈다 — 필수 도입 이전 회원만 해당.
+  if (!p.phone) {
+    return { label: '전화번호를 등록해주세요', hint: '편지에 연락처를 실으려면 필요해요', href: '/my/edit-basic' };
+  }
   const photos = p.photoUrls?.length ?? 0;
   if (photos < 2) {
     return { label: '사진을 2장 이상 올려주세요', hint: '사진이 있어야 상대에게 소개돼요', href: '/my/edit-photos' };

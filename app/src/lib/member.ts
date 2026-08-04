@@ -9,22 +9,28 @@ export type OnboardingProfile = {
   birthDate: string;
   preferredGender: Gender;
   region: string;
+  /** 전화번호(숫자만). 프로필에 공개되지 않고, 편지에 실을 때만 상대에게 전해진다. */
+  phone: string;
   bio?: string | null;
   heightCm?: number | null;
   hobbies?: string[];
   interests?: string[];
   strengths?: string[];
   avatarId?: number | null;
+  /** 카카오톡 ID(선택) — 편지에 전화번호 대신 실을 수 있다. */
+  kakaoId?: string | null;
 };
 
 /**
  * 프로필 조회 응답. 사진은 프로필 수정(PUT)이 아니라 사진 전용 엔드포인트로 관리하므로
  * 요청 타입(OnboardingProfile)에는 없고 응답에만 있다.
  */
-export type MemberProfile = Required<OnboardingProfile> & {
+export type MemberProfile = Required<Omit<OnboardingProfile, 'phone'>> & {
   accountId: string;
   /** 프로필 사진 URL 목록(등록 순). 첫 장이 대표. */
   photoUrls: string[];
+  /** 전화번호 필수 도입 이전 회원은 아직 없을 수 있다 — 기본 정보에서 등록. */
+  phone: string | null;
 };
 
 /** 온보딩 프로필 생성/수정 (PUT /members/me, 인증 필요). */

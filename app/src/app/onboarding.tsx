@@ -22,6 +22,7 @@ import { KeywordChips } from '@/components/keyword-chips';
 import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { koreanManAge, parseBirthDigits } from '@/lib/birth-date';
+import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/lib/phone';
 import { AvatarPicker, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
@@ -70,6 +71,7 @@ export default function OnboardingScreen() {
     if (!preferredTouched) setPreferredGender(g === 'MALE' ? 'FEMALE' : 'MALE');
   }
   const [region, setRegion] = useState('');
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
   const [submitting, setSubmitting] = useState(false);
@@ -178,6 +180,23 @@ export default function OnboardingScreen() {
       content: <RegionPicker value={region || null} onChange={setRegion} c={c} />,
     },
     {
+      key: 'phone',
+      title: '전화번호를 알려주세요',
+      subtitle: '프로필에 공개되지 않아요.\n마음이 닿아 편지를 보낼 때, 내가 담기로 한 경우에만 상대에게 전해져요.',
+      valid: isValidPhoneDigits(phoneDigits),
+      content: (
+        <PlaceholderInput
+          value={formatPhoneDigits(phoneDigits)}
+          onChangeText={(t) => setPhoneDigits(sanitizePhoneDigits(t))}
+          placeholder="010-0000-0000"
+          placeholderTextColor={c.textSecondary}
+          keyboardType="phone-pad"
+          maxLength={13}
+          style={inputStyle}
+        />
+      ),
+    },
+    {
       key: 'photos',
       title: '프로필 사진을 올려주세요',
       subtitle: `최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.\n얼굴이 잘 보이는 사진만 등록돼요.`,
@@ -257,6 +276,7 @@ export default function OnboardingScreen() {
         birthDate: birthDate!,
         preferredGender: preferredGender!,
         region: region.trim(),
+        phone: phoneDigits,
         ...toProfilePayload(extra),
       });
       return true;
