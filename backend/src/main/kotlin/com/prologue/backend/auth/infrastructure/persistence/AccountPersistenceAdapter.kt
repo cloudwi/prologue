@@ -4,6 +4,7 @@ import com.prologue.backend.auth.domain.model.Account
 import com.prologue.backend.auth.domain.model.AccountId
 import com.prologue.backend.auth.domain.repository.AccountRepository
 import org.springframework.stereotype.Repository
+import java.time.Instant
 
 /**
  * AccountRepository 포트의 JPA 어댑터.
@@ -22,6 +23,13 @@ class AccountPersistenceAdapter(
 
     override fun save(account: Account): Account =
         jpa.save(account.toEntity()).toDomain()
+
+    override fun touchLastSeen(id: AccountId, now: Instant, threshold: Instant) {
+        jpa.touchLastSeen(id.value, now, threshold)
+    }
+
+    override fun findLastSeenAt(id: AccountId): Instant? =
+        jpa.findLastSeenAt(id.value)
 
     private fun Account.toEntity(): AccountJpaEntity =
         AccountJpaEntity(

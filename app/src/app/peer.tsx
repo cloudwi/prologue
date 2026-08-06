@@ -122,6 +122,7 @@ export default function PeerDetailScreen() {
         <ProfileInvitation
           nickname={peer.nickname}
           meta={meta}
+          lastActive={peer.lastActive}
           photoUrls={peer.photoUrls}
           letters={letters}
           keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}

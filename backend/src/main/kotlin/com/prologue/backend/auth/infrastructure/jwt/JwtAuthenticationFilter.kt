@@ -1,6 +1,7 @@
 package com.prologue.backend.auth.infrastructure.jwt
 
 import com.prologue.backend.auth.application.port.TokenProvider
+import com.prologue.backend.auth.application.service.LastSeenService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -18,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthenticationFilter(
     private val tokenProvider: TokenProvider,
+    private val lastSeenService: LastSeenService,
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -38,6 +40,8 @@ class JwtAuthenticationFilter(
                     authorities,
                 )
                 SecurityContextHolder.getContext().authentication = authentication
+                // 최근 접속 기록 — 부가 기능이므로 실패해도 요청을 막지 않는다.
+                runCatching { lastSeenService.touch(principal.accountId.value) }
             }
         }
         filterChain.doFilter(request, response)

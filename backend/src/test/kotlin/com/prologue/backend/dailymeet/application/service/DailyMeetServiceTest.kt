@@ -35,7 +35,10 @@ class DailyMeetServiceTest {
     private val profileLetterService = mockk<ProfileLetterService> {
         every { lettersOf(any()) } returns emptyList()
     }
-    private val service = DailyMeetService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, memberQueryService, profileLetterService)
+    private val lastSeenService = mockk<com.prologue.backend.auth.application.service.LastSeenService> {
+        every { lastSeenAt(any()) } returns null
+    }
+    private val service = DailyMeetService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, memberQueryService, profileLetterService, lastSeenService)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트

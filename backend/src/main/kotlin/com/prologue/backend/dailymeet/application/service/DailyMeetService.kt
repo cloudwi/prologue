@@ -8,6 +8,7 @@ import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
+import com.prologue.backend.auth.application.service.LastSeenService
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -30,6 +31,7 @@ class DailyMeetService(
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
     private val profileLetterService: ProfileLetterService,
+    private val lastSeenService: LastSeenService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
     @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
 ) {
@@ -197,6 +199,7 @@ class DailyMeetService(
             interests = p?.interests ?: emptyList(),
             strengths = p?.strengths ?: emptyList(),
             avatarId = p?.avatarId,
+            lastActive = LastActiveBucket.of(lastSeenService.lastSeenAt(peer.accountId)),
         )
     }
 

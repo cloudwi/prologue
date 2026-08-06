@@ -28,6 +28,8 @@ function peerMetaLabel(peer: Peer): string {
   if (peer.age != null) parts.push(`${peer.age}세`);
   if (peer.heightCm) parts.push(`${peer.heightCm}cm`);
   if (peer.region) parts.push(peer.region.split(' ').slice(-1)[0]);
+  // 카드에서는 가장 값진 신호(오늘 활동)만 — 상세 버킷은 프로필 화면 몫.
+  if (peer.lastActive === 'TODAY') parts.push('오늘 활동');
   return parts.join(' · ');
 }
 

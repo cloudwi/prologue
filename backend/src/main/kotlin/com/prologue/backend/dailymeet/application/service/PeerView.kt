@@ -2,7 +2,30 @@ package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
+
+/**
+ * 최근 접속을 뭉갠 버킷 — 정확한 시각은 프라이버시상 상대에게 내리지 않는다.
+ * 한 달 넘게 조용한 계정은 null(미표시) — "43일 전 접속"은 신뢰를 깎기만 한다.
+ */
+enum class LastActiveBucket {
+    TODAY, THIS_WEEK, WEEKS_AGO;
+
+    companion object {
+        fun of(lastSeenAt: Instant?, now: Instant = Instant.now()): LastActiveBucket? {
+            if (lastSeenAt == null) return null
+            val elapsed = Duration.between(lastSeenAt, now)
+            return when {
+                elapsed < Duration.ofHours(24) -> TODAY
+                elapsed < Duration.ofDays(7) -> THIS_WEEK
+                elapsed <= Duration.ofDays(30) -> WEEKS_AGO
+                else -> null
+            }
+        }
+    }
+}
 
 /**
  * 블라인드 상대. 닉네임 등 신원은 감추되 프로필(성별·나이·키·자기소개·키워드)은 공개한다.
@@ -30,6 +53,8 @@ data class PeerView(
     val avatarId: Int?,
     /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
     val mailSent: Boolean = false,
+    /** 최근 접속 버킷. 접속 기록이 없거나 한 달 넘게 조용하면 null(미표시). */
+    val lastActive: LastActiveBucket? = null,
 )
 
 /**

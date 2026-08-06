@@ -2,6 +2,13 @@ import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import type { LastActive } from '@/lib/daily';
+
+const ACTIVITY_LABEL: Record<LastActive, string> = {
+  TODAY: '오늘 활동했어요',
+  THIS_WEEK: '이번 주에 활동했어요',
+  WEEKS_AGO: '몇 주 전에 활동했어요',
+};
 
 /**
  * 프로필을 청첩장처럼 펼치는 공용 렌더러.
@@ -20,6 +27,7 @@ export type InvitationLetter = {
 export function ProfileInvitation({
   nickname,
   meta,
+  lastActive,
   photoUrls,
   letters,
   keywords,
@@ -29,6 +37,8 @@ export function ProfileInvitation({
 }: {
   nickname: string | null;
   meta: string;
+  /** 최근 접속 버킷 — 상대 프로필에서만 넘긴다(내 미리보기에는 없음). */
+  lastActive?: LastActive | null;
   photoUrls: string[];
   letters: InvitationLetter[];
   keywords: string[];
@@ -51,6 +61,12 @@ export function ProfileInvitation({
       <View style={styles.cover}>
         {nickname ? <Text style={[styles.name, { color: c.text, fontFamily: Fonts.serif }]}>{nickname}</Text> : null}
         <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text>
+        {lastActive ? (
+          <View style={[styles.activity, { backgroundColor: c.backgroundElement }]}>
+            {lastActive === 'TODAY' ? <View style={[styles.activityDot, { backgroundColor: c.primary }]} /> : null}
+            <Text style={{ color: c.textSecondary, fontSize: 12 }}>{ACTIVITY_LABEL[lastActive]}</Text>
+          </View>
+        ) : null}
       </View>
 
       {keywords.length > 0 && (
@@ -167,6 +183,8 @@ const styles = StyleSheet.create({
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
   name: { fontSize: 30, fontWeight: '700', letterSpacing: 1 },
   meta: { fontSize: 13, letterSpacing: 1, marginTop: 10 },
+  activity: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 28, borderRadius: Radius.pill, marginTop: 14 },
+  activityDot: { width: 6, height: 6, borderRadius: 3 },
 
   divider: { alignItems: 'center', marginVertical: 30 },
   dividerLine: { width: 40, height: StyleSheet.hairlineWidth },

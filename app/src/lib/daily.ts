@@ -38,7 +38,11 @@ export type Peer = {
   avatarId: number | null;
   /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
   mailSent: boolean;
+  /** 최근 접속 버킷. 기록 없음·한 달 초과는 null(미표시) — 정확한 시각은 서버가 내리지 않는다. */
+  lastActive: LastActive | null;
 };
+
+export type LastActive = 'TODAY' | 'THIS_WEEK' | 'WEEKS_AGO';
 
 export type TodayPeers = {
   /** 정오(KST) 전에는 false — 아직 공개 전. */

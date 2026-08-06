@@ -1,5 +1,6 @@
 package com.prologue.backend.dailymeet.interfaces.rest.dto
 
+import com.prologue.backend.dailymeet.application.service.LastActiveBucket
 import com.prologue.backend.dailymeet.application.service.PeerView
 import com.prologue.backend.dailymeet.application.service.TodayPeersView
 import com.prologue.backend.member.domain.model.BodyType
@@ -24,6 +25,8 @@ data class PeerResponse(
     val avatarId: Int?,
     /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
     val mailSent: Boolean,
+    /** 최근 접속 버킷(TODAY/THIS_WEEK/WEEKS_AGO). 기록 없음·한 달 초과는 null. */
+    val lastActive: LastActiveBucket?,
 ) {
     companion object {
         fun from(view: PeerView): PeerResponse =
@@ -45,6 +48,7 @@ data class PeerResponse(
                 interests = view.interests,
                 strengths = view.strengths,
                 avatarId = view.avatarId,
+                lastActive = view.lastActive,
             )
     }
 }
