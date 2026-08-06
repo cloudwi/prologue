@@ -116,12 +116,53 @@
 | `app/assets/images/icon.png` | 1024×1024 | 크림 배경, 마크 폭 62% |
 | `app/assets/images/android-icon-foreground.png` | 1024×1024 | 투명, 마크 폭 55% (안전영역 안쪽) |
 | `app/assets/images/android-icon-monochrome.png` | 1024×1024 | 크림 면을 뺀 잉크 선·하트만 남긴 라인아트 |
-| `app/assets/images/splash.png` / `splash-dark.png` | 401×369 | 마크(높이 84) + 워드마크. 워드마크는 별도 원본 없이 이 파일이 원본 |
+| `app/assets/images/splash.png` / `splash-dark.png` | 600×392 (3x) | 마크 + 워드마크. 아래 '스플래시' 절의 스크립트로 생성 |
 | `web/public/brand-mark.png` | 213×152 | 헤더 39×28, 히어로 106×76으로 표시 |
 
 > ⚠️ 마크는 가로형(1.4:1)입니다. 정사각형으로 넣으면 위아래 여백이 생겨 작아 보입니다.
 > 표시 크기를 바꿀 때 `app/src/app/index.tsx`의 `styles.logo`와
 > `web/src/styles/global.css`의 `.header-brand img`, `.hero .brand-mark`를 함께 맞추세요.
+
+## 스플래시
+
+로그인 화면(`app/src/app/index.tsx`)과 같은 조판을 이미지로 구운 것입니다 —
+마크 89×64dp, 프롤로그 36pt Bold(자간 2), PROLOGUE 13pt Bold(자간 6, 포인트 컬러).
+스플래시가 로그인 화면으로 자연스럽게 이어지도록 서체·비례를 화면과 맞춥니다.
+
+처음에는 AI가 그린 붓글씨 워드마크가 박혀 있었는데, '글씨체' 결정(2026-08-03) 이후
+화면은 시스템체가 되고 스플래시만 붓글씨로 남아 어긋나서 2026-08-06에 다시 만들었습니다.
+글자가 이미지에 박혀 있으므로 워드마크·글씨체·팔레트가 바뀌면 이 파일도 다시 생성해야 합니다.
+
+```python
+# splash.png / splash-dark.png 재생성 — 3x, expo-splash-screen imageWidth 200 기준
+from PIL import Image, ImageDraw, ImageFont
+S = 3
+KR = ImageFont.truetype('/System/Library/Fonts/AppleSDGothicNeo.ttc', 36 * S, index=6)  # Bold
+EN = ImageFont.truetype('/System/Library/Fonts/HelveticaNeue.ttc', 13 * S, index=1)     # Bold
+mark = Image.open('design/brand/brand-mark.png').convert('RGBA').resize((89 * S, 64 * S), Image.LANCZOS)
+
+def text_layer(text, font, ls, color):
+    widths = [font.getlength(ch) for ch in text]
+    asc, desc = font.getmetrics()
+    img = Image.new('RGBA', (round(sum(widths) + ls * (len(text) - 1)), asc + desc), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img); x = 0.0
+    for ch, cw in zip(text, widths):
+        d.text((x, 0), ch, font=font, fill=color); x += cw + ls
+    return img.crop(img.getbbox())
+
+def build(text_color, accent, out):
+    kr = text_layer('프롤로그', KR, 2 * S, text_color)
+    en = text_layer('PROLOGUE', EN, 6 * S, accent)
+    W = 200 * S
+    canvas = Image.new('RGBA', (W, mark.height + 14 * S + kr.height + 12 * S + en.height), (0, 0, 0, 0))
+    y = 0
+    for layer, gap in ((mark, 14 * S), (kr, 12 * S), (en, 0)):
+        canvas.alpha_composite(layer, ((W - layer.width) // 2, y)); y += layer.height + gap
+    canvas.save(out)
+
+build((27, 33, 38, 255), (217, 105, 76, 255), 'app/assets/images/splash.png')          # text/primary 라이트
+build((234, 239, 244, 255), (224, 122, 92, 255), 'app/assets/images/splash-dark.png')  # text/primary 다크
+```
 
 ## 파비콘
 
