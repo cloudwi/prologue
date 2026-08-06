@@ -23,7 +23,7 @@ import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/phot
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { koreanManAge, parseBirthDigits } from '@/lib/birth-date';
 import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/lib/phone';
-import { AvatarPicker, toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
+import { toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import { Fonts, type ThemeColors } from '@/constants/theme';
@@ -224,14 +224,6 @@ export default function OnboardingScreen() {
   // 선택 스텝 — 가입 후 이성에게 더 잘 보이기 위해 채우는 항목. MY에서도 언제든 수정 가능.
   const optionalSteps: StepDef[] = [
     {
-      key: 'avatar',
-      title: '나를 닮은 아바타를 골라주세요',
-      subtitle: '사진은 없어요. 아바타로 첫인상을 대신해요.',
-      optional: true,
-      filled: extra.avatarId != null,
-      content: <AvatarPicker value={extra.avatarId} onChange={(avatarId) => patchExtra({ avatarId })} c={c} />,
-    },
-    {
       key: 'height',
       title: '키를 알려주세요',
       optional: true,
@@ -370,7 +362,7 @@ export default function OnboardingScreen() {
               가입이 완료됐어요!
             </Text>
             <Text lineBreakStrategyIOS="hangul-word" style={[styles.subtitle, { color: c.textSecondary }]}>
-              아바타·자기소개·취미를 채우면 상대에게 더 잘 보여요.{'\n'}지금 하지 않아도 MY 탭에서 언제든 채울 수 있어요.
+              키·취미·관심사를 채우면 상대에게 더 잘 보여요.{'\n'}지금 하지 않아도 MY 탭에서 언제든 채울 수 있어요.
             </Text>
           </View>
           <View style={styles.choiceButtons}>
