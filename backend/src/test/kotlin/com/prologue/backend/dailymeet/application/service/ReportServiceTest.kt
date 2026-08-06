@@ -24,7 +24,8 @@ class ReportServiceTest {
     private val mailRepository = mockk<MailRepository>()
     private val reportRepository = mockk<ReportRepository>()
     private val memberQueryService = mockk<MemberQueryService>()
-    private val service = ReportService(answerRepository, mailRepository, reportRepository, memberQueryService)
+    private val accountModerationService = mockk<com.prologue.backend.auth.application.service.AccountModerationService>(relaxed = true)
+    private val service = ReportService(answerRepository, mailRepository, reportRepository, memberQueryService, accountModerationService)
 
     private val me = UUID.randomUUID()
     private val other = UUID.randomUUID()

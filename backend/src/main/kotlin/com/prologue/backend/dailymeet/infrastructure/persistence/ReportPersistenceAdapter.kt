@@ -39,6 +39,12 @@ class ReportJpaEntity(
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
+
+    @Column(name = "status", nullable = false, length = 10)
+    var status: String,
+
+    @Column(name = "resolved_at")
+    var resolvedAt: Instant? = null,
 )
 
 interface ReportJpaRepository : JpaRepository<ReportJpaEntity, UUID> {
@@ -60,8 +66,13 @@ class ReportPersistenceAdapter(
                 reason = report.reason,
                 snapshot = report.snapshot,
                 createdAt = report.createdAt,
+                status = report.status,
+                resolvedAt = report.resolvedAt,
             ),
         ).toDomain()
+
+    override fun findById(id: UUID): Report? =
+        jpa.findById(id).orElse(null)?.toDomain()
 
     override fun findRecent(limit: Int): List<Report> =
         jpa.findTop100ByOrderByCreatedAtDesc().take(limit).map { it.toDomain() }
@@ -75,5 +86,7 @@ class ReportPersistenceAdapter(
             reason = reason,
             snapshot = snapshot,
             createdAt = createdAt,
+            status = status,
+            resolvedAt = resolvedAt,
         )
 }

@@ -16,11 +16,35 @@ class Report private constructor(
     val reason: String,
     val snapshot: String?,
     val createdAt: Instant,
+    status: String,
+    resolvedAt: Instant?,
 ) {
+    /** 처리 상태 — PENDING(대기) → DISMISSED(기각) | RESOLVED(조치 완료). */
+    var status: String = status
+        private set
+
+    var resolvedAt: Instant? = resolvedAt
+        private set
+
+    /** 기각 — 검토 결과 문제없음. */
+    fun dismiss(now: Instant = Instant.now()) = close(STATUS_DISMISSED, now)
+
+    /** 조치 완료 — 피신고 계정 제재 등 조치를 마쳤다. */
+    fun resolve(now: Instant = Instant.now()) = close(STATUS_RESOLVED, now)
+
+    private fun close(newStatus: String, now: Instant) {
+        if (status != STATUS_PENDING) throw DailyMeetException("이미 처리된 신고예요")
+        status = newStatus
+        resolvedAt = now
+    }
+
     companion object {
         val REASONS = setOf("SPAM", "ABUSE", "SEXUAL", "FAKE", "OTHER")
         const val CONTEXT_ANSWER = "ANSWER"
         const val CONTEXT_MAIL = "MAIL"
+        const val STATUS_PENDING = "PENDING"
+        const val STATUS_DISMISSED = "DISMISSED"
+        const val STATUS_RESOLVED = "RESOLVED"
         private const val SNAPSHOT_MAX = 1000
 
         fun file(
@@ -33,7 +57,10 @@ class Report private constructor(
         ): Report {
             if (reason !in REASONS) throw DailyMeetException("신고 사유가 올바르지 않습니다")
             if (reporterAccountId == reportedAccountId) throw DailyMeetException("자신은 신고할 수 없어요")
-            return Report(null, reporterAccountId, reportedAccountId, context, reason, snapshot?.take(SNAPSHOT_MAX), now)
+            return Report(
+                null, reporterAccountId, reportedAccountId, context, reason,
+                snapshot?.take(SNAPSHOT_MAX), now, STATUS_PENDING, null,
+            )
         }
 
         fun reconstitute(
@@ -44,6 +71,8 @@ class Report private constructor(
             reason: String,
             snapshot: String?,
             createdAt: Instant,
-        ): Report = Report(id, reporterAccountId, reportedAccountId, context, reason, snapshot, createdAt)
+            status: String,
+            resolvedAt: Instant?,
+        ): Report = Report(id, reporterAccountId, reportedAccountId, context, reason, snapshot, createdAt, status, resolvedAt)
     }
 }

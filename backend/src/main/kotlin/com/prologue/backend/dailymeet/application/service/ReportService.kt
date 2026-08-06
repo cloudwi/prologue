@@ -4,6 +4,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Report
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
+import com.prologue.backend.auth.application.service.AccountModerationService
 import com.prologue.backend.dailymeet.domain.repository.ReportRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.stereotype.Service
@@ -20,6 +21,8 @@ data class ReportView(
     val reason: String,
     val snapshot: String?,
     val createdAt: Instant,
+    val status: String,
+    val resolvedAt: Instant?,
 )
 
 /**
@@ -32,6 +35,7 @@ class ReportService(
     private val mailRepository: MailRepository,
     private val reportRepository: ReportRepository,
     private val memberQueryService: MemberQueryService,
+    private val accountModerationService: AccountModerationService,
 ) {
     /** 답변 id로 신고 — 프로필 상세(그 답변의 주인)를 신고하는 경로. */
     @Transactional
@@ -66,8 +70,27 @@ class ReportService(
                 reason = r.reason,
                 snapshot = r.snapshot,
                 createdAt = r.createdAt,
+                status = r.status,
+                resolvedAt = r.resolvedAt,
             )
         }
+
+    /** 어드민 — 기각(검토 결과 문제없음). */
+    @Transactional
+    fun dismiss(reportId: UUID) {
+        val report = reportRepository.findById(reportId) ?: throw DailyMeetException("신고를 찾을 수 없어요")
+        report.dismiss()
+        reportRepository.save(report)
+    }
+
+    /** 어드민 — 피신고 계정을 정지하고 신고를 조치 완료로 닫는다. */
+    @Transactional
+    fun suspendReported(reportId: UUID) {
+        val report = reportRepository.findById(reportId) ?: throw DailyMeetException("신고를 찾을 수 없어요")
+        report.resolve() // 먼저 닫는다 — 이미 처리된 신고면 여기서 거부돼 정지가 중복 실행되지 않는다
+        accountModerationService.suspend(report.reportedAccountId)
+        reportRepository.save(report)
+    }
 
     companion object {
         private const val RECENT_LIMIT = 100
