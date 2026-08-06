@@ -52,6 +52,8 @@ type StepDef = {
   /** optional 스텝: 뭔가 입력했는지 (버튼 라벨 '건너뛰기' ↔ '다음' 전환용). */
   filled?: boolean;
   content: ReactNode;
+  /** 다음 버튼 바로 위에 고정되는 보조 UI — 키보드가 열려도 잘리지 않아야 하는 것(추천 칩 등). */
+  footerAccessory?: ReactNode;
 };
 
 export default function OnboardingScreen() {
@@ -108,16 +110,19 @@ export default function OnboardingScreen() {
       subtitle: '상대에게는 실명 대신 이 닉네임으로 보여요.',
       valid: nickname.trim().length > 0,
       content: (
+        <PlaceholderInput
+          value={nickname}
+          onChangeText={setNickname}
+          placeholder="닉네임을 입력해 주세요"
+          placeholderTextColor={c.textSecondary}
+          maxLength={30}
+          autoFocus
+          style={inputStyle}
+        />
+      ),
+      // 추천 칩은 키보드 위에 고정 — 본문에 두면 키보드가 열릴 때 접힌 선에 잘린다.
+      footerAccessory: (
         <View>
-          <PlaceholderInput
-            value={nickname}
-            onChangeText={setNickname}
-            placeholder="닉네임을 입력해 주세요"
-            placeholderTextColor={c.textSecondary}
-            maxLength={30}
-            autoFocus
-            style={inputStyle}
-          />
           <Text style={[styles.suggestHint, { color: c.textSecondary }]}>이런 닉네임은 어때요?</Text>
           <View style={styles.suggestRow}>
             {nameSuggestions.map((name) => (
@@ -428,12 +433,20 @@ export default function OnboardingScreen() {
           </ScrollView>
 
           <View style={styles.footer}>
+            {step.footerAccessory ? <View style={styles.footerAccessory}>{step.footerAccessory}</View> : null}
             <Pressable
               onPress={next}
               disabled={!canAdvance || submitting}
-              style={[styles.submit, { backgroundColor: c.primary, opacity: !canAdvance || submitting ? 0.5 : 1 }]}
+              style={[
+                styles.submit,
+                canAdvance
+                  ? { backgroundColor: c.primary, opacity: submitting ? 0.7 : 1 }
+                  : { backgroundColor: c.backgroundSelected },
+              ]}
             >
-              <Text style={[styles.submitText, { color: c.primaryText }]}>{buttonLabel}</Text>
+              <Text style={[styles.submitText, { color: canAdvance ? c.primaryText : c.textSecondary }]}>
+                {buttonLabel}
+              </Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -494,8 +507,9 @@ const styles = StyleSheet.create({
   stepBody: { marginTop: 40 },
   hint: { fontSize: 13, marginTop: 6 },
   input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
-  suggestHint: { fontSize: 13, marginTop: 16, marginBottom: 8 },
+  suggestHint: { fontSize: 13, marginBottom: 8 },
   suggestRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  footerAccessory: { marginBottom: 14 },
   suggestChip: { paddingHorizontal: 14, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   toggleRow: { flexDirection: 'row', gap: 12 },
