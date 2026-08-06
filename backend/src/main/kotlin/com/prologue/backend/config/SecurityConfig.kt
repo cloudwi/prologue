@@ -24,7 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    @param:Value("\${cors.allowed-origins:https://prologue-web.onrender.com,http://localhost:4321}")
+    @param:Value("\${cors.allowed-origins:https://prologue.day,https://www.prologue.day,https://prologue-web.onrender.com,http://localhost:4321}")
     private val allowedOrigins: List<String>,
 ) {
 

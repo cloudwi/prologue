@@ -4,7 +4,7 @@ import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from './auth
  * 백엔드 API 클라이언트.
  * 기본 URL은 EXPO_PUBLIC_API_URL 환경변수로 덮어쓸 수 있다(로컬 개발 등).
  */
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://prologue-backend.onrender.com';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.prologue.day';
 
 export class ApiError extends Error {
   constructor(
