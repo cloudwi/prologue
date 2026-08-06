@@ -133,6 +133,8 @@ class Member private constructor(
 
         private const val NICKNAME_MAX = 30
         private const val MIN_BIRTH_YEAR = 1920
+        /** 가입 가능한 최소 만 나이 — 한국 성년(만 19세). */
+        private const val ADULT_AGE = 19
         private const val BIO_MAX = 100
         private const val KEYWORD_MAX = 15
         private const val KAKAO_ID_MAX = 30
@@ -226,6 +228,10 @@ class Member private constructor(
             val today = now.atZone(KST).toLocalDate()
             if (birthDate.year < MIN_BIRTH_YEAR || birthDate.isAfter(today)) {
                 throw MemberDomainException("생년월일이 올바르지 않습니다")
+            }
+            // 소개팅 서비스는 성인 전용 — 만 19세(한국 성년) 미만은 가입할 수 없다.
+            if (birthDate.plusYears(ADULT_AGE.toLong()).isAfter(today)) {
+                throw MemberDomainException("만 ${ADULT_AGE}세 이상만 가입할 수 있습니다")
             }
             if (region.isBlank()) throw MemberDomainException("지역은 필수입니다")
             if (bio != null && bio.trim().length > BIO_MAX) throw MemberDomainException("자기소개는 ${BIO_MAX}자 이하여야 합니다")

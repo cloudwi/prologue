@@ -34,6 +34,9 @@ import { useTheme } from '@/hooks/use-theme';
 
 const EMPTY_EXTRA: ProfileExtra = { avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
 
+/** 가입 가능한 최소 만 나이 — 한국 성년. 서버(Member.validate)와 같은 기준. */
+const ADULT_AGE = 19;
+
 /** 닉네임 placeholder 예시 풀 (화면 진입 시 랜덤). */
 const NICKNAME_EXAMPLES = [
   '봄날의곰', '책읽는여우', '느긋한고양이', '바다보는사람', '새벽의산책',
@@ -155,11 +158,18 @@ export default function OnboardingScreen() {
       key: 'birthDate',
       title: '생년월일을 알려주세요',
       subtitle: '프로필에는 만 나이만 표시돼요.',
-      valid: birthDate != null,
+      valid: birthDate != null && age != null && age >= ADULT_AGE,
       content: (
         <>
           <BirthDatePicker value={birthDigits} onChange={setBirthDigits} c={c} />
-          {age != null && <Text style={[styles.hint, { color: c.textSecondary }]}>만 {age}세</Text>}
+          {age != null &&
+            (age >= ADULT_AGE ? (
+              <Text style={[styles.hint, { color: c.textSecondary }]}>만 {age}세</Text>
+            ) : (
+              <Text style={[styles.hint, { color: c.primaryStrong }]}>
+                만 {ADULT_AGE}세 이상만 가입할 수 있어요
+              </Text>
+            ))}
         </>
       ),
     },
