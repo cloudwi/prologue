@@ -166,9 +166,22 @@ build((234, 239, 244, 255), (224, 122, 92, 255), 'app/assets/images/splash-dark.
 
 ## 파비콘
 
-`app/assets/images/favicon.png`, `web/public/favicon.png` (48×48)는 마크를 그대로 씁니다.
-봉투 실루엣과 붉은 하트가 16px에서도 구분되는 것을 확인했습니다.
-마크를 교체할 때는 16·24·32px로 줄여 형태가 남는지 반드시 확인하세요.
+`app/assets/images/favicon.png`, `web/public/favicon.png` (256×256)는
+**라운드 사각형 종이 배경(#F6F8FA, radius 56) + 마크 폭 74%**입니다.
+투명 배경이던 시절(48×48)에는 다크 UI(브라우저 탭·Vercel 대시보드)에서 형체가 죽어서
+2026-08-06에 배경을 깔았습니다. 마크를 교체할 때는 16·24·32px로 줄여 형태가 남는지 반드시 확인하세요.
+
+```python
+# favicon 재생성 — 종이 배경 라운드 사각형 + 마크
+from PIL import Image, ImageDraw
+mark = Image.open('design/brand/brand-mark.png').convert('RGBA')
+S = 256
+canvas = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+ImageDraw.Draw(canvas).rounded_rectangle([0, 0, S - 1, S - 1], radius=56, fill=(246, 248, 250, 255))
+w = int(S * 0.74); h = round(w * mark.height / mark.width)
+canvas.alpha_composite(mark.resize((w, h), Image.LANCZOS), ((S - w) // 2, (S - h) // 2))
+canvas.save('web/public/favicon.png'); canvas.save('app/assets/images/favicon.png')
+```
 
 ## 아바타
 
