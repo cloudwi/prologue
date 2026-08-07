@@ -65,16 +65,27 @@ const tabs = [
     <script is:inline define:vars={{ API_BASE }}>
       const $ = (id) => document.getElementById(id);
       const TOKEN_KEY = 'pl_admin_token';
+      const REFRESH_KEY = 'pl_admin_refresh';
       let token = localStorage.getItem(TOKEN_KEY) || '';
+      let refreshToken = localStorage.getItem(REFRESH_KEY) || '';
 
-      async function api(path, options = {}) {
-        const res = await fetch(API_BASE + path, {
+      function rawFetch(path, options = {}) {
+        return fetch(API_BASE + path, {
           ...options,
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: 'Bearer ' + token } : {}),
           },
         });
+      }
+
+      // 액세스 토큰은 30분짜리 — 만료로 거부되면 리프레시(14일) 한 번으로 조용히 갱신하고 재시도한다.
+      // 갱신까지 실패했을 때만 로그인 화면으로 보낸다.
+      async function api(path, options = {}) {
+        let res = await rawFetch(path, options);
+        if ((res.status === 401 || res.status === 403) && refreshToken && (await tryRefresh())) {
+          res = await rawFetch(path, options);
+        }
         if (res.status === 401 || res.status === 403) {
           throw Object.assign(new Error('권한이 없거나 세션이 만료됐어요.'), { auth: true });
         }
@@ -83,9 +94,30 @@ const tabs = [
         return data;
       }
 
+      async function tryRefresh() {
+        try {
+          const res = await fetch(API_BASE + '/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
+          if (!res.ok) return false;
+          const data = await res.json();
+          token = data.accessToken;
+          refreshToken = data.refreshToken || refreshToken;
+          localStorage.setItem(TOKEN_KEY, token);
+          localStorage.setItem(REFRESH_KEY, refreshToken);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
       function showLogin(msg) {
         token = '';
+        refreshToken = '';
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_KEY);
         $('panel').hidden = true;
         $('login').hidden = false;
         $('login-msg').textContent = msg || '';
@@ -127,7 +159,9 @@ const tabs = [
         try {
           const data = await api('/auth/email/verify', { method: 'POST', body: JSON.stringify({ email, code }) });
           token = data.accessToken;
+          refreshToken = data.refreshToken || '';
           localStorage.setItem(TOKEN_KEY, token);
+          if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
           await showPanel();
         } catch (e) {
           $('login-msg').textContent = e.message;
