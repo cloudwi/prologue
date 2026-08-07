@@ -1,0 +1,104 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="회원 관리">
+  <div class="admin-field" style="margin: 0 0 12px;">
+    <input id="member-q" type="search" placeholder="이메일 또는 닉네임 검색 (비우면 최근 가입순)" />
+    <button type="button" class="admin-btn ghost" id="member-search">검색</button>
+  </div>
+  <div id="member-list" class="admin-card admin-list"></div>
+
+  <script is:inline>
+    const MEMBER_STATUS = { ACTIVE: '정상', SUSPENDED: '정지됨', WITHDRAWN: '탈퇴' };
+    const GENDER = { MALE: '남', FEMALE: '여' };
+
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const listEl = $('member-list');
+      listEl.textContent = '불러오는 중...';
+      try {
+        const q = $('member-q').value.trim();
+        const data = await api('/admin/members' + (q ? '?q=' + encodeURIComponent(q) : ''));
+        render(data.members);
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        listEl.textContent = e.message;
+      }
+    };
+
+    // innerHTML 금지 — 이메일·닉네임은 사용자 입력이라 전부 textContent로만 그린다.
+    function render(items) {
+      const { $ } = window.admin;
+      const listEl = $('member-list');
+      listEl.textContent = '';
+      if (!items.length) {
+        listEl.textContent = '결과가 없어요.';
+        return;
+      }
+      for (const m of items) {
+        const row = document.createElement('div');
+        row.className = 'admin-row';
+
+        const info = document.createElement('div');
+        info.className = 'admin-row-info';
+        const name = document.createElement('div');
+        name.className = 'admin-row-name';
+        name.textContent =
+          (m.nickname || '(프로필 없음)') +
+          (m.gender ? ' · ' + (GENDER[m.gender] || m.gender) : '') +
+          ' · ' + (MEMBER_STATUS[m.status] || m.status);
+        const email = document.createElement('div');
+        email.className = 'admin-row-date';
+        email.textContent = m.email;
+        const date = document.createElement('div');
+        date.className = 'admin-row-date';
+        date.textContent =
+          '가입 ' + new Date(m.createdAt).toLocaleDateString('ko-KR') +
+          (m.lastSeenAt ? ' · 최근 접속 ' + new Date(m.lastSeenAt).toLocaleString('ko-KR') : ' · 접속 기록 없음');
+        info.append(name, email, date);
+
+        const actions = document.createElement('div');
+        actions.className = 'admin-row-actions';
+        if (m.status === 'ACTIVE') {
+          const suspend = document.createElement('button');
+          suspend.className = 'admin-btn ghost small';
+          suspend.textContent = '정지';
+          suspend.onclick = () => {
+            if (confirm(m.email + ' 계정을 정지할까요? 로그인이 차단돼요.')) act(m.accountId, 'suspend', suspend);
+          };
+          actions.append(suspend);
+        } else if (m.status === 'SUSPENDED') {
+          const reactivate = document.createElement('button');
+          reactivate.className = 'admin-btn small';
+          reactivate.textContent = '정지 해제';
+          reactivate.onclick = () => {
+            if (confirm(m.email + ' 계정의 정지를 해제할까요?')) act(m.accountId, 'reactivate', reactivate);
+          };
+          actions.append(reactivate);
+        }
+
+        row.append(info, actions);
+        listEl.append(row);
+      }
+    }
+
+    async function act(accountId, action, btn) {
+      const { api, showLogin } = window.admin;
+      btn.disabled = true;
+      try {
+        await api('/admin/members/' + accountId + '/' + action, { method: 'POST' });
+        await window.pageLoad();
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('member-search').addEventListener('click', () => window.pageLoad());
+    document.getElementById('member-q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') window.pageLoad();
+    });
+  </script>
+</AdminLayout>

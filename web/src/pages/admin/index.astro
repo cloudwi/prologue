@@ -1,0 +1,55 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="대시보드">
+  <div id="stats" class="admin-stats"></div>
+
+  <script is:inline>
+    // innerHTML 금지 — 전부 textContent로만 그린다.
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const el = $('stats');
+      el.textContent = '불러오는 중...';
+      try {
+        const s = await api('/admin/stats');
+        const femaleRatio = s.totalMembers > 0 ? Math.round((s.femaleMembers / s.totalMembers) * 100) : null;
+        const tiles = [
+          { label: '전체 회원', value: s.totalMembers },
+          {
+            label: '여성 비율',
+            value: femaleRatio == null ? '—' : femaleRatio + '%',
+            hint: '여 ' + s.femaleMembers + ' · 남 ' + s.maleMembers,
+          },
+          { label: '오늘 가입', value: s.joinedToday },
+          { label: '주간 활성', value: s.weeklyActive, hint: '최근 7일 접속 계정' },
+          { label: '오늘 답변', value: s.answersToday },
+          { label: '대기 신고', value: s.pendingReports, alert: s.pendingReports > 0 },
+          { label: '정지 계정', value: s.suspendedAccounts },
+        ];
+        el.textContent = '';
+        for (const t of tiles) {
+          const tile = document.createElement('div');
+          tile.className = 'admin-stat';
+          const value = document.createElement('div');
+          value.className = 'admin-stat-value' + (t.alert ? ' alert' : '');
+          value.textContent = String(t.value);
+          const label = document.createElement('div');
+          label.className = 'admin-stat-label';
+          label.textContent = t.label;
+          tile.append(value, label);
+          if (t.hint) {
+            const hint = document.createElement('div');
+            hint.className = 'admin-stat-hint';
+            hint.textContent = t.hint;
+            tile.append(hint);
+          }
+          el.append(tile);
+        }
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        el.textContent = e.message;
+      }
+    };
+  </script>
+</AdminLayout>

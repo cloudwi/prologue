@@ -1,0 +1,95 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="우표 이벤트 검토">
+  <div id="list" class="admin-card admin-list"></div>
+
+  <script is:inline>
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const listEl = $('list');
+      listEl.textContent = '불러오는 중...';
+      try {
+        const data = await api('/admin/stamp-events');
+        render(data.submissions);
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        listEl.textContent = e.message;
+      }
+    };
+
+    // innerHTML 금지 — url·닉네임은 사용자 입력이라 전부 textContent로만 그린다.
+    function render(items) {
+      const { $ } = window.admin;
+      const listEl = $('list');
+      listEl.textContent = '';
+      if (!items.length) {
+        listEl.textContent = '검토할 제출이 없어요.';
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'admin-row';
+
+        const info = document.createElement('div');
+        info.className = 'admin-row-info';
+        const name = document.createElement('div');
+        name.className = 'admin-row-name';
+        name.textContent = item.nickname || '(닉네임 없음)';
+        const link = document.createElement('a');
+        link.className = 'admin-row-url';
+        link.href = item.url;
+        link.textContent = item.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        const date = document.createElement('div');
+        date.className = 'admin-row-date';
+        date.textContent = new Date(item.createdAt).toLocaleString('ko-KR');
+        info.append(name, link, date);
+
+        const actions = document.createElement('div');
+        actions.className = 'admin-row-actions';
+        const amount = document.createElement('input');
+        amount.className = 'admin-amount';
+        amount.type = 'number';
+        amount.min = '1';
+        amount.value = '5';
+        const approve = document.createElement('button');
+        approve.className = 'admin-btn small';
+        approve.textContent = '승인';
+        approve.onclick = () => {
+          const n = Number(amount.value);
+          if (!Number.isInteger(n) || n < 1) return alert('지급할 우표 수를 확인해 주세요.');
+          if (confirm('우표 ' + n + '장을 지급할까요?')) decide(item.id, 'approve', n, approve);
+        };
+        const reject = document.createElement('button');
+        reject.className = 'admin-btn ghost small';
+        reject.textContent = '반려';
+        reject.onclick = () => {
+          if (confirm('반려할까요? 지급 없이 닫혀요.')) decide(item.id, 'reject', null, reject);
+        };
+        actions.append(amount, approve, reject);
+
+        row.append(info, actions);
+        listEl.append(row);
+      }
+    }
+
+    async function decide(id, action, amount, btn) {
+      const { api, showLogin } = window.admin;
+      btn.disabled = true;
+      try {
+        await api('/admin/stamp-events/' + id + '/' + action, {
+          method: 'POST',
+          body: JSON.stringify(action === 'approve' ? { amount } : {}),
+        });
+        await window.pageLoad();
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+        btn.disabled = false;
+      }
+    }
+  </script>
+</AdminLayout>

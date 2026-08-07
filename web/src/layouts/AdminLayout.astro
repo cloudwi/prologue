@@ -1,0 +1,359 @@
+---
+import '../styles/global.css';
+
+// 어드민 공용 셸 — 로그인(이메일 인증코드)·API 헬퍼·탭 내비를 제공한다.
+// 각 페이지는 패널 내용 마크업과 window.pageLoad()만 구현하면 된다.
+const API_BASE = 'https://api.prologue.day';
+const { title } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, '') || '/admin';
+const tabs = [
+  { href: '/admin', label: '대시보드' },
+  { href: '/admin/reports', label: '신고' },
+  { href: '/admin/members', label: '회원' },
+  { href: '/admin/stamps', label: '우표 이벤트' },
+];
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · 프롤로그 어드민</title>
+    <!-- 운영 도구 — 색인·리퍼러 전달을 막는다 -->
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" href="/favicon.png" />
+  </head>
+  <body class="admin-body">
+    <main class="admin-wrap">
+      <h1 class="admin-title">프롤로그 어드민</h1>
+
+      <nav class="admin-nav">
+        {tabs.map((t) => (
+          <a href={t.href} class:list={['admin-tab', { active: path === t.href }]}>{t.label}</a>
+        ))}
+      </nav>
+
+      <!-- 로그인 — 앱과 같은 이메일 인증코드 방식 -->
+      <section id="login" class="admin-card" hidden>
+        <h2 class="admin-sub">로그인</h2>
+        <p class="admin-desc">어드민 권한이 있는 계정의 이메일로 인증해 주세요.</p>
+        <div class="admin-field">
+          <input id="email" type="email" placeholder="이메일" autocomplete="email" />
+          <button type="button" class="admin-btn ghost" id="send-code">코드 받기</button>
+        </div>
+        <div class="admin-field" id="code-row" hidden>
+          <input id="code" inputmode="numeric" maxlength="6" placeholder="6자리 코드" />
+          <button type="button" class="admin-btn" id="verify">로그인</button>
+        </div>
+        <p class="admin-msg" id="login-msg"></p>
+      </section>
+
+      <section id="panel" hidden>
+        <div class="admin-panel-head">
+          <h2 class="admin-sub">{title}</h2>
+          <div>
+            <button type="button" class="admin-btn ghost small" id="refresh">새로고침</button>
+            <button type="button" class="admin-btn ghost small" id="logout">로그아웃</button>
+          </div>
+        </div>
+        <slot />
+      </section>
+    </main>
+
+    <script is:inline define:vars={{ API_BASE }}>
+      const $ = (id) => document.getElementById(id);
+      const TOKEN_KEY = 'pl_admin_token';
+      let token = localStorage.getItem(TOKEN_KEY) || '';
+
+      async function api(path, options = {}) {
+        const res = await fetch(API_BASE + path, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: 'Bearer ' + token } : {}),
+          },
+        });
+        if (res.status === 401 || res.status === 403) {
+          throw Object.assign(new Error('권한이 없거나 세션이 만료됐어요.'), { auth: true });
+        }
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error((data && data.message) || 'HTTP ' + res.status);
+        return data;
+      }
+
+      function showLogin(msg) {
+        token = '';
+        localStorage.removeItem(TOKEN_KEY);
+        $('panel').hidden = true;
+        $('login').hidden = false;
+        $('login-msg').textContent = msg || '';
+      }
+
+      async function showPanel() {
+        $('login').hidden = true;
+        $('panel').hidden = false;
+        if (window.pageLoad) await window.pageLoad();
+      }
+
+      // 페이지 스크립트가 쓰는 공용 훅
+      window.admin = { $, api, showLogin };
+
+      $('send-code').addEventListener('click', async () => {
+        const email = $('email').value.trim();
+        if (!email) return;
+        $('send-code').disabled = true;
+        try {
+          await api('/auth/email/request-code', { method: 'POST', body: JSON.stringify({ email }) });
+          $('code-row').hidden = false;
+          $('login-msg').textContent = '메일로 6자리 코드를 보냈어요.';
+          $('code').focus();
+        } catch (e) {
+          $('login-msg').textContent = e.message;
+        } finally {
+          $('send-code').disabled = false;
+        }
+      });
+
+      $('verify').addEventListener('click', async () => {
+        const email = $('email').value.trim();
+        const code = $('code').value.trim();
+        if (!email || !/^\d{6}$/.test(code)) {
+          $('login-msg').textContent = '이메일과 6자리 코드를 확인해 주세요.';
+          return;
+        }
+        $('verify').disabled = true;
+        try {
+          const data = await api('/auth/email/verify', { method: 'POST', body: JSON.stringify({ email, code }) });
+          token = data.accessToken;
+          localStorage.setItem(TOKEN_KEY, token);
+          await showPanel();
+        } catch (e) {
+          $('login-msg').textContent = e.message;
+        } finally {
+          $('verify').disabled = false;
+        }
+      });
+
+      $('refresh').addEventListener('click', () => window.pageLoad && window.pageLoad());
+      $('logout').addEventListener('click', () => showLogin(''));
+
+      if (token) showPanel();
+      else showLogin('');
+    </script>
+
+    <style is:global>
+      /* 운영 도구는 멋 부리지 않는다 — 제목까지 시스템 기본 글씨체로 통일. */
+      .admin-body,
+      .admin-body h1,
+      .admin-body h2 {
+        font-family:
+          -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      }
+      .admin-body {
+        min-height: 100vh;
+        padding: 48px 20px;
+      }
+      .admin-wrap {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .admin-title {
+        font-size: 24px;
+        margin-bottom: 16px;
+      }
+      .admin-nav {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .admin-tab {
+        padding: 8px 14px 10px;
+        font-size: 14px;
+        color: var(--muted);
+        text-decoration: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+      .admin-tab.active {
+        color: var(--ink);
+        font-weight: 700;
+        border-bottom-color: var(--terracotta);
+      }
+      .admin-sub {
+        font-size: 17px;
+      }
+      .admin-desc {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 6px 0 16px;
+      }
+      .admin-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 22px;
+      }
+      .admin-field {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .admin-field input {
+        flex: 1;
+        height: 44px;
+        padding: 0 14px;
+        font-size: 15px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .admin-btn {
+        height: 44px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--terracotta);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .admin-btn.ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--terracotta-strong);
+      }
+      .admin-btn.small {
+        height: 36px;
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .admin-btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .admin-msg {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 12px;
+        min-height: 1.2em;
+      }
+      .admin-panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .admin-list {
+        padding: 6px 22px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .admin-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 0;
+      }
+      .admin-row + .admin-row {
+        border-top: 1px solid var(--border);
+      }
+      .admin-row-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .admin-row-name {
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .admin-row-url {
+        display: block;
+        color: var(--terracotta-strong);
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-decoration: underline;
+      }
+      .admin-row-date {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .admin-row-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .admin-amount {
+        width: 58px;
+        height: 36px;
+        text-align: center;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--paper);
+        color: var(--ink);
+        font-size: 14px;
+      }
+      .admin-snapshot {
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.5;
+        margin-top: 4px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 4.5em;
+        overflow: hidden;
+      }
+      .admin-status-done {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      /* 대시보드 스탯 타일 — 숫자는 잉크, 라벨은 회색. 색은 데이터가 아니라 텍스트 토큰이 입는다. */
+      .admin-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+      }
+      .admin-stat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 20px;
+      }
+      .admin-stat-value {
+        color: var(--ink);
+        font-size: 28px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .admin-stat-value.alert {
+        color: var(--terracotta-strong);
+      }
+      .admin-stat-label {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 2px;
+      }
+      .admin-stat-hint {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      @media (max-width: 560px) {
+        .admin-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .admin-row-actions {
+          justify-content: flex-end;
+        }
+      }
+    </style>
+  </body>
+</html>

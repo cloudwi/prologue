@@ -22,4 +22,12 @@ class AccountModerationService(
         account.suspend()
         accountRepository.save(account)
     }
+
+    @Transactional
+    fun reactivate(accountId: UUID) {
+        val account = accountRepository.findById(AccountId(accountId))
+            ?: throw AuthDomainException("계정을 찾을 수 없다")
+        account.reactivate()
+        accountRepository.save(account)
+    }
 }

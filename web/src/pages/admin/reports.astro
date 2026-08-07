@@ -1,0 +1,99 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="신고 검토">
+  <div id="report-list" class="admin-card admin-list"></div>
+
+  <script is:inline>
+    const REPORT_REASON = { SPAM: '스팸', ABUSE: '욕설·혐오', SEXUAL: '성적 콘텐츠', FAKE: '사칭·허위', OTHER: '기타' };
+    const REPORT_CONTEXT = { ANSWER: '답변', MAIL: '편지' };
+    const REPORT_STATUS = { DISMISSED: '기각됨', RESOLVED: '정지 조치됨' };
+
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const listEl = $('report-list');
+      listEl.textContent = '불러오는 중...';
+      try {
+        const data = await api('/admin/reports');
+        render(data.reports);
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        listEl.textContent = e.message;
+      }
+    };
+
+    // innerHTML 금지 — 닉네임·스냅샷은 사용자 입력이라 전부 textContent로만 그린다.
+    function render(items) {
+      const { $ } = window.admin;
+      const listEl = $('report-list');
+      listEl.textContent = '';
+      if (!items.length) {
+        listEl.textContent = '접수된 신고가 없어요.';
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'admin-row';
+
+        const info = document.createElement('div');
+        info.className = 'admin-row-info';
+        const name = document.createElement('div');
+        name.className = 'admin-row-name';
+        name.textContent =
+          (item.reportedNickname || '(탈퇴한 계정)') +
+          ' — ' + (REPORT_REASON[item.reason] || item.reason) +
+          ' (' + (REPORT_CONTEXT[item.context] || item.context) + ')';
+        const snapshot = document.createElement('div');
+        snapshot.className = 'admin-snapshot';
+        snapshot.textContent = item.snapshot || '(신고 시점 콘텐츠 없음)';
+        const date = document.createElement('div');
+        date.className = 'admin-row-date';
+        date.textContent =
+          '신고자: ' + (item.reporterNickname || '(탈퇴한 계정)') +
+          ' · ' + new Date(item.createdAt).toLocaleString('ko-KR');
+        info.append(name, snapshot, date);
+
+        const actions = document.createElement('div');
+        actions.className = 'admin-row-actions';
+        if (item.status === 'PENDING') {
+          const suspend = document.createElement('button');
+          suspend.className = 'admin-btn small';
+          suspend.textContent = '계정 정지';
+          suspend.onclick = () => {
+            if (confirm('피신고 계정을 정지할까요? 정지된 계정은 로그인할 수 없어요.'))
+              decide(item.id, 'suspend', suspend);
+          };
+          const dismiss = document.createElement('button');
+          dismiss.className = 'admin-btn ghost small';
+          dismiss.textContent = '기각';
+          dismiss.onclick = () => {
+            if (confirm('문제없음으로 기각할까요?')) decide(item.id, 'dismiss', dismiss);
+          };
+          actions.append(suspend, dismiss);
+        } else {
+          const done = document.createElement('span');
+          done.className = 'admin-status-done';
+          done.textContent = REPORT_STATUS[item.status] || item.status;
+          actions.append(done);
+        }
+
+        row.append(info, actions);
+        listEl.append(row);
+      }
+    }
+
+    async function decide(id, action, btn) {
+      const { api, showLogin } = window.admin;
+      btn.disabled = true;
+      try {
+        await api('/admin/reports/' + id + '/' + action, { method: 'POST' });
+        await window.pageLoad();
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+        btn.disabled = false;
+      }
+    }
+  </script>
+</AdminLayout>
