@@ -10,4 +10,7 @@ class QuestionPersistenceAdapter(
 ) : QuestionRepository {
     override fun findAllOrdered(): List<Question> =
         jpa.findAllByOrderByIdAsc().map { Question(it.id, it.content) }
+
+    override fun save(question: Question): Question =
+        jpa.save(QuestionJpaEntity(question.id, question.content)).let { Question(it.id, it.content) }
 }

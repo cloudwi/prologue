@@ -24,6 +24,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           { label: '오늘 가입', value: s.joinedToday },
           { label: '주간 활성', value: s.weeklyActive, hint: '최근 7일 접속 계정' },
           { label: '오늘 답변', value: s.answersToday },
+          { label: '오늘 소개 카드', value: s.revealsToday, hint: '0에 가까우면 성비·풀 부족 신호' },
           { label: '대기 신고', value: s.pendingReports, alert: s.pendingReports > 0 },
           { label: '정지 계정', value: s.suspendedAccounts },
         ];

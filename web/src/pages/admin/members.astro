@@ -77,6 +77,17 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           };
           actions.append(reactivate);
         }
+        if (m.status !== 'WITHDRAWN') {
+          const grant = document.createElement('button');
+          grant.className = 'admin-btn ghost small';
+          grant.textContent = '우표 지급';
+          grant.onclick = () => {
+            const n = Number(prompt('몇 장을 지급할까요? (CS 보상 등)', '3'));
+            if (!Number.isInteger(n) || n < 1 || n > 100) return;
+            grantStamps(m.accountId, n, grant);
+          };
+          actions.append(grant);
+        }
 
         row.append(info, actions);
         listEl.append(row);
@@ -96,9 +107,29 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       }
     }
 
+    async function grantStamps(accountId, amount, btn) {
+      const { api, showLogin } = window.admin;
+      btn.disabled = true;
+      try {
+        await api('/admin/members/' + accountId + '/grant-stamps', {
+          method: 'POST',
+          body: JSON.stringify({ amount }),
+        });
+        alert('우표 ' + amount + '장을 지급했어요.');
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     document.getElementById('member-search').addEventListener('click', () => window.pageLoad());
     document.getElementById('member-q').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') window.pageLoad();
     });
+    // 문답 모니터링 등에서 ?q=닉네임 으로 진입하면 바로 검색어를 채운다.
+    const initialQ = new URLSearchParams(location.search).get('q');
+    if (initialQ) document.getElementById('member-q').value = initialQ;
   </script>
 </AdminLayout>

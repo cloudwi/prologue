@@ -1,0 +1,96 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="질문 관리">
+  <div class="admin-field" style="margin: 0 0 12px;">
+    <input id="new-question" type="text" maxlength="500" placeholder="새 질문 (예: 요즘 가장 마음 쓰는 일은?)" />
+    <button type="button" class="admin-btn" id="add-question">추가</button>
+  </div>
+  <p class="admin-desc" style="margin: 0 0 12px;">
+    질문은 id 순서로 날짜에 따라 순환해요. 질문을 추가하면 주기가 바뀌어 오늘의 질문이 달라질 수 있어요. 삭제는 없고 문구 수정만 돼요(답변들이 질문을 참조해요).
+  </p>
+  <div id="question-list" class="admin-card admin-list"></div>
+
+  <script is:inline>
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const listEl = $('question-list');
+      listEl.textContent = '불러오는 중...';
+      try {
+        const data = await api('/admin/questions');
+        render(data.questions);
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        listEl.textContent = e.message;
+      }
+    };
+
+    // innerHTML 금지 — 질문 문구도 입력값이라 전부 textContent로만 그린다.
+    function render(items) {
+      const { $ } = window.admin;
+      const listEl = $('question-list');
+      listEl.textContent = '';
+      if (!items.length) {
+        listEl.textContent = '등록된 질문이 없어요.';
+        return;
+      }
+      for (const q of items) {
+        const row = document.createElement('div');
+        row.className = 'admin-row';
+
+        const info = document.createElement('div');
+        info.className = 'admin-row-info';
+        const name = document.createElement('div');
+        name.className = 'admin-row-name';
+        name.textContent = 'Q' + q.id + (q.isToday ? ' · 오늘의 질문' : '');
+        const content = document.createElement('div');
+        content.className = 'admin-snapshot';
+        content.textContent = q.content;
+        info.append(name, content);
+
+        const actions = document.createElement('div');
+        actions.className = 'admin-row-actions';
+        const edit = document.createElement('button');
+        edit.className = 'admin-btn ghost small';
+        edit.textContent = '수정';
+        edit.onclick = () => {
+          const next = prompt('질문 문구를 수정해 주세요.', q.content);
+          if (next != null && next.trim() && next.trim() !== q.content) save(q.id, next.trim(), edit);
+        };
+        actions.append(edit);
+
+        row.append(info, actions);
+        listEl.append(row);
+      }
+    }
+
+    async function save(id, content, btn) {
+      const { api, showLogin } = window.admin;
+      btn.disabled = true;
+      try {
+        await api('/admin/questions/' + id, { method: 'PUT', body: JSON.stringify({ content }) });
+        await window.pageLoad();
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('add-question').addEventListener('click', async () => {
+      const { $, api, showLogin } = window.admin;
+      const input = $('new-question');
+      const content = input.value.trim();
+      if (!content) return;
+      try {
+        await api('/admin/questions', { method: 'POST', body: JSON.stringify({ content }) });
+        input.value = '';
+        await window.pageLoad();
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+      }
+    });
+  </script>
+</AdminLayout>

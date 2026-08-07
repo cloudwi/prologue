@@ -1,0 +1,70 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="문답 모니터링">
+  <p class="admin-desc" style="margin: 0 0 12px;">
+    최근 답변 50개예요. 부적절한 답변을 발견하면 닉네임 옆 "회원 보기"로 넘어가 조치하세요. 편지는 사적 대화라 여기서 보지 않아요 — 신고된 것만 신고 탭에서 봐요.
+  </p>
+  <div id="answer-list" class="admin-card admin-list"></div>
+
+  <script is:inline>
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const listEl = $('answer-list');
+      listEl.textContent = '불러오는 중...';
+      try {
+        const data = await api('/admin/answers');
+        render(data.answers);
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        listEl.textContent = e.message;
+      }
+    };
+
+    // innerHTML 금지 — 답변·닉네임은 사용자 입력이라 전부 textContent로만 그린다.
+    function render(items) {
+      const { $ } = window.admin;
+      const listEl = $('answer-list');
+      listEl.textContent = '';
+      if (!items.length) {
+        listEl.textContent = '아직 답변이 없어요.';
+        return;
+      }
+      for (const a of items) {
+        const row = document.createElement('div');
+        row.className = 'admin-row';
+
+        const info = document.createElement('div');
+        info.className = 'admin-row-info';
+        const question = document.createElement('div');
+        question.className = 'admin-row-date';
+        question.textContent = a.question || '(삭제된 질문)';
+        const content = document.createElement('div');
+        content.className = 'admin-snapshot';
+        content.textContent = a.content;
+        const meta = document.createElement('div');
+        meta.className = 'admin-row-date';
+        meta.textContent =
+          (a.nickname || '(프로필 없음)') + ' · ' + new Date(a.createdAt).toLocaleString('ko-KR');
+        info.append(question, content, meta);
+
+        const actions = document.createElement('div');
+        actions.className = 'admin-row-actions';
+        if (a.nickname) {
+          const link = document.createElement('a');
+          link.className = 'admin-btn ghost small';
+          link.style.display = 'inline-flex';
+          link.style.alignItems = 'center';
+          link.style.textDecoration = 'none';
+          link.textContent = '회원 보기';
+          link.href = '/admin/members?q=' + encodeURIComponent(a.nickname);
+          actions.append(link);
+        }
+
+        row.append(info, actions);
+        listEl.append(row);
+      }
+    }
+  </script>
+</AdminLayout>

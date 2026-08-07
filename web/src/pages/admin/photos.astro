@@ -1,0 +1,81 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="사진 검수">
+  <p class="admin-desc" style="margin: 0 0 12px;">
+    사진이 있는 최근 가입 회원 30명이에요. 자동 검수(얼굴)를 통과해도 부적절할 수 있어 사람 눈으로 한 번 더 봐요. 삭제하면 회원 프로필과 저장소에서 함께 지워져요.
+  </p>
+  <div id="photo-list"></div>
+
+  <script is:inline>
+    window.pageLoad = async function () {
+      const { $, api, showLogin } = window.admin;
+      const listEl = $('photo-list');
+      listEl.textContent = '불러오는 중...';
+      try {
+        const data = await api('/admin/photos');
+        render(data.members);
+      } catch (e) {
+        if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
+        listEl.textContent = e.message;
+      }
+    };
+
+    // innerHTML 금지 — 닉네임은 사용자 입력이라 전부 textContent로만 그린다.
+    function render(items) {
+      const { $ } = window.admin;
+      const listEl = $('photo-list');
+      listEl.textContent = '';
+      if (!items.length) {
+        listEl.textContent = '사진을 올린 회원이 없어요.';
+        return;
+      }
+      for (const m of items) {
+        const card = document.createElement('div');
+        card.className = 'admin-card admin-photo-card';
+
+        const name = document.createElement('div');
+        name.className = 'admin-row-name';
+        name.textContent =
+          (m.nickname || '(프로필 없음)') + ' · 가입 ' + new Date(m.createdAt).toLocaleDateString('ko-KR');
+        card.append(name);
+
+        const grid = document.createElement('div');
+        grid.className = 'admin-photo-grid';
+        for (const url of m.photos) {
+          const cell = document.createElement('div');
+          cell.className = 'admin-photo-cell';
+          const img = document.createElement('img');
+          img.src = url;
+          img.loading = 'lazy';
+          img.alt = '프로필 사진';
+          const remove = document.createElement('button');
+          remove.className = 'admin-photo-remove';
+          remove.textContent = '삭제';
+          remove.onclick = () => {
+            if (confirm('이 사진을 삭제할까요? 회원 프로필과 저장소에서 함께 지워져요.'))
+              removePhoto(m.accountId, url, remove);
+          };
+          cell.append(img, remove);
+          grid.append(cell);
+        }
+        card.append(grid);
+        listEl.append(card);
+      }
+    }
+
+    async function removePhoto(accountId, url, btn) {
+      const { api, showLogin } = window.admin;
+      btn.disabled = true;
+      try {
+        await api('/admin/photos/remove', { method: 'POST', body: JSON.stringify({ accountId, url }) });
+        await window.pageLoad();
+      } catch (e) {
+        if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+        alert(e.message);
+        btn.disabled = false;
+      }
+    }
+  </script>
+</AdminLayout>

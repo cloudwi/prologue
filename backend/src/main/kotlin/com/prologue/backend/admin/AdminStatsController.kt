@@ -26,6 +26,8 @@ class AdminStatsController(
         /** 최근 7일 안에 한 번이라도 접속한 계정 수(accounts.last_seen_at 기준). */
         val weeklyActive: Int,
         val answersToday: Int,
+        /** 오늘 공개된 소개 카드 수(daily_reveals) — 0에 가까우면 성비·풀 부족 신호. */
+        val revealsToday: Int,
         val pendingReports: Int,
         val suspendedAccounts: Int,
     )
@@ -42,6 +44,7 @@ class AdminStatsController(
             joinedToday = count("select count(*) from members where created_at >= ?", kstMidnight),
             weeklyActive = count("select count(*) from accounts where last_seen_at >= now() - interval '7 days'"),
             answersToday = count("select count(*) from answers where created_at >= ?", kstMidnight),
+            revealsToday = count("select count(*) from daily_reveals where created_at >= ?", kstMidnight),
             pendingReports = count("select count(*) from reports where status = 'PENDING'"),
             suspendedAccounts = count("select count(*) from accounts where status = 'SUSPENDED'"),
         )

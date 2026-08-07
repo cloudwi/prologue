@@ -8,9 +8,12 @@ const { title } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, '') || '/admin';
 const tabs = [
   { href: '/admin', label: '대시보드' },
+  { href: '/admin/questions', label: '질문' },
+  { href: '/admin/answers', label: '문답' },
+  { href: '/admin/photos', label: '사진' },
   { href: '/admin/reports', label: '신고' },
   { href: '/admin/members', label: '회원' },
-  { href: '/admin/stamps', label: '우표 이벤트' },
+  { href: '/admin/stamps', label: '우표' },
 ];
 ---
 
@@ -202,6 +205,7 @@ const tabs = [
         gap: 4px;
         margin-bottom: 20px;
         border-bottom: 1px solid var(--border);
+        overflow-x: auto;
       }
       .admin-tab {
         padding: 8px 14px 10px;
@@ -378,6 +382,40 @@ const tabs = [
         color: var(--muted);
         font-size: 12px;
         margin-top: 6px;
+      }
+      /* 사진 검수 그리드 */
+      .admin-photo-card {
+        margin-bottom: 12px;
+      }
+      .admin-photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .admin-photo-cell {
+        position: relative;
+      }
+      .admin-photo-cell img {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--paper);
+      }
+      .admin-photo-remove {
+        position: absolute;
+        right: 6px;
+        bottom: 6px;
+        height: 28px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
       }
       @media (max-width: 560px) {
         .admin-row {
