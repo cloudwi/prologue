@@ -22,6 +22,7 @@ class HeartService(
     private val heartRepository: HeartRepository,
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
+    private val stampService: StampService,
 ) {
     /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 서로의 마음을 안 것. */
     @Transactional
@@ -31,11 +32,29 @@ class HeartService(
         val toAccountId = peerAnswer.accountId
         if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 하트를 보낼 수 없어요")
 
+        // 이미 보낸 하트면 아무 일도 일어나지 않는다 — 보상도 여기서 한 번만 걸린다(멱등).
+        var stampEarned = false
         if (!heartRepository.exists(fromAccountId, toAccountId, peerAnswer.questionId)) {
             heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
+            stampEarned = rewardIfMilestone(fromAccountId)
         }
 
-        return HeartResult(hearted = true, matched = heartRepository.existsFromTo(toAccountId, fromAccountId))
+        return HeartResult(
+            hearted = true,
+            matched = heartRepository.existsFromTo(toAccountId, fromAccountId),
+            stampEarned = stampEarned,
+        )
+    }
+
+    /**
+     * 하트를 [HEARTS_PER_STAMP]번 보낼 때마다 우표 한 장을 돌려준다.
+     * 마음을 자주 건네는 사람에게 편지 쓸 여력을 주는 장치 — 보낸 하트의 누적 수를 기준으로 한다.
+     */
+    private fun rewardIfMilestone(fromAccountId: UUID): Boolean {
+        val sent = heartRepository.countFrom(fromAccountId)
+        if (sent == 0L || sent % HEARTS_PER_STAMP != 0L) return false
+        stampService.grantTo(fromAccountId, 1, StampService.REASON_HEART)
+        return true
     }
 
     /**
@@ -82,4 +101,9 @@ data class HeartResult(
     val hearted: Boolean,
     /** 서로 하트 — 마음이 통했다. */
     val matched: Boolean,
+    /** 이번 하트로 우표를 받았는지 — 화면이 알려줄 수 있게. */
+    val stampEarned: Boolean = false,
 )
+
+/** 하트 몇 번마다 우표 한 장을 돌려줄지. */
+private const val HEARTS_PER_STAMP = 5L

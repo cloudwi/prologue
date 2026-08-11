@@ -101,13 +101,15 @@ export default function PeerDetailScreen() {
     try {
       const result = await sendHeart(peer.peerAnswerId);
       setHearted(true);
+      // 하트 다섯 번마다 우표 한 장 — 받은 순간 바로 알려준다
+      const stampNote = result.stampEarned ? '\n\n하트를 다섯 번 보내 우표 한 장을 받았어요.' : '';
       if (result.matched) {
-        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 편지로 연락처를 건네보세요.', [
+        Alert.alert('서로 호감이에요!', `두 사람 모두 하트를 보냈어요. 편지로 연락처를 건네보세요.${stampNote}`, [
           { text: '나중에', style: 'cancel' },
           { text: '편지 쓰기', onPress: openCompose },
         ]);
       } else {
-        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 서로의 마음을 알 수 있어요.');
+        Alert.alert('하트를 보냈어요', `상대도 하트를 보내면 서로의 마음을 알 수 있어요.${stampNote}`);
       }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');

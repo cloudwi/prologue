@@ -211,7 +211,7 @@ export default function DiscoverScreen() {
                   </Pressable>
                 )}
                 {!today?.answered && (
-                  <Text style={[styles.hint, { color: c.textSecondary }]}>답변해야 상대의 답변을 볼 수 있어요.</Text>
+                  <Text style={[styles.hint, { color: c.textSecondary }]}>답변해야 오늘의 상대를 만날 수 있어요.</Text>
                 )}
               </>
             ) : (
@@ -256,6 +256,13 @@ export default function DiscoverScreen() {
                 <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected }]}>
                   <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
                     오늘의 인연은 정오에 공개돼요.{'\n'}그동안 오늘의 질문에 답을 남겨보세요.
+                  </Text>
+                </View>
+              ) : !peersData.answerUnlocked ? (
+                // 답을 남겨야 상대가 보인다 — "후보가 없다"와 다른 상황이라 문구를 나눈다
+                <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected }]}>
+                  <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
+                    오늘의 답변을 먼저 남겨주세요.{'\n'}답을 남기면 오늘의 상대를 만날 수 있어요.
                   </Text>
                 </View>
               ) : peersData.peers.length === 0 ? (

@@ -63,7 +63,7 @@ class DailyMeetService(
 
     /**
      * 오늘의 상대 — 매일 정오(KST)에 두 사람이 공개된다.
-     * 프로필(성별·나이·키·소개·키워드)은 바로 보이고, 답변(글)은 Give&Take: 내가 오늘 답해야 열린다.
+     * 내가 오늘 질문에 답해야 상대가 보인다(Give&Take) — 받기만 하는 사람은 없게 한다.
      * 공개된 상대는 그날 동안 고정(비독점: 같은 상대가 여러 명에게 노출 가능) + 공평 분배.
      * 정오에 부족했으면 이후 조회 때마다 후보가 생기는 대로 채운다 — 먼저 답한 사람도 결국 소개받는다.
      */
@@ -74,6 +74,11 @@ class DailyMeetService(
 
         // 정오 전에는 아직 공개 전
         if (now.isBefore(revealTime)) return TodayPeersView(open = false, answerUnlocked = answered, peers = emptyList())
+
+        // 내가 답하기 전에는 상대를 만들지도 보여주지도 않는다.
+        // 여기서 일찍 빠져나가야 공개 기록(DailyReveal)도 남지 않는다 — 답하지 않은 사람 때문에
+        // 후보의 노출 횟수가 올라가면, 정작 답한 사람들에게 돌아갈 몫이 줄어든다.
+        if (!answered) return TodayPeersView(open = true, answerUnlocked = false, peers = emptyList())
 
         // 이미 공개된 상대는 그대로 고정
         val revealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id)

@@ -26,7 +26,8 @@ class HeartServiceTest {
     private val heartRepository = mockk<HeartRepository>(relaxed = true)
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
-    private val service = HeartService(answerRepository, heartRepository, mailRepository, memberQueryService)
+    private val stampService = mockk<StampService>(relaxed = true)
+    private val service = HeartService(answerRepository, heartRepository, mailRepository, memberQueryService, stampService)
 
     private val me = UUID.randomUUID()
     private val peer = UUID.randomUUID()
@@ -125,5 +126,44 @@ class HeartServiceTest {
         every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns null
 
         assertEquals(1, service.receivedHearts(me).size)
+    }
+
+    @Test
+    fun `하트 다섯 번째마다 우표 한 장을 받는다`() {
+        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        every { heartRepository.exists(me, peer, 1L) } returns false
+        every { heartRepository.existsFromTo(peer, me) } returns false
+        every { heartRepository.countFrom(me) } returns 5L
+
+        val result = service.heart(me, peerAnswerId)
+
+        assertTrue(result.stampEarned)
+        verify(exactly = 1) { stampService.grantTo(me, 1, StampService.REASON_HEART) }
+    }
+
+    @Test
+    fun `다섯의 배수가 아니면 우표를 주지 않는다`() {
+        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        every { heartRepository.exists(me, peer, 1L) } returns false
+        every { heartRepository.existsFromTo(peer, me) } returns false
+        every { heartRepository.countFrom(me) } returns 4L
+
+        val result = service.heart(me, peerAnswerId)
+
+        assertFalse(result.stampEarned)
+        verify(exactly = 0) { stampService.grantTo(any(), any(), any()) }
+    }
+
+    @Test
+    fun `이미 보낸 하트를 다시 눌러도 우표가 또 나오지는 않는다`() {
+        // 하트 저장이 멱등이라 보상도 함께 멱등이어야 한다 — 아니면 같은 상대를 연타해 우표를 찍어낼 수 있다.
+        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        every { heartRepository.exists(me, peer, 1L) } returns true
+        every { heartRepository.existsFromTo(peer, me) } returns false
+
+        val result = service.heart(me, peerAnswerId)
+
+        assertFalse(result.stampEarned)
+        verify(exactly = 0) { stampService.grantTo(any(), any(), any()) }
     }
 }

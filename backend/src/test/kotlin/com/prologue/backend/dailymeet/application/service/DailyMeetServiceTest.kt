@@ -13,6 +13,7 @@ import com.prologue.backend.member.domain.model.Member
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -135,24 +136,18 @@ class DailyMeetServiceTest {
     }
 
     @Test
-    fun `오늘의 상대 - 답 안 했어도 프로필은 보이되 답변은 잠긴다`() {
-        val peerAccount = UUID.randomUUID()
-        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "상대 답변", Instant.now())
+    fun `오늘의 상대 - 내가 답하기 전에는 상대가 보이지 않는다`() {
+        // Give&Take: 받기만 하는 사람은 없게 한다. 공개 기록도 남기지 않아야
+        // 답하지 않은 사람 때문에 후보의 노출 몫이 줄지 않는다.
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null // 미답변
-        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
-        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
-        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(peerAnswer)
-        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
-        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
 
         val view = service.todayPeers(accountId, now = NOON)
 
         assertTrue(view.open)
-        assertEquals(1, view.peers.size)
         assertFalse(view.answerUnlocked)
-        assertNull(view.peers[0].peerAnswer) // 답변은 Give&Take로 잠김
-        assertEquals(Gender.FEMALE, view.peers[0].gender) // 프로필은 미리 보임
+        assertTrue(view.peers.isEmpty())
+        verify(exactly = 0) { dailyRevealRepository.save(any()) }
     }
 
     @Test
