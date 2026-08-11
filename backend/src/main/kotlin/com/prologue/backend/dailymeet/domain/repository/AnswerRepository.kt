@@ -14,6 +14,12 @@ interface AnswerRepository {
     /** 같은 질문에 대한 '나 외의' 모든 답변. 성별·선호 필터링/페어링용. */
     fun findOthers(questionId: Long, excludeAccountId: UUID): List<Answer>
 
+    /**
+     * 여러 질문에 걸친 '나 외의' 모든 답변. 오늘의 상대 후보를 최근 며칠치로 넓힐 때 쓴다.
+     * 유저가 적으면 같은 날 같은 질문에 겹칠 확률이 낮아, 후보를 오늘 하루로 묶으면 아무도 못 만난다.
+     */
+    fun findOthersByQuestionIds(questionIds: List<Long>, excludeAccountId: UUID): List<Answer>
+
     /** 한 사람이 남긴 모든 답변, 최신순. 본인 전용 기록 조회용. */
     fun findAllByAccountId(accountId: UUID): List<Answer>
 }

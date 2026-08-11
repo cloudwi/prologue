@@ -13,5 +13,7 @@ interface AnswerJpaRepository : JpaRepository<AnswerJpaEntity, UUID> {
 
     fun findByQuestionIdAndAccountIdNot(questionId: Long, accountId: UUID): List<AnswerJpaEntity>
 
+    fun findByQuestionIdInAndAccountIdNot(questionIds: List<Long>, accountId: UUID): List<AnswerJpaEntity>
+
     fun findByAccountIdOrderByCreatedAtDesc(accountId: UUID): List<AnswerJpaEntity>
 }

@@ -346,7 +346,8 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
 
   /** 상세 화면으로 — 나머지 사진과 프로필 전체, 하트는 거기서. 오늘의 질문도 함께 넘긴다. */
   function openDetail() {
-    router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question: question ?? '' } });
+    // 상대가 답한 질문이 오늘 질문과 다를 수 있다 — 상대 쪽 값을 우선한다
+    router.push({ pathname: '/peer', params: { data: JSON.stringify(peer), question: peer.question ?? question ?? '' } });
   }
 
   return (
@@ -398,8 +399,8 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
       {peer.answerUnlocked && peer.peerAnswer ? (
         <>
           {/* 답변만 있으면 무슨 질문에 대한 답인지 끊긴다 — 질문을 먼저 보여준다. */}
-          {question ? (
-            <Text style={[styles.peerAnswerQuestion, { color: c.textSecondary }]}>{question}</Text>
+          {peer.question ?? question ? (
+            <Text style={[styles.peerAnswerQuestion, { color: c.textSecondary }]}>{peer.question ?? question}</Text>
           ) : null}
           <Pressable onPress={() => setRevealed(true)} disabled={revealed}>
             <Text

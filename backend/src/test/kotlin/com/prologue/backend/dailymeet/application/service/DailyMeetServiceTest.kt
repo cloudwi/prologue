@@ -44,8 +44,12 @@ class DailyMeetServiceTest {
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
     private val question = Question(1L, "요즘 가장 마음 쓰는 일은?")
 
-    private fun member(id: UUID, gender: Gender, prefers: Gender): Member =
-        Member.reconstitute(id, "닉", gender, LocalDate.of(1995, 5, 14), prefers, "서울특별시 강남구", Instant.now())
+    /** 사진 2장을 채운다 — 소개 노출 조건(Member.isVisibleToOthers)을 만족시키기 위해. */
+    private fun member(id: UUID, gender: Gender, prefers: Gender, photos: List<String> = listOf("a.jpg", "b.jpg")): Member =
+        Member.reconstitute(
+            id, "닉", gender, LocalDate.of(1995, 5, 14), prefers, "서울특별시 강남구", Instant.now(),
+            photoUrls = photos,
+        )
 
     @Test
     fun `오늘 - 아직 답 안 함`() {
@@ -138,7 +142,7 @@ class DailyMeetServiceTest {
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null // 미답변
         every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
-        every { answerRepository.findOthers(1L, accountId) } returns listOf(peerAnswer)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(peerAnswer)
         every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
         every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
 
@@ -159,7 +163,7 @@ class DailyMeetServiceTest {
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
         every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
-        every { answerRepository.findOthers(1L, accountId) } returns peers
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns peers
         peers.forEach {
             every { memberQueryService.findProfile(it.accountId) } returns member(it.accountId, Gender.FEMALE, Gender.MALE)
             every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, it.id!!) } returns 0
@@ -185,9 +189,30 @@ class DailyMeetServiceTest {
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
         every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
-        every { answerRepository.findOthers(1L, accountId) } returns listOf(otherAnswer)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(otherAnswer)
         // 후보가 남성(내가 선호하는 여성이 아님) → 제외
         every { memberQueryService.findProfile(sameGenderAccount) } returns member(sameGenderAccount, Gender.MALE, Gender.FEMALE)
+
+        val view = service.todayPeers(accountId, now = NOON)
+
+        assertTrue(view.open)
+        assertTrue(view.peers.isEmpty())
+    }
+
+    @Test
+    fun `오늘의 상대 - 사진이 부족한 후보는 소개하지 않는다`() {
+        // MY 탭이 "사진이 있어야 상대에게 소개돼요"라고 안내한다 — 그 약속을 여기서 지킨다.
+        val noPhotoAccount = UUID.randomUUID()
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val theirAnswer = Answer.reconstitute(UUID.randomUUID(), noPhotoAccount, 1L, "사진 없는 사람의 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(theirAnswer)
+        // 선호는 맞지만 사진이 한 장뿐 → 제외
+        every { memberQueryService.findProfile(noPhotoAccount) } returns
+            member(noPhotoAccount, Gender.FEMALE, Gender.MALE, photos = listOf("only-one.jpg"))
 
         val view = service.todayPeers(accountId, now = NOON)
 
@@ -209,7 +234,7 @@ class DailyMeetServiceTest {
             listOf(DailyReveal.reconstitute(UUID.randomUUID(), accountId, 1L, pinnedAnswerId, Instant.now()))
         every { answerRepository.findById(pinnedAnswerId) } returns pinnedAnswer
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
-        every { answerRepository.findOthers(1L, accountId) } returns listOf(pinnedAnswer, newAnswer)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(pinnedAnswer, newAnswer)
         every { memberQueryService.findProfile(pinnedAccount) } returns member(pinnedAccount, Gender.FEMALE, Gender.MALE)
         every { memberQueryService.findProfile(newAccount) } returns member(newAccount, Gender.FEMALE, Gender.MALE)
         every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, newAnswer.id!!) } returns 0

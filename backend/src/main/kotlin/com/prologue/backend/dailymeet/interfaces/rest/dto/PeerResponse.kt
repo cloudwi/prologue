@@ -9,6 +9,8 @@ import com.prologue.backend.member.domain.model.Gender
 data class PeerResponse(
     val peerAnswerId: String?,
     val peerAnswer: String?,
+    /** 상대가 답한 질문 — 오늘 질문이 아닐 수 있어 화면은 이 값을 우선 쓴다. */
+    val question: String?,
     val answerUnlocked: Boolean,
     val photoUrls: List<String>,
     val nickname: String?,
@@ -34,6 +36,7 @@ data class PeerResponse(
                 mailSent = view.mailSent,
                 peerAnswerId = view.peerAnswerId?.toString(),
                 peerAnswer = view.peerAnswer,
+                question = view.question,
                 answerUnlocked = view.answerUnlocked,
                 photoUrls = view.photoUrls,
                 nickname = view.nickname,

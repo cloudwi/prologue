@@ -20,6 +20,8 @@ export async function answerToday(content: string): Promise<Today> {
 export type Peer = {
   peerAnswerId: string | null;
   peerAnswer: string | null;
+  /** 상대가 답한 질문. 후보를 최근 며칠치로 넓혀서 오늘 질문이 아닐 수 있다. */
+  question: string | null;
   answerUnlocked: boolean;
   /** 노출 순서대로의 프로필 사진. 가입 시 2장 필수라 비어 있는 건 옛 데이터뿐. */
   photoUrls: string[];

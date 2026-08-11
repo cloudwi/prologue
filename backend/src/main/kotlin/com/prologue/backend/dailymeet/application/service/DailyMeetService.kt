@@ -35,6 +35,14 @@ class DailyMeetService(
     private val lastSeenService: LastSeenService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
     @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
+    /**
+     * 후보를 찾을 질문의 범위(일). 1이면 오늘 질문에 답한 사람만 후보다.
+     *
+     * 질문 풀이 100개라 같은 날 같은 질문에 두 사람이 겹칠 확률이 낮다 — 유저가 적을 때
+     * 오늘 하루로 묶으면 아무도 만나지 못한다. 사람이 많아지면 1에 가깝게 좁혀
+     * "같은 질문에 답한 사람"이라는 원래 결을 되찾는다.
+     */
+    @param:Value("\${daily.candidate-days:7}") private val candidateDays: Int = 7,
 ) {
     @Transactional(readOnly = true)
     fun today(accountId: UUID): TodayView {
@@ -78,13 +86,16 @@ class DailyMeetService(
                 ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
 
             val seen = revealed.mapNotNull { it.id }.toSet()
-            // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)하는 후보만.
+            // 후보는 최근 며칠치 질문에 걸쳐 찾는다 — 오늘 질문 하나로 묶으면 초기에 후보가 비어버린다.
+            // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)에 더해,
+            // 사진이 없는 프로필은 소개하지 않는다(Member.isVisibleToOthers) — MY 탭 안내와 같은 기준.
             // 프로필은 점수 계산에도 쓰이니 여기서 한 번만 읽어 답변과 짝지어 들고 간다.
-            val candidates = answerRepository.findOthers(question.id, accountId)
+            val candidates = answerRepository.findOthersByQuestionIds(recentQuestionIds(), accountId)
                 .filter { it.id !in seen }
                 .mapNotNull { answer ->
                     val peer = memberQueryService.findProfile(answer.accountId) ?: return@mapNotNull null
                     if (peer.gender != me.preferredGender || peer.preferredGender != me.gender) return@mapNotNull null
+                    if (!peer.isVisibleToOthers()) return@mapNotNull null
                     answer to peer
                 }
                 .toMutableList()
@@ -190,6 +201,7 @@ class DailyMeetService(
             mailSent = mailRepository.existsBySenderAndRecipient(viewerAccountId, peer.accountId),
             peerAnswerId = peer.id,
             peerAnswer = if (answered) peer.content else null,
+            question = questionRepository.findAllOrdered().firstOrNull { it.id == peer.questionId }?.content,
             answerUnlocked = answered,
             photoUrls = p?.photoUrls ?: emptyList(),
             nickname = p?.nickname,
@@ -206,6 +218,19 @@ class DailyMeetService(
             avatarId = p?.avatarId,
             lastActive = LastActiveBucket.of(lastSeenService.lastSeenAt(peer.accountId)),
         )
+    }
+
+    /**
+     * 후보를 찾을 질문들 — 오늘부터 거슬러 [candidateDays]일치.
+     * 질문은 날짜로 결정되므로(pickTodayQuestion과 같은 공식) 날짜를 되짚으면 그날의 질문을 알 수 있다.
+     */
+    private fun recentQuestionIds(): List<Long> {
+        val questions = questionRepository.findAllOrdered()
+        if (questions.isEmpty()) return emptyList()
+        val today = LocalDate.now(KST).toEpochDay()
+        return (0 until candidateDays.coerceAtLeast(1))
+            .map { questions[((today - it) % questions.size).toInt()].id }
+            .distinct()
     }
 
     private fun pickTodayQuestion(): Question {
