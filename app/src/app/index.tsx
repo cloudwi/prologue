@@ -70,25 +70,25 @@ export default function LoginScreen() {
           </Animated.View>
         </View>
 
-        {/* 이메일 인증은 가입과 로그인이 같은 흐름이라 진입 버튼도 하나로 둔다 */}
+        {/* 이메일 인증은 가입과 로그인이 같은 흐름이라 진입 버튼도 하나로 둔다.
+            이메일도 개인정보라 수집 전에 동의를 받아야 해서, 동의 화면을 먼저 거친다. */}
         <Animated.View entering={FadeInUp.duration(700).delay(450)} style={styles.buttons}>
           <Pressable
-            onPress={() => router.push('/email-auth')}
+            onPress={() => router.push('/consent')}
             style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
             <Text style={[styles.startBtnText, { color: c.primaryText }]}>이메일로 시작하기</Text>
           </Pressable>
 
+          {/* 동의는 다음 화면에서 항목별로 받는다 — 여기서는 미리 읽어볼 수 있는 통로만 둔다 */}
           <Text style={[styles.terms, { color: c.textSecondary }]}>
-            가입 시{' '}
             <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/terms')}>
               이용약관
-            </Text>{' '}
-            및{' '}
+            </Text>
+            {'   ·   '}
             <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/privacy')}>
               개인정보처리방침
             </Text>
-            에 동의하게 됩니다
           </Text>
         </Animated.View>
       </SafeAreaView>

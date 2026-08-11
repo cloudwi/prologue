@@ -1,4 +1,5 @@
 import { ApiError, authedRequest } from './api';
+import type { Consent } from './consent';
 
 export type Gender = 'MALE' | 'FEMALE';
 
@@ -19,6 +20,8 @@ export type OnboardingProfile = {
   avatarId?: number | null;
   /** 카카오톡 ID(선택) — 편지에 전화번호 대신 실을 수 있다. */
   kakaoId?: string | null;
+  /** 가입 동의. 최초 가입에서만 보낸다 — 프로필 수정에는 없다. */
+  consent?: Consent;
 };
 
 /**

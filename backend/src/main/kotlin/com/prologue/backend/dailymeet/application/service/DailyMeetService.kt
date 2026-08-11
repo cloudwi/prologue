@@ -3,6 +3,7 @@ package com.prologue.backend.dailymeet.application.service
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.DailyReveal
+import com.prologue.backend.dailymeet.domain.model.PeerScore
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
@@ -77,23 +78,27 @@ class DailyMeetService(
                 ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
 
             val seen = revealed.mapNotNull { it.id }.toSet()
-            // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)하는 후보만
+            // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)하는 후보만.
+            // 프로필은 점수 계산에도 쓰이니 여기서 한 번만 읽어 답변과 짝지어 들고 간다.
             val candidates = answerRepository.findOthers(question.id, accountId)
                 .filter { it.id !in seen }
-                .filter { candidate ->
-                    val peerProfile = memberQueryService.findProfile(candidate.accountId)
-                    peerProfile != null &&
-                        peerProfile.gender == me.preferredGender &&
-                        peerProfile.preferredGender == me.gender
+                .mapNotNull { answer ->
+                    val peer = memberQueryService.findProfile(answer.accountId) ?: return@mapNotNull null
+                    if (peer.gender != me.preferredGender || peer.preferredGender != me.gender) return@mapNotNull null
+                    answer to peer
                 }
                 .toMutableList()
 
-            // 비독점 + 공평 분배: 지금까지 가장 적게 노출된 상대부터 선택(희소한 성별을 여러 명에게 골고루)
+            // 호감 가능성(지역·나이·관심사)과 공평 분배를 함께 본 점수가 높은 순으로 채운다.
+            // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
             while (revealed.size < REVEAL_COUNT && candidates.isNotEmpty()) {
-                val chosen = candidates.minBy { dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, it.id!!) }
+                val chosen = candidates.maxBy { (answer, peer) ->
+                    val exposure = dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, answer.id!!)
+                    PeerScore.of(me, peer, exposure)
+                }
                 candidates.remove(chosen)
-                dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.id!!))
-                revealed += chosen
+                dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.first.id!!))
+                revealed += chosen.first
             }
         }
 

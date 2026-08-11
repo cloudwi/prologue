@@ -1,6 +1,7 @@
 package com.prologue.backend.member.interfaces.rest
 
 import com.prologue.backend.member.application.service.CompleteOnboardingCommand
+import com.prologue.backend.member.application.service.ConsentAgreement
 import com.prologue.backend.member.application.service.MemberPhotoService
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.application.service.OnboardingService
@@ -75,6 +76,16 @@ class OnboardingController(
                 interests = request.interests,
                 strengths = request.strengths,
                 avatarId = request.avatarId,
+                consent = request.consent?.let {
+                    ConsentAgreement(
+                        legalVersion = it.legalVersion,
+                        terms = it.terms,
+                        privacy = it.privacy,
+                        age = it.age,
+                        sensitive = it.sensitive,
+                        marketing = it.marketing,
+                    )
+                },
             ),
         )
         return MemberProfileResponse.from(member)

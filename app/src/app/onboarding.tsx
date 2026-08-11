@@ -28,6 +28,7 @@ import { RegionPicker } from '@/components/region-picker';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import { Fonts, type ThemeColors } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
+import { clearConsent, getConsent } from '@/lib/consent';
 import { completeOnboarding, type Gender } from '@/lib/member';
 import { uploadPhoto } from '@/lib/photo';
 import { useTheme } from '@/hooks/use-theme';
@@ -277,6 +278,9 @@ export default function OnboardingScreen() {
   // PUT /members/me는 생성/수정 겸용 — 필수만으로 가입하고, 선택 입력 후 한 번 더 저장한다.
   async function saveProfile(): Promise<boolean> {
     try {
+      // 동의 화면에서 적어둔 값 — 회원을 만드는 첫 저장에만 실려 간다.
+      // (두 번째 저장 때는 이미 지워졌고, 서버도 기존 회원에게는 기록을 남기지 않는다)
+      const consent = await getConsent();
       await completeOnboarding({
         nickname: nickname.trim(),
         gender: gender!,
@@ -285,7 +289,9 @@ export default function OnboardingScreen() {
         region: region.trim(),
         phone: phoneDigits,
         ...toProfilePayload(extra),
+        ...(consent ? { consent } : {}),
       });
+      if (consent) await clearConsent();
       return true;
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');

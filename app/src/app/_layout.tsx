@@ -60,6 +60,7 @@ function Navigation() {
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="consent" />
         <Stack.Screen name="email-auth" />
         <Stack.Screen name="terms" />
         <Stack.Screen name="privacy" />

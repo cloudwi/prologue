@@ -41,4 +41,17 @@ data class OnboardingRequest(
     val strengths: List<String> = emptyList(),
     val avatarId: Int? = null,
     val kakaoId: String? = null,
+
+    /** 가입 화면에서 받은 동의. 프로필 수정 요청에는 없고, 이 기능 이전 앱 버전도 보내지 않는다. */
+    val consent: ConsentRequest? = null,
+)
+
+/** 동의 체크 결과. 필수 항목 검증은 도메인(MemberConsent)에서 한다. */
+data class ConsentRequest(
+    val legalVersion: String = "",
+    val terms: Boolean = false,
+    val privacy: Boolean = false,
+    val age: Boolean = false,
+    val sensitive: Boolean = false,
+    val marketing: Boolean = false,
 )
