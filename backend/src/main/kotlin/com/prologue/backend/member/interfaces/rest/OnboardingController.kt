@@ -1,5 +1,6 @@
 package com.prologue.backend.member.interfaces.rest
 
+import com.prologue.backend.auth.application.service.AccountQueryService
 import com.prologue.backend.member.application.service.CompleteOnboardingCommand
 import com.prologue.backend.member.application.service.ConsentAgreement
 import com.prologue.backend.member.application.service.MemberPhotoService
@@ -35,6 +36,7 @@ class OnboardingController(
     private val memberQueryService: MemberQueryService,
     private val memberPhotoService: MemberPhotoService,
     private val withdrawService: WithdrawService,
+    private val accountQueryService: AccountQueryService,
 ) {
     /** 회원 탈퇴 — 계정과 모든 데이터를 되돌릴 수 없게 지운다. */
     @DeleteMapping("/me")
@@ -49,7 +51,7 @@ class OnboardingController(
     fun getMyProfile(authentication: Authentication): MemberProfileResponse {
         val accountId = UUID.fromString(authentication.name)
         val member = memberQueryService.findProfile(accountId) ?: throw ProfileNotFoundException()
-        return MemberProfileResponse.from(member)
+        return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
     }
 
     /** 프로필 생성/수정 (upsert). */
@@ -88,7 +90,7 @@ class OnboardingController(
                 },
             ),
         )
-        return MemberProfileResponse.from(member)
+        return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
     }
 
     /** 프로필 사진 추가(멀티파트, 최대 6장). 온보딩 완료 후 사용. */
@@ -101,7 +103,7 @@ class OnboardingController(
         // 형식 검사는 서비스에서 바이트로 한다 — 클라이언트가 보낸 Content-Type은 확장자 추측이라 자주 틀린다.
         val accountId = UUID.fromString(authentication.name)
         val member = memberPhotoService.addPhoto(accountId, file.bytes)
-        return MemberProfileResponse.from(member)
+        return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
     }
 
     /** 프로필 사진 삭제(공개 URL 지정). */
@@ -112,6 +114,6 @@ class OnboardingController(
     ): MemberProfileResponse {
         val accountId = UUID.fromString(authentication.name)
         val member = memberPhotoService.removePhoto(accountId, url)
-        return MemberProfileResponse.from(member)
+        return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
     }
 }

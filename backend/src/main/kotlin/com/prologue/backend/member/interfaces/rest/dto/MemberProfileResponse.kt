@@ -24,9 +24,11 @@ data class MemberProfileResponse(
     /** 내 연락처(본인 조회 전용 응답이라 노출해도 안전). 이전 회원은 전화번호가 비어 있을 수 있다. */
     val phone: String?,
     val kakaoId: String?,
+    /** 로그인에 쓰는 이메일. 계정의 자연키라 화면에서는 읽기 전용으로 보여준다. */
+    val email: String?,
 ) {
     companion object {
-        fun from(member: Member): MemberProfileResponse =
+        fun from(member: Member, email: String? = null): MemberProfileResponse =
             MemberProfileResponse(
                 accountId = member.accountId.toString(),
                 nickname = member.nickname,
@@ -44,6 +46,7 @@ data class MemberProfileResponse(
                 photoUrls = member.photoUrls,
                 phone = member.phone,
                 kakaoId = member.kakaoId,
+                email = email,
             )
     }
 }

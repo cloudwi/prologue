@@ -106,6 +106,18 @@ export default function EditBasicScreen() {
       ) : (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            {/* 이메일은 계정의 자연키라 바꿀 수 없다 — 무엇으로 로그인하는지 확인만 할 수 있게 둔다 */}
+            <Field label="이메일" c={c}>
+              <View style={[styles.readonly, { borderColor: c.border, backgroundColor: c.backgroundSelected }]}>
+                <Text style={[styles.readonlyText, { color: c.textSecondary }]} numberOfLines={1}>
+                  {base?.email ?? '-'}
+                </Text>
+              </View>
+              <Text style={[styles.readonlyHint, { color: c.textSecondary }]}>
+                로그인에 쓰는 아이디라 변경할 수 없어요.
+              </Text>
+            </Field>
+
             <Field label="닉네임" c={c}>
               <TextInput
                 value={nickname}
@@ -230,6 +242,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   fieldHint: { fontSize: 12.5, lineHeight: 18, marginTop: 7 },
   input: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, fontSize: 16 },
+  // 입력칸과 같은 형태를 쓰되 눌린 면 색으로 두어 "만질 수 없는 값"임을 보이게 한다
+  readonly: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, justifyContent: 'center' },
+  readonlyText: { fontSize: 16 },
+  readonlyHint: { fontSize: 12.5, lineHeight: 18, marginTop: 7 },
   toggleRow: { flexDirection: 'row', gap: 10 },
   toggle: { flex: 1, height: 50, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });
