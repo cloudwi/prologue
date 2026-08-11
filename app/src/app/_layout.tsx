@@ -1,6 +1,8 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { enableAppSwitcherProtectionAsync, usePreventScreenCapture } from 'expo-screen-capture';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -9,6 +11,8 @@ import { requiredUpdateStoreUrl } from '@/lib/app-config';
 import { AppearanceProvider, useAppearance } from '@/lib/appearance';
 
 export default function RootLayout() {
+  useScreenPrivacy();
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -19,6 +23,25 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * 화면 캡처 차단 — 앱 전체에 건다.
+ *
+ * 상대의 사진과 답변이 늘 떠 있고, 편지에는 전화번호와 카카오톡 ID가 실려 간다.
+ * 건넨 사람은 상대 한 명에게만 준 것이라 믿는데 그게 갈무리돼 떠돌면 신뢰가 무너진다.
+ *
+ * 안드로이드는 FLAG_SECURE라 스크린샷·화면 녹화가 막히고 최근 앱 미리보기도 비워진다.
+ * iOS는 캡처 차단(13+)은 되지만 앱 스위처 가림은 별도라, 그쪽만 따로 켠다.
+ */
+function useScreenPrivacy() {
+  usePreventScreenCapture();
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    // 실패해도 앱이 멈출 이유는 없다 — 가림막이 없을 뿐이다.
+    void enableAppSwitcherProtectionAsync().catch(() => {});
+  }, []);
 }
 
 /**
