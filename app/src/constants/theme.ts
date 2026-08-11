@@ -100,5 +100,10 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+/**
+ * 하단 탭바에서 아이콘·라벨이 차지하는 높이(제스처 바 몫 제외).
+ * 탭바가 실제로 쓰는 값이자((tabs)/_layout.tsx), 화면들이 스크롤 바닥 여백을 잡는 기준이다 —
+ * 두 값이 갈라지면 콘텐츠가 탭바에 가리거나 헛돈다.
+ */
+export const BottomTabInset = 60;
 export const MaxContentWidth = 800;

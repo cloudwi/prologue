@@ -1,20 +1,59 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { BottomTabInset } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+
+/**
+ * 하단 탭.
+ *
+ * 네이티브 탭(NativeTabs) 대신 직접 그린다. 네이티브 탭은 안드로이드에서 시스템 드로어블만
+ * 쓸 수 있어 아이콘이 제각각이었고(봉투는 solid, 돋보기는 outline, MY는 깃발 든 사람),
+ * 선택 표시도 Material 기본 파란 알약이라 테라코타 하나로 온기를 내는 팔레트와 어긋났다.
+ *
+ * 아이콘은 한 세트(Ionicons)에서만 고르고, 선택되면 outline이 채워진다 —
+ * 색만 바뀌는 것보다 눈에 띄면서도 요란하지 않다.
+ */
+type TabIcon = { outline: keyof typeof Ionicons.glyphMap; filled: keyof typeof Ionicons.glyphMap };
+
+const ICONS: Record<string, TabIcon> = {
+  mails: { outline: 'mail-outline', filled: 'mail' },
+  discover: { outline: 'sparkles-outline', filled: 'sparkles' },
+  my: { outline: 'person-outline', filled: 'person' },
+};
 
 export default function TabsLayout() {
+  const c = useTheme();
+  // 제스처 바가 있는 기기에서는 그만큼을 바닥에 더 둬야 라벨이 눌리지 않는다
+  const insets = useSafeAreaInsets();
+
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="mails">
-        <NativeTabs.Trigger.Icon sf="envelope.fill" drawable="ic_dialog_email" />
-        <NativeTabs.Trigger.Label>편지함</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="discover">
-        <NativeTabs.Trigger.Icon sf="sparkles" drawable="ic_menu_search" />
-        <NativeTabs.Trigger.Label>발견</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="my">
-        <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_menu_myplaces" />
-        <NativeTabs.Trigger.Label>MY</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: c.primary,
+        tabBarInactiveTintColor: c.textSecondary,
+        tabBarStyle: {
+          backgroundColor: c.backgroundElement,
+          borderTopColor: c.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: BottomTabInset + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+        tabBarIcon: ({ focused, color }) => {
+          const icon = ICONS[route.name];
+          if (!icon) return null;
+          return <Ionicons name={focused ? icon.filled : icon.outline} size={24} color={color} />;
+        },
+      })}
+    >
+      <Tabs.Screen name="mails" options={{ title: '편지함' }} />
+      <Tabs.Screen name="discover" options={{ title: '발견' }} />
+      <Tabs.Screen name="my" options={{ title: 'MY' }} />
+    </Tabs>
   );
 }
