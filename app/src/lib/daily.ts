@@ -40,6 +40,8 @@ export type Peer = {
   avatarId: number | null;
   /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
   mailSent: boolean;
+  /** 내가 이 상대에게 이미 하트를 보냈는지. 하트는 한 사람에게 한 번뿐이다. */
+  hearted: boolean;
   /** 최근 접속 버킷. 기록 없음·한 달 초과는 null(미표시) — 정확한 시각은 서버가 내리지 않는다. */
   lastActive: LastActive | null;
 };

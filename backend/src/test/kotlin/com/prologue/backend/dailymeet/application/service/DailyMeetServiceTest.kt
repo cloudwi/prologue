@@ -32,6 +32,7 @@ class DailyMeetServiceTest {
     private val answerRepository = mockk<AnswerRepository>()
     private val dailyRevealRepository = mockk<DailyRevealRepository>(relaxed = true)
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
+    private val heartRepository = mockk<com.prologue.backend.dailymeet.domain.repository.HeartRepository>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
     private val profileLetterService = mockk<ProfileLetterService> {
         every { lettersOf(any()) } returns emptyList()
@@ -39,7 +40,7 @@ class DailyMeetServiceTest {
     private val lastSeenService = mockk<com.prologue.backend.auth.application.service.LastSeenService> {
         every { lastSeenAt(any()) } returns null
     }
-    private val service = DailyMeetService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, memberQueryService, profileLetterService, lastSeenService)
+    private val service = DailyMeetService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, lastSeenService)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -187,6 +188,27 @@ class DailyMeetServiceTest {
         every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(otherAnswer)
         // 후보가 남성(내가 선호하는 여성이 아님) → 제외
         every { memberQueryService.findProfile(sameGenderAccount) } returns member(sameGenderAccount, Gender.MALE, Gender.FEMALE)
+
+        val view = service.todayPeers(accountId, now = NOON)
+
+        assertTrue(view.open)
+        assertTrue(view.peers.isEmpty())
+    }
+
+    @Test
+    fun `오늘의 상대 - 한 번 소개된 사람은 다시 소개하지 않는다`() {
+        // 이미 지나간 인연이 다시 '오늘의 상대'로 오면 소개가 아니라 반복이 된다.
+        // 답변이 아니라 사람 단위로 걸러야 한다 — 같은 사람이 다른 날 다른 답변으로 다시 오를 수 있어서.
+        val metAccount = UUID.randomUUID()
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val newAnswerFromMetPerson = Answer.reconstitute(UUID.randomUUID(), metAccount, 1L, "다른 날의 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { dailyRevealRepository.findRevealedPeerAccountIds(accountId) } returns listOf(metAccount)
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(newAnswerFromMetPerson)
+        every { memberQueryService.findProfile(metAccount) } returns member(metAccount, Gender.FEMALE, Gender.MALE)
 
         val view = service.todayPeers(accountId, now = NOON)
 

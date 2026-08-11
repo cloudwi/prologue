@@ -7,6 +7,7 @@ import com.prologue.backend.dailymeet.domain.model.PeerScore
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
+import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import com.prologue.backend.auth.application.service.LastSeenService
@@ -30,6 +31,7 @@ class DailyMeetService(
     private val answerRepository: AnswerRepository,
     private val dailyRevealRepository: DailyRevealRepository,
     private val mailRepository: MailRepository,
+    private val heartRepository: HeartRepository,
     private val memberQueryService: MemberQueryService,
     private val profileLetterService: ProfileLetterService,
     private val lastSeenService: LastSeenService,
@@ -91,12 +93,17 @@ class DailyMeetService(
                 ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
 
             val seen = revealed.mapNotNull { it.id }.toSet()
+            // 한 번 소개된 사람은 다시 만나지 않는다. 하트를 보냈든 아무 일도 없었든,
+            // 이미 지나간 인연이 다시 '오늘의 상대'로 오면 소개가 아니라 반복이 된다.
+            // 답변이 아니라 사람 단위로 걸러야 한다 — 같은 사람이 다른 날 다른 답변으로 다시 오를 수 있어서.
+            val alreadyMet = dailyRevealRepository.findRevealedPeerAccountIds(accountId).toSet()
             // 후보는 최근 며칠치 질문에 걸쳐 찾는다 — 오늘 질문 하나로 묶으면 초기에 후보가 비어버린다.
             // 상호 선호 일치(나는 상대 성별을 선호 + 상대는 내 성별을 선호)에 더해,
             // 사진이 없는 프로필은 소개하지 않는다(Member.isVisibleToOthers) — MY 탭 안내와 같은 기준.
             // 프로필은 점수 계산에도 쓰이니 여기서 한 번만 읽어 답변과 짝지어 들고 간다.
             val candidates = answerRepository.findOthersByQuestionIds(recentQuestionIds(), accountId)
                 .filter { it.id !in seen }
+                .filter { it.accountId !in alreadyMet }
                 .mapNotNull { answer ->
                     val peer = memberQueryService.findProfile(answer.accountId) ?: return@mapNotNull null
                     if (peer.gender != me.preferredGender || peer.preferredGender != me.gender) return@mapNotNull null
@@ -204,6 +211,7 @@ class DailyMeetService(
         val p = memberQueryService.findProfile(peer.accountId)
         return PeerView(
             mailSent = mailRepository.existsBySenderAndRecipient(viewerAccountId, peer.accountId),
+            hearted = heartRepository.existsFromTo(viewerAccountId, peer.accountId),
             peerAnswerId = peer.id,
             peerAnswer = if (answered) peer.content else null,
             question = questionRepository.findAllOrdered().firstOrNull { it.id == peer.questionId }?.content,

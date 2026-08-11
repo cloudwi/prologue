@@ -15,6 +15,7 @@ import java.util.UUID
  * 하트(호감) 유스케이스.
  * 하트는 가벼운 신호다 — **서로** 하트를 보냈으면 마음이 통한 것. 연결(연락처 교환)은 편지가 맡는다.
  * 상호 판정은 질문과 무관하다: 어제의 하트와 오늘의 하트가 만나도 호감은 호감이다.
+ * 한 사람에게는 한 번만 보낸다 — 질문마다 다시 보낼 수 있으면 호감이 신호가 아니라 빈도가 된다.
  */
 @Service
 class HeartService(
@@ -32,9 +33,9 @@ class HeartService(
         val toAccountId = peerAnswer.accountId
         if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 하트를 보낼 수 없어요")
 
-        // 이미 보낸 하트면 아무 일도 일어나지 않는다 — 보상도 여기서 한 번만 걸린다(멱등).
+        // 이미 이 사람에게 보냈다면 아무 일도 일어나지 않는다 — 보상도 여기서 한 번만 걸린다(멱등).
         var stampEarned = false
-        if (!heartRepository.exists(fromAccountId, toAccountId, peerAnswer.questionId)) {
+        if (!heartRepository.existsFromTo(fromAccountId, toAccountId)) {
             heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
             stampEarned = rewardIfMilestone(fromAccountId)
         }

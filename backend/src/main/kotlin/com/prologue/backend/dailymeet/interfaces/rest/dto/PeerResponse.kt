@@ -27,6 +27,8 @@ data class PeerResponse(
     val avatarId: Int?,
     /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
     val mailSent: Boolean,
+    /** 내가 이 상대에게 이미 하트를 보냈는지(하트는 한 사람에게 한 번). */
+    val hearted: Boolean,
     /** 최근 접속 버킷(TODAY/THIS_WEEK/WEEKS_AGO). 기록 없음·한 달 초과는 null. */
     val lastActive: LastActiveBucket?,
 ) {
@@ -34,6 +36,7 @@ data class PeerResponse(
         fun from(view: PeerView): PeerResponse =
             PeerResponse(
                 mailSent = view.mailSent,
+                hearted = view.hearted,
                 peerAnswerId = view.peerAnswerId?.toString(),
                 peerAnswer = view.peerAnswer,
                 question = view.question,

@@ -24,9 +24,6 @@ export default function PeerDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data, question, answers } = useLocalSearchParams<{ data?: string; question?: string; answers?: string }>();
-  const [hearted, setHearted] = useState(false);
-  const [hearting, setHearting] = useState(false);
-
   const peer = useMemo<Peer | null>(() => {
     try {
       return JSON.parse(typeof data === 'string' ? data : '') as Peer;
@@ -34,6 +31,10 @@ export default function PeerDetailScreen() {
       return null;
     }
   }, [data]);
+
+  // 하트는 한 사람에게 한 번뿐 — 서버가 알려준 상태로 시작해야 다시 들어왔을 때 버튼이 거짓말하지 않는다
+  const [hearted, setHearted] = useState(peer?.hearted ?? false);
+  const [hearting, setHearting] = useState(false);
 
   // 지난 상대는 그동안의 문답 목록을 함께 넘긴다 — 없으면(오늘의 상대·대화 목록) 빈 배열.
   const pastAnswers = useMemo<PastAnswer[]>(() => {

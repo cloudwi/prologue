@@ -55,6 +55,8 @@ data class PeerView(
     val avatarId: Int?,
     /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
     val mailSent: Boolean = false,
+    /** 내가 이 상대에게 이미 하트를 보냈는지. 하트는 한 사람에게 한 번뿐이라 화면이 미리 알아야 한다. */
+    val hearted: Boolean = false,
     /** 최근 접속 버킷. 접속 기록이 없거나 한 달 넘게 조용하면 null(미표시). */
     val lastActive: LastActiveBucket? = null,
 )

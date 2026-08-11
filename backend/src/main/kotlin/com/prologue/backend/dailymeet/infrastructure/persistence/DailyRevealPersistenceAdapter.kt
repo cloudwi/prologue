@@ -19,6 +19,9 @@ class DailyRevealPersistenceAdapter(
     override fun countByQuestionAndPeerAnswer(questionId: Long, peerAnswerId: UUID): Long =
         jpa.countByQuestionIdAndPeerAnswerId(questionId, peerAnswerId)
 
+    override fun findRevealedPeerAccountIds(viewerAccountId: UUID): List<UUID> =
+        jpa.findRevealedPeerAccountIds(viewerAccountId)
+
     override fun findRecentByViewer(viewerAccountId: UUID, since: java.time.Instant): List<DailyReveal> =
         jpa.findByViewerAccountIdAndCreatedAtAfterOrderByCreatedAtDesc(viewerAccountId, since).map { it.toDomain() }
 
