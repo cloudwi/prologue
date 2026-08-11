@@ -7,6 +7,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "prologue",
     "userInterfaceStyle": "automatic",
+    "updates": {
+      "url": "https://u.expo.dev/2ea86b1c-287c-4acd-96a0-a5768eba7752"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "bundleIdentifier": "com.juyoung.prologue",
       "infoPlist": {

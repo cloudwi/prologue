@@ -38,6 +38,16 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return data as T;
 }
 
+/** 인증이 필요 없는 GET. 로그인 전에 부르는 것들(부팅 설정 등)이 쓴다. */
+export async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new ApiError(res.status, data?.code, data?.message);
+  }
+  return data as T;
+}
+
 // ── 토큰 자동 재발급 ─────────────────────────────────────────────
 // 액세스 토큰은 30분짜리라 쓰다 보면 반드시 만료된다. 만료(401/403)를 만나면
 // refresh token으로 한 번 재발급하고 원래 요청을 다시 보낸다.

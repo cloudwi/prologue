@@ -1,8 +1,11 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { UpdateRequired } from '@/components/update-required';
+import { requiredUpdateStoreUrl } from '@/lib/app-config';
 import { AppearanceProvider, useAppearance } from '@/lib/appearance';
 
 export default function RootLayout() {
@@ -18,8 +21,41 @@ export default function RootLayout() {
   );
 }
 
+/**
+ * 부팅 시 한 번 서버에 최소 지원 버전을 물어본다.
+ * 확인이 끝나기를 기다리지는 않는다 — 느린 네트워크 때문에 첫 화면이 늦게 뜨면 손해가 더 크다.
+ * 막아야 한다는 답이 오면 그때 화면을 갈아끼운다.
+ */
+function useForcedUpdate() {
+  const [storeUrl, setStoreUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const url = await requiredUpdateStoreUrl();
+      if (active && url) setStoreUrl(url);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return storeUrl;
+}
+
 function Navigation() {
   const { scheme } = useAppearance();
+  const updateStoreUrl = useForcedUpdate();
+
+  if (updateStoreUrl) {
+    return (
+      <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <UpdateRequired storeUrl={updateStoreUrl} />
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
