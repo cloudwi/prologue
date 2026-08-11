@@ -6,7 +6,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getSentMailTo, type SentMail } from '@/lib/mails';
-import { formatPhoneDigits } from '@/lib/phone';
+import { RevealableContact } from '@/components/revealable-contact';
 
 /**
  * 보낸 편지 확인 — 한 번 부친 편지는 고칠 수 없는 기록이라 읽기 전용이다.
@@ -55,15 +55,8 @@ export default function MailViewScreen() {
 
             <Text style={[styles.body, { color: c.text, fontFamily: Fonts.serif }]}>{mail.content}</Text>
 
-            {/* 함께 부친 연락처 */}
-            <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
-              {mail.phone && (
-                <Text style={[styles.contactLine, { color: c.text }]}>전화번호  {formatPhoneDigits(mail.phone)}</Text>
-              )}
-              {mail.kakaoId && (
-                <Text style={[styles.contactLine, { color: c.text }]}>카카오톡  {mail.kakaoId}</Text>
-              )}
-            </View>
+            {/* 함께 부친 연락처 — 내 것이지만 어깨너머로 읽히지 않게 같은 규칙을 쓴다 */}
+            <RevealableContact phone={mail.phone} kakaoId={mail.kakaoId} c={c} />
           </View>
 
           <Text style={[styles.sealNote, { color: c.textSecondary }]}>
@@ -87,8 +80,6 @@ const styles = StyleSheet.create({
   to: { fontSize: 19, fontWeight: '700' },
   date: { fontSize: 12.5, marginTop: 4 },
   body: { fontSize: 15.5, lineHeight: 26, marginTop: 16 },
-  contactBox: { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, marginTop: 18, gap: 6 },
-  contactLine: { fontSize: 14, fontVariant: ['tabular-nums'] },
 
   sealNote: { fontSize: 12.5, lineHeight: 19, textAlign: 'center', marginTop: 20 },
 });

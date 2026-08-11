@@ -10,7 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
-import { formatPhoneDigits } from '@/lib/phone';
+import { RevealableContact } from '@/components/revealable-contact';
 import { promptReport } from '@/lib/reports';
 
 /**
@@ -291,20 +291,9 @@ export default function MailsScreen() {
                       <>
                         <Text style={[styles.mailContent, { color: c.text, fontFamily: Fonts.serif }]}>{m.content}</Text>
 
-                        {/* 연락처 — 답장(내 연락처를 건네는 것)을 해야 열린다. 열리면 길게 눌러 복사. */}
+                        {/* 연락처 — 답장(내 연락처를 건네는 것)을 해야 열린다. 열린 뒤에도 기본은 가려둔다. */}
                         {m.phone || m.kakaoId ? (
-                          <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
-                            {m.phone && (
-                              <Text selectable style={[styles.contactLine, { color: c.text }]}>
-                                전화번호  {formatPhoneDigits(m.phone)}
-                              </Text>
-                            )}
-                            {m.kakaoId && (
-                              <Text selectable style={[styles.contactLine, { color: c.text }]}>
-                                카카오톡  {m.kakaoId}
-                              </Text>
-                            )}
-                          </View>
+                          <RevealableContact phone={m.phone} kakaoId={m.kakaoId} c={c} />
                         ) : (
                           <View style={[styles.contactBox, { backgroundColor: c.backgroundSelected }]}>
                             <Text style={[styles.contactLocked, { color: c.textSecondary }]}>
@@ -380,7 +369,6 @@ const styles = StyleSheet.create({
   mailHead: { flexDirection: 'row', alignItems: 'center' },
   mailContent: { fontSize: 15.5, lineHeight: 25, marginTop: 14 },
   contactBox: { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, gap: 6 },
-  contactLine: { fontSize: 14, fontVariant: ['tabular-nums'] },
   contactLocked: { fontSize: 13, lineHeight: 19 },
   replyBtn: { height: 42, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   replyBtnText: { fontSize: 14, fontWeight: '700' },
