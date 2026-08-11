@@ -1,6 +1,7 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
-import com.prologue.backend.dailymeet.application.service.DailyMeetService
+import com.prologue.backend.dailymeet.application.service.DailyAnswerService
+import com.prologue.backend.dailymeet.application.service.PeerMatchingService
 import com.prologue.backend.dailymeet.application.service.HeartService
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
@@ -28,28 +29,29 @@ import java.util.UUID
 @RestController
 @RequestMapping("/daily")
 class DailyMeetController(
-    private val dailyMeetService: DailyMeetService,
+    private val dailyAnswerService: DailyAnswerService,
+    private val peerMatchingService: PeerMatchingService,
     private val heartService: HeartService,
 ) {
     /** 오늘의 질문 + 내 답변 여부. */
     @GetMapping("/today")
     fun today(authentication: Authentication): TodayResponse {
         val accountId = UUID.fromString(authentication.name)
-        return TodayResponse.from(dailyMeetService.today(accountId))
+        return TodayResponse.from(dailyAnswerService.today(accountId))
     }
 
     /** 오늘의 상대 목록 (매일 정오 공개, 최대 2명, 답변은 내가 먼저 답해야 열람 가능). */
     @GetMapping("/today/peers")
     fun peers(authentication: Authentication): PeersResponse {
         val accountId = UUID.fromString(authentication.name)
-        return PeersResponse.from(dailyMeetService.todayPeers(accountId))
+        return PeersResponse.from(peerMatchingService.todayPeers(accountId))
     }
 
     /** 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 제외), 최신 공개 순. */
     @GetMapping("/past-peers")
     fun pastPeers(authentication: Authentication): PastPeersResponse {
         val accountId = UUID.fromString(authentication.name)
-        return PastPeersResponse.from(dailyMeetService.pastPeers(accountId))
+        return PastPeersResponse.from(peerMatchingService.pastPeers(accountId))
     }
 
     /** 답변 id로 상대 프로필 상세 — 편지함(받은 하트)에서 프로필로 들어갈 때. */
@@ -64,14 +66,14 @@ class DailyMeetController(
         } catch (e: IllegalArgumentException) {
             throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
         }
-        return PeerProfileResponse.from(dailyMeetService.peerProfile(accountId, answerId))
+        return PeerProfileResponse.from(peerMatchingService.peerProfile(accountId, answerId))
     }
 
     /** 내가 남긴 답 — 역대 답변 전부(질문 포함), 최신순. 본인 전용. */
     @GetMapping("/my-answers")
     fun myAnswers(authentication: Authentication): MyAnswersResponse {
         val accountId = UUID.fromString(authentication.name)
-        return MyAnswersResponse.from(dailyMeetService.myAnswers(accountId))
+        return MyAnswersResponse.from(dailyAnswerService.myAnswers(accountId))
     }
 
     /** 오늘의 질문에 답변(작성/수정). 답변 후 갱신된 현황 반환. */
@@ -81,8 +83,8 @@ class DailyMeetController(
         @Valid @RequestBody request: AnswerRequest,
     ): TodayResponse {
         val accountId = UUID.fromString(authentication.name)
-        dailyMeetService.answerToday(accountId, request.content)
-        return TodayResponse.from(dailyMeetService.today(accountId))
+        dailyAnswerService.answerToday(accountId, request.content)
+        return TodayResponse.from(dailyAnswerService.today(accountId))
     }
 
     /** 익명 상대 답변에 하트. 상호 하트면 매칭 성립. */

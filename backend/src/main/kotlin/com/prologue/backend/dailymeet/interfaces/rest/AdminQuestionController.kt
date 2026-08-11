@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Question
+import com.prologue.backend.dailymeet.domain.model.QuestionRotation
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -32,10 +33,10 @@ class AdminQuestionController(
     @GetMapping
     fun list(): QuestionsResponse {
         val questions = questionRepository.findAllOrdered()
-        // DailyMeetService.pickTodayQuestion과 같은 공식 — 어드민에 "오늘" 배지를 달아준다.
-        val todayIndex = if (questions.isEmpty()) -1 else (LocalDate.now(KST).toEpochDay() % questions.size).toInt()
+        // 오늘의 질문 판정은 앱과 같은 규칙을 쓴다 — 공식을 베끼면 언젠가 두 화면이 다른 날을 가리킨다.
+        val todayId = if (questions.isEmpty()) null else QuestionRotation.of(questions, LocalDate.now(KST)).id
         return QuestionsResponse(
-            questions.mapIndexed { i, q -> QuestionItem(q.id, q.content, i == todayIndex) },
+            questions.map { QuestionItem(it.id, it.content, it.id == todayId) },
         )
     }
 
