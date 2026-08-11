@@ -55,7 +55,7 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safe}>
         {/* 브랜드 */}
         <View style={styles.brand}>
-          <Animated.View entering={FadeInDown.duration(700)} style={styles.center}>
+          <Animated.View entering={FadeInDown.duration(380)} style={styles.center}>
             <Image
               source={require('@/assets/images/brand-mark.png')}
               style={styles.logo}
@@ -64,7 +64,7 @@ export default function LoginScreen() {
             <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
             <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
           </Animated.View>
-          <Animated.View entering={FadeInDown.duration(700).delay(250)} style={styles.center}>
+          <Animated.View entering={FadeInDown.duration(380).delay(90)} style={styles.center}>
             <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답으로 알아가는,</Text>
             <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관이 꼭 맞는 소중한 인연</Text>
           </Animated.View>
@@ -72,7 +72,7 @@ export default function LoginScreen() {
 
         {/* 이메일 인증은 가입과 로그인이 같은 흐름이라 진입 버튼도 하나로 둔다.
             이메일도 개인정보라 수집 전에 동의를 받아야 해서, 동의 화면을 먼저 거친다. */}
-        <Animated.View entering={FadeInUp.duration(700).delay(450)} style={styles.buttons}>
+        <Animated.View entering={FadeInUp.duration(380).delay(180)} style={styles.buttons}>
           <Pressable
             onPress={() => router.push('/consent')}
             style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}

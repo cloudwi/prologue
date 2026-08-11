@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Easing, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomTabInset } from '@/constants/theme';
@@ -33,6 +33,13 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
+        // 기본값은 'none'이라 화면이 툭 바뀐다. 짧은 페이드 하나만 둔다 —
+        // 옆으로 미는 전환(shift)은 세 탭을 오갈 때 시선이 따라다녀 산만하다.
+        animation: 'fade',
+        transitionSpec: {
+          animation: 'timing',
+          config: { duration: 160, easing: Easing.out(Easing.quad) },
+        },
         tabBarActiveTintColor: c.primary,
         tabBarInactiveTintColor: c.textSecondary,
         tabBarStyle: {
