@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import { Easing, StyleSheet } from 'react-native';
+import { Easing, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomTabInset } from '@/constants/theme';
@@ -51,6 +51,18 @@ export default function TabsLayout() {
           paddingBottom: insets.bottom,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+        // 기본 버튼은 경계 없는(borderless) 안드로이드 리플이라 탭바 밖까지 검게 번진다.
+        // 앱의 다른 버튼들처럼 눌림을 opacity로만 표현해 톤을 맞춘다.
+        // ref는 타입이 맞지 않아 넘기지 않는다 — 탭 버튼에서는 쓰이지 않는다.
+        tabBarButton: ({ children, style, ref: _ref, ...rest }) => (
+          <Pressable
+            {...rest}
+            android_ripple={null}
+            style={({ pressed }) => [style, { opacity: pressed ? 0.55 : 1 }]}
+          >
+            {children}
+          </Pressable>
+        ),
         tabBarIcon: ({ focused, color }) => {
           const icon = ICONS[route.name];
           if (!icon) return null;
