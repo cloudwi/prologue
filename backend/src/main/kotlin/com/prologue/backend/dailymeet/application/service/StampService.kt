@@ -82,6 +82,8 @@ class StampService(
         const val REASON_WEEKLY = "WEEKLY"
         /** 하트를 여러 번 보낸 보상. 원장에 "왜 늘었는지"가 남아야 한다. */
         const val REASON_HEART = "HEART"
+        /** 인앱결제 충전. 정산·환불 대응 때 이 사유로 찾는다. */
+        const val REASON_PURCHASE = "PURCHASE"
         private const val WEEKLY_AMOUNT = 1
         private const val HISTORY_LIMIT = 50
         private val KST = ZoneId.of("Asia/Seoul")
