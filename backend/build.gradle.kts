@@ -43,6 +43,9 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("io.mockk:mockk:1.14.2")
+    // 컨텍스트가 실제로 뜨는지 보려면 DataSource가 있어야 한다. 운영은 Postgres지만
+    // 기동 검증에는 인메모리로 충분하다 — 여기서 잡으려는 건 쿼리가 아니라 빈 배선이다.
+    testRuntimeOnly("com.h2database:h2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
