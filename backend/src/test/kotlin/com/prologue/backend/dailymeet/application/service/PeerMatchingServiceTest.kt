@@ -80,7 +80,7 @@ class PeerMatchingServiceTest {
     }
 
     @Test
-    fun `오늘의 상대 - 후보가 여럿이어도 두 명만 공개하고 고정 저장`() {
+    fun `오늘의 상대 - 후보가 많아도 정해진 수만큼만 공개하고 고정 저장한다`() {
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
         val peers = (1..4).map { Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대 답변 $it", Instant.now()) }
         every { questionRepository.findAllOrdered() } returns listOf(question)
@@ -95,13 +95,39 @@ class PeerMatchingServiceTest {
         val saved = mutableListOf<DailyReveal>()
         every { dailyRevealRepository.save(capture(saved)) } answers { saved.last() }
 
-        val view = service.todayPeers(accountId, now = NOON)
+        // 소개 인원은 설정값이라 테스트에서 2로 고정해 "넘치지 않는지"를 본다
+        val twoPerDay = PeerMatchingService(
+            questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
+            memberQueryService, profileLetterService, lastSeenService, revealCount = 2,
+        )
+
+        val view = twoPerDay.todayPeers(accountId, now = NOON)
 
         assertTrue(view.open)
         assertEquals(2, view.peers.size)
         assertEquals(2, saved.size)
         assertTrue(view.answerUnlocked)
         assertEquals(2, view.peers.mapNotNull { it.peerAnswer }.size)
+    }
+
+    @Test
+    fun `오늘의 상대 - 기본값은 하루 한 명이다`() {
+        // 유저가 적을 때 둘씩 태우면 후보 풀이 두 배로 빨리 마른다.
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val peers = (1..3).map { Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대 답변 $it", Instant.now()) }
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns peers
+        peers.forEach {
+            every { memberQueryService.findProfile(it.accountId) } returns member(it.accountId, Gender.FEMALE, Gender.MALE)
+            every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, it.id!!) } returns 0
+        }
+
+        val view = service.todayPeers(accountId, now = NOON)
+
+        assertEquals(1, view.peers.size)
     }
 
     @Test
@@ -186,9 +212,15 @@ class PeerMatchingServiceTest {
         val saved = mutableListOf<DailyReveal>()
         every { dailyRevealRepository.save(capture(saved)) } answers { saved.last() }
 
-        val view = service.todayPeers(accountId, now = NOON)
+        // 정원이 1이면 부족분이 없어 채울 일이 없다 — 2로 두고 "모자란 만큼만" 채우는지 본다
+        val twoPerDay = PeerMatchingService(
+            questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
+            memberQueryService, profileLetterService, lastSeenService, revealCount = 2,
+        )
 
-        // 고정된 상대는 그대로, 정원(2)까지 부족분은 새 후보로 채운다
+        val view = twoPerDay.todayPeers(accountId, now = NOON)
+
+        // 고정된 상대는 그대로, 정원까지 부족분은 새 후보로 채운다
         assertEquals(2, view.peers.size)
         assertEquals("고정된 상대", view.peers[0].peerAnswer)
         assertEquals("새 상대", view.peers[1].peerAnswer)

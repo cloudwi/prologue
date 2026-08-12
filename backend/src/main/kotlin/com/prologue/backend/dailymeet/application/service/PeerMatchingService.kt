@@ -50,9 +50,17 @@ class PeerMatchingService(
      * "같은 질문에 답한 사람"이라는 원래 결을 되찾는다.
      */
     @param:Value("\${daily.candidate-days:7}") private val candidateDays: Int = 7,
+    /**
+     * 하루에 소개하는 상대 수.
+     *
+     * 유저가 적을 때는 1이 맞다. 후보 풀이 얕은데 두 명씩 태우면 두 배로 빨리 마르고,
+     * 한 번 만난 사람은 다시 소개하지 않으므로 며칠이면 만날 사람이 없어진다.
+     * 사람이 늘면 2로 되돌려 선택의 여지를 준다.
+     */
+    @param:Value("\${daily.reveal-count:1}") private val revealCount: Int = 1,
 ) {
     /**
-     * 오늘의 상대 — 매일 정오(KST)에 두 사람이 공개된다.
+     * 오늘의 상대 — 매일 정오(KST)에 [revealCount]명이 공개된다.
      * 내가 오늘 질문에 답해야 상대가 보인다(Give&Take) — 받기만 하는 사람은 없게 한다.
      * 공개된 상대는 그날 동안 고정(비독점: 같은 상대가 여러 명에게 노출 가능) + 공평 분배.
      * 정오에 부족했으면 이후 조회 때마다 후보가 생기는 대로 채운다 — 먼저 답한 사람도 결국 소개받는다.
@@ -80,14 +88,14 @@ class PeerMatchingService(
     }
 
     /**
-     * 오늘 공개된 상대 목록. 이미 공개된 건 그대로 두고 [REVEAL_COUNT]에 모자란 만큼만 채운다.
+     * 오늘 공개된 상대 목록. 이미 공개된 건 그대로 두고 [revealCount]에 모자란 만큼만 채운다.
      * 채우는 순서는 점수 순 — 자격을 통과한 후보 중 호감 가능성과 공평 분배를 함께 본 값이다.
      */
     private fun fillRevealed(accountId: UUID, question: Question, questions: List<Question>): List<Answer> {
         val revealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id)
             .mapNotNull { answerRepository.findById(it.peerAnswerId) }
             .toMutableList()
-        if (revealed.size >= REVEAL_COUNT) return revealed
+        if (revealed.size >= revealCount) return revealed
 
         val me = memberQueryService.findProfile(accountId)
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
@@ -106,7 +114,7 @@ class PeerMatchingService(
             .toMutableList()
 
         // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
-        while (revealed.size < REVEAL_COUNT && candidates.isNotEmpty()) {
+        while (revealed.size < revealCount && candidates.isNotEmpty()) {
             val chosen = candidates.maxBy { (answer, peer) ->
                 PeerScore.of(me, peer, dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, answer.id!!))
             }
@@ -216,9 +224,6 @@ class PeerMatchingService(
 
     companion object {
         private val KST = ZoneId.of("Asia/Seoul")
-
-        /** 하루에 공개되는 상대 수 — 답하면 두 사람을 만나는 페이스. */
-        private const val REVEAL_COUNT = 2
 
         /** 지난 상대를 보여주는 기간 — 소개의 여운은 사흘. */
         private val PAST_PEER_WINDOW: Duration = Duration.ofDays(3)

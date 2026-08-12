@@ -247,7 +247,7 @@ export default function DiscoverScreen() {
             <View style={styles.peerSection}>
               <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>오늘의 상대</Text>
               <Text style={[styles.peerSub, { color: c.textSecondary }]}>
-                매일 정오, 같은 질문에 답한 두 사람이 도착해요.
+                매일 정오, 같은 질문에 답한 한 사람이 도착해요.
               </Text>
 
               {peersLoading && !peersData ? (
