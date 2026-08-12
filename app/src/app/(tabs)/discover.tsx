@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -61,38 +61,44 @@ export default function DiscoverScreen() {
     }
   }
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const t = await getToday();
-        if (!active) return;
-        setToday(t);
-        setDraft(t.myAnswer ?? '');
-        loadPeers(); // 답변 전에도 상대 프로필은 미리보기
-        getPastPeers().then((p) => active && setPastPeers(p)).catch(() => {}); // 지난 상대는 보조 정보
-      } catch (e) {
-        if (!active) return;
-        if (isSessionExpired(e)) {
-          router.replace('/'); // 세션 만료 — 에러 알림 대신 로그인으로
-          return;
-        }
-        Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  // 첫 로드에만 작성칸을 서버 답변으로 채운다 — 이후 새로고침이 입력 중인 글을 지우면 안 된다.
+  const seeded = useRef(false);
 
-  // 발견 탭에 다시 들어올 때, 아직 공개 전이거나 상대가 없으면 다시 시도 (정오가 지났을 수 있음)
+  /**
+   * 탭으로 돌아올 때마다 다시 읽는다.
+   *
+   * 탭 화면은 한 번 뜨면 계속 살아 있어서, 마운트 때만 읽으면 앱을 켜둔 동안 화면이 그대로 굳는다.
+   * 자정을 넘겨 질문이 바뀌어도, 하트나 편지로 지난 상대의 남은 기간이 달라져도 알 수 없다.
+   */
   useFocusEffect(
     useCallback(() => {
-      if (!peersData?.open || peersData.peers.length === 0) loadPeers();
-
-    }, [peersData?.open, peersData?.peers.length]),
+      let active = true;
+      (async () => {
+        try {
+          const t = await getToday();
+          if (!active) return;
+          setToday(t);
+          if (!seeded.current) {
+            setDraft(t.myAnswer ?? '');
+            seeded.current = true;
+          }
+          loadPeers(); // 답변 전에도 상대 프로필은 미리보기
+          getPastPeers().then((p) => active && setPastPeers(p)).catch(() => {}); // 지난 상대는 보조 정보
+        } catch (e) {
+          if (!active) return;
+          if (isSessionExpired(e)) {
+            router.replace('/'); // 세션 만료 — 에러 알림 대신 로그인으로
+            return;
+          }
+          Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+        } finally {
+          if (active) setLoading(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [router]),
   );
 
   // 잉크 잔액 — 편지를 보내고 돌아와도 맞게, 탭에 들어올 때마다 갱신. 실패하면 칩을 숨긴다.
