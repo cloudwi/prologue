@@ -3,6 +3,7 @@ package com.prologue.backend.dailymeet.infrastructure.persistence
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 import java.util.UUID
 
 interface DailyRevealJpaRepository : JpaRepository<DailyRevealJpaEntity, UUID> {
@@ -42,4 +43,22 @@ interface DailyRevealJpaRepository : JpaRepository<DailyRevealJpaEntity, UUID> {
         """,
     )
     fun findViewersRevealedTo(@Param("accountId") accountId: UUID): List<UUID>
+
+    /**
+     * 두 사람이 마지막으로 소개된 시각(방향 무관). 프로필 열람 창의 시작점 중 하나.
+     * 없으면 null — 소개로 이어진 적이 없다는 뜻이다.
+     */
+    @Query(
+        """
+        select max(r.createdAt)
+        from DailyRevealJpaEntity r, AnswerJpaEntity a
+        where r.peerAnswerId = a.id
+          and ((r.viewerAccountId = :accountId and a.accountId = :peerAccountId)
+            or (r.viewerAccountId = :peerAccountId and a.accountId = :accountId))
+        """,
+    )
+    fun findLastRevealedAtBetween(
+        @Param("accountId") accountId: UUID,
+        @Param("peerAccountId") peerAccountId: UUID,
+    ): Instant?
 }

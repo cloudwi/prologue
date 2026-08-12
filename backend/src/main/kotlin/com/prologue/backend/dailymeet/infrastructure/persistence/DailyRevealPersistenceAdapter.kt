@@ -22,6 +22,9 @@ class DailyRevealPersistenceAdapter(
     override fun findEverPairedAccountIds(accountId: UUID): Set<UUID> =
         (jpa.findRevealedPeerAccountIds(accountId) + jpa.findViewersRevealedTo(accountId)).toSet()
 
+    override fun findLastRevealedAtBetween(accountId: UUID, peerAccountId: UUID): java.time.Instant? =
+        jpa.findLastRevealedAtBetween(accountId, peerAccountId)
+
     override fun findRecentByViewer(viewerAccountId: UUID, since: java.time.Instant): List<DailyReveal> =
         jpa.findByViewerAccountIdAndCreatedAtAfterOrderByCreatedAtDesc(viewerAccountId, since).map { it.toDomain() }
 

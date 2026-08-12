@@ -33,6 +33,9 @@ class WithdrawService(
         exec("delete from device_tokens where account_id = :id", accountId)
         exec("delete from daily_reveals where viewer_account_id = :id or peer_answer_id in (select id from answers where account_id = :id)", accountId)
         exec("delete from hearts where from_account_id = :id or to_account_id = :id", accountId)
+        // 열람권도 양방향으로 — 내가 산 것과 남이 나를 열어둔 것 모두. 남겨두면 탈퇴한 사람의 자리에
+        // 열린 채로 기록이 남고, 같은 계정 id가 재사용될 일은 없어도 지워야 할 개인정보다.
+        exec("delete from profile_unlocks where account_id = :id or peer_account_id = :id", accountId)
         exec("delete from mails where sender_account_id = :id or recipient_account_id = :id", accountId)
         exec("delete from profile_letters where account_id = :id", accountId)
         exec("delete from answers where account_id = :id", accountId)

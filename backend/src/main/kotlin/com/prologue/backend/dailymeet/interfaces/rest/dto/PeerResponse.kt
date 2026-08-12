@@ -31,6 +31,8 @@ data class PeerResponse(
     val hearted: Boolean,
     /** 최근 접속 버킷(TODAY/THIS_WEEK/WEEKS_AGO). 기록 없음·한 달 초과는 null. */
     val lastActive: LastActiveBucket?,
+    /** 이어진 지 사흘이 지나 닫힌 프로필. true면 사진·답변·상세가 비어 있고, 열려면 우표가 든다. */
+    val locked: Boolean,
 ) {
     companion object {
         fun from(view: PeerView): PeerResponse =
@@ -55,6 +57,7 @@ data class PeerResponse(
                 strengths = view.strengths,
                 avatarId = view.avatarId,
                 lastActive = view.lastActive,
+                locked = view.locked,
             )
     }
 }

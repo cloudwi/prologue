@@ -62,6 +62,8 @@ class StampService(
         const val REASON_HEART = "HEART"
         /** 인앱결제 충전. 정산·환불 대응 때 이 사유로 찾는다. */
         const val REASON_PURCHASE = "PURCHASE"
+        /** 사흘이 지나 닫힌 프로필을 다시 연 값. */
+        const val REASON_PROFILE_UNLOCK = "PROFILE_UNLOCK"
         private const val HISTORY_LIMIT = 50
     }
 }

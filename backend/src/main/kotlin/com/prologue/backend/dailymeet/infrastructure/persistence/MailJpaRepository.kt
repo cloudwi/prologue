@@ -9,4 +9,8 @@ interface MailJpaRepository : JpaRepository<MailJpaEntity, UUID> {
     fun findBySenderAccountIdAndRecipientAccountId(senderAccountId: UUID, recipientAccountId: UUID): MailJpaEntity?
 
     fun findByRecipientAccountIdAndStatusNotOrderByCreatedAtDesc(recipientAccountId: UUID, status: String): List<MailJpaEntity>
+
+    fun findBySenderAccountId(senderAccountId: UUID): List<MailJpaEntity>
+
+    fun findByRecipientAccountId(recipientAccountId: UUID): List<MailJpaEntity>
 }

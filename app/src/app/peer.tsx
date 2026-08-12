@@ -4,10 +4,12 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
+import { Avatar } from '@/components/avatar';
 import { ProfileInvitation, type InvitationLetter } from '@/components/profile-invitation';
 import { SubScreen } from '@/components/sub-screen';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { sendHeart, type PastAnswer, type Peer } from '@/lib/daily';
+import { sendHeart, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
 import { promptReport } from '@/lib/reports';
 
 /**
@@ -24,16 +26,19 @@ export default function PeerDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data, question, answers } = useLocalSearchParams<{ data?: string; question?: string; answers?: string }>();
-  const peer = useMemo<Peer | null>(() => {
+  const initialPeer = useMemo<Peer | null>(() => {
     try {
       return JSON.parse(typeof data === 'string' ? data : '') as Peer;
     } catch {
       return null;
     }
   }, [data]);
+  // 우표로 열면 서버가 열린 프로필을 함께 주므로 그 자리에서 바꿔 끼운다 — 다시 조회하지 않는다
+  const [peer, setPeer] = useState(initialPeer);
+  const [unlocking, setUnlocking] = useState(false);
 
   // 하트는 한 사람에게 한 번뿐 — 서버가 알려준 상태로 시작해야 다시 들어왔을 때 버튼이 거짓말하지 않는다
-  const [hearted, setHearted] = useState(peer?.hearted ?? false);
+  const [hearted, setHearted] = useState(initialPeer?.hearted ?? false);
   const [hearting, setHearting] = useState(false);
 
   // 지난 상대는 그동안의 문답 목록을 함께 넘긴다 — 없으면(오늘의 상대·대화 목록) 빈 배열.
@@ -53,6 +58,34 @@ export default function PeerDetailScreen() {
           <Text style={{ color: c.textSecondary }}>프로필을 불러오지 못했어요</Text>
         </View>
       </SubScreen>
+    );
+  }
+
+  /** 우표 한 장으로 프로필을 다시 연다. 열리면 그 자리에서 화면이 바뀐다. */
+  function confirmUnlock() {
+    if (!peer?.peerAnswerId || unlocking) return;
+    Alert.alert(
+      '프로필을 다시 열까요?',
+      '우표 1장을 사용해요. 한 번 열면 다시 닫히지 않아요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '우표 쓰기',
+          onPress: async () => {
+            setUnlocking(true);
+            try {
+              const result = await unlockPeer(peer!.peerAnswerId!);
+              setPeer(result.peer);
+              setHearted(result.peer.hearted);
+              if (result.spent) Alert.alert('프로필을 열었어요', `남은 우표 ${result.balance}장이에요.`);
+            } catch (e) {
+              Alert.alert('열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+            } finally {
+              setUnlocking(false);
+            }
+          },
+        },
+      ],
     );
   }
 
@@ -115,6 +148,39 @@ export default function PeerDetailScreen() {
     } finally {
       setHearting(false);
     }
+  }
+
+  if (peer.locked) {
+    // 사진도 문답도 서버가 비워 보낸다 — 초대장을 펴봐야 빈 종이라, 잠금 자체를 화면으로 삼는다.
+    return (
+      <SubScreen title="" c={c}>
+        <View style={[styles.flex, styles.center, styles.lockedPad]}>
+          <Avatar avatarId={peer.avatarId} nickname={peer.nickname ?? undefined} size={72} c={c} />
+          <Text style={[styles.lockedName, { color: c.text }]}>{peer.nickname ?? '이름 없음'}</Text>
+          {meta.length > 0 && <Text style={[styles.lockedMeta, { color: c.textSecondary }]}>{meta}</Text>}
+          <Text style={[styles.lockedBody, { color: c.textSecondary }]}>
+            사흘이 지나 프로필이 닫혔어요.{'\n'}우표 1장으로 다시 열 수 있어요.
+          </Text>
+          {peer.peerAnswerId && (
+            <Pressable
+              onPress={confirmUnlock}
+              disabled={unlocking}
+              accessibilityRole="button"
+              accessibilityLabel="우표를 써서 프로필 다시 열기"
+              style={[styles.unlockBtn, { backgroundColor: c.primary, opacity: unlocking ? 0.6 : 1 }]}
+            >
+              <Image
+                source={require('@/assets/images/stamp.png')}
+                style={styles.unlockIcon}
+                contentFit="contain"
+                tintColor={c.primaryText}
+              />
+              <Text style={[styles.unlockText, { color: c.primaryText }]}>우표 1장으로 열기</Text>
+            </Pressable>
+          )}
+        </View>
+      </SubScreen>
+    );
   }
 
   return (
@@ -220,4 +286,20 @@ const styles = StyleSheet.create({
   },
   requestPillIcon: { width: 16, height: 16 },
   requestPillText: { fontSize: 14.5, fontWeight: '700' },
+
+  lockedPad: { paddingHorizontal: 40 },
+  lockedName: { fontSize: 19, fontWeight: '700', marginTop: 16 },
+  lockedMeta: { fontSize: 13.5, marginTop: 5 },
+  lockedBody: { fontSize: 13.5, lineHeight: 21, textAlign: 'center', marginTop: 22 },
+  unlockBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 46,
+    paddingHorizontal: 22,
+    borderRadius: Radius.md,
+    marginTop: 24,
+  },
+  unlockIcon: { width: 17, height: 17 },
+  unlockText: { fontSize: 15, fontWeight: '700' },
 });

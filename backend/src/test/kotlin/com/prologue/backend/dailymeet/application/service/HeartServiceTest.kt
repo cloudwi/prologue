@@ -27,7 +27,12 @@ class HeartServiceTest {
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
     private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
-    private val service = HeartService(answerRepository, heartRepository, mailRepository, memberQueryService, notificationService)
+    // 기본은 "방금 하트가 오갔고 잠긴 적 없음" — 잠금을 다루는 테스트에서만 시각을 되돌린다
+    private val profileAccessService = mockk<ProfileAccessService> {
+        every { unlockedPeers(any()) } returns emptySet()
+        every { lastContactedAtByPeer(any()) } returns emptyMap()
+    }
+    private val service = HeartService(answerRepository, heartRepository, mailRepository, memberQueryService, notificationService, profileAccessService)
 
     private val me = UUID.randomUUID()
     private val peer = UUID.randomUUID()
@@ -128,4 +133,39 @@ class HeartServiceTest {
         assertEquals(1, service.receivedHearts(me).size)
     }
 
+
+    @Test
+    fun `받은 하트 - 사흘이 지나면 사진이 가려지고 잠긴 것으로 표시된다`() {
+        val stale = Instant.now().minus(java.time.Duration.ofDays(10))
+        every { heartRepository.findAllTo(me) } returns
+            listOf(Heart.reconstitute(UUID.randomUUID(), peer, me, 1L, stale))
+        every { memberQueryService.findProfile(peer) } returns Member.reconstitute(
+            peer, "닉", Gender.FEMALE, LocalDate.of(1995, 5, 14), Gender.MALE, "서울특별시 강남구", Instant.now(),
+            photoUrls = listOf("a.jpg", "b.jpg"),
+        )
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns peerAnswer
+
+        val received = service.receivedHearts(me)[0]
+
+        assertTrue(received.locked)
+        assertEquals(null, received.photoUrl)
+        // 누구인지는 남는다 — 우표를 쓸지 정하려면 알아야 한다
+        assertEquals("닉", received.nickname)
+    }
+
+    @Test
+    fun `받은 하트 - 사흘 안이면 사진이 그대로 보인다`() {
+        every { heartRepository.findAllTo(me) } returns
+            listOf(Heart.reconstitute(UUID.randomUUID(), peer, me, 1L, Instant.now()))
+        every { memberQueryService.findProfile(peer) } returns Member.reconstitute(
+            peer, "닉", Gender.FEMALE, LocalDate.of(1995, 5, 14), Gender.MALE, "서울특별시 강남구", Instant.now(),
+            photoUrls = listOf("a.jpg", "b.jpg"),
+        )
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns peerAnswer
+
+        val received = service.receivedHearts(me)[0]
+
+        assertFalse(received.locked)
+        assertEquals("a.jpg", received.photoUrl)
+    }
 }

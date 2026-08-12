@@ -44,6 +44,11 @@ export type Peer = {
   hearted: boolean;
   /** 최근 접속 버킷. 기록 없음·한 달 초과는 null(미표시) — 정확한 시각은 서버가 내리지 않는다. */
   lastActive: LastActive | null;
+  /**
+   * 이어진 지 사흘이 지나 닫힌 프로필. true면 사진·답변·상세가 비어 온다(서버가 지운다).
+   * 닉네임·나이·지역은 남는다 — 우표를 쓸지 정하려면 누구인지는 알아야 하니까.
+   */
+  locked: boolean;
 };
 
 export type LastActive = 'TODAY' | 'THIS_WEEK' | 'WEEKS_AGO';
@@ -78,7 +83,10 @@ export type PastPeer = {
   answers: PastAnswer[];
 };
 
-/** 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 제외, GET /daily/past-peers). */
+/**
+ * 지난 상대 — 최근 30일 안에 소개됐던 상대(오늘 제외, GET /daily/past-peers).
+ * 사흘이 지난 상대는 목록에는 남되 `peer.locked`로 잠겨서 온다.
+ */
 export async function getPastPeers(): Promise<PastPeer[]> {
   const res = await authedRequest<{ peers: PastPeer[] }>('GET', '/daily/past-peers');
   return res.peers;
@@ -131,6 +139,8 @@ export type ReceivedHeart = {
   mutual: boolean;
   /** 내가 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
   mailSent: boolean;
+  /** 하트가 오간 지 사흘이 지나 프로필이 닫혔는지. true면 photoUrl이 비어 오고 행동도 닫힌다. */
+  locked: boolean;
   createdAt: string;
 };
 
@@ -138,4 +148,21 @@ export type ReceivedHeart = {
 export async function getReceivedHearts(): Promise<ReceivedHeart[]> {
   const res = await authedRequest<{ hearts: ReceivedHeart[] }>('GET', '/daily/hearts/received');
   return res.hearts;
+}
+
+export type UnlockResult = {
+  /** false면 이미 열려 있어 우표를 쓰지 않았다는 뜻(멱등). */
+  spent: boolean;
+  /** 차감 후 잔액 — 지갑을 다시 묻지 않아도 되게 서버가 함께 준다. */
+  balance: number;
+  /** 열린 프로필 — 그대로 화면에 꽂으면 된다. */
+  peer: Peer;
+};
+
+/**
+ * 우표 한 장으로 닫힌 프로필을 다시 연다 (POST /daily/peers/{id}/unlock).
+ * 한 번 열면 다시 닫히지 않는다. 이미 열려 있으면 우표를 쓰지 않고 성공한다.
+ */
+export async function unlockPeer(peerAnswerId: string): Promise<UnlockResult> {
+  return authedRequest<UnlockResult>('POST', `/daily/peers/${peerAnswerId}/unlock`);
 }

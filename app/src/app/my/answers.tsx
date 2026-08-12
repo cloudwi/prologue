@@ -8,7 +8,7 @@ import { getMyAnswers, type MyAnswer } from '@/lib/daily';
 
 /**
  * 내가 남긴 답 — 역대 문답 전부를 날짜별로 읽는 본인 전용 기록.
- * 상대에게는 지난 상대의 짧은 창(3일)만 보이므로, 전체 목록과 날짜는 여기서만 드러난다.
+ * 상대에게는 프로필이 열려 있는 사흘 동안만 보이므로, 전체 목록과 날짜는 여기서만 드러난다.
  * 하루 한 답이라 달력처럼 월로 묶고, 카드마다 그날의 날짜를 머리에 둔다 — 일기장의 조판.
  */
 export default function MyAnswersScreen() {

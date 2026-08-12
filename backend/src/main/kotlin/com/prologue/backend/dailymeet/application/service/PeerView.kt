@@ -59,7 +59,32 @@ data class PeerView(
     val hearted: Boolean = false,
     /** 최근 접속 버킷. 접속 기록이 없거나 한 달 넘게 조용하면 null(미표시). */
     val lastActive: LastActiveBucket? = null,
-)
+    /**
+     * 이어진 지 사흘이 지나 닫힌 프로필인지(ProfileAccess). true면 사진·답변·상세가 비어 온다 —
+     * 화면이 "빈 프로필"과 "잠긴 프로필"을 구별할 수 있어야 우표를 쓸 자리를 안내할 수 있다.
+     */
+    val locked: Boolean = false,
+) {
+    /**
+     * 잠긴 상태의 자신 — 누구인지는 남기고 볼거리는 지운다.
+     *
+     * 닉네임·나이·지역·아바타를 남기는 건 목록이 이름 없는 자물쇠 줄이 되지 않게 하기 위해서다.
+     * 우표를 쓸지 정하려면 누구인지는 알아야 한다. 사진과 답변, 자기소개는 그 값이 치를 대상이다.
+     */
+    fun locked(): PeerView = copy(
+        locked = true,
+        photoUrls = emptyList(),
+        peerAnswer = null,
+        answerUnlocked = false,
+        letters = emptyList(),
+        bio = null,
+        heightCm = null,
+        bodyType = null,
+        hobbies = emptyList(),
+        interests = emptyList(),
+        strengths = emptyList(),
+    )
+}
 
 /**
  * 오늘의 상대 목록. 매일 정오(KST) 전에는 [open]=false, 공개 후에는 최대 2명의 [peers].

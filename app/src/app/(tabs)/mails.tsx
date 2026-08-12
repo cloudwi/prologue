@@ -182,10 +182,22 @@ export default function MailsScreen() {
                     <View style={styles.rowBody}>
                       <Text style={[styles.rowName, { color: c.text }]}>{h.nickname}</Text>
                       <Text style={[styles.rowMeta, { color: c.textSecondary }]}>
-                        {h.mutual ? '서로 하트 · 편지를 보낼 차례예요' : `만 ${h.age}세 · ${h.region}`}
+                        {h.locked
+                          ? '사흘이 지나 프로필이 닫혔어요'
+                          : h.mutual
+                            ? '서로 하트 · 편지를 보낼 차례예요'
+                            : `만 ${h.age}세 · ${h.region}`}
                       </Text>
                     </View>
+                    {h.peerAnswerId && h.locked && (
+                      // 프로필이 닫혔으면 행동도 닫는다 — 보지 못하는 상대에게 하트를 보내게 두면
+                      // 잠근 의미가 없다. 카드를 누르면 상세에서 우표로 열 수 있다.
+                      <View style={[styles.mailBtn, { borderColor: c.border }]}>
+                        <Text style={[styles.mailBtnText, { color: c.textSecondary }]}>프로필 열기</Text>
+                      </View>
+                    )}
                     {h.peerAnswerId &&
+                      !h.locked &&
                       (h.mailSent || h.mutual ? (
                         <Pressable
                           onPress={() => openCompose(h)}

@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.DailyAnswerService
 import com.prologue.backend.dailymeet.application.service.PeerMatchingService
+import com.prologue.backend.dailymeet.application.service.ProfileAccessService
 import com.prologue.backend.dailymeet.application.service.HeartService
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.interfaces.rest.dto.AnswerRequest
@@ -13,6 +14,7 @@ import com.prologue.backend.dailymeet.interfaces.rest.dto.PeerProfileResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.PeersResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.ReceivedHeartsResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TodayResponse
+import com.prologue.backend.dailymeet.interfaces.rest.dto.UnlockPeerResponse
 import jakarta.validation.Valid
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,6 +34,7 @@ class DailyMeetController(
     private val dailyAnswerService: DailyAnswerService,
     private val peerMatchingService: PeerMatchingService,
     private val heartService: HeartService,
+    private val profileAccessService: ProfileAccessService,
 ) {
     /** 오늘의 질문 + 내 답변 여부. */
     @GetMapping("/today")
@@ -67,6 +70,29 @@ class DailyMeetController(
             throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
         }
         return PeerProfileResponse.from(peerMatchingService.peerProfile(accountId, answerId))
+    }
+
+    /**
+     * 우표 한 장으로 닫힌 프로필을 다시 연다. 한 번 열면 다시 닫히지 않는다.
+     * 이미 열려 있으면 우표를 쓰지 않고 성공으로 답한다 — 재시도가 두 장을 쓰지 않도록.
+     */
+    @PostMapping("/peers/{peerAnswerId}/unlock")
+    fun unlockPeer(
+        authentication: Authentication,
+        @PathVariable peerAnswerId: String,
+    ): UnlockPeerResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val answerId = try {
+            UUID.fromString(peerAnswerId)
+        } catch (e: IllegalArgumentException) {
+            throw DailyMeetException("상대 답변 식별자가 올바르지 않습니다")
+        }
+        val result = profileAccessService.unlock(accountId, answerId)
+        return UnlockPeerResponse(
+            spent = result.spent,
+            balance = result.balance,
+            peer = PeerProfileResponse.from(peerMatchingService.peerProfile(accountId, answerId)).peer,
+        )
     }
 
     /** 내가 남긴 답 — 역대 답변 전부(질문 포함), 최신순. 본인 전용. */

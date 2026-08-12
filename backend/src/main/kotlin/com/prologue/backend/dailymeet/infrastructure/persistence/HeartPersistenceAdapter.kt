@@ -24,6 +24,18 @@ class HeartPersistenceAdapter(
 
     override fun countFrom(fromAccountId: UUID): Long = jpa.countByFromAccountId(fromAccountId)
 
+    /**
+     * 보낸 하트와 받은 하트를 각각 읽어 상대별 최신 시각으로 접는다.
+     * 한 사람이 주고받는 하트는 많아야 수십 건이라, 방향별 한 번씩 두 질의면 충분하다.
+     */
+    override fun findLastHeartedAtByPeer(accountId: UUID): Map<UUID, java.time.Instant> {
+        val sent = jpa.findByFromAccountId(accountId).map { it.toAccountId to it.createdAt }
+        val received = jpa.findByToAccountIdOrderByCreatedAtDesc(accountId).map { it.fromAccountId to it.createdAt }
+        return (sent + received)
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, times) -> times.max() }
+    }
+
     private fun Heart.toEntity(): HeartJpaEntity =
         HeartJpaEntity(
             id = id,

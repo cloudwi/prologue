@@ -40,7 +40,13 @@ class PeerMatchingServiceTest {
     private val lastSeenService = mockk<com.prologue.backend.auth.application.service.LastSeenService> {
         every { lastSeenAt(any()) } returns null
     }
-    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, lastSeenService)
+    // 기본은 "방금 이어졌고 잠긴 적 없음" — 잠금을 다루는 테스트에서만 시각을 되돌린다
+    private val profileAccessService = mockk<ProfileAccessService> {
+        every { unlockedPeers(any()) } returns emptySet()
+        every { lastContactedAtByPeer(any()) } returns emptyMap()
+        every { pairedAt(any(), any()) } returns Instant.now()
+    }
+    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -98,7 +104,7 @@ class PeerMatchingServiceTest {
         // 소개 인원은 설정값이라 테스트에서 2로 고정해 "넘치지 않는지"를 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, lastSeenService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, revealCount = 2,
         )
 
         val view = twoPerDay.todayPeers(accountId, now = NOON)
@@ -259,7 +265,7 @@ class PeerMatchingServiceTest {
         // 정원이 1이면 부족분이 없어 채울 일이 없다 — 2로 두고 "모자란 만큼만" 채우는지 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, lastSeenService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, revealCount = 2,
         )
 
         val view = twoPerDay.todayPeers(accountId, now = NOON)
@@ -330,7 +336,71 @@ class PeerMatchingServiceTest {
         assertEquals(openAnswer.id, view.peer.peerAnswerId)
     }
 
+    /**
+     * 잠금 테스트용 공통 설정 — 오늘이 아닌 질문에 사흘 넘게 지난 소개 하나.
+     * 오늘의 질문은 날짜로 정해지므로, 질문 셋을 두고 오늘이 아닌 것을 골라야 결정적이다.
+     */
+    private fun stalePastPeer(peerAccount: UUID): Answer {
+        val all = listOf(Question(1L, "질문 하나"), Question(2L, "질문 둘"), Question(3L, "질문 셋"))
+        val todayId = LocalDate.now(ZoneId.of("Asia/Seoul")).toEpochDay() % 3 + 1
+        val pastQid = listOf(1L, 2L, 3L).first { it != todayId }
+        val pastAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, pastQid, "지난 답", Instant.now())
+
+        every { questionRepository.findAllOrdered() } returns all
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, any()) } returns
+            Answer.reconstitute(UUID.randomUUID(), accountId, pastQid, "내 답", Instant.now())
+        every { dailyRevealRepository.findRecentByViewer(accountId, any()) } returns listOf(
+            DailyReveal.reconstitute(UUID.randomUUID(), accountId, pastQid, pastAnswer.id!!, STALE),
+        )
+        every { answerRepository.findById(pastAnswer.id) } returns pastAnswer
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+        return pastAnswer
+    }
+
+    @Test
+    fun `지난 상대 - 사흘이 지나면 프로필이 잠기고 문답도 함께 닫힌다`() {
+        // 프로필만 가리고 답이 남으면 잠근 게 아니다 — 볼거리는 전부 닫혀야 우표에 값이 생긴다.
+        stalePastPeer(UUID.randomUUID())
+
+        val view = service.pastPeers(accountId).single()
+
+        assertTrue(view.peer.locked)
+        assertTrue(view.peer.photoUrls.isEmpty())
+        assertNull(view.peer.bio)
+        // 내가 그날 답했더라도 창이 닫혔으면 문답은 잠긴다
+        assertFalse(view.answers[0].unlocked)
+        assertNull(view.answers[0].content)
+        // 누구인지는 남는다 — 우표를 쓸지 정하려면 알아야 한다
+        assertEquals("닉", view.peer.nickname)
+    }
+
+    @Test
+    fun `지난 상대 - 우표로 열어둔 상대는 사흘이 지나도 열려 있다`() {
+        val peerAccount = UUID.randomUUID()
+        stalePastPeer(peerAccount)
+        every { profileAccessService.unlockedPeers(accountId) } returns setOf(peerAccount)
+
+        val view = service.pastPeers(accountId).single()
+
+        assertFalse(view.peer.locked)
+        assertEquals(2, view.peer.photoUrls.size)
+        assertEquals("지난 답", view.answers[0].content)
+    }
+
+    @Test
+    fun `지난 상대 - 소개는 오래됐어도 최근에 하트가 오갔으면 열려 있다`() {
+        // 창은 마지막으로 마음이 오간 때부터 흐른다.
+        val peerAccount = UUID.randomUUID()
+        stalePastPeer(peerAccount)
+        every { profileAccessService.lastContactedAtByPeer(accountId) } returns mapOf(peerAccount to Instant.now())
+
+        assertFalse(service.pastPeers(accountId).single().peer.locked)
+    }
+
     companion object {
         private val NOON = LocalTime.NOON
+
+        /** 열람 창(사흘)을 확실히 넘긴 시각. */
+        private val STALE: Instant = Instant.now().minus(java.time.Duration.ofDays(10))
     }
 }

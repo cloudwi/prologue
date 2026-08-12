@@ -28,6 +28,18 @@ class MailPersistenceAdapter(
         jpa.findByRecipientAccountIdAndStatusNotOrderByCreatedAtDesc(recipientAccountId, MailStatus.DECLINED.name)
             .map { it.toDomain() }
 
+    /**
+     * 보낸 편지와 받은 편지를 각각 읽어 상대별 최신 시각으로 접는다.
+     * 거절한 편지도 센다 — 거절은 프로필을 닫는 일과 무관하고, 인연이 닿았던 사실 자체는 남는다.
+     */
+    override fun findLastMailedAtByPeer(accountId: UUID): Map<UUID, java.time.Instant> {
+        val sent = jpa.findBySenderAccountId(accountId).map { it.recipientAccountId to it.createdAt }
+        val received = jpa.findByRecipientAccountId(accountId).map { it.senderAccountId to it.createdAt }
+        return (sent + received)
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, times) -> times.max() }
+    }
+
     private fun Mail.toEntity(): MailJpaEntity =
         MailJpaEntity(
             id = id,

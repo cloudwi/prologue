@@ -41,6 +41,10 @@ export function stampReasonLabel(reason: string): string {
       return '주간 우표';
     case 'EVENT':
       return '이벤트 지급';
+    case 'PURCHASE':
+      return '우표 충전';
+    case 'PROFILE_UNLOCK':
+      return '프로필 다시 보기';
     default:
       return '우표 변동';
   }

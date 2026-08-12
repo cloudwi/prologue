@@ -19,6 +19,12 @@ interface DailyRevealRepository {
      */
     fun findEverPairedAccountIds(accountId: UUID): Set<UUID>
 
+    /**
+     * 두 사람이 마지막으로 소개된 시각(방향 무관). 프로필 열람 창이 언제부터 흐르는지의 기준.
+     * 소개로 이어진 적이 없으면 null.
+     */
+    fun findLastRevealedAtBetween(accountId: UUID, peerAccountId: UUID): java.time.Instant?
+
     /** 이 사용자에게 [since] 이후 공개된 상대들, 최신 공개 순 — 지난 상대 화면용. */
     fun findRecentByViewer(viewerAccountId: UUID, since: java.time.Instant): List<DailyReveal>
 }

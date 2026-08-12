@@ -18,6 +18,8 @@ data class ReceivedHeartsResponse(
         val mutual: Boolean,
         /** 내가 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
         val mailSent: Boolean,
+        /** 이어진 지 사흘이 지나 프로필이 닫혔는지. true면 photoUrl이 비어 오고, 열려면 우표가 든다. */
+        val locked: Boolean,
         val createdAt: Instant,
     )
 
@@ -34,6 +36,7 @@ data class ReceivedHeartsResponse(
                         peerAnswerId = it.peerAnswerId?.toString(),
                         mutual = it.mutual,
                         mailSent = it.mailSent,
+                        locked = it.locked,
                         createdAt = it.createdAt,
                     )
                 },

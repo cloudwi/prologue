@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.DailyReveal
 import com.prologue.backend.dailymeet.domain.model.PeerEligibility
 import com.prologue.backend.dailymeet.domain.model.PeerScore
+import com.prologue.backend.dailymeet.domain.model.ProfileAccess
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
@@ -40,6 +41,7 @@ class PeerMatchingService(
     private val heartRepository: HeartRepository,
     private val memberQueryService: MemberQueryService,
     private val profileLetterService: ProfileLetterService,
+    private val profileAccessService: ProfileAccessService,
     private val lastSeenService: LastSeenService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
     @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
@@ -98,6 +100,7 @@ class PeerMatchingService(
         return TodayPeersView(
             open = true,
             answerUnlocked = true,
+            // 오늘 공개된 상대는 방금 이어진 사람이라 잠길 수 없다 — 창을 물어볼 것도 없다.
             peers = revealed.map { peerView(accountId, it, answered = true, questions) },
         )
     }
@@ -156,7 +159,7 @@ class PeerMatchingService(
         val questions = questionRepository.findAllOrdered()
         val today = QuestionRotation.of(questions, LocalDate.now(KST))
         val questionById = questions.associateBy { it.id }
-        val reveals = dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_WINDOW))
+        val reveals = dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_HISTORY))
             .filter { it.questionId != today.id }
             .mapNotNull { reveal -> answerRepository.findById(reveal.peerAnswerId)?.let { reveal to it } }
 
@@ -164,21 +167,32 @@ class PeerMatchingService(
         val answeredByQuestion = reveals.map { (reveal, _) -> reveal.questionId }.distinct()
             .associateWith { answerRepository.findByAccountIdAndQuestionId(accountId, it) != null }
 
+        // 잠김 판정에 필요한 것들은 사람 수와 무관하게 한 번씩만 읽는다
+        val unlockedPeers = profileAccessService.unlockedPeers(accountId)
+        val contactedAt = profileAccessService.lastContactedAtByPeer(accountId)
+
         // findRecentByViewer가 최신순이라 묶어도 최신 공개 순이 유지된다
         return reveals
             .groupBy { (_, answer) -> answer.accountId }
-            .map { (_, grouped) ->
+            .map { (peerAccountId, grouped) ->
                 // 행동(하트·편지)은 열려 있는 답변에 걸린다 — 최신 공개가 잠겨 있어도
                 // 예전에 열린 답변이 있으면 그쪽을 대표로 삼아 인연이 끊기지 않게 한다.
                 val (latestReveal, _) = grouped.first()
                 val (_, actionable) = grouped.firstOrNull { (reveal, _) -> answeredByQuestion[reveal.questionId] == true }
                     ?: grouped.first()
+
+                // 창은 마지막으로 마음이 오간 때부터 흐른다 — 소개와 하트 중 더 최근 쪽.
+                val pairedAt = maxOf(latestReveal.createdAt, contactedAt[peerAccountId] ?: latestReveal.createdAt)
+                val open = ProfileAccess.isOpen(pairedAt, unlocked = peerAccountId in unlockedPeers)
+
+                val peer = peerView(accountId, actionable, answeredByQuestion[actionable.questionId] == true, questions)
                 PastPeerView(
                     question = questionById[latestReveal.questionId]?.content ?: "",
                     revealedAt = latestReveal.createdAt,
-                    peer = peerView(accountId, actionable, answeredByQuestion[actionable.questionId] == true, questions),
+                    peer = if (open) peer else peer.locked(),
                     answers = grouped.map { (reveal, answer) ->
-                        val unlocked = answeredByQuestion[reveal.questionId] == true
+                        // 창이 닫히면 문답도 함께 닫힌다 — 프로필만 가리고 답이 남으면 잠근 게 아니다.
+                        val unlocked = open && answeredByQuestion[reveal.questionId] == true
                         PastAnswerView(
                             question = questionById[reveal.questionId]?.content ?: "",
                             content = if (unlocked) answer.content else null,
@@ -201,9 +215,14 @@ class PeerMatchingService(
         if (answer.accountId == accountId) throw DailyMeetException("내 프로필이에요")
         val answered = answerRepository.findByAccountIdAndQuestionId(accountId, answer.questionId) != null
         val questions = questionRepository.findAllOrdered()
+        val open = ProfileAccess.isOpen(
+            profileAccessService.pairedAt(accountId, answer.accountId),
+            unlocked = answer.accountId in profileAccessService.unlockedPeers(accountId),
+        )
+        val peer = peerView(accountId, answer, answered, questions)
         return PeerProfileView(
             question = questions.firstOrNull { it.id == answer.questionId }?.content ?: "",
-            peer = peerView(accountId, answer, answered, questions),
+            peer = if (open) peer else peer.locked(),
         )
     }
 
@@ -245,8 +264,14 @@ class PeerMatchingService(
     companion object {
         private val KST = ZoneId.of("Asia/Seoul")
 
-        /** 지난 상대를 보여주는 기간 — 소개의 여운은 사흘. */
-        private val PAST_PEER_WINDOW: Duration = Duration.ofDays(3)
+        /**
+         * 지난 상대 목록에 남기는 기간.
+         *
+         * 프로필이 열려 있는 사흘([ProfileAccess.WINDOW])보다 길다 — 사흘이 지나면 목록에서
+         * 사라지는 게 아니라 잠긴 채로 남아야, 다시 보고 싶은 사람에게 우표를 쓸 자리가 생긴다.
+         * 이 기간까지 지나면 그때는 정말 지워진다. 무한히 쌓이는 목록은 서랍이지 인연이 아니다.
+         */
+        private val PAST_PEER_HISTORY: Duration = Duration.ofDays(30)
     }
 }
 

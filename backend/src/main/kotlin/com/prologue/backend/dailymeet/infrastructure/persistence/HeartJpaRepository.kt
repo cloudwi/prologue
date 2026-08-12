@@ -12,4 +12,6 @@ interface HeartJpaRepository : JpaRepository<HeartJpaEntity, UUID> {
         toAccountId: UUID,
         questionId: Long,
     ): Boolean
+
+    fun findByFromAccountId(fromAccountId: UUID): List<HeartJpaEntity>
 }
