@@ -32,8 +32,12 @@ class StampWallet private constructor(
     }
 
     companion object {
-        /** 지갑을 처음 열 때 지급되는 환영 우표. */
-        const val WELCOME_STAMPS = 3
+        /**
+         * 지갑을 처음 열 때 지급되는 환영 우표.
+         * 편지 한 통이 만원에 가까운 값이라 넉넉히 줄 수 없다. 다만 첫 한 통은 겪어봐야
+         * 무엇을 사는 것인지 알 수 있어서, 딱 한 장만 준다.
+         */
+        const val WELCOME_STAMPS = 1
 
         fun open(accountId: UUID, now: Instant = Instant.now()): StampWallet =
             StampWallet(accountId, WELCOME_STAMPS, now, now)

@@ -10,9 +10,9 @@ package com.prologue.backend.dailymeet.domain.model
  * 상품을 추가할 때는 두 스토어에 같은 id로 등록해야 한다 — 갈라지면 플랫폼별 분기가 생긴다.
  */
 enum class StampProduct(val productId: String, val stamps: Int) {
+    STAMP_1("stamp_1", 1),
+    STAMP_3("stamp_3", 3),
     STAMP_5("stamp_5", 5),
-    STAMP_15("stamp_15", 15),
-    STAMP_40("stamp_40", 40),
     ;
 
     companion object {

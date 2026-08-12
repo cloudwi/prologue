@@ -5,15 +5,15 @@ import com.prologue.backend.dailymeet.domain.repository.StampLedgerRepository
 import com.prologue.backend.dailymeet.domain.repository.StampWalletRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 
 /**
  * 우표 유스케이스. 지갑은 첫 접근에 환영 우표와 함께 열린다(가입 훅이 따로 없어도 됨).
- * 소모는 부족하면 도메인이 막는다("우표가 부족해요"). 충전(IAP)은 출시 직전에 붙는다.
+ * 소모는 부족하면 도메인이 막는다("우표가 부족해요").
+ *
+ * 무료 지급은 환영 한 장뿐이다. 편지 한 통이 만원에 가까운 값이라, 주기적으로 나눠주면
+ * 그 금액만큼을 매달 그냥 내주는 셈이 된다. 추가 지급은 이벤트(EVENT)나 CS(ADMIN_GRANT)처럼
+ * 사람이 판단해 내보내는 경로로만 남긴다.
  */
 @Service
 class StampService(
@@ -48,45 +48,21 @@ class StampService(
         ledgerRepository.append(accountId, amount, reason)
     }
 
-    private fun walletOf(accountId: UUID): StampWallet {
-        val wallet = walletRepository.findByAccountId(accountId)
-            ?: return walletRepository.save(StampWallet.open(accountId)).also {
+    private fun walletOf(accountId: UUID): StampWallet =
+        walletRepository.findByAccountId(accountId)
+            ?: walletRepository.save(StampWallet.open(accountId)).also {
                 ledgerRepository.append(accountId, StampWallet.WELCOME_STAMPS, REASON_WELCOME)
             }
-        topUpWeekly(accountId, wallet)
-        return wallet
-    }
-
-    /**
-     * 주간 지급 — 결제(IAP)가 없는 동안 매주 1장. 스케줄러 없이 지갑을 여는 순간 이번 주 몫을 채운다.
-     * 기준은 KST 월요일 0시, 환영 우표를 받은 주는 이미 받은 것으로 친다.
-     */
-    private fun topUpWeekly(accountId: UUID, wallet: StampWallet) {
-        val weekStart = LocalDate.now(KST)
-            .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            .atStartOfDay(KST)
-            .toInstant()
-        val last = ledgerRepository.latestAt(accountId, REASON_WEEKLY)
-            ?: ledgerRepository.latestAt(accountId, REASON_WELCOME)
-        if (last == null || last.isBefore(weekStart)) {
-            wallet.grant(WEEKLY_AMOUNT)
-            walletRepository.save(wallet)
-            ledgerRepository.append(accountId, WEEKLY_AMOUNT, REASON_WEEKLY)
-        }
-    }
 
     companion object {
         const val REASON_WELCOME = "WELCOME"
         const val REASON_EVENT = "EVENT"
         const val REASON_MAIL = "MAIL"
-        const val REASON_WEEKLY = "WEEKLY"
         /** 하트를 여러 번 보낸 보상. 원장에 "왜 늘었는지"가 남아야 한다. */
         const val REASON_HEART = "HEART"
         /** 인앱결제 충전. 정산·환불 대응 때 이 사유로 찾는다. */
         const val REASON_PURCHASE = "PURCHASE"
-        private const val WEEKLY_AMOUNT = 1
         private const val HISTORY_LIMIT = 50
-        private val KST = ZoneId.of("Asia/Seoul")
     }
 }
 

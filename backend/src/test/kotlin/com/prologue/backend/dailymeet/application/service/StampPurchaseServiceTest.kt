@@ -28,21 +28,21 @@ class StampPurchaseServiceTest {
     private val accountId = UUID.randomUUID()
     private val token = "purchase-token-abc"
 
-    private fun verified(productId: String = "stamp_15", txn: String = "txn-1") =
+    private fun verified(productId: String = "stamp_3", txn: String = "txn-1") =
         VerifiedPurchase(transactionId = txn, productId = productId)
 
     @Test
     fun `검증된 결제는 상품에 정해진 만큼 우표를 지급한다`() {
-        every { verifier.verify(StorePlatform.ANDROID, "stamp_15", token) } returns verified()
+        every { verifier.verify(StorePlatform.ANDROID, "stamp_3", token) } returns verified()
         every { purchaseRepository.saveIfNew(any()) } returns true
         every { stampService.balance(accountId) } returns 18
 
-        val result = service.purchase(accountId, StorePlatform.ANDROID, "stamp_15", token)
+        val result = service.purchase(accountId, StorePlatform.ANDROID, "stamp_3", token)
 
-        assertEquals(15, result.granted)
+        assertEquals(3, result.granted)
         assertEquals(18, result.balance)
         assertFalse(result.alreadyProcessed)
-        verify(exactly = 1) { stampService.grantTo(accountId, 15, StampService.REASON_PURCHASE) }
+        verify(exactly = 1) { stampService.grantTo(accountId, 3, StampService.REASON_PURCHASE) }
     }
 
     @Test
@@ -52,7 +52,7 @@ class StampPurchaseServiceTest {
         every { purchaseRepository.saveIfNew(any()) } returns false
         every { stampService.balance(accountId) } returns 18
 
-        val result = service.purchase(accountId, StorePlatform.ANDROID, "stamp_15", token)
+        val result = service.purchase(accountId, StorePlatform.ANDROID, "stamp_3", token)
 
         assertTrue(result.alreadyProcessed)
         assertEquals(0, result.granted)
@@ -65,7 +65,7 @@ class StampPurchaseServiceTest {
         every { verifier.verify(any(), any(), any()) } throws PurchaseVerificationException("확인 실패")
 
         assertFailsWith<DailyMeetException> {
-            service.purchase(accountId, StorePlatform.ANDROID, "stamp_15", token)
+            service.purchase(accountId, StorePlatform.ANDROID, "stamp_3", token)
         }
         verify(exactly = 0) { stampService.grantTo(any(), any(), any()) }
         verify(exactly = 0) { purchaseRepository.saveIfNew(any()) }
@@ -83,10 +83,10 @@ class StampPurchaseServiceTest {
     @Test
     fun `스토어가 알려준 상품이 요청과 다르면 지급하지 않는다`() {
         // 싼 상품을 사고 비싼 상품 id를 보내는 시도를 막는다.
-        every { verifier.verify(any(), any(), any()) } returns verified(productId = "stamp_5")
+        every { verifier.verify(any(), any(), any()) } returns verified(productId = "stamp_1")
 
         assertFailsWith<DailyMeetException> {
-            service.purchase(accountId, StorePlatform.ANDROID, "stamp_40", token)
+            service.purchase(accountId, StorePlatform.ANDROID, "stamp_5", token)
         }
         verify(exactly = 0) { stampService.grantTo(any(), any(), any()) }
     }
@@ -94,15 +94,15 @@ class StampPurchaseServiceTest {
     @Test
     fun `지급은 기록이 남은 뒤에만 일어난다`() {
         // 기록의 유니크 제약이 중복 지급을 막는 자물쇠다 — 지급이 먼저면 그 사이 두 번 나갈 수 있다.
-        every { verifier.verify(any(), any(), any()) } returns verified(productId = "stamp_5", txn = "txn-42")
+        every { verifier.verify(any(), any(), any()) } returns verified(productId = "stamp_1", txn = "txn-42")
         val saved = slot<StampPurchase>()
         every { purchaseRepository.saveIfNew(capture(saved)) } returns true
         every { stampService.balance(accountId) } returns 5
 
-        service.purchase(accountId, StorePlatform.IOS, "stamp_5", token)
+        service.purchase(accountId, StorePlatform.IOS, "stamp_1", token)
 
         assertEquals("txn-42", saved.captured.transactionId)
         assertEquals(StorePlatform.IOS, saved.captured.platform)
-        assertEquals(5, saved.captured.stamps)
+        assertEquals(1, saved.captured.stamps)
     }
 }

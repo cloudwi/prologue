@@ -16,6 +16,9 @@ import java.util.UUID
  * 하트는 가벼운 신호다 — **서로** 하트를 보냈으면 마음이 통한 것. 연결(연락처 교환)은 편지가 맡는다.
  * 상호 판정은 질문과 무관하다: 어제의 하트와 오늘의 하트가 만나도 호감은 호감이다.
  * 한 사람에게는 한 번만 보낸다 — 질문마다 다시 보낼 수 있으면 호감이 신호가 아니라 빈도가 된다.
+ *
+ * 하트는 공짜다. 대가로 우표를 주지도 않는다 — 공짜 행동이 유료 재화를 낳으면
+ * 아무에게나 하트를 뿌리는 게 이득이 되고, 그 순간 하트는 호감의 신호이길 그만둔다.
  */
 @Service
 class HeartService(
@@ -23,7 +26,6 @@ class HeartService(
     private val heartRepository: HeartRepository,
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
-    private val stampService: StampService,
 ) {
     /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 서로의 마음을 안 것. */
     @Transactional
@@ -33,29 +35,15 @@ class HeartService(
         val toAccountId = peerAnswer.accountId
         if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 하트를 보낼 수 없어요")
 
-        // 이미 이 사람에게 보냈다면 아무 일도 일어나지 않는다 — 보상도 여기서 한 번만 걸린다(멱등).
-        var stampEarned = false
+        // 이미 이 사람에게 보냈다면 아무 일도 일어나지 않는다(멱등).
         if (!heartRepository.existsFromTo(fromAccountId, toAccountId)) {
             heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
-            stampEarned = rewardIfMilestone(fromAccountId)
         }
 
         return HeartResult(
             hearted = true,
             matched = heartRepository.existsFromTo(toAccountId, fromAccountId),
-            stampEarned = stampEarned,
         )
-    }
-
-    /**
-     * 하트를 [HEARTS_PER_STAMP]번 보낼 때마다 우표 한 장을 돌려준다.
-     * 마음을 자주 건네는 사람에게 편지 쓸 여력을 주는 장치 — 보낸 하트의 누적 수를 기준으로 한다.
-     */
-    private fun rewardIfMilestone(fromAccountId: UUID): Boolean {
-        val sent = heartRepository.countFrom(fromAccountId)
-        if (sent == 0L || sent % HEARTS_PER_STAMP != 0L) return false
-        stampService.grantTo(fromAccountId, 1, StampService.REASON_HEART)
-        return true
     }
 
     /**
@@ -102,9 +90,4 @@ data class HeartResult(
     val hearted: Boolean,
     /** 서로 하트 — 마음이 통했다. */
     val matched: Boolean,
-    /** 이번 하트로 우표를 받았는지 — 화면이 알려줄 수 있게. */
-    val stampEarned: Boolean = false,
 )
-
-/** 하트 몇 번마다 우표 한 장을 돌려줄지. */
-private const val HEARTS_PER_STAMP = 5L

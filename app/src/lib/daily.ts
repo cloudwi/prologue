@@ -112,8 +112,6 @@ export type HeartResult = {
   hearted: boolean;
   /** 서로 하트 — 편지를 우표 없이 보낼 수 있다. */
   matched: boolean;
-  /** 이번 하트로 우표를 받았는지(하트 5번마다 1장). */
-  stampEarned: boolean;
 };
 
 /** 상대 답변에 하트(호감 표시). 서로 하트면 편지가 무료가 된다 (POST /daily/today/heart). */
