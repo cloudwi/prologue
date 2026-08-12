@@ -38,6 +38,11 @@ class SecurityConfig(
             .formLogin { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
+                // /error를 열어두는 건 편의가 아니라 정확성 문제다. 없는 주소로 404가 나면 스프링은
+                // /error로 포워드하는데, 그 디스패치에서는 JWT 필터가 다시 돌지 않는다(OncePerRequestFilter
+                // 기본 동작). 인증이 비어 있으니 여기서 막히고, 클라이언트는 404 대신 403을 받는다.
+                // 앱은 403을 세션 만료로 읽어 토큰을 지우므로, 오타 하나가 "로그아웃"으로 둔갑한다.
+                it.requestMatchers("/error").permitAll()
                 it.requestMatchers("/auth/**", "/actuator/health", "/app-config").permitAll()
                 it.requestMatchers("/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
