@@ -192,6 +192,49 @@ class PeerMatchingServiceTest {
     }
 
     @Test
+    fun `오늘의 상대 - 오늘 상한만큼 소개된 사람은 후보가 그 사람뿐이어도 내보내지 않는다`() {
+        // 성비가 기울면 적은 쪽에 노출이 몰린다. 점수의 공평 분배는 순서만 바꿀 뿐
+        // 횟수를 막지 못해서, 후보가 하나면 몇 번이든 뽑힌다 — 그쪽이 먼저 지쳐 떠난다.
+        val popularAccount = UUID.randomUUID()
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val theirAnswer = Answer.reconstitute(UUID.randomUUID(), popularAccount, 1L, "인기 있는 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(theirAnswer)
+        every { memberQueryService.findProfile(popularAccount) } returns member(popularAccount, Gender.FEMALE, Gender.MALE)
+        // 오늘 이미 3명에게 소개됨 = 기본 상한
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, theirAnswer.id!!) } returns 3
+
+        val view = service.todayPeers(accountId, now = NOON)
+
+        // 빈 화면은 손실이 아니라 정직함이다 — 한쪽을 갈아 넣어 채우는 것보다 낫다
+        assertTrue(view.open)
+        assertTrue(view.peers.isEmpty())
+        verify(exactly = 0) { dailyRevealRepository.save(any()) }
+    }
+
+    @Test
+    fun `오늘의 상대 - 상한에 아직 닿지 않은 사람은 소개된다`() {
+        // 상한은 경계에서만 막아야 한다. 한 칸 남은 사람까지 걸러내면 매칭이 필요 이상으로 마른다.
+        val popularAccount = UUID.randomUUID()
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val theirAnswer = Answer.reconstitute(UUID.randomUUID(), popularAccount, 1L, "인기 있는 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(theirAnswer)
+        every { memberQueryService.findProfile(popularAccount) } returns member(popularAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, theirAnswer.id!!) } returns 2
+
+        val view = service.todayPeers(accountId, now = NOON)
+
+        assertEquals(1, view.peers.size)
+    }
+
+    @Test
     fun `오늘의 상대 - 이미 공개된 상대는 유지하고 부족분만 채운다`() {
         val pinnedAnswerId = UUID.randomUUID()
         val pinnedAccount = UUID.randomUUID()

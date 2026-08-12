@@ -14,6 +14,7 @@ import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import com.prologue.backend.member.application.service.MemberQueryService
+import com.prologue.backend.member.domain.model.Member
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -58,6 +59,20 @@ class PeerMatchingService(
      * 사람이 늘면 2로 되돌려 선택의 여지를 준다.
      */
     @param:Value("\${daily.reveal-count:1}") private val revealCount: Int = 1,
+    /**
+     * 한 사람이 하루에 소개될 수 있는 최대 횟수.
+     *
+     * 성비가 기울면 적은 쪽이 그만큼 여러 번 소개된다. 남성 100명 여성 10명이면
+     * 여성 한 명이 하루 열 번 소개되고, 하트와 알림도 그만큼 쌓인다 — 그 피로가
+     * 먼저 떠나게 만드는 원인이 된다.
+     *
+     * 점수의 공평 분배(PeerScore)는 순서를 조정할 뿐 횟수를 막지 못한다.
+     * 후보가 그 사람뿐이면 몇 번이든 뽑히기 때문에, 상한은 따로 있어야 한다.
+     *
+     * 상한에 걸려 소개할 사람이 없으면 빈 화면이 된다. 그건 손실이 아니라 정직함이다 —
+     * 없는 사람을 만들어낼 수는 없고, 한쪽을 갈아 넣어 채우는 것보다 낫다.
+     */
+    @param:Value("\${daily.max-exposure-per-day:3}") private val maxExposurePerDay: Int = 3,
 ) {
     /**
      * 오늘의 상대 — 매일 정오(KST)에 [revealCount]명이 공개된다.
@@ -102,28 +117,33 @@ class PeerMatchingService(
         val seen = revealed.mapNotNull { it.id }.toSet()
         val alreadyMet = dailyRevealRepository.findRevealedPeerAccountIds(accountId).toSet()
 
-        // 후보는 최근 며칠치 질문에 걸쳐 찾는다. 프로필은 점수 계산에도 쓰이니 한 번만 읽어 답변과 짝짓는다.
+        // 후보는 최근 며칠치 질문에 걸쳐 찾는다. 프로필과 노출 횟수는 점수 계산에도 쓰이니
+        // 여기서 한 번만 읽는다 — 뽑을 때마다 다시 세면 후보 수만큼 질의가 반복된다.
         val candidates = answerRepository
             .findOthersByQuestionIds(QuestionRotation.recentIds(questions, LocalDate.now(KST), candidateDays), accountId)
             .filter { it.id !in seen }
             .mapNotNull { answer ->
                 val peer = memberQueryService.findProfile(answer.accountId) ?: return@mapNotNull null
                 if (!PeerEligibility.isEligible(me, peer, alreadyMet)) return@mapNotNull null
-                answer to peer
+                val exposure = dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, answer.id!!)
+                // 오늘 이미 상한만큼 소개된 사람은 더 내보내지 않는다
+                if (exposure >= maxExposurePerDay) return@mapNotNull null
+                Candidate(answer, peer, exposure)
             }
             .toMutableList()
 
         // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
         while (revealed.size < revealCount && candidates.isNotEmpty()) {
-            val chosen = candidates.maxBy { (answer, peer) ->
-                PeerScore.of(me, peer, dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, answer.id!!))
-            }
+            val chosen = candidates.maxBy { PeerScore.of(me, it.peer, it.exposure) }
             candidates.remove(chosen)
-            dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.first.id!!))
-            revealed += chosen.first
+            dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.answer.id!!))
+            revealed += chosen.answer
         }
         return revealed
     }
+
+    /** 자격을 통과한 후보 하나 — 프로필과 오늘의 노출 횟수를 함께 들고 다닌다. */
+    private data class Candidate(val answer: Answer, val peer: Member, val exposure: Long)
 
     /**
      * 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 공개분 제외), 최신 공개 순.
