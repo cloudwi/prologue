@@ -11,8 +11,13 @@ interface DailyRevealRepository {
     /** 해당 질문에서 특정 상대 답변이 지금까지 몇 명에게 노출됐는지(공평 분배용). */
     fun countByQuestionAndPeerAnswer(questionId: Long, peerAnswerId: UUID): Long
 
-    /** 이 사용자에게 한 번이라도 소개된 상대들의 계정 id. 같은 사람을 다시 소개하지 않기 위해. */
-    fun findRevealedPeerAccountIds(viewerAccountId: UUID): List<UUID>
+    /**
+     * 이 사용자와 한 번이라도 이어진 적 있는 사람들 — 내가 본 상대와 나를 본 상대 양쪽 모두.
+     *
+     * 소개는 한쪽 화면에만 뜨지만 인연은 쌍으로 맺어진다. 내가 본 쪽만 세면
+     * 이미 지나쳤던 상대가 며칠 뒤 반대 방향으로 다시 '오늘의 인연'이 된다.
+     */
+    fun findEverPairedAccountIds(accountId: UUID): Set<UUID>
 
     /** 이 사용자에게 [since] 이후 공개된 상대들, 최신 공개 순 — 지난 상대 화면용. */
     fun findRecentByViewer(viewerAccountId: UUID, since: java.time.Instant): List<DailyReveal>

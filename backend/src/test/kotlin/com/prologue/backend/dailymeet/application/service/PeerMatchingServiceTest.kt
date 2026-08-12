@@ -150,16 +150,17 @@ class PeerMatchingServiceTest {
     }
 
     @Test
-    fun `오늘의 상대 - 한 번 소개된 사람은 다시 소개하지 않는다`() {
+    fun `오늘의 상대 - 한 번 이어진 사람은 어느 방향이었든 다시 소개하지 않는다`() {
         // 이미 지나간 인연이 다시 '오늘의 상대'로 오면 소개가 아니라 반복이 된다.
         // 답변이 아니라 사람 단위로 걸러야 한다 — 같은 사람이 다른 날 다른 답변으로 다시 오를 수 있어서.
+        // 내가 본 상대든 나를 본 상대든 똑같이 걸러진다(findEverPairedAccountIds가 양쪽을 합쳐 준다).
         val metAccount = UUID.randomUUID()
         val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
         val newAnswerFromMetPerson = Answer.reconstitute(UUID.randomUUID(), metAccount, 1L, "다른 날의 답변", Instant.now())
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
         every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
-        every { dailyRevealRepository.findRevealedPeerAccountIds(accountId) } returns listOf(metAccount)
+        every { dailyRevealRepository.findEverPairedAccountIds(accountId) } returns setOf(metAccount)
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
         every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(newAnswerFromMetPerson)
         every { memberQueryService.findProfile(metAccount) } returns member(metAccount, Gender.FEMALE, Gender.MALE)

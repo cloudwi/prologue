@@ -115,7 +115,7 @@ class PeerMatchingService(
         val me = memberQueryService.findProfile(accountId)
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
         val seen = revealed.mapNotNull { it.id }.toSet()
-        val alreadyMet = dailyRevealRepository.findRevealedPeerAccountIds(accountId).toSet()
+        val alreadyMet = dailyRevealRepository.findEverPairedAccountIds(accountId)
 
         // 후보는 최근 며칠치 질문에 걸쳐 찾는다. 프로필과 노출 횟수는 점수 계산에도 쓰이니
         // 여기서 한 번만 읽는다 — 뽑을 때마다 다시 세면 후보 수만큼 질의가 반복된다.
