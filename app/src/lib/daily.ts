@@ -78,6 +78,11 @@ export type PastPeer = {
   /** 그날의 질문 — 상세 화면 답변 블록의 라벨. */
   question: string;
   revealedAt: string;
+  /**
+   * 프로필이 닫히는 시각. 이미 닫혔거나 잉크로 열어둬 다시 닫히지 않는 상대는 null.
+   * 창은 하트·편지로 연장되므로 소개 시각만 보고 앱이 계산하면 실제 잠금과 어긋난다.
+   */
+  closesAt: string | null;
   peer: Peer;
   /** 이 상대가 남긴 문답 목록(최신 공개 순) — 같은 상대가 여러 날 공개되면 쌓인다. */
   answers: PastAnswer[];

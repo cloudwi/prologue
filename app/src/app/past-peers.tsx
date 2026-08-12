@@ -8,7 +8,6 @@ import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getPastPeers, type PastPeer } from '@/lib/daily';
-import { INK_PRICE } from '@/lib/ink';
 
 /**
  * 지난 상대 — 최근 한 달 안에 소개된 상대의 그리드.
@@ -47,9 +46,7 @@ export default function PastPeersScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.sub, { color: c.textSecondary }]}>
-            소개된 지 사흘이 지나면 프로필이 닫혀요. 잉크 {INK_PRICE.PROFILE_UNLOCK}로 다시 열 수 있어요.
-          </Text>
+          <Text style={[styles.sub, { color: c.textSecondary }]}>사흘이 지나면 프로필이 닫혀요.</Text>
           <PastPeerGrid items={peers} c={c} />
         </ScrollView>
       )}
@@ -57,10 +54,19 @@ export default function PastPeersScreen() {
   );
 }
 
-/** 며칠 전 공개됐는지 — 어제/2일 전/… */
-function daysAgoLabel(revealedAt: string): string {
-  const days = Math.max(1, Math.round((Date.now() - new Date(revealedAt).getTime()) / 86_400_000));
-  return days === 1 ? '어제' : `${days}일 전`;
+/**
+ * 프로필이 닫히기까지 남은 시간.
+ *
+ * 언제 만났는지보다 얼마나 남았는지가 지금 할 수 있는 일을 말해준다.
+ * 하루가 안 남았으면 시간으로 보여준다 — "1일 남음"은 스무 시간과 두 시간을 같게 만든다.
+ */
+function remainingLabel(closesAt: string): string {
+  const ms = new Date(closesAt).getTime() - Date.now();
+  if (ms <= 0) return '곧 닫혀요';
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 1) return '곧 닫혀요';
+  if (hours < 24) return `${hours}시간 남음`;
+  return `${Math.floor(hours / 24)}일 남음`;
 }
 
 /** 지난 상대 그리드 — 한 줄 세 명씩 세로로 쌓는다. */
@@ -108,8 +114,8 @@ function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: Th
       <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>
         {item.peer.nickname ?? '이름 없음'}
       </Text>
-      <Text style={[styles.day, { color: c.textSecondary }]}>
-        {locked ? `${daysAgoLabel(item.revealedAt)} · 잠김` : daysAgoLabel(item.revealedAt)}
+      <Text style={[styles.day, { color: locked ? c.textSecondary : c.primaryStrong }]}>
+        {locked ? '잠김' : item.closesAt ? remainingLabel(item.closesAt) : '계속 열림'}
         {!locked && unlockedCount > 1 ? ` · 답변 ${unlockedCount}` : ''}
       </Text>
     </Pressable>

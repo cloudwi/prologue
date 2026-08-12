@@ -183,12 +183,16 @@ class PeerMatchingService(
 
                 // 창은 마지막으로 마음이 오간 때부터 흐른다 — 소개와 하트 중 더 최근 쪽.
                 val pairedAt = maxOf(latestReveal.createdAt, contactedAt[peerAccountId] ?: latestReveal.createdAt)
-                val open = ProfileAccess.isOpen(pairedAt, unlocked = peerAccountId in unlockedPeers)
+                val unlocked = peerAccountId in unlockedPeers
+                val open = ProfileAccess.isOpen(pairedAt, unlocked = unlocked)
 
                 val peer = peerView(accountId, actionable, answeredByQuestion[actionable.questionId] == true, questions)
                 PastPeerView(
                     question = questionById[latestReveal.questionId]?.content ?: "",
                     revealedAt = latestReveal.createdAt,
+                    // 닫히는 시각은 서버가 알려준다 — 창은 하트·편지로 연장되므로
+                    // 앱이 소개 시각만 보고 계산하면 실제 잠금과 어긋난다.
+                    closesAt = if (open && !unlocked) pairedAt.plus(ProfileAccess.WINDOW) else null,
                     peer = if (open) peer else peer.locked(),
                     answers = grouped.map { (reveal, answer) ->
                         // 창이 닫히면 문답도 함께 닫힌다 — 프로필만 가리고 답이 남으면 잠근 게 아니다.
@@ -285,6 +289,13 @@ data class PeerProfileView(
 data class PastPeerView(
     val question: String,
     val revealedAt: Instant,
+    /**
+     * 프로필이 닫히는 시각. 이미 닫혔거나(잠김) 잉크로 열어둬 다시 닫히지 않는 상대는 null.
+     *
+     * 화면이 "언제 만났는지"가 아니라 "얼마나 남았는지"를 보여줄 수 있게 서버가 계산해 준다 —
+     * 창은 마지막으로 마음이 오간 때부터 흐르므로 소개 시각만으로는 알 수 없다.
+     */
+    val closesAt: Instant?,
     val peer: PeerView,
     val answers: List<PastAnswerView>,
 )

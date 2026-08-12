@@ -3,6 +3,7 @@ package com.prologue.backend.dailymeet.application.service
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.DailyReveal
+import com.prologue.backend.dailymeet.domain.model.ProfileAccess
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
@@ -385,6 +386,31 @@ class PeerMatchingServiceTest {
         assertFalse(view.peer.locked)
         assertEquals(2, view.peer.photoUrls.size)
         assertEquals("지난 답", view.answers[0].content)
+    }
+
+    @Test
+    fun `지난 상대 - 닫히는 시각은 마지막으로 마음이 오간 때부터 사흘 뒤다`() {
+        // 화면이 "얼마나 남았는지"를 보여주려면 서버가 그 시각을 알려줘야 한다.
+        // 창은 하트·편지로 연장되므로 소개 시각만으로는 앱이 계산할 수 없다.
+        val peerAccount = UUID.randomUUID()
+        stalePastPeer(peerAccount)
+        val heartedAt = Instant.now()
+        every { profileAccessService.lastContactedAtByPeer(accountId) } returns mapOf(peerAccount to heartedAt)
+
+        val view = service.pastPeers(accountId).single()
+
+        assertEquals(heartedAt.plus(ProfileAccess.WINDOW), view.closesAt)
+    }
+
+    @Test
+    fun `지난 상대 - 잠겼거나 잉크로 열어둔 상대는 닫히는 시각이 없다`() {
+        // 잠긴 상대는 남은 기간이랄 게 없고, 잉크로 연 상대는 다시 닫히지 않는다.
+        val lockedPeer = UUID.randomUUID()
+        stalePastPeer(lockedPeer)
+        assertNull(service.pastPeers(accountId).single().closesAt)
+
+        every { profileAccessService.unlockedPeers(accountId) } returns setOf(lockedPeer)
+        assertNull(service.pastPeers(accountId).single().closesAt)
     }
 
     @Test
