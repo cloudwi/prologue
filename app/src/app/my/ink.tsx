@@ -11,7 +11,6 @@ import { getInkWallet, inkReasonLabel, INK_PRICE, type InkWallet } from '@/lib/i
 /**
  * 잉크 지갑 — 잔액과 증감 내역. 재화는 매칭 메뉴가 아니라 제 방을 가진다.
  * 이벤트는 하위 화면(my/events)으로 한 뎁스 내렸다 — 이벤트가 늘어도 지갑은 조용하게.
- * 충전 버튼은 출시 후 IAP와 함께 이 화면에 붙는다.
  */
 export default function InkScreen() {
   const c = useTheme();
@@ -53,12 +52,21 @@ export default function InkScreen() {
             />
             <Text style={[styles.balanceNumber, { color: c.text, fontFamily: Fonts.serif }]}>
               {wallet?.balance ?? 0}
-              <Text style={[styles.balanceUnit, { color: c.textSecondary }]}> 장</Text>
             </Text>
             <Text style={[styles.balanceHint, { color: c.textSecondary }]}>
               편지 한 통에 잉크 {INK_PRICE.MAIL},{'\n'}사흘이 지난 프로필을 다시 여는 데 {INK_PRICE.PROFILE_UNLOCK}이 쓰여요.
             </Text>
           </View>
+
+          {/* 충전 — 잔액 바로 아래. 모자란 걸 확인한 자리에서 채울 수 있어야 한다. */}
+          <Pressable
+            onPress={() => router.push('/my/ink-topup')}
+            accessibilityRole="button"
+            accessibilityLabel="잉크 충전하기"
+            style={({ pressed }) => [styles.topupBtn, { backgroundColor: c.primary, opacity: pressed ? 0.8 : 1 }]}
+          >
+            <Text style={[styles.topupText, { color: c.primaryText }]}>잉크 충전</Text>
+          </Pressable>
 
           {/* 이벤트 — 자세한 건 하위 화면에서. 지갑에는 문 하나만 둔다. */}
           <Pressable
@@ -96,7 +104,7 @@ export default function InkScreen() {
                     <Text
                       style={[styles.historyAmount, { color: item.amount > 0 ? c.primaryStrong : c.textSecondary }]}
                     >
-                      {item.amount > 0 ? `+${item.amount}` : item.amount}장
+                      {item.amount > 0 ? `+${item.amount}` : item.amount}
                     </Text>
                   </View>
                 ))}
@@ -117,8 +125,16 @@ const styles = StyleSheet.create({
   balanceCard: { borderRadius: Radius.md, alignItems: 'center', paddingVertical: 36, marginBottom: 14 },
   stampIcon: { width: 40, height: 40, marginBottom: 14 },
   balanceNumber: { fontSize: 44, fontWeight: '700' },
-  balanceUnit: { fontSize: 18, fontWeight: '400' },
   balanceHint: { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 14 },
+
+  topupBtn: {
+    height: 50,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  topupText: { fontSize: 15.5, fontWeight: '700' },
 
   eventEntry: {
     flexDirection: 'row',

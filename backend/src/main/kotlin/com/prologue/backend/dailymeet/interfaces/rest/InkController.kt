@@ -116,7 +116,11 @@ data class InkPurchaseRequest(
     val platform: StorePlatform?,
     @field:NotBlank(message = "상품 id는 필수입니다")
     val productId: String,
-    /** 안드로이드는 purchase token, iOS는 transaction id. */
+    /**
+     * 스토어가 준 거래 증표. 안드로이드는 purchase token, iOS는 서명된 거래(JWS)다.
+     * 검증기가 스토어에 물을 때 쓰는 자격증명일 뿐, 중복 판정의 열쇠는 아니다 —
+     * 그건 스토어가 확인해 준 transactionId이고, 그 값은 검증 결과에서 나온다.
+     */
     @field:NotBlank(message = "거래 증표는 필수입니다")
     val token: String,
 )

@@ -5,6 +5,17 @@ import { authedRequest } from './api';
  * 값은 서버(InkPrice)가 단일 소스이고, 여기 상수는 화면 문구를 위한 사본이다.
  * 지갑은 서버에서 첫 접근에 환영 잉크와 함께 열린다.
  */
+/**
+ * 충전 상품 — 스토어에 등록한 상품 id와 지급되는 잉크 양.
+ * 서버(InkProduct)가 단일 소스이고, 여기 표는 화면이 목록을 그리기 위한 사본이다.
+ * 실제 가격은 스토어에서 받아 온다(나라마다 다르므로 앱이 정할 수 없다).
+ */
+export const INK_PRODUCTS = [
+  { productId: 'ink_50', ink: 50, savingPercent: 0 },
+  { productId: 'ink_150', ink: 150, savingPercent: 9 },
+  { productId: 'ink_250', ink: 250, savingPercent: 20 },
+] as const;
+
 export const INK_PRICE = {
   /** 편지 한 통을 부치는 값. */
   MAIL: 50,
@@ -80,4 +91,19 @@ export async function getInkEvents(): Promise<InkEventSubmission[]> {
 export async function submitInkEvent(url: string): Promise<InkEventSubmission[]> {
   const res = await authedRequest<{ submissions: InkEventSubmission[] }>('POST', '/ink/events', { url });
   return res.submissions;
+}
+
+/**
+ * 스토어 결제를 서버에 확인시키고 잉크를 받는다 (POST /ink/purchase).
+ *
+ * 지급의 근거는 스토어가 확인해 준 거래뿐이라, 앱은 증표만 전달한다.
+ * 이미 처리된 거래를 다시 보내도 성공으로 답한다(alreadyProcessed=true) —
+ * 실패로 답하면 앱이 거래를 소비하지 못해 영원히 재시도한다.
+ */
+export async function redeemPurchase(input: {
+  platform: 'IOS' | 'ANDROID';
+  productId: string;
+  token: string;
+}): Promise<{ granted: number; balance: number; alreadyProcessed: boolean }> {
+  return authedRequest('POST', '/ink/purchase', input);
 }
