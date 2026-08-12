@@ -1,6 +1,6 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import {
   endConnection,
   ErrorCode,
@@ -175,12 +175,7 @@ export default function InkTopupScreen() {
                   },
                 ]}
               >
-                <Image
-                  source={require('@/assets/images/stamp.png')}
-                  style={styles.cardIcon}
-                  contentFit="contain"
-                  tintColor={c.primaryStrong}
-                />
+                <Ionicons name="water" size={22} color={c.primaryStrong} />
                 <View style={styles.cardBody}>
                   <Text style={[styles.cardTitle, { color: c.text }]}>잉크 {item.ink}</Text>
                   {item.savingPercent > 0 && (
@@ -237,7 +232,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10,
   },
-  cardIcon: { width: 22, height: 22 },
   cardBody: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardSaving: { fontSize: 12.5, fontWeight: '600', marginTop: 3 },

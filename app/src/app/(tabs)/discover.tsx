@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -169,12 +170,7 @@ export default function DiscoverScreen() {
                   accessibilityLabel={`남은 잉크 ${ink}, 지갑 열기`}
                   style={({ pressed }) => [styles.inkChip, { borderColor: c.border, opacity: pressed ? 0.6 : 1 }]}
                 >
-                  <Image
-                    source={require('@/assets/images/stamp.png')}
-                    style={styles.inkChipIcon}
-                    contentFit="contain"
-                    tintColor={c.primaryStrong}
-                  />
+                  <Ionicons name="water" size={13} color={c.primaryStrong} />
                   <Text style={[styles.inkChipText, { color: c.text }]}>{ink}</Text>
                 </Pressable>
               )}
@@ -469,7 +465,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: 1,
   },
-  inkChipIcon: { width: 13, height: 13 },
   inkChipText: { fontSize: 13, fontWeight: '700' },
   questionCard: { borderRadius: Radius.md, padding: 20, marginBottom: 16 },
   question: { fontSize: 19, fontWeight: '600', lineHeight: 28 },

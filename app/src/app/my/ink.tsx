@@ -1,7 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
@@ -44,12 +44,8 @@ export default function InkScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           {/* 잔액 — 이 화면의 주인공. 숫자 하나를 크게. */}
           <View style={[styles.balanceCard, { backgroundColor: c.backgroundElement }]}>
-            <Image
-              source={require('@/assets/images/stamp.png')}
-              style={styles.stampIcon}
-              contentFit="contain"
-              tintColor={c.primaryStrong}
-            />
+            {/* 재화는 잉크다 — 우표는 편지를 부치는 행위의 은유로 따로 남는다 */}
+            <Ionicons name="water" size={36} color={c.primaryStrong} style={styles.inkIcon} />
             <Text style={[styles.balanceNumber, { color: c.text, fontFamily: Fonts.serif }]}>
               {wallet?.balance ?? 0}
             </Text>
@@ -123,7 +119,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   balanceCard: { borderRadius: Radius.md, alignItems: 'center', paddingVertical: 36, marginBottom: 14 },
-  stampIcon: { width: 40, height: 40, marginBottom: 14 },
+  inkIcon: { marginBottom: 14 },
   balanceNumber: { fontSize: 44, fontWeight: '700' },
   balanceHint: { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 14 },
 

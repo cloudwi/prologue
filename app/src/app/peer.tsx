@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -170,12 +171,7 @@ export default function PeerDetailScreen() {
               accessibilityLabel="잉크를 써서 프로필 다시 열기"
               style={[styles.unlockBtn, { backgroundColor: c.primary, opacity: unlocking ? 0.6 : 1 }]}
             >
-              <Image
-                source={require('@/assets/images/stamp.png')}
-                style={styles.unlockIcon}
-                contentFit="contain"
-                tintColor={c.primaryText}
-              />
+              <Ionicons name="water" size={17} color={c.primaryText} />
               <Text style={[styles.unlockText, { color: c.primaryText }]}>잉크 {INK_PRICE.PROFILE_UNLOCK}로 열기</Text>
             </Pressable>
           )}
@@ -301,6 +297,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     marginTop: 24,
   },
-  unlockIcon: { width: 17, height: 17 },
   unlockText: { fontSize: 15, fontWeight: '700' },
 });
