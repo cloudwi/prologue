@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
+import com.prologue.backend.notification.application.service.NotificationService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -58,6 +59,7 @@ class MailService(
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
     private val stampService: StampService,
+    private val notificationService: NotificationService,
 ) {
     /** 상대 답변(peerAnswerId)의 주인에게 편지를 보낸다. */
     @Transactional
@@ -113,6 +115,8 @@ class MailService(
         val saved = mailRepository.save(
             Mail.write(senderAccountId, recipientId, content, phone, kakaoId),
         )
+        // 받는 사람이 모르고 지나가면 보낸 사람의 우표가 헛되이 사라진다.
+        notificationService.letterArrived(recipientId)
         return SendMailResult(mailId = requireNotNull(saved.id))
     }
 

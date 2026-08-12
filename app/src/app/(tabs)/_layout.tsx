@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { Easing, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomTabInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { enableNotifications } from '@/lib/notifications';
 
 /**
  * 하단 탭.
@@ -26,6 +28,12 @@ const ICONS: Record<string, TabIcon> = {
 
 export default function TabsLayout() {
   const c = useTheme();
+
+  // 권한은 앱의 본 화면에 도달했을 때 묻는다. 가입 첫 화면에서 물으면
+  // 무엇에 쓰는 알림인지 모른 채 거절당하고, 한 번 거절되면 되돌리기 어렵다.
+  useEffect(() => {
+    void enableNotifications();
+  }, []);
   // 제스처 바가 있는 기기에서는 그만큼을 바닥에 더 둬야 라벨이 눌리지 않는다
   const insets = useSafeAreaInsets();
 

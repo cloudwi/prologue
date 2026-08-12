@@ -28,7 +28,8 @@ class MailServiceTest {
     private val mailRepository = mockk<MailRepository>()
     private val memberQueryService = mockk<MemberQueryService>()
     private val stampService = mockk<StampService>(relaxed = true)
-    private val service = MailService(answerRepository, mailRepository, memberQueryService, stampService)
+    private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
+    private val service = MailService(answerRepository, mailRepository, memberQueryService, stampService, notificationService)
 
     private val senderId = UUID.randomUUID()
     private val recipientId = UUID.randomUUID()

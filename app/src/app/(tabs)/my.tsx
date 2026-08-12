@@ -19,6 +19,7 @@ import { isSessionExpired } from '@/lib/api';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
+import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep } from '@/lib/profile-form';
 import { getStampBalance } from '@/lib/stamps';
 import { useTheme } from '@/hooks/use-theme';
@@ -37,6 +38,8 @@ export default function MyScreen() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [stamps, setStamps] = useState<number | null>(null);
+  // null이면 아직 확인 전 — 값이 잠깐 '꺼짐'으로 보였다 바뀌는 깜빡임을 막는다
+  const [notifyOn, setNotifyOn] = useState<boolean | null>(null);
 
   // 하위 편집 화면에서 돌아오면 다시 읽어 최신 상태를 반영한다.
   useFocusEffect(
@@ -45,6 +48,9 @@ export default function MyScreen() {
       getStampBalance()
         .then((n) => active && setStamps(n))
         .catch(() => {}); // 우표는 보조 정보 — 실패해도 화면은 유지
+      notificationsEnabled()
+        .then((on) => active && setNotifyOn(on))
+        .catch(() => {});
       (async () => {
         try {
           const p = await getMyProfile();
@@ -65,6 +71,21 @@ export default function MyScreen() {
       };
     }, []),
   );
+
+  async function toggleNotifications() {
+    if (notifyOn === null) return;
+    if (notifyOn) {
+      await disableNotifications();
+      setNotifyOn(false);
+      return;
+    }
+    // 기기 설정에서 알림을 막아뒀다면 다시 켜도 켜지지 않는다 — 그 사실을 알려준다
+    const on = await reenableNotifications();
+    setNotifyOn(on);
+    if (!on) {
+      Alert.alert('알림을 켤 수 없어요', '휴대폰 설정에서 프롤로그의 알림 권한을 허용해 주세요.');
+    }
+  }
 
   async function logout() {
     await clearTokens();
@@ -183,6 +204,12 @@ export default function MyScreen() {
         </Section>
 
         <Section title="설정" c={c}>
+          <Row
+            label="알림"
+            value={notifyOn === null ? '' : notifyOn ? '켜짐' : '꺼짐'}
+            onPress={toggleNotifications}
+            c={c}
+          />
           <Row label="화면 테마" value={APPEARANCE_LABEL[mode]} onPress={() => router.push('/my/appearance')} c={c} />
           <Row label="프롤로그 사용법" onPress={() => router.push('/my/guide')} c={c} last />
         </Section>

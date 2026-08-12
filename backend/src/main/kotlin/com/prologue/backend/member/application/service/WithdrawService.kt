@@ -29,6 +29,8 @@ class WithdrawService(
         }
 
         // 내 답변을 참조하는 공개 기록 → 내 활동 → 지갑 → 프로필 → 인증 부산물 → 계정 순.
+        // 기기 토큰부터 — 남겨두면 탈퇴한 사람의 폰으로 알림이 계속 간다.
+        exec("delete from device_tokens where account_id = :id", accountId)
         exec("delete from daily_reveals where viewer_account_id = :id or peer_answer_id in (select id from answers where account_id = :id)", accountId)
         exec("delete from hearts where from_account_id = :id or to_account_id = :id", accountId)
         exec("delete from mails where sender_account_id = :id or recipient_account_id = :id", accountId)

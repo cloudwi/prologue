@@ -26,7 +26,8 @@ class HeartServiceTest {
     private val heartRepository = mockk<HeartRepository>(relaxed = true)
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
-    private val service = HeartService(answerRepository, heartRepository, mailRepository, memberQueryService)
+    private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
+    private val service = HeartService(answerRepository, heartRepository, mailRepository, memberQueryService, notificationService)
 
     private val me = UUID.randomUUID()
     private val peer = UUID.randomUUID()

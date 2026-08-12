@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
+import com.prologue.backend.notification.application.service.NotificationService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -26,6 +27,7 @@ class HeartService(
     private val heartRepository: HeartRepository,
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
+    private val notificationService: NotificationService,
 ) {
     /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 서로의 마음을 안 것. */
     @Transactional
@@ -38,6 +40,8 @@ class HeartService(
         // 이미 이 사람에게 보냈다면 아무 일도 일어나지 않는다(멱등).
         if (!heartRepository.existsFromTo(fromAccountId, toAccountId)) {
             heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
+            // 처음 보낸 하트일 때만 알린다 — 하트는 1인 1회라 두 번 울릴 일이 없다.
+            notificationService.heartArrived(toAccountId)
         }
 
         return HeartResult(
