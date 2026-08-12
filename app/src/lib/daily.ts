@@ -46,7 +46,7 @@ export type Peer = {
   lastActive: LastActive | null;
   /**
    * 이어진 지 사흘이 지나 닫힌 프로필. true면 사진·답변·상세가 비어 온다(서버가 지운다).
-   * 닉네임·나이·지역은 남는다 — 우표를 쓸지 정하려면 누구인지는 알아야 하니까.
+   * 닉네임·나이·지역은 남는다 — 잉크를 쓸지 정하려면 누구인지는 알아야 하니까.
    */
   locked: boolean;
 };
@@ -118,7 +118,7 @@ export async function getMyAnswers(): Promise<MyAnswer[]> {
 
 export type HeartResult = {
   hearted: boolean;
-  /** 서로 하트 — 편지를 우표 없이 보낼 수 있다. */
+  /** 서로 하트 — 편지를 잉크 없이 보낼 수 있다. */
   matched: boolean;
 };
 
@@ -151,7 +151,7 @@ export async function getReceivedHearts(): Promise<ReceivedHeart[]> {
 }
 
 export type UnlockResult = {
-  /** false면 이미 열려 있어 우표를 쓰지 않았다는 뜻(멱등). */
+  /** false면 이미 열려 있어 잉크를 쓰지 않았다는 뜻(멱등). */
   spent: boolean;
   /** 차감 후 잔액 — 지갑을 다시 묻지 않아도 되게 서버가 함께 준다. */
   balance: number;
@@ -160,8 +160,8 @@ export type UnlockResult = {
 };
 
 /**
- * 우표 한 장으로 닫힌 프로필을 다시 연다 (POST /daily/peers/{id}/unlock).
- * 한 번 열면 다시 닫히지 않는다. 이미 열려 있으면 우표를 쓰지 않고 성공한다.
+ * 잉크 한 장으로 닫힌 프로필을 다시 연다 (POST /daily/peers/{id}/unlock).
+ * 한 번 열면 다시 닫히지 않는다. 이미 열려 있으면 잉크를 쓰지 않고 성공한다.
  */
 export async function unlockPeer(peerAnswerId: string): Promise<UnlockResult> {
   return authedRequest<UnlockResult>('POST', `/daily/peers/${peerAnswerId}/unlock`);

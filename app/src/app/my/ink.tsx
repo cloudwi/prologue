@@ -6,24 +6,24 @@ import { Image } from 'expo-image';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getStampWallet, stampReasonLabel, type StampWallet } from '@/lib/stamps';
+import { getInkWallet, inkReasonLabel, INK_PRICE, type InkWallet } from '@/lib/ink';
 
 /**
- * 우표 지갑 — 잔액과 증감 내역. 재화는 매칭 메뉴가 아니라 제 방을 가진다.
+ * 잉크 지갑 — 잔액과 증감 내역. 재화는 매칭 메뉴가 아니라 제 방을 가진다.
  * 이벤트는 하위 화면(my/events)으로 한 뎁스 내렸다 — 이벤트가 늘어도 지갑은 조용하게.
  * 충전 버튼은 출시 후 IAP와 함께 이 화면에 붙는다.
  */
-export default function StampsScreen() {
+export default function InkScreen() {
   const c = useTheme();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [wallet, setWallet] = useState<StampWallet | null>(null);
+  const [wallet, setWallet] = useState<InkWallet | null>(null);
 
-  // 이벤트 화면에서 돌아왔을 때 지급된 우표가 바로 보이도록 포커스마다 다시 읽는다.
+  // 이벤트 화면에서 돌아왔을 때 지급된 잉크가 바로 보이도록 포커스마다 다시 읽는다.
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getStampWallet()
+      getInkWallet()
         .then((w) => active && setWallet(w))
         .catch(() => {})
         .finally(() => active && setLoading(false));
@@ -36,7 +36,7 @@ export default function StampsScreen() {
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' });
 
   return (
-    <SubScreen title="우표" c={c}>
+    <SubScreen title="잉크" c={c}>
       {loading ? (
         <View style={[styles.flex, styles.center]}>
           <ActivityIndicator color={c.primary} />
@@ -56,7 +56,7 @@ export default function StampsScreen() {
               <Text style={[styles.balanceUnit, { color: c.textSecondary }]}> 장</Text>
             </Text>
             <Text style={[styles.balanceHint, { color: c.textSecondary }]}>
-              편지 한 통에 우표 1장이 쓰여요.{'\n'}매주 1장씩 새로 채워져요.
+              편지 한 통에 잉크 {INK_PRICE.MAIL},{'\n'}사흘이 지난 프로필을 다시 여는 데 {INK_PRICE.PROFILE_UNLOCK}이 쓰여요.
             </Text>
           </View>
 
@@ -70,7 +70,7 @@ export default function StampsScreen() {
           >
             <View style={styles.flex}>
               <Text style={[styles.eventEntryLabel, { color: c.text }]}>이벤트</Text>
-              <Text style={[styles.eventEntryHint, { color: c.textSecondary }]}>참여하고 우표를 선물로 받아보세요</Text>
+              <Text style={[styles.eventEntryHint, { color: c.textSecondary }]}>참여하고 잉크를 선물로 받아보세요</Text>
             </View>
             <Text style={[styles.chevron, { color: c.textSecondary }]}>›</Text>
           </Pressable>
@@ -88,7 +88,7 @@ export default function StampsScreen() {
                     ]}
                   >
                     <View style={styles.flex}>
-                      <Text style={[styles.historyLabel, { color: c.text }]}>{stampReasonLabel(item.reason)}</Text>
+                      <Text style={[styles.historyLabel, { color: c.text }]}>{inkReasonLabel(item.reason)}</Text>
                       <Text style={[styles.historyDate, { color: c.textSecondary }]}>
                         {dateFmt.format(new Date(item.createdAt))}
                       </Text>

@@ -15,23 +15,23 @@ import {
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getStampEvents, submitStampEvent, type StampEventSubmission } from '@/lib/stamps';
+import { getInkEvents, submitInkEvent, type InkEventSubmission } from '@/lib/ink';
 
 /**
- * 이벤트 — 우표를 받을 수 있는 참여 목록.
+ * 이벤트 — 잉크를 받을 수 있는 참여 목록.
  * 지금은 블로그 이벤트 하나지만, 이벤트가 늘면 이 화면에 카드가 쌓인다.
- * (우표 화면에 직접 두면 재화 화면이 이벤트판이 되어 한 뎁스 내렸다)
+ * (잉크 화면에 직접 두면 재화 화면이 이벤트판이 되어 한 뎁스 내렸다)
  */
 export default function EventsScreen() {
   const c = useTheme();
   const [loading, setLoading] = useState(true);
-  const [events, setEvents] = useState<StampEventSubmission[]>([]);
+  const [events, setEvents] = useState<InkEventSubmission[]>([]);
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
-    getStampEvents()
+    getInkEvents()
       .then((e) => active && setEvents(e))
       .catch(() => {}) // 목록이 없어도 제출 폼은 보여준다
       .finally(() => active && setLoading(false));
@@ -47,9 +47,9 @@ export default function EventsScreen() {
     if (trimmed.length === 0 || submitting) return;
     setSubmitting(true);
     try {
-      setEvents(await submitStampEvent(trimmed));
+      setEvents(await submitInkEvent(trimmed));
       setUrl('');
-      Alert.alert('접수했어요', '확인 후 우표를 보내드려요. 결과는 이 화면에서 볼 수 있어요.');
+      Alert.alert('접수했어요', '확인 후 잉크를 보내드려요. 결과는 이 화면에서 볼 수 있어요.');
     } catch (e) {
       Alert.alert('접수 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -66,13 +66,13 @@ export default function EventsScreen() {
       ) : (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {/* 블로그 이벤트 — 후기 링크를 남기면 검토 후 우표 지급 */}
+            {/* 블로그 이벤트 — 후기 링크를 남기면 검토 후 잉크 지급 */}
             <View style={[styles.eventCard, { backgroundColor: c.backgroundElement }]}>
               <Text style={[styles.eventTitle, { color: c.text, fontFamily: Fonts.serif }]}>
                 프롤로그 이야기를 들려주세요
               </Text>
               <Text style={[styles.eventDesc, { color: c.textSecondary }]}>
-                프롤로그를 소개하는 글을 블로그에 남기고 링크를 보내주세요.{'\n'}확인 후 우표를 선물로 보내드려요.
+                프롤로그를 소개하는 글을 블로그에 남기고 링크를 보내주세요.{'\n'}확인 후 잉크를 선물로 보내드려요.
               </Text>
 
               {hasPending ? (
@@ -139,7 +139,7 @@ export default function EventsScreen() {
 }
 
 /** 제출 상태 → 사용자 문구. */
-function eventStatusLabel(item: StampEventSubmission): string {
+function eventStatusLabel(item: InkEventSubmission): string {
   if (item.status === 'APPROVED') return `+${item.grantedAmount ?? 0}장`;
   if (item.status === 'REJECTED') return '반려';
   return '검토 중';

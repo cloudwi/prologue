@@ -51,7 +51,7 @@ export default function WithdrawScreen() {
           <Item c={c} text="프로필과 사진 전부" />
           <Item c={c} text="매일 남긴 답변과 프로필 문답" />
           <Item c={c} text="주고받은 하트와 편지 (상대의 편지함에서도 사라져요)" />
-          <Item c={c} text="남은 우표와 사용 내역" last />
+          <Item c={c} text="남은 잉크와 사용 내역" last />
         </View>
 
         <Text style={[styles.note, { color: c.textSecondary }]}>

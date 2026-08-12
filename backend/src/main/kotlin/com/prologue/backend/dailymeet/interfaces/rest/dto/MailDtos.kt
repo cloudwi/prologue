@@ -45,6 +45,10 @@ data class SentMailToResponse(
         val content: String,
         val phone: String?,
         val kakaoId: String?,
+        /** PENDING이면 상대가 아직 봉투를 열지 않았다. */
+        val status: String,
+        /** 지금 회수할 수 있는지 — 안 읽힌 채 사흘이 지났을 때만 true. */
+        val recallable: Boolean,
         val createdAt: Instant,
     )
 
@@ -58,6 +62,8 @@ data class SentMailToResponse(
                         content = it.content,
                         phone = it.phone,
                         kakaoId = it.kakaoId,
+                        status = it.status.name,
+                        recallable = it.recallable,
                         createdAt = it.createdAt,
                     )
                 },

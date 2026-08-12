@@ -1,8 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
-import com.prologue.backend.dailymeet.domain.model.StampEventSubmission
-import com.prologue.backend.dailymeet.domain.repository.StampEventSubmissionRepository
+import com.prologue.backend.dailymeet.domain.model.InkEventSubmission
+import com.prologue.backend.dailymeet.domain.repository.InkEventSubmissionRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import io.mockk.every
 import io.mockk.mockk
@@ -14,18 +14,18 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class StampEventServiceTest {
+class InkEventServiceTest {
 
-    private val submissionRepository = mockk<StampEventSubmissionRepository>()
-    private val stampService = mockk<StampService>(relaxed = true)
+    private val submissionRepository = mockk<InkEventSubmissionRepository>()
+    private val inkService = mockk<InkService>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
-    private val service = StampEventService(submissionRepository, stampService, memberQueryService)
+    private val service = InkEventService(submissionRepository, inkService, memberQueryService)
 
     private val accountId = UUID.randomUUID()
 
-    private fun pendingSubmission(id: UUID = UUID.randomUUID()): StampEventSubmission =
-        StampEventSubmission.reconstitute(
-            id, accountId, "https://blog.naver.com/review", StampEventSubmission.Status.PENDING, null, Instant.now(), null,
+    private fun pendingSubmission(id: UUID = UUID.randomUUID()): InkEventSubmission =
+        InkEventSubmission.reconstitute(
+            id, accountId, "https://blog.naver.com/review", InkEventSubmission.Status.PENDING, null, Instant.now(), null,
         )
 
     @Test
@@ -45,39 +45,39 @@ class StampEventServiceTest {
     @Test
     fun `제출 - 성공하면 PENDING으로 저장된다`() {
         every { submissionRepository.existsPendingByAccountId(accountId) } returns false
-        val saved = slot<StampEventSubmission>()
+        val saved = slot<InkEventSubmission>()
         every { submissionRepository.save(capture(saved)) } answers { saved.captured }
         every { submissionRepository.findByAccountId(accountId) } returns emptyList()
 
         service.submit(accountId, "  https://blog.naver.com/review  ")
 
         assertEquals("https://blog.naver.com/review", saved.captured.url) // trim
-        assertEquals(StampEventSubmission.Status.PENDING, saved.captured.status)
+        assertEquals(InkEventSubmission.Status.PENDING, saved.captured.status)
     }
 
     @Test
-    fun `승인 - 우표를 지급하고 원장 사유는 EVENT`() {
+    fun `승인 - 잉크를 지급하고 원장 사유는 EVENT`() {
         val submission = pendingSubmission()
         every { submissionRepository.findById(submission.id!!) } returns submission
         every { submissionRepository.save(any()) } answers { firstArg() }
 
         service.approve(submission.id!!, 5)
 
-        assertEquals(StampEventSubmission.Status.APPROVED, submission.status)
+        assertEquals(InkEventSubmission.Status.APPROVED, submission.status)
         assertEquals(5, submission.grantedAmount)
-        verify { stampService.grantTo(accountId, 5, StampService.REASON_EVENT) }
+        verify { inkService.grantTo(accountId, 5, InkService.REASON_EVENT) }
     }
 
     @Test
     fun `승인 - 이미 처리된 제출이면 지급 없이 예외`() {
-        val done = StampEventSubmission.reconstitute(
+        val done = InkEventSubmission.reconstitute(
             UUID.randomUUID(), accountId, "https://blog.naver.com/review",
-            StampEventSubmission.Status.APPROVED, 5, Instant.now(), Instant.now(),
+            InkEventSubmission.Status.APPROVED, 5, Instant.now(), Instant.now(),
         )
         every { submissionRepository.findById(done.id!!) } returns done
 
         assertFailsWith<DailyMeetException> { service.approve(done.id!!, 5) }
-        verify(exactly = 0) { stampService.grantTo(any(), any(), any()) }
+        verify(exactly = 0) { inkService.grantTo(any(), any(), any()) }
     }
 
     @Test
@@ -88,7 +88,7 @@ class StampEventServiceTest {
 
         service.reject(submission.id!!)
 
-        assertEquals(StampEventSubmission.Status.REJECTED, submission.status)
-        verify(exactly = 0) { stampService.grantTo(any(), any(), any()) }
+        assertEquals(InkEventSubmission.Status.REJECTED, submission.status)
+        verify(exactly = 0) { inkService.grantTo(any(), any(), any()) }
     }
 }

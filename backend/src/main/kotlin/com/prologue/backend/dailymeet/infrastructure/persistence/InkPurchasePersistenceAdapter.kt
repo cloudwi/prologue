@@ -1,14 +1,14 @@
 package com.prologue.backend.dailymeet.infrastructure.persistence
 
-import com.prologue.backend.dailymeet.domain.model.StampPurchase
+import com.prologue.backend.dailymeet.domain.model.InkPurchase
 import com.prologue.backend.dailymeet.domain.model.StorePlatform
-import com.prologue.backend.dailymeet.domain.repository.StampPurchaseRepository
+import com.prologue.backend.dailymeet.domain.repository.InkPurchaseRepository
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
-interface StampPurchaseJpaRepository : JpaRepository<StampPurchaseJpaEntity, UUID> {
+interface InkPurchaseJpaRepository : JpaRepository<InkPurchaseJpaEntity, UUID> {
     fun existsByPlatformAndTransactionId(platform: StorePlatform, transactionId: String): Boolean
 }
 
@@ -19,11 +19,11 @@ interface StampPurchaseJpaRepository : JpaRepository<StampPurchaseJpaEntity, UUI
  * 두 요청이 같은 순간에 들어오면 조회는 둘 다 "없음"을 볼 수 있다 — 그 틈은 제약만이 막는다.
  */
 @Repository
-class StampPurchasePersistenceAdapter(
-    private val jpa: StampPurchaseJpaRepository,
-) : StampPurchaseRepository {
+class InkPurchasePersistenceAdapter(
+    private val jpa: InkPurchaseJpaRepository,
+) : InkPurchaseRepository {
 
-    override fun saveIfNew(purchase: StampPurchase): Boolean {
+    override fun saveIfNew(purchase: InkPurchase): Boolean {
         if (exists(purchase.platform, purchase.transactionId)) return false
         return try {
             jpa.saveAndFlush(purchase.toEntity())
@@ -36,13 +36,13 @@ class StampPurchasePersistenceAdapter(
     override fun exists(platform: StorePlatform, transactionId: String): Boolean =
         jpa.existsByPlatformAndTransactionId(platform, transactionId)
 
-    private fun StampPurchase.toEntity() = StampPurchaseJpaEntity(
+    private fun InkPurchase.toEntity() = InkPurchaseJpaEntity(
         id = id,
         accountId = accountId,
         platform = platform,
         productId = productId,
         transactionId = transactionId,
-        stamps = stamps,
+        ink = ink,
         createdAt = createdAt,
     )
 }

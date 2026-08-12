@@ -3,8 +3,11 @@ package com.prologue.backend.dailymeet.domain.model
 import java.time.Instant
 import java.util.UUID
 
-/** 편지의 상태 — 봉투로 도착해(PENDING) 열거나(OPENED) 조용히 거절된다(DECLINED). */
-enum class MailStatus { PENDING, OPENED, DECLINED }
+/**
+ * 편지의 상태 — 봉투로 도착해(PENDING) 열거나(OPENED) 조용히 거절된다(DECLINED).
+ * 읽히지 않은 채 사흘이 지나면 보낸 사람이 되찾아갈 수 있다(RECALLED).
+ */
+enum class MailStatus { PENDING, OPENED, DECLINED, RECALLED }
 
 /**
  * 편지 — 인앱 채팅 대신 연락처를 건네는 한 통.
@@ -37,8 +40,32 @@ class Mail private constructor(
         status = MailStatus.DECLINED
     }
 
+    /**
+     * 되찾아간다 — 봉투째 사라지고 보낸 사람은 잉크의 절반을 돌려받는다.
+     *
+     * 읽히지 않은 편지만, 그리고 사흘이 지난 뒤에만. 바로 회수할 수 있으면
+     * 보내고 물리는 일이 반복돼 받는 쪽 편지함이 흔들리고, 잉크를 쓴 의미도 없어진다.
+     * 열어본 편지는 이미 전해진 것이라 되찾을 수 없다 — 마음을 도로 가져올 수는 없다.
+     */
+    fun recall(now: Instant = Instant.now()) {
+        when (status) {
+            MailStatus.OPENED -> throw DailyMeetException("이미 읽은 편지는 회수할 수 없어요")
+            MailStatus.DECLINED, MailStatus.RECALLED -> throw DailyMeetException("이미 사라진 편지예요")
+            MailStatus.PENDING -> Unit
+        }
+        if (!isRecallableAt(now)) throw DailyMeetException("보낸 지 사흘이 지나야 회수할 수 있어요")
+        status = MailStatus.RECALLED
+    }
+
+    /** 지금 회수할 수 있는 편지인지 — 화면이 버튼을 미리 감출 수 있도록 도메인이 답한다. */
+    fun isRecallableAt(now: Instant = Instant.now()): Boolean =
+        status == MailStatus.PENDING && !now.isBefore(createdAt.plus(RECALL_AFTER))
+
     companion object {
         private const val MAX_LENGTH = 300 // 편지 한 통의 분량 — 대화가 아니라 건네는 인사
+
+        /** 회수까지 기다리는 기간 — 상대에게 읽을 시간을 주는 사흘. */
+        val RECALL_AFTER: java.time.Duration = java.time.Duration.ofDays(3)
 
         fun write(
             senderAccountId: UUID,

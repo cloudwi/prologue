@@ -2,7 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<AdminLayout title="우표 이벤트 검토">
+<AdminLayout title="잉크 이벤트 검토">
   <div id="list" class="admin-card admin-list"></div>
 
   <script is:inline>
@@ -11,7 +11,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const listEl = $('list');
       listEl.textContent = '불러오는 중...';
       try {
-        const data = await api('/admin/stamp-events');
+        const data = await api('/admin/ink-events');
         render(data.submissions);
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
@@ -60,8 +60,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         approve.textContent = '승인';
         approve.onclick = () => {
           const n = Number(amount.value);
-          if (!Number.isInteger(n) || n < 1) return alert('지급할 우표 수를 확인해 주세요.');
-          if (confirm('우표 ' + n + '장을 지급할까요?')) decide(item.id, 'approve', n, approve);
+          if (!Number.isInteger(n) || n < 1) return alert('지급할 잉크 양을 확인해 주세요.');
+          if (confirm('잉크 ' + n + '을 지급할까요?')) decide(item.id, 'approve', n, approve);
         };
         const reject = document.createElement('button');
         reject.className = 'admin-btn ghost small';
@@ -80,7 +80,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const { api, showLogin } = window.admin;
       btn.disabled = true;
       try {
-        await api('/admin/stamp-events/' + id + '/' + action, {
+        await api('/admin/ink-events/' + id + '/' + action, {
           method: 'POST',
           body: JSON.stringify(action === 'approve' ? { amount } : {}),
         });

@@ -31,7 +31,7 @@ class ProfileAccessTest {
     }
 
     @Test
-    fun `우표로 열었으면 아무리 오래돼도 열려 있다`() {
+    fun `잉크로 열었으면 아무리 오래돼도 열려 있다`() {
         // 한 번 산 것을 다시 닫으면 값을 받은 게 아니라 볼모로 잡은 것이다.
         val longAgo = now.minus(Duration.ofDays(365))
 
@@ -40,7 +40,7 @@ class ProfileAccessTest {
 
     @Test
     fun `이어진 적 없는 상대는 열리지 않는다`() {
-        // 소개도 하트도 없었다면 볼 자격 자체가 없다 — 우표로도 열 수 없어야 한다.
+        // 소개도 하트도 없었다면 볼 자격 자체가 없다 — 잉크로도 열 수 없어야 한다.
         assertFalse(ProfileAccess.isOpen(null, unlocked = false, now = now))
     }
 }

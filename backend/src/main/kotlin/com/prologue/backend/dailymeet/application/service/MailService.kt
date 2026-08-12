@@ -1,6 +1,7 @@
 package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
+import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.Mail
 import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
@@ -23,6 +24,10 @@ data class SentMailView(
     val content: String,
     val phone: String?,
     val kakaoId: String?,
+    /** 상대가 열었는지. 봉투(PENDING)인 동안에만 회수할 수 있다. */
+    val status: MailStatus,
+    /** 지금 회수할 수 있는지 — 화면이 버튼을 미리 감출 수 있도록 서버가 판정해 준다. */
+    val recallable: Boolean,
     val createdAt: Instant,
 )
 
@@ -50,15 +55,19 @@ data class ReceivedMailView(
 
 /**
  * 편지 유스케이스 — 인앱 채팅 대신 연락처(전화번호/카카오톡 ID)를 건넨다.
- * 한 통에 우표 1장 — 상호 하트여도 마찬가지(하트는 신호일 뿐, 부치는 값은 같다).
+ * 한 통에 잉크 50 — 상호 하트여도 마찬가지(하트는 신호일 뿐, 부치는 값은 같다).
  * 전화번호는 위조를 막기 위해 요청이 아니라 프로필에서 읽는다.
+ *
+ * 읽히지 않은 편지는 사흘 뒤 되찾아갈 수 있고, 그때 부친 잉크의 절반이 돌아온다.
+ * 거절당한 편지는 돌려주지 않는다 — 잉크가 돌아오는 것만으로 거절당한 사실이 드러나서,
+ * "조용히 거절한다"는 약속이 깨진다.
  */
 @Service
 class MailService(
     private val answerRepository: AnswerRepository,
     private val mailRepository: MailRepository,
     private val memberQueryService: MemberQueryService,
-    private val stampService: StampService,
+    private val inkService: InkService,
     private val notificationService: NotificationService,
 ) {
     /** 상대 답변(peerAnswerId)의 주인에게 편지를 보낸다. */
@@ -109,13 +118,13 @@ class MailService(
             null
         }
 
-        // 검증을 모두 통과한 뒤에 소모 — 같은 트랜잭션이라 저장이 실패하면 우표도 돌아간다.
-        stampService.spendOne(senderAccountId, StampService.REASON_MAIL)
+        // 검증을 모두 통과한 뒤에 소모 — 같은 트랜잭션이라 저장이 실패하면 잉크도 돌아간다.
+        inkService.spend(senderAccountId, InkPrice.MAIL, InkService.REASON_MAIL)
 
         val saved = mailRepository.save(
             Mail.write(senderAccountId, recipientId, content, phone, kakaoId),
         )
-        // 받는 사람이 모르고 지나가면 보낸 사람의 우표가 헛되이 사라진다.
+        // 받는 사람이 모르고 지나가면 보낸 사람의 잉크가 헛되이 사라진다.
         notificationService.letterArrived(recipientId)
         return SendMailResult(mailId = requireNotNull(saved.id))
     }
@@ -133,6 +142,40 @@ class MailService(
         mail.open()
         val saved = mailRepository.save(mail)
         return receivedView(accountId, saved) ?: throw DailyMeetException("보낸 사람의 프로필을 찾을 수 없어요")
+    }
+
+    /**
+     * 읽히지 않은 편지를 되찾아간다 — 부친 잉크의 절반이 돌아온다.
+     *
+     * 절반인 데는 이유가 있다. 전액이면 아무에게나 보내고 되거두는 게 공짜가 되어
+     * 편지가 신중한 한 통이길 그만두고, 한 푼도 안 주면 상대가 읽지도 않은 값을 그대로 잃는다.
+     *
+     * 회수해도 같은 상대에게 다시 보낼 수는 없다(기록은 RECALLED로 남는다).
+     * 되찾을 수 있게 한 건 값을 돌려주려는 것이지, 다시 시도할 기회를 주려는 게 아니다.
+     */
+    @Transactional
+    fun recall(accountId: UUID, mailId: UUID) {
+        val mail = mailRepository.findById(mailId) ?: throw DailyMeetException("편지를 찾을 수 없어요")
+        if (mail.senderAccountId != accountId) throw DailyMeetException("내가 보낸 편지만 회수할 수 있어요")
+        mail.recall()
+        mailRepository.save(mail)
+        inkService.grantTo(accountId, InkPrice.MAIL_RECALL_REFUND, InkService.REASON_MAIL_RECALL)
+    }
+
+    /**
+     * 이 사람에게 온 봉투들을 보낸 사람에게 되돌린다 — 탈퇴 직전에 호출한다.
+     *
+     * 탈퇴하면 편지가 통째로 지워져서 회수할 대상 자체가 사라진다. 그대로 두면
+     * 보낸 사람은 아무 통보 없이 잉크만 잃는다. 받는 쪽이 없어진 편지는 전해질 수 없으니
+     * 사흘을 기다릴 것도 없이 바로 돌려준다.
+     *
+     * 열어본 편지는 돌려주지 않는다 — 이미 전해졌고, 그게 잉크를 쓴 이유다.
+     */
+    @Transactional
+    fun refundPendingMailsTo(recipientAccountId: UUID) {
+        mailRepository.findPendingTo(recipientAccountId).forEach { mail ->
+            inkService.grantTo(mail.senderAccountId, InkPrice.MAIL_RECALL_REFUND, InkService.REASON_MAIL_RECALL)
+        }
     }
 
     /** 조용히 거절한다 — 목록에서 사라지고, 보낸 사람에게는 알리지 않는다. */
@@ -180,6 +223,8 @@ class MailService(
             content = mail.content,
             phone = mail.phone,
             kakaoId = mail.kakaoId,
+            status = mail.status,
+            recallable = mail.isRecallableAt(),
             createdAt = mail.createdAt,
         )
     }

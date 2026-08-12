@@ -10,6 +10,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { sendHeart, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
+import { INK_PRICE } from '@/lib/ink';
 import { promptReport } from '@/lib/reports';
 
 /**
@@ -18,7 +19,7 @@ import { promptReport } from '@/lib/reports';
  * 상대는 개별 조회 API가 없어서(오늘의 상대는 목록으로만 내려온다)
  * 발견 탭이 이미 들고 있는 데이터를 params로 직렬화해 넘긴다. 조회 전용이라 충분하다.
  * 행동은 두 가지, 편지를 끝까지 읽은 자리에서: 하트(가벼운 신호) +
- * 편지 보내기(연락처를 건네는 한 통, 우표 1장).
+ * 편지 보내기(연락처를 건네는 한 통, 잉크 50).
  * 서버가 멱등이라 카드와 상세의 하트 상태가 어긋나도 안전하다.
  */
 export default function PeerDetailScreen() {
@@ -33,7 +34,7 @@ export default function PeerDetailScreen() {
       return null;
     }
   }, [data]);
-  // 우표로 열면 서버가 열린 프로필을 함께 주므로 그 자리에서 바꿔 끼운다 — 다시 조회하지 않는다
+  // 잉크로 열면 서버가 열린 프로필을 함께 주므로 그 자리에서 바꿔 끼운다 — 다시 조회하지 않는다
   const [peer, setPeer] = useState(initialPeer);
   const [unlocking, setUnlocking] = useState(false);
 
@@ -61,23 +62,23 @@ export default function PeerDetailScreen() {
     );
   }
 
-  /** 우표 한 장으로 프로필을 다시 연다. 열리면 그 자리에서 화면이 바뀐다. */
+  /** 잉크를 써서 프로필을 다시 연다. 열리면 그 자리에서 화면이 바뀐다. */
   function confirmUnlock() {
     if (!peer?.peerAnswerId || unlocking) return;
     Alert.alert(
       '프로필을 다시 열까요?',
-      '우표 1장을 사용해요. 한 번 열면 다시 닫히지 않아요.',
+      `잉크 ${INK_PRICE.PROFILE_UNLOCK}을 사용해요. 한 번 열면 다시 닫히지 않아요.`,
       [
         { text: '취소', style: 'cancel' },
         {
-          text: '우표 쓰기',
+          text: '잉크 쓰기',
           onPress: async () => {
             setUnlocking(true);
             try {
               const result = await unlockPeer(peer!.peerAnswerId!);
               setPeer(result.peer);
               setHearted(result.peer.hearted);
-              if (result.spent) Alert.alert('프로필을 열었어요', `남은 우표 ${result.balance}장이에요.`);
+              if (result.spent) Alert.alert('프로필을 열었어요', `남은 잉크 ${result.balance}이에요.`);
             } catch (e) {
               Alert.alert('열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
             } finally {
@@ -159,14 +160,14 @@ export default function PeerDetailScreen() {
           <Text style={[styles.lockedName, { color: c.text }]}>{peer.nickname ?? '이름 없음'}</Text>
           {meta.length > 0 && <Text style={[styles.lockedMeta, { color: c.textSecondary }]}>{meta}</Text>}
           <Text style={[styles.lockedBody, { color: c.textSecondary }]}>
-            사흘이 지나 프로필이 닫혔어요.{'\n'}우표 1장으로 다시 열 수 있어요.
+            사흘이 지나 프로필이 닫혔어요.{'\n'}잉크 {INK_PRICE.PROFILE_UNLOCK}로 다시 열 수 있어요.
           </Text>
           {peer.peerAnswerId && (
             <Pressable
               onPress={confirmUnlock}
               disabled={unlocking}
               accessibilityRole="button"
-              accessibilityLabel="우표를 써서 프로필 다시 열기"
+              accessibilityLabel="잉크를 써서 프로필 다시 열기"
               style={[styles.unlockBtn, { backgroundColor: c.primary, opacity: unlocking ? 0.6 : 1 }]}
             >
               <Image
@@ -175,7 +176,7 @@ export default function PeerDetailScreen() {
                 contentFit="contain"
                 tintColor={c.primaryText}
               />
-              <Text style={[styles.unlockText, { color: c.primaryText }]}>우표 1장으로 열기</Text>
+              <Text style={[styles.unlockText, { color: c.primaryText }]}>잉크 {INK_PRICE.PROFILE_UNLOCK}로 열기</Text>
             </Pressable>
           )}
         </View>

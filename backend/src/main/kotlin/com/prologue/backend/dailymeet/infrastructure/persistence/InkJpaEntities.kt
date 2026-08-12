@@ -10,14 +10,14 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "stamp_wallets")
-class StampWalletJpaEntity(
+@Table(name = "ink_wallets")
+class InkWalletJpaEntity(
     @Id
     @Column(name = "account_id", nullable = false, updatable = false)
     val accountId: UUID,
 
-    @Column(name = "balance", nullable = false)
-    var balance: Int,
+    @Column(name = "ink", nullable = false)
+    var ink: Int,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
@@ -27,8 +27,8 @@ class StampWalletJpaEntity(
 )
 
 @Entity
-@Table(name = "stamp_ledger")
-class StampLedgerJpaEntity(
+@Table(name = "ink_ledger")
+class InkLedgerJpaEntity(
     @Id
     @GeneratedValue
     @UuidGenerator(style = UuidGenerator.Style.TIME)

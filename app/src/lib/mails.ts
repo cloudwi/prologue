@@ -9,7 +9,7 @@ export type SendMailResult = {
   mailId: string;
 };
 
-/** 편지 보내기 (POST /mails). 한 통에 우표 1장. 전화번호는 서버가 내 프로필에서 읽는다. */
+/** 편지 보내기 (POST /mails). 한 통에 잉크 1장. 전화번호는 서버가 내 프로필에서 읽는다. */
 export async function sendMail(
   peerAnswerId: string,
   content: string,
@@ -19,7 +19,7 @@ export async function sendMail(
   return authedRequest<SendMailResult>('POST', '/mails', { peerAnswerId, content, includePhone, kakaoId });
 }
 
-/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장도 한 통의 편지 — 우표 1장. */
+/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장도 한 통의 편지 — 잉크 1장. */
 export async function sendMailReply(
   mailId: string,
   content: string,
@@ -70,8 +70,20 @@ export type SentMail = {
   content: string;
   phone: string | null;
   kakaoId: string | null;
+  /** PENDING이면 상대가 아직 봉투를 열지 않았다. */
+  status: 'PENDING' | 'OPENED' | 'DECLINED' | 'RECALLED' | (string & {});
+  /** 지금 회수할 수 있는지 — 안 읽힌 채 사흘이 지났을 때만 true. */
+  recallable: boolean;
   createdAt: string;
 };
+
+/**
+ * 읽히지 않은 편지를 되찾아간다 (POST /mails/{id}/recall).
+ * 부친 잉크의 절반이 돌아온다. 회수해도 같은 상대에게 다시 보낼 수는 없다.
+ */
+export async function recallMail(mailId: string): Promise<void> {
+  await authedRequest('POST', `/mails/${mailId}/recall`);
+}
 
 /** 내가 이 상대(답변 주인)에게 보낸 편지 — 없으면 null (GET /mails/sent-to/{peerAnswerId}). */
 export async function getSentMailTo(peerAnswerId: string): Promise<SentMail | null> {

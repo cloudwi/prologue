@@ -80,11 +80,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         if (m.status !== 'WITHDRAWN') {
           const grant = document.createElement('button');
           grant.className = 'admin-btn ghost small';
-          grant.textContent = '우표 지급';
+          grant.textContent = '잉크 지급';
           grant.onclick = () => {
             const n = Number(prompt('몇 장을 지급할까요? (CS 보상 등)', '3'));
             if (!Number.isInteger(n) || n < 1 || n > 100) return;
-            grantStamps(m.accountId, n, grant);
+            grantInk(m.accountId, n, grant);
           };
           actions.append(grant);
         }
@@ -107,15 +107,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       }
     }
 
-    async function grantStamps(accountId, amount, btn) {
+    async function grantInk(accountId, amount, btn) {
       const { api, showLogin } = window.admin;
       btn.disabled = true;
       try {
-        await api('/admin/members/' + accountId + '/grant-stamps', {
+        await api('/admin/members/' + accountId + '/grant-ink', {
           method: 'POST',
           body: JSON.stringify({ amount }),
         });
-        alert('우표 ' + amount + '장을 지급했어요.');
+        alert('잉크 ' + amount + '을 지급했어요.');
       } catch (e) {
         if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
         alert(e.message);

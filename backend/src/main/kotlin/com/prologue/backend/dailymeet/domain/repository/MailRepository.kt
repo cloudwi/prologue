@@ -14,13 +14,16 @@ interface MailRepository {
     /** 내가 그 상대에게 보낸 편지 한 통 — 보낸 편지 확인용. */
     fun findBySenderAndRecipient(senderAccountId: UUID, recipientAccountId: UUID): Mail?
 
-    /** 받은 편지, 최신순. */
+    /** 받은 편지, 최신순. 거절·회수된 편지는 빠진다. */
     fun findAllByRecipient(recipientAccountId: UUID): List<Mail>
+
+    /** 이 사람에게 온 편지 중 아직 열지 않은 것 — 탈퇴할 때 보낸 사람들에게 환급하기 위해. */
+    fun findPendingTo(recipientAccountId: UUID): List<Mail>
 
     /**
      * 이 사용자와 편지가 오간 상대별 마지막 편지 시각(방향 무관).
      *
-     * 프로필 열람 창의 시작점 중 하나다. 편지는 우표를 쓰고 연락처를 건네는 행동이라
+     * 프로필 열람 창의 시작점 중 하나다. 편지는 잉크를 쓰고 연락처를 건네는 행동이라
      * 소개나 하트보다 강한 신호인데, 이걸 세지 않으면 편지를 받아둔 상대가 사흘 뒤 잠긴다.
      */
     fun findLastMailedAtByPeer(accountId: UUID): Map<UUID, java.time.Instant>

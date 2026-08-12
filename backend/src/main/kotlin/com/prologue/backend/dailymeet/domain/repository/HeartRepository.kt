@@ -13,7 +13,7 @@ interface HeartRepository {
     /** 내가 받은 하트 전부, 최신순. */
     fun findAllTo(toAccountId: UUID): List<Heart>
 
-    /** 내가 보낸 하트 수. 일정 개수마다 우표를 돌려주는 보상 기준. */
+    /** 내가 보낸 하트 수. 일정 개수마다 잉크를 돌려주던 보상 기준. */
     fun countFrom(fromAccountId: UUID): Long
 
     /**

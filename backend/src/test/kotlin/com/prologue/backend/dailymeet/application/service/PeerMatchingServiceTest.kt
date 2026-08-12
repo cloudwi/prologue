@@ -359,7 +359,7 @@ class PeerMatchingServiceTest {
 
     @Test
     fun `지난 상대 - 사흘이 지나면 프로필이 잠기고 문답도 함께 닫힌다`() {
-        // 프로필만 가리고 답이 남으면 잠근 게 아니다 — 볼거리는 전부 닫혀야 우표에 값이 생긴다.
+        // 프로필만 가리고 답이 남으면 잠근 게 아니다 — 볼거리는 전부 닫혀야 잉크에 값이 생긴다.
         stalePastPeer(UUID.randomUUID())
 
         val view = service.pastPeers(accountId).single()
@@ -370,12 +370,12 @@ class PeerMatchingServiceTest {
         // 내가 그날 답했더라도 창이 닫혔으면 문답은 잠긴다
         assertFalse(view.answers[0].unlocked)
         assertNull(view.answers[0].content)
-        // 누구인지는 남는다 — 우표를 쓸지 정하려면 알아야 한다
+        // 누구인지는 남는다 — 잉크를 쓸지 정하려면 알아야 한다
         assertEquals("닉", view.peer.nickname)
     }
 
     @Test
-    fun `지난 상대 - 우표로 열어둔 상대는 사흘이 지나도 열려 있다`() {
+    fun `지난 상대 - 잉크로 열어둔 상대는 사흘이 지나도 열려 있다`() {
         val peerAccount = UUID.randomUUID()
         stalePastPeer(peerAccount)
         every { profileAccessService.unlockedPeers(accountId) } returns setOf(peerAccount)

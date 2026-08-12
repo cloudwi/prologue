@@ -24,9 +24,14 @@ class MailPersistenceAdapter(
         jpa.findBySenderAccountIdAndRecipientAccountId(senderAccountId, recipientAccountId)?.toDomain()
 
     override fun findAllByRecipient(recipientAccountId: UUID): List<Mail> =
-        // 거절한 편지는 조용히 사라진 것 — 받은 목록에 다시 올리지 않는다.
-        jpa.findByRecipientAccountIdAndStatusNotOrderByCreatedAtDesc(recipientAccountId, MailStatus.DECLINED.name)
-            .map { it.toDomain() }
+        // 거절했거나 보낸 사람이 되찾아간 편지는 사라진 것 — 받은 목록에 다시 올리지 않는다.
+        jpa.findByRecipientAccountIdAndStatusNotInOrderByCreatedAtDesc(
+            recipientAccountId,
+            listOf(MailStatus.DECLINED.name, MailStatus.RECALLED.name),
+        ).map { it.toDomain() }
+
+    override fun findPendingTo(recipientAccountId: UUID): List<Mail> =
+        jpa.findByRecipientAccountIdAndStatus(recipientAccountId, MailStatus.PENDING.name).map { it.toDomain() }
 
     /**
      * 보낸 편지와 받은 편지를 각각 읽어 상대별 최신 시각으로 접는다.

@@ -20,14 +20,14 @@ import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts'
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
 import { sendMail, sendMailReply } from '@/lib/mails';
-import { getStampBalance } from '@/lib/stamps';
+import { getInkBalance, INK_PRICE } from '@/lib/ink';
 
 const CONTENT_MAX = 300;
 
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
- * 한 통에 우표 1장 — 서로 하트여도, 답장이어도 부치는 값은 같다.
+ * 한 통에 잉크 50 — 서로 하트여도, 답장이어도 부치는 값은 같다.
  * 상대는 둘 중 하나로 정해진다: 답변 id(peerAnswerId) 또는 답장할 원본 편지(replyMailId).
  * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
@@ -47,7 +47,7 @@ export default function MailComposeScreen() {
   const [includePhone, setIncludePhone] = useState(true);
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
-  const [stamps, setStamps] = useState<number | null>(null);
+  const [ink, setInk] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   // 초안을 읽기 전에는 자동 저장을 멈춰둔다 — 빈 값이 초안을 덮어쓰지 않게.
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -63,7 +63,7 @@ export default function MailComposeScreen() {
       })
       .catch(() => active && setMyPhone(null))
       .finally(() => active && setLoading(false));
-    getStampBalance().then((n) => active && setStamps(n)).catch(() => {});
+    getInkBalance().then((n) => active && setInk(n)).catch(() => {});
     return () => {
       active = false;
     };
@@ -120,7 +120,7 @@ export default function MailComposeScreen() {
       else await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
-      Alert.alert('편지를 보냈어요', '우표 1장을 사용했어요.', [{ text: '확인', onPress: () => router.back() }]);
+      Alert.alert('편지를 보냈어요', `잉크 ${INK_PRICE.MAIL}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -128,12 +128,14 @@ export default function MailComposeScreen() {
     }
   }
 
-  /** 우표를 쓰는 행동이라 한 번 확인한다 — 남은 우표를 함께 보여주고. */
+  /** 잉크를 쓰는 행동이라 한 번 확인한다 — 남은 잉크를 함께 보여주고. */
   function confirmSend() {
     if (!canSend) return;
     Alert.alert(
       '편지 보내기',
-      stamps != null ? `우표 1장을 사용해요. (남은 우표 ${stamps}장)` : '우표 1장을 사용해요.',
+      ink != null
+        ? `잉크 ${INK_PRICE.MAIL}을 사용해요. (남은 잉크 ${ink})`
+        : `잉크 ${INK_PRICE.MAIL}을 사용해요.`,
       [
         { text: '취소', style: 'cancel' },
         { text: '보내기', onPress: () => void send() },
@@ -235,7 +237,7 @@ export default function MailComposeScreen() {
               style={[styles.submit, { backgroundColor: c.primary, opacity: canSend ? 1 : 0.5 }]}
             >
               <Text style={[styles.submitText, { color: c.primaryText }]}>
-                {sending ? '보내는 중...' : '우표 1장으로 보내기'}
+                {sending ? '보내는 중...' : `잉크 ${INK_PRICE.MAIL}으로 보내기`}
               </Text>
             </Pressable>
           </View>

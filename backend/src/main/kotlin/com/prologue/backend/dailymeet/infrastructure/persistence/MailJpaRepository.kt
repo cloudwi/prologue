@@ -8,7 +8,13 @@ interface MailJpaRepository : JpaRepository<MailJpaEntity, UUID> {
 
     fun findBySenderAccountIdAndRecipientAccountId(senderAccountId: UUID, recipientAccountId: UUID): MailJpaEntity?
 
-    fun findByRecipientAccountIdAndStatusNotOrderByCreatedAtDesc(recipientAccountId: UUID, status: String): List<MailJpaEntity>
+    fun findByRecipientAccountIdAndStatusNotInOrderByCreatedAtDesc(
+        recipientAccountId: UUID,
+        statuses: Collection<String>,
+    ): List<MailJpaEntity>
+
+    /** 이 사람에게 온 편지 중 아직 열지 않은 것 — 탈퇴할 때 보낸 사람들에게 환급하기 위해. */
+    fun findByRecipientAccountIdAndStatus(recipientAccountId: UUID, status: String): List<MailJpaEntity>
 
     fun findBySenderAccountId(senderAccountId: UUID): List<MailJpaEntity>
 

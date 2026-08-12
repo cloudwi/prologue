@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
+import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.Mail
 import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
@@ -27,9 +28,9 @@ class MailServiceTest {
     private val answerRepository = mockk<AnswerRepository>()
     private val mailRepository = mockk<MailRepository>()
     private val memberQueryService = mockk<MemberQueryService>()
-    private val stampService = mockk<StampService>(relaxed = true)
+    private val inkService = mockk<InkService>(relaxed = true)
     private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
-    private val service = MailService(answerRepository, mailRepository, memberQueryService, stampService, notificationService)
+    private val service = MailService(answerRepository, mailRepository, memberQueryService, inkService, notificationService)
 
     private val senderId = UUID.randomUUID()
     private val recipientId = UUID.randomUUID()
@@ -54,7 +55,7 @@ class MailServiceTest {
         Mail.reconstitute(id, sender, recipient, "연락 주세요", "01012345678", null, status, Instant.now())
 
     @Test
-    fun `편지 한 통에 우표 1장을 쓴다`() {
+    fun `편지 한 통에 잉크 1장을 쓴다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
         every { memberQueryService.findProfile(senderId) } returns sender()
@@ -62,11 +63,11 @@ class MailServiceTest {
 
         service.send(senderId, peerAnswerId, "만나서 반가웠어요", includePhone = true, kakaoId = null)
 
-        verify(exactly = 1) { stampService.spendOne(senderId, StampService.REASON_MAIL) }
+        verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
     }
 
     @Test
-    fun `카카오톡 ID만 실어도 보내진다 - 우표는 똑같이 쓴다`() {
+    fun `카카오톡 ID만 실어도 보내진다 - 잉크는 똑같이 쓴다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
         stubSaved()
@@ -74,7 +75,7 @@ class MailServiceTest {
         val result = service.send(senderId, peerAnswerId, "안녕하세요", includePhone = false, kakaoId = "kakao_id")
 
         assertEquals(36, result.mailId.toString().length)
-        verify(exactly = 1) { stampService.spendOne(senderId, StampService.REASON_MAIL) }
+        verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
     }
 
     @Test
@@ -109,7 +110,7 @@ class MailServiceTest {
     }
 
     @Test
-    fun `받은 편지에 답장하면 원본 발신인에게 우표 1장으로 보내진다`() {
+    fun `받은 편지에 답장하면 원본 발신인에게 잉크 1장으로 보내진다`() {
         val mailId = UUID.randomUUID()
         every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, senderId)
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
@@ -118,7 +119,7 @@ class MailServiceTest {
 
         service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
 
-        verify(exactly = 1) { stampService.spendOne(senderId, StampService.REASON_MAIL) }
+        verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
     }
 
     @Test

@@ -8,11 +8,12 @@ import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getPastPeers, type PastPeer } from '@/lib/daily';
+import { INK_PRICE } from '@/lib/ink';
 
 /**
  * 지난 상대 — 최근 한 달 안에 소개된 상대의 그리드.
  * 발견 탭은 "오늘"로 끝나야 해서, 여운은 한 줄 진입점 뒤의 이 화면이 맡는다.
- * 사흘이 지난 상대는 사라지지 않고 잠긴 채로 남는다 — 다시 보려면 우표 한 장.
+ * 사흘이 지난 상대는 사라지지 않고 잠긴 채로 남는다 — 다시 보려면 잉크 8.
  */
 export default function PastPeersScreen() {
   const c = useTheme();
@@ -47,7 +48,7 @@ export default function PastPeersScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={[styles.sub, { color: c.textSecondary }]}>
-            소개된 지 사흘이 지나면 프로필이 닫혀요. 우표 한 장으로 다시 열 수 있어요.
+            소개된 지 사흘이 지나면 프로필이 닫혀요. 잉크 {INK_PRICE.PROFILE_UNLOCK}로 다시 열 수 있어요.
           </Text>
           <PastPeerGrid items={peers} c={c} />
         </ScrollView>

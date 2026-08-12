@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
+import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.ProfileUnlock
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
@@ -30,9 +31,9 @@ class ProfileAccessServiceTest {
         every { findLastMailedAtByPeer(any()) } returns emptyMap()
     }
     private val profileUnlockRepository = mockk<ProfileUnlockRepository>()
-    private val stampService = mockk<StampService>(relaxed = true)
+    private val inkService = mockk<InkService>(relaxed = true)
     private val service = ProfileAccessService(
-        answerRepository, dailyRevealRepository, heartRepository, mailRepository, profileUnlockRepository, stampService,
+        answerRepository, dailyRevealRepository, heartRepository, mailRepository, profileUnlockRepository, inkService,
     )
 
     private val me = UUID.randomUUID()
@@ -43,68 +44,68 @@ class ProfileAccessServiceTest {
     private fun daysAgo(days: Long): Instant = Instant.now().minus(Duration.ofDays(days))
 
     @Test
-    fun `닫힌 프로필을 열면 우표 한 장이 나간다`() {
+    fun `닫힌 프로필을 열면 잉크 한 장이 나간다`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
         every { dailyRevealRepository.findLastRevealedAtBetween(me, peer) } returns daysAgo(10)
         every { heartRepository.findLastHeartedAtByPeer(me) } returns emptyMap()
         every { profileUnlockRepository.saveIfNew(any()) } returns true
-        every { stampService.balance(me) } returns 4
+        every { inkService.balance(me) } returns 4
 
         val result = service.unlock(me, peerAnswerId)
 
         assertTrue(result.spent)
         assertEquals(4, result.balance)
-        verify(exactly = 1) { stampService.spendOne(me, StampService.REASON_PROFILE_UNLOCK) }
+        verify(exactly = 1) { inkService.spend(me, InkPrice.PROFILE_UNLOCK, InkService.REASON_PROFILE_UNLOCK) }
     }
 
     @Test
-    fun `아직 열려 있는 상대에게는 우표를 쓰지 않는다`() {
+    fun `아직 열려 있는 상대에게는 잉크를 쓰지 않는다`() {
         // 지금 공짜로 볼 수 있는 걸 받고 파는 건 값을 받는 게 아니라 속이는 것이다.
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
         every { dailyRevealRepository.findLastRevealedAtBetween(me, peer) } returns daysAgo(1)
         every { heartRepository.findLastHeartedAtByPeer(me) } returns emptyMap()
-        every { stampService.balance(me) } returns 5
+        every { inkService.balance(me) } returns 5
 
         val result = service.unlock(me, peerAnswerId)
 
         assertFalse(result.spent)
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
         verify(exactly = 0) { profileUnlockRepository.saveIfNew(any()) }
     }
 
     @Test
     fun `이미 열어둔 상대는 다시 사지 않는다`() {
-        // 실패로 답하면 앱이 재시도한다 — 성공으로 답하되 우표는 쓰지 않는다.
+        // 실패로 답하면 앱이 재시도한다 — 성공으로 답하되 잉크는 쓰지 않는다.
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns setOf(peer)
-        every { stampService.balance(me) } returns 5
+        every { inkService.balance(me) } returns 5
 
         val result = service.unlock(me, peerAnswerId)
 
         assertFalse(result.spent)
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
     }
 
     @Test
-    fun `같은 순간에 두 번 들어와도 우표는 한 번만 나간다`() {
+    fun `같은 순간에 두 번 들어와도 잉크는 한 번만 나간다`() {
         // 조회는 둘 다 "없음"을 볼 수 있다 — 그 틈은 유니크 제약만이 막는다.
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
         every { dailyRevealRepository.findLastRevealedAtBetween(me, peer) } returns daysAgo(10)
         every { heartRepository.findLastHeartedAtByPeer(me) } returns emptyMap()
         every { profileUnlockRepository.saveIfNew(any()) } returns false // 먼저 온 쪽이 이미 기록했다
-        every { stampService.balance(me) } returns 5
+        every { inkService.balance(me) } returns 5
 
         val result = service.unlock(me, peerAnswerId)
 
         assertFalse(result.spent)
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
     }
 
     @Test
-    fun `우표는 기록이 남은 뒤에만 나간다`() {
+    fun `잉크는 기록이 남은 뒤에만 나간다`() {
         // 기록의 유니크 제약이 중복 차감을 막는 자물쇠다 — 차감이 먼저면 그 사이 두 장이 나갈 수 있다.
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
@@ -112,7 +113,7 @@ class ProfileAccessServiceTest {
         every { heartRepository.findLastHeartedAtByPeer(me) } returns emptyMap()
         val saved = slot<ProfileUnlock>()
         every { profileUnlockRepository.saveIfNew(capture(saved)) } returns true
-        every { stampService.balance(me) } returns 4
+        every { inkService.balance(me) } returns 4
 
         service.unlock(me, peerAnswerId)
 
@@ -121,7 +122,7 @@ class ProfileAccessServiceTest {
     }
 
     @Test
-    fun `이어진 적 없는 상대는 우표로도 열 수 없다`() {
+    fun `이어진 적 없는 상대는 잉크로도 열 수 없다`() {
         // 답변 id만 알면 아무나 열어볼 수 있으면 잠금이 아니라 가격표다.
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
@@ -129,7 +130,7 @@ class ProfileAccessServiceTest {
         every { heartRepository.findLastHeartedAtByPeer(me) } returns emptyMap()
 
         assertFailsWith<DailyMeetException> { service.unlock(me, peerAnswerId) }
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
     }
 
     @Test
@@ -140,7 +141,7 @@ class ProfileAccessServiceTest {
         every { dailyRevealRepository.findLastRevealedAtBetween(me, peer) } returns null
         every { heartRepository.findLastHeartedAtByPeer(me) } returns mapOf(peer to daysAgo(10))
         every { profileUnlockRepository.saveIfNew(any()) } returns true
-        every { stampService.balance(me) } returns 4
+        every { inkService.balance(me) } returns 4
 
         assertTrue(service.unlock(me, peerAnswerId).spent)
     }
@@ -152,24 +153,24 @@ class ProfileAccessServiceTest {
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
         every { dailyRevealRepository.findLastRevealedAtBetween(me, peer) } returns daysAgo(10)
         every { heartRepository.findLastHeartedAtByPeer(me) } returns mapOf(peer to daysAgo(1))
-        every { stampService.balance(me) } returns 5
+        every { inkService.balance(me) } returns 5
 
         assertFalse(service.unlock(me, peerAnswerId).spent)
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
     }
 
     @Test
     fun `편지를 주고받은 상대는 소개가 오래됐어도 열려 있다`() {
-        // 편지는 우표를 쓰고 연락처를 건넨 상대다 — 그걸 사흘 뒤 잠그면 산 것을 도로 뺏는 셈이다.
+        // 편지는 잉크를 쓰고 연락처를 건넨 상대다 — 그걸 사흘 뒤 잠그면 산 것을 도로 뺏는 셈이다.
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
         every { dailyRevealRepository.findLastRevealedAtBetween(me, peer) } returns daysAgo(10)
         every { heartRepository.findLastHeartedAtByPeer(me) } returns emptyMap()
         every { mailRepository.findLastMailedAtByPeer(me) } returns mapOf(peer to daysAgo(1))
-        every { stampService.balance(me) } returns 5
+        every { inkService.balance(me) } returns 5
 
         assertFalse(service.unlock(me, peerAnswerId).spent)
-        verify(exactly = 0) { stampService.spendOne(any(), any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
     }
 
     @Test

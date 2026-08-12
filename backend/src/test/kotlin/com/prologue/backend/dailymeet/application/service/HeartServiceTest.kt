@@ -149,7 +149,7 @@ class HeartServiceTest {
 
         assertTrue(received.locked)
         assertEquals(null, received.photoUrl)
-        // 누구인지는 남는다 — 우표를 쓸지 정하려면 알아야 한다
+        // 누구인지는 남는다 — 잉크를 쓸지 정하려면 알아야 한다
         assertEquals("닉", received.nickname)
     }
 

@@ -191,7 +191,7 @@ export default function MailsScreen() {
                     </View>
                     {h.peerAnswerId && h.locked && (
                       // 프로필이 닫혔으면 행동도 닫는다 — 보지 못하는 상대에게 하트를 보내게 두면
-                      // 잠근 의미가 없다. 카드를 누르면 상세에서 우표로 열 수 있다.
+                      // 잠근 의미가 없다. 카드를 누르면 상세에서 잉크로 열 수 있다.
                       <View style={[styles.mailBtn, { borderColor: c.border }]}>
                         <Text style={[styles.mailBtnText, { color: c.textSecondary }]}>프로필 열기</Text>
                       </View>
@@ -314,7 +314,7 @@ export default function MailsScreen() {
                           </View>
                         )}
 
-                        {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(우표 1장).
+                        {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(잉크 50).
                             이미 보냈으면 다시 쓰는 대신 보낸 편지를 보여준다 — 부친 편지는 고칠 수 없다. */}
                         {m.replied && !m.peerAnswerId ? null : (
                           <Pressable

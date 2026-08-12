@@ -26,7 +26,7 @@ import java.util.UUID
 class MailController(
     private val mailService: MailService,
 ) {
-    /** 편지 보내기. 한 통에 우표 1장. */
+    /** 편지 보내기. 한 통에 잉크 1장. */
     @PostMapping
     fun send(
         authentication: Authentication,
@@ -43,7 +43,7 @@ class MailController(
         )
     }
 
-    /** 받은 편지에 답장 — 답장도 한 통의 편지, 우표 1장. */
+    /** 받은 편지에 답장 — 답장도 한 통의 편지, 잉크 1장. */
     @PostMapping("/{mailId}/reply")
     fun reply(
         authentication: Authentication,
@@ -94,6 +94,18 @@ class MailController(
     }
 
     /** 조용히 거절 — 목록에서 사라지고 보낸 사람에게는 알리지 않는다. */
+    /**
+     * 읽히지 않은 편지를 되찾아간다 — 잉크의 절반이 돌아온다.
+     * 보낸 지 사흘이 지나고 상대가 아직 열지 않았을 때만.
+     */
+    @PostMapping("/{mailId}/recall")
+    fun recall(
+        authentication: Authentication,
+        @PathVariable mailId: String,
+    ) {
+        mailService.recall(UUID.fromString(authentication.name), parseMailId(mailId))
+    }
+
     @PostMapping("/{mailId}/decline")
     fun decline(
         authentication: Authentication,

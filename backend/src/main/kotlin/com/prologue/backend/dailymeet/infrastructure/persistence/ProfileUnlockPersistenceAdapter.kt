@@ -44,7 +44,7 @@ class ProfileUnlockPersistenceAdapter(
             jpa.saveAndFlush(unlock.toEntity())
             true
         } catch (e: DataIntegrityViolationException) {
-            false // 동시에 들어온 같은 요청 — 먼저 온 쪽만 우표를 쓴다
+            false // 동시에 들어온 같은 요청 — 먼저 온 쪽만 잉크를 쓴다
         }
     }
 

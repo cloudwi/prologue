@@ -10,8 +10,8 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "stamp_event_submissions")
-class StampEventSubmissionJpaEntity(
+@Table(name = "ink_event_submissions")
+class InkEventSubmissionJpaEntity(
     @Id
     @GeneratedValue
     @UuidGenerator(style = UuidGenerator.Style.TIME)

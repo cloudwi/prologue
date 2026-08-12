@@ -268,7 +268,7 @@ class PeerMatchingService(
          * 지난 상대 목록에 남기는 기간.
          *
          * 프로필이 열려 있는 사흘([ProfileAccess.WINDOW])보다 길다 — 사흘이 지나면 목록에서
-         * 사라지는 게 아니라 잠긴 채로 남아야, 다시 보고 싶은 사람에게 우표를 쓸 자리가 생긴다.
+         * 사라지는 게 아니라 잠긴 채로 남아야, 다시 보고 싶은 사람에게 잉크를 쓸 자리가 생긴다.
          * 이 기간까지 지나면 그때는 정말 지워진다. 무한히 쌓이는 목록은 서랍이지 인연이 아니다.
          */
         private val PAST_PEER_HISTORY: Duration = Duration.ofDays(30)

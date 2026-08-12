@@ -1,7 +1,7 @@
 package com.prologue.backend.admin
 
 import com.prologue.backend.auth.application.service.AccountModerationService
-import com.prologue.backend.dailymeet.application.service.StampService
+import com.prologue.backend.dailymeet.application.service.InkService
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,9 +22,9 @@ import java.util.UUID
 class AdminMemberController(
     private val jdbc: JdbcTemplate,
     private val accountModerationService: AccountModerationService,
-    private val stampService: StampService,
+    private val inkService: InkService,
 ) {
-    data class GrantStampsRequest(val amount: Int)
+    data class GrantInksRequest(val amount: Int)
 
     data class AdminMemberRow(
         val accountId: String,
@@ -74,10 +74,10 @@ class AdminMemberController(
     @PostMapping("/{accountId}/reactivate")
     fun reactivate(@PathVariable accountId: UUID) = accountModerationService.reactivate(accountId)
 
-    /** 우표 수동 지급 — CS 보상 등. 원장(reason)에 어드민 지급으로 남는다. */
-    @PostMapping("/{accountId}/grant-stamps")
-    fun grantStamps(@PathVariable accountId: UUID, @RequestBody request: GrantStampsRequest) {
+    /** 잉크 수동 지급 — CS 보상 등. 원장(reason)에 어드민 지급으로 남는다. */
+    @PostMapping("/{accountId}/grant-ink")
+    fun grantInk(@PathVariable accountId: UUID, @RequestBody request: GrantInksRequest) {
         require(request.amount in 1..100) { "지급 수량은 1~100장이어야 해요" }
-        stampService.grantTo(accountId, request.amount, "ADMIN_GRANT")
+        inkService.grantTo(accountId, request.amount, "ADMIN_GRANT")
     }
 }
