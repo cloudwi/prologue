@@ -266,9 +266,11 @@ export default function DiscoverScreen() {
                   </Text>
                 </View>
               ) : peersData.peers.length === 0 ? (
+                // 하루 한 명이라 후보가 없는 날이 생긴다. 서버는 조회할 때마다 빈자리를 채우므로
+                // "오늘은 끝"이 아니라 "아직"이라는 걸 알려준다 — 저녁에 답한 사람이 생기면 그때 소개된다.
                 <View style={[styles.peerCard, styles.peerEmpty, { backgroundColor: c.backgroundSelected }]}>
                   <Text style={[styles.peerEmptyText, { color: c.textSecondary }]}>
-                    아직 도착한 답변이 없어요.{'\n'}곧 누군가의 마음이 도착할 거예요.
+                    오늘은 아직 인연이 닿지 않았어요.{'\n'}새로 답을 남긴 분이 생기면 바로 소개해 드릴게요.
                   </Text>
                 </View>
               ) : (
