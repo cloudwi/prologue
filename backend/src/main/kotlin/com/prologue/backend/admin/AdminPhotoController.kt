@@ -53,9 +53,9 @@ class AdminPhotoController(
         return PhotosResponse(rows)
     }
 
-    /** 사진 강제 삭제 — 회원 본인의 삭제와 같은 경로(저장소 베스트 에포트 삭제 포함). */
+    /** 사진 강제 삭제 — 검수 경로라 최소 장수 제한을 받지 않는다(저장소 베스트 에포트 삭제 포함). */
     @PostMapping("/remove")
     fun remove(@RequestBody request: RemovePhotoRequest) {
-        memberPhotoService.removePhoto(request.accountId, request.url)
+        memberPhotoService.stripPhoto(request.accountId, request.url)
     }
 }

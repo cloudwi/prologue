@@ -74,7 +74,9 @@ class Member private constructor(
      *
      * 가입 시점에는 사진을 올릴 수 없으므로(회원이 있어야 업로드 가능) 최소 장수를
      * 가입 조건으로 걸 수 없다. 대신 계정은 만들되 사진을 채우기 전까지 소개되지 않는다.
-     * TODO: 매칭·발견 쿼리에 이 조건을 반영할 것. 현재는 클라이언트 온보딩에서만 2장을 요구한다.
+     * 온보딩(클라이언트)이 [MIN_PHOTOS]장을 요구하고, 한번 채운 뒤에는 [removePhoto]가
+     * 그 밑으로 내려가지 못하게 막는다 — 두 장치가 합쳐져 "보이는 회원은 항상 2장 이상"이 된다.
+     * TODO: 매칭·발견 쿼리에 이 조건을 반영할 것.
      */
     fun isVisibleToOthers(): Boolean = photoUrls.size >= MIN_PHOTOS
 
@@ -84,8 +86,24 @@ class Member private constructor(
         photoUrls = photoUrls + url
     }
 
-    /** 사진 삭제. 목록에 없으면 무시(멱등). */
+    /**
+     * 사진 삭제(본인). 목록에 없으면 무시(멱등).
+     * [MIN_PHOTOS]장을 채운 뒤에는 그 밑으로 내려갈 수 없다 — 교체는 새 사진을 먼저 올린 뒤 지우는 순서.
+     * 아직 못 채운 계정(온보딩 중단 등)은 자유롭게 지운다 — 바닥은 한번 밟은 사람에게만 생긴다.
+     */
     fun removePhoto(url: String) {
+        if (url !in photoUrls) return
+        if (photoUrls.size == MIN_PHOTOS) {
+            throw MemberDomainException("프로필 사진은 ${MIN_PHOTOS}장 이상 유지해야 해요. 새 사진을 먼저 올린 뒤 지워주세요")
+        }
+        photoUrls = photoUrls - url
+    }
+
+    /**
+     * 검수 삭제(운영자). 부적절한 사진은 최소 장수와 무관하게 내린다.
+     * 장수가 모자라져 소개 노출이 멈추는 것([isVisibleToOthers])이 의도된 결과다.
+     */
+    fun stripPhoto(url: String) {
         photoUrls = photoUrls - url
     }
 

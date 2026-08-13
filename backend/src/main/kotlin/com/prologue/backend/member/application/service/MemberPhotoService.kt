@@ -54,11 +54,20 @@ class MemberPhotoService(
         )
     }
 
-    /** 사진 삭제(목록에서 제거 + 저장소 베스트 에포트 삭제). */
+    /** 사진 삭제(본인). 최소 장수 밑으로는 도메인이 막는다. 통과하면 저장소도 베스트 에포트로 지운다. */
     @Transactional
     fun removePhoto(accountId: UUID, url: String): Member {
         val member = memberRepository.findByAccountId(accountId) ?: throw MemberNotOnboardedException()
         member.removePhoto(url)
+        photoStorage.deleteProfilePhoto(url)
+        return memberRepository.save(member)
+    }
+
+    /** 검수 삭제(운영자). 부적절 사진은 최소 장수와 무관하게 내린다. */
+    @Transactional
+    fun stripPhoto(accountId: UUID, url: String): Member {
+        val member = memberRepository.findByAccountId(accountId) ?: throw MemberNotOnboardedException()
+        member.stripPhoto(url)
         photoStorage.deleteProfilePhoto(url)
         return memberRepository.save(member)
     }

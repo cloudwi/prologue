@@ -64,6 +64,14 @@ export default function EditPhotosScreen() {
 
   async function remove(url: string) {
     if (busy) return;
+    // 서버도 같은 규칙으로 막지만, 여기서 안내해야 에러가 아니라 순서 문제로 읽힌다.
+    if (photos.length === MIN_PHOTOS) {
+      Alert.alert(
+        `사진은 ${MIN_PHOTOS}장 이상 유지해야 해요`,
+        '바꾸고 싶다면 새 사진을 먼저 추가한 뒤 지워주세요.',
+      );
+      return;
+    }
     setBusy(true);
     try {
       const res = await deletePhoto(url);
