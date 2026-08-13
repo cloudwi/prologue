@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
 import { Colors, Fonts } from '@/constants/theme';
+import { identify } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { useAppearance } from '@/lib/appearance';
@@ -29,6 +30,7 @@ export default function LoginScreen() {
       }
       try {
         const profile = await getMyProfile();
+        if (profile?.accountId) identify(profile.accountId);
         if (active) router.replace(profile ? '/discover' : '/onboarding');
       } catch (e) {
         // 재발급까지 실패한 만료(401/403) — authedFetch가 토큰을 지웠으니 로그인 화면으로 남는다

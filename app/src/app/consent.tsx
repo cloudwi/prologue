@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LEGAL_EFFECTIVE_DATE } from '@/constants/legal';
 import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
 import { saveConsent } from '@/lib/consent';
 
 /**
@@ -50,6 +51,8 @@ const REQUIRED_KEYS = ITEMS.filter((i) => i.required).map((i) => i.key);
 export default function ConsentScreen() {
   const c = useTheme();
   const router = useRouter();
+
+  useEffect(() => track('consent_viewed'), []);
   const [checked, setChecked] = useState<Record<ItemKey, boolean>>({
     terms: false,
     privacy: false,
@@ -69,6 +72,7 @@ export default function ConsentScreen() {
   };
 
   const proceed = async () => {
+    track('consent_completed');
     await saveConsent(checked.marketing);
     router.push('/email-auth');
   };

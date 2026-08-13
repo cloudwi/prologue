@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
 import { INK_PRICE } from '@/lib/ink';
 import { getSentMailTo, recallMail, type SentMail } from '@/lib/mails';
 import { RevealableContact } from '@/components/revealable-contact';
@@ -58,6 +59,7 @@ export default function MailViewScreen() {
             setRecalling(true);
             try {
               await recallMail(mail.mailId);
+              track('mail_recalled');
               Alert.alert('편지를 회수했어요', `잉크 ${INK_PRICE.MAIL_RECALL_REFUND}이 돌아왔어요.`, [
                 { text: '확인', onPress: () => router.back() },
               ]);

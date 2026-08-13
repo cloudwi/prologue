@@ -21,6 +21,7 @@ import { HeightPicker } from '@/components/height-picker';
 import { KeywordChips } from '@/components/keyword-chips';
 import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
+import { track } from '@/lib/analytics';
 import { koreanManAge, parseBirthDigits } from '@/lib/birth-date';
 import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/lib/phone';
 import { toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
@@ -281,6 +282,7 @@ export default function OnboardingScreen() {
       // 동의 화면에서 적어둔 값 — 회원을 만드는 첫 저장에만 실려 간다.
       // (두 번째 저장 때는 이미 지워졌고, 서버도 기존 회원에게는 기록을 남기지 않는다)
       const consent = await getConsent();
+      track('onboarding_completed');
       await completeOnboarding({
         nickname: nickname.trim(),
         gender: gender!,

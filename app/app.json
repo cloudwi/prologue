@@ -58,7 +58,13 @@
         }
       ],
       "expo-iap",
-      "@sentry/react-native"
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "prologue-4k",
+          "project": "prologue-app"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

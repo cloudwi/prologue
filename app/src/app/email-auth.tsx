@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { Fonts } from '@/constants/theme';
+import { identify, track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { requestCode, verifyCode } from '@/lib/auth';
 import { clearPendingEmail, getPendingEmail, savePendingEmail } from '@/lib/auth-storage';
@@ -72,6 +73,7 @@ export default function EmailAuthScreen() {
     setSubmitting(true);
     setError(null);
     try {
+      track('auth_code_requested');
       await requestCode(email.trim());
       // 메일의 딥링크는 코드만 담으므로, 짝이 될 이메일을 기기에 남긴다.
       await savePendingEmail(email.trim());
@@ -90,7 +92,9 @@ export default function EmailAuthScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await verifyCode(email.trim(), code);
+      const session = await verifyCode(email.trim(), code);
+      if (session?.accountId) identify(session.accountId);
+      track('auth_succeeded');
       await clearPendingEmail();
       const profile = await getMyProfile();
       router.replace(profile ? '/discover' : '/onboarding');

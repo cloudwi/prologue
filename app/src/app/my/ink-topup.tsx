@@ -18,6 +18,7 @@ import {
 import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
 import { getInkBalance, INK_PRICE, INK_PRODUCTS, redeemPurchase } from '@/lib/ink';
 
 const STORE_PLATFORM = Platform.OS === 'ios' ? 'IOS' : 'ANDROID';
@@ -58,6 +59,7 @@ export default function InkTopupScreen() {
       });
       // 소모성이라 isConsumable — 끝내야 같은 상품을 다시 살 수 있다
       await finishTransaction({ purchase, isConsumable: true });
+      if (result.granted > 0) track('topup_purchase_completed', { ink: result.granted });
       setBalance(result.balance);
       if (!silent && result.granted > 0) {
         Alert.alert('충전했어요', `잉크 ${result.granted}이 들어왔어요. 지금 ${result.balance}이에요.`);
@@ -113,6 +115,7 @@ export default function InkTopupScreen() {
       }
     })();
 
+    track('topup_viewed');
     getInkBalance()
       .then((n) => active && setBalance(n))
       .catch(() => {});
@@ -128,6 +131,7 @@ export default function InkTopupScreen() {
   async function buy(productId: string) {
     if (busy) return;
     setBusy(productId);
+    track('topup_purchase_started');
     try {
       await requestPurchase({
         request: { apple: { sku: productId }, google: { skus: [productId] } },

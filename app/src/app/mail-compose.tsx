@@ -16,6 +16,7 @@ import {
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
 import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts';
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
@@ -48,6 +49,8 @@ export default function MailComposeScreen() {
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
   const [ink, setInk] = useState<number | null>(null);
+
+  useEffect(() => track('mail_compose_started'), []);
   const [sending, setSending] = useState(false);
   // 초안을 읽기 전에는 자동 저장을 멈춰둔다 — 빈 값이 초안을 덮어쓰지 않게.
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -120,6 +123,7 @@ export default function MailComposeScreen() {
       else await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
+      track('mail_sent');
       Alert.alert('편지를 보냈어요', `잉크 ${INK_PRICE.MAIL}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');

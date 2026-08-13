@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -10,6 +10,7 @@ import { ProfileInvitation, type InvitationLetter } from '@/components/profile-i
 import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
 import { sendHeart, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
 import { INK_PRICE } from '@/lib/ink';
 import { promptReport } from '@/lib/reports';
@@ -38,6 +39,9 @@ export default function PeerDetailScreen() {
   // 잉크로 열면 서버가 열린 프로필을 함께 주므로 그 자리에서 바꿔 끼운다 — 다시 조회하지 않는다
   const [peer, setPeer] = useState(initialPeer);
   const [unlocking, setUnlocking] = useState(false);
+
+  // 누구를 봤는지는 싣지 않는다 — 열람이 일어났다는 사실만.
+  useEffect(() => track('peer_profile_viewed'), []);
 
   // 하트는 한 사람에게 한 번뿐 — 서버가 알려준 상태로 시작해야 다시 들어왔을 때 버튼이 거짓말하지 않는다
   const [hearted, setHearted] = useState(initialPeer?.hearted ?? false);
@@ -77,6 +81,7 @@ export default function PeerDetailScreen() {
             setUnlocking(true);
             try {
               const result = await unlockPeer(peer!.peerAnswerId!);
+              if (result.spent) track('profile_unlocked');
               setPeer(result.peer);
               setHearted(result.peer.hearted);
               if (result.spent) Alert.alert('프로필을 열었어요', `남은 잉크 ${result.balance}이에요.`);
@@ -136,6 +141,7 @@ export default function PeerDetailScreen() {
     setHearting(true);
     try {
       const result = await sendHeart(peer.peerAnswerId);
+      track('heart_sent');
       setHearted(true);
       if (result.matched) {
         Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 편지로 연락처를 건네보세요.', [

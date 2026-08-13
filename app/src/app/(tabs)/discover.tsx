@@ -18,6 +18,7 @@ import { Image } from 'expo-image';
 
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { track } from '@/lib/analytics';
 import { isSessionExpired } from '@/lib/api';
 import { answerToday, getPastPeers, getPeers, getToday, type PastPeer, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
@@ -114,6 +115,7 @@ export default function DiscoverScreen() {
     try {
       const wasAnswered = today?.answered ?? false;
       const updated = await answerToday(draft.trim());
+      track('answer_submitted');
       setToday(updated);
       setDraft(updated.myAnswer ?? '');
       setEditing(false);

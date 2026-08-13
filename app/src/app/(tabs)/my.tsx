@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PhotoPager } from '@/components/photo-pager';
 import { avatarSource } from '@/constants/avatars';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { resetAnalytics } from '@/lib/analytics';
 import { isSessionExpired } from '@/lib/api';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
@@ -88,6 +89,7 @@ export default function MyScreen() {
   }
 
   async function logout() {
+    resetAnalytics();
     await clearTokens();
     router.replace('/');
   }
