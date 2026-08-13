@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { enableAppSwitcherProtectionAsync, usePreventScreenCapture } from 'expo-screen-capture';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +11,20 @@ import { UpdateRequired } from '@/components/update-required';
 import { requiredUpdateStoreUrl } from '@/lib/app-config';
 import { AppearanceProvider, useAppearance } from '@/lib/appearance';
 
-export default function RootLayout() {
+/**
+ * 에러 모니터링 — 유저가 겪는 크래시를 제보보다 먼저 알기 위한 장치.
+ * DSN은 비밀이 아니라(클라이언트에 실려 나가는 값) 코드에 둔다.
+ * 개발 중에는 끈다 — 로컬에서 일부러 내는 에러가 쿼터를 갉아먹지 않게.
+ */
+Sentry.init({
+  dsn: 'https://7a48292a145d53327d445f8e3cb848bb@o4511901645078528.ingest.us.sentry.io/4511901658841088',
+  enabled: !__DEV__,
+  sendDefaultPii: false, // 소개팅 앱 — 에러 리포트에 개인정보를 싣지 않는다
+});
+
+export default Sentry.wrap(RootLayout);
+
+function RootLayout() {
   useScreenPrivacy();
 
   return (

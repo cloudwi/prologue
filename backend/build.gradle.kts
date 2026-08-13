@@ -42,6 +42,12 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    // 에러 모니터링 — 유저가 겪는 500을 우리가 먼저 안다. DSN(SENTRY_DSN)이 없으면 조용히 비활성.
+    // 스타터(sentry-spring-boot-starter-jakarta)는 쓰지 않는다: Spring Boot 3 전용이라
+    // Boot 4에서 옮겨진 RestClientCustomizer를 찾다 컨텍스트가 죽는다(contextLoads가 잡아냄).
+    // 코어 + 로그백 연동은 프레임워크 버전을 타지 않는다 — 초기화는 config/SentryConfig가 한다.
+    implementation("io.sentry:sentry:8.16.0")
+    implementation("io.sentry:sentry-logback:8.16.0")
     testImplementation("io.mockk:mockk:1.14.2")
     // 컨텍스트가 실제로 뜨는지 보려면 DataSource가 있어야 한다. 운영은 Postgres지만
     // 기동 검증에는 인메모리로 충분하다 — 여기서 잡으려는 건 쿼리가 아니라 빈 배선이다.

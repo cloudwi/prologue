@@ -74,6 +74,11 @@ app:
 web:
   base-url: ${WEB_BASE_URL:https://prologue-web.onrender.com}
 
+# 에러 모니터링(Sentry). DSN이 비어 있으면 초기화 자체를 건너뛴다 — 로컬·테스트에서 무해.
+# 초기화는 config/SentryConfig, 이벤트 수집은 logback 어펜더(ERROR 로그)가 맡는다.
+sentry:
+  dsn: ${SENTRY_DSN:}
+
 jwt:
   secret: ${JWT_SECRET}          # 운영: Render 환경변수(자동생성). 로컬: 환경변수로 주입
   access-token-expiry: 30m       # 액세스 토큰 30분
