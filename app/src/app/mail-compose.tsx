@@ -29,7 +29,8 @@ const CONTENT_MAX = 300;
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
  * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인), 받은 편지에 답장은 25(50% 할인).
- * 값은 서버 견적(GET /mails/quote)이 정한다. 화면은 견적이 오기 전엔 정가(답장이면 답장값)를 보여준다.
+ * 값은 서버 견적(GET /mails/quote)이 정한다. 견적이 오기 전에는 화면을 그리지 않는다 —
+ * 정가를 먼저 보여줬다가 할인가로 바꾸면 값이 튀어 보이고, 그 한 순간이 "속은 느낌"을 남긴다.
  * 상대는 둘 중 하나로 정해진다: 답변 id(peerAnswerId) 또는 답장할 원본 편지(replyMailId).
  * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
@@ -50,20 +51,25 @@ export default function MailComposeScreen() {
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
   const [ink, setInk] = useState<number | null>(null);
-  // 편지값 견적 — 답장이면 절반, 서로 하트면 30% 할인. 견적을 못 받으면 아는 값으로 보여준다(실제 값은 서버가 정한다).
-  const [quote, setQuote] = useState<MailQuote>(
-    replyMailId ? { price: INK_PRICE.MAIL_REPLY, discount: 'REPLY' } : { price: INK_PRICE.MAIL, discount: null },
-  );
+  // 편지값 견적 — 답장이면 절반, 서로 하트면 30% 할인. 올 때까지 null이라 화면은 스피너를 보여준다.
+  // 견적을 못 받으면(구버전 서버 등) 아는 값으로 그린다 — 실제 차감은 서버가 정하므로 화면이 틀려도 돈은 안 샌다.
+  const [quote, setQuote] = useState<MailQuote | null>(null);
 
   useEffect(() => track('mail_compose_started'), []);
 
   useEffect(() => {
     const target = peerAnswerId ? { peerAnswerId } : replyMailId ? { replyMailId } : null;
-    if (!target) return;
+    const fallback: MailQuote = replyMailId
+      ? { price: INK_PRICE.MAIL_REPLY, discount: 'REPLY' }
+      : { price: INK_PRICE.MAIL, discount: null };
+    if (!target) {
+      setQuote(fallback);
+      return;
+    }
     let active = true;
     getMailQuote(target)
       .then((q) => active && setQuote(q))
-      .catch(() => {});
+      .catch(() => active && setQuote(fallback));
     return () => {
       active = false;
     };
@@ -127,7 +133,7 @@ export default function MailComposeScreen() {
   );
 
   const hasContact = (includePhone && !!myPhone) || kakaoId.trim().length > 0;
-  const canSend = (!!peerAnswerId || !!replyMailId) && content.trim().length > 0 && hasContact && !sending;
+  const canSend = (!!peerAnswerId || !!replyMailId) && !!quote && content.trim().length > 0 && hasContact && !sending;
 
   async function send() {
     if (!canSend) return;
@@ -141,7 +147,7 @@ export default function MailComposeScreen() {
         : await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
-      track('mail_sent', { discount: quote.discount ?? 'NONE' });
+      track('mail_sent', { discount: quote?.discount ?? 'NONE' });
       Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -152,7 +158,7 @@ export default function MailComposeScreen() {
 
   /** 잉크를 쓰는 행동이라 한 번 확인한다 — 남은 잉크를 함께 보여주고. */
   function confirmSend() {
-    if (!canSend) return;
+    if (!canSend || !quote) return;
     Alert.alert(
       '편지 보내기',
       [
@@ -174,7 +180,7 @@ export default function MailComposeScreen() {
 
   return (
     <SubScreen title="편지 쓰기" c={c}>
-      {loading ? (
+      {loading || !quote ? (
         <View style={[styles.flex, styles.center]}>
           <ActivityIndicator color={c.primary} />
         </View>
