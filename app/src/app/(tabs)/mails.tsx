@@ -8,7 +8,7 @@ import { Avatar } from '@/components/avatar';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isSessionExpired } from '@/lib/api';
-import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
+import { getPeerProfile, getReceivedHearts, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
 import { INK_PRICE } from '@/lib/ink';
 import { RevealableContact } from '@/components/revealable-contact';
@@ -16,7 +16,9 @@ import { promptReport } from '@/lib/reports';
 
 /**
  * 편지함 — 인앱 채팅 없이, 마음이 닿은 흔적이 도착하는 곳.
- * 나에게 온 하트(되보내면 서로 하트 → 편지 쓸 차례)와 받은 편지(내용·연락처 바로 보임)가 쌓인다.
+ * 나에게 온 하트(프로필을 보고 상세에서 되보내면 서로 하트 → 편지 쓸 차례)와 받은 편지(내용·연락처 바로 보임)가 쌓인다.
+ * 목록에서는 하트를 보내지 않는다 — 이름과 사진 한 장만 보고 마음을 돌려보내게 두면 하트가 가벼워진다.
+ * 사람을 먼저 보고(프로필 상세), 그 자리에서 보낸다.
  * 편지를 받았다면 다음 대화는 앱 밖(전화·카카오톡)에서 이어진다.
  */
 export default function MailsScreen() {
@@ -73,26 +75,6 @@ export default function MailsScreen() {
         return;
       }
       Alert.alert('프로필을 불러오지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  /** 받은 하트에 하트를 돌려보낸다 — 상대는 이미 나를 좋아하니 그 자리에서 상호가 된다. */
-  async function heartBack(h: ReceivedHeart) {
-    if (!h.peerAnswerId || busy) return;
-    setBusy(h.peerAnswerId);
-    try {
-      const result = await sendHeart(h.peerAnswerId);
-      if (result.matched) {
-        Alert.alert('서로 호감이에요!', `${h.nickname}님에게 편지로 연락처를 건네보세요.`, [
-          { text: '나중에', style: 'cancel' },
-          { text: '편지 쓰기', onPress: () => openCompose(h) },
-        ]);
-      }
-      await load();
-    } catch (e) {
-      Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시');
     } finally {
       setBusy(null);
     }
@@ -211,20 +193,10 @@ export default function MailsScreen() {
                           </Text>
                         </Pressable>
                       ) : (
-                        <Pressable
-                          onPress={() => heartBack(h)}
-                          disabled={busy === h.peerAnswerId}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${h.nickname}님에게 하트 돌려보내기`}
-                          style={[styles.heartBackBtn, { backgroundColor: c.primary, opacity: busy === h.peerAnswerId ? 0.6 : 1 }]}
-                        >
-                          <Image
-                            source={require('@/assets/images/match-heart.png')}
-                            style={styles.heartBackIcon}
-                            contentFit="contain"
-                            tintColor={c.primaryText}
-                          />
-                        </Pressable>
+                        // 하트 되보내기는 프로필 상세에서만 — 카드 전체가 상세로 가는 버튼이라 이 칩은 그 길을 가리킬 뿐이다.
+                        <View style={[styles.mailBtn, { borderColor: c.primaryStrong }]}>
+                          <Text style={[styles.mailBtnText, { color: c.primaryStrong }]}>프로필 보기</Text>
+                        </View>
                       ))}
                   </Pressable>
                 ))}
@@ -373,8 +345,6 @@ const styles = StyleSheet.create({
   rowBody: { marginLeft: 14, flex: 1 },
   rowName: { fontSize: 17, fontWeight: '700' },
   rowMeta: { fontSize: 13, marginTop: 3 },
-  heartBackBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  heartBackIcon: { width: 17, height: 17 },
   mailBtn: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   mailBtnText: { fontSize: 13.5, fontWeight: '700' },
 
