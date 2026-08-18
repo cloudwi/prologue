@@ -22,6 +22,9 @@ class HeartPersistenceAdapter(
     override fun findAllTo(toAccountId: UUID): List<Heart> =
         jpa.findByToAccountIdOrderByCreatedAtDesc(toAccountId).map { it.toDomain() }
 
+    override fun findAllFrom(fromAccountId: UUID): List<Heart> =
+        jpa.findByFromAccountIdOrderByCreatedAtDesc(fromAccountId).map { it.toDomain() }
+
     override fun countFrom(fromAccountId: UUID): Long = jpa.countByFromAccountId(fromAccountId)
 
     /**

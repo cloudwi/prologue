@@ -128,10 +128,17 @@ class DailyMeetController(
         return HeartResponse.from(heartService.heart(accountId, peerAnswerId))
     }
 
-    /** 나에게 하트를 보낸 사람들(아직 상호 아님). 하트를 돌려보내면 그 자리에서 매칭. */
+    /** 나에게 하트를 보낸 사람들 — 상호가 된 사람도 남는다. 되보내기는 프로필 상세에서. */
     @GetMapping("/hearts/received")
     fun receivedHearts(authentication: Authentication): ReceivedHeartsResponse {
         val accountId = UUID.fromString(authentication.name)
         return ReceivedHeartsResponse.from(heartService.receivedHearts(accountId))
+    }
+
+    /** 내가 하트를 보낸 사람들 — 답이 온 사람(상호)도, 아직인 사람도. 받은 하트와 같은 모양. */
+    @GetMapping("/hearts/sent")
+    fun sentHearts(authentication: Authentication): ReceivedHeartsResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return ReceivedHeartsResponse.from(heartService.sentHearts(accountId))
     }
 }

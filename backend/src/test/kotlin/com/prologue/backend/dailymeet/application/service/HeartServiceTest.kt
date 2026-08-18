@@ -113,11 +113,42 @@ class HeartServiceTest {
         val senderAnswerId = UUID.randomUUID()
         every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
         every { heartRepository.existsFromTo(me, peer) } returns true
+        every { heartRepository.existsFromTo(peer, me) } returns true
         every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
         every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns
             Answer.reconstitute(senderAnswerId, peer, 1L, "상대 답변", Instant.now())
 
         val result = service.receivedHearts(me)
+
+        assertEquals(1, result.size)
+        assertTrue(result[0].mutual)
+    }
+
+    @Test
+    fun `보낸 하트는 받는 사람 요약과 내가 하트한 답변 id를 담는다 - 답이 없으면 mutual=false`() {
+        every { heartRepository.findAllFrom(me) } returns listOf(Heart.send(me, peer, 1L))
+        every { heartRepository.existsFromTo(me, peer) } returns true
+        every { heartRepository.existsFromTo(peer, me) } returns false
+        every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns peerAnswer
+
+        val result = service.sentHearts(me)
+
+        assertEquals(1, result.size)
+        assertEquals("고요한아침", result[0].nickname)
+        assertEquals(peerAnswerId, result[0].peerAnswerId)
+        assertFalse(result[0].mutual)
+    }
+
+    @Test
+    fun `보낸 하트 - 상대가 되보냈으면 mutual, 같은 사람에게 여러 날 보냈어도 한 줄`() {
+        every { heartRepository.findAllFrom(me) } returns listOf(Heart.send(me, peer, 1L), Heart.send(me, peer, 2L))
+        every { heartRepository.existsFromTo(me, peer) } returns true
+        every { heartRepository.existsFromTo(peer, me) } returns true
+        every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns peerAnswer
+
+        val result = service.sentHearts(me)
 
         assertEquals(1, result.size)
         assertTrue(result[0].mutual)

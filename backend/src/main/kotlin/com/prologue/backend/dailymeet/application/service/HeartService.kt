@@ -57,40 +57,56 @@ class HeartService(
      * 계정 id는 노출하지 않고, 행동 대상으로 상대 답변 id(불투명 식별자)를 준다.
      */
     @Transactional(readOnly = true)
-    fun receivedHearts(accountId: UUID): List<ReceivedHeartView> {
+    fun receivedHearts(accountId: UUID): List<HeartPeerView> =
+        heartPeers(accountId, heartRepository.findAllTo(accountId)) { it.fromAccountId }
+
+    /**
+     * 내가 하트를 보낸 사람들 — 답이 온 사람(상호)도, 아직인 사람도 함께.
+     * 받은 하트와 같은 모양으로 준다: 상대 요약, 행동 대상 답변 id(내가 하트한 그 답), 상호·편지·잠김.
+     */
+    @Transactional(readOnly = true)
+    fun sentHearts(accountId: UUID): List<HeartPeerView> =
+        heartPeers(accountId, heartRepository.findAllFrom(accountId)) { it.toAccountId }
+
+    /**
+     * 하트 목록을 상대별 한 줄로 접는다 — 방향만 다르고 나머지는 같다.
+     * [peerOf]가 하트에서 "상대"를 꺼낸다(받은 하트면 보낸 사람, 보낸 하트면 받는 사람).
+     */
+    private fun heartPeers(accountId: UUID, hearts: List<Heart>, peerOf: (Heart) -> UUID): List<HeartPeerView> {
         // 잠김 판정에 필요한 것들은 사람 수와 무관하게 한 번씩만 읽는다
         val unlockedPeers = profileAccessService.unlockedPeers(accountId)
         val contactedAt = profileAccessService.lastContactedAtByPeer(accountId)
 
-        return heartRepository.findAllTo(accountId)
-            .distinctBy { it.fromAccountId } // 같은 사람이 여러 날 보냈어도 한 줄
+        return hearts
+            .distinctBy(peerOf) // 같은 사람과 여러 날 오갔어도 한 줄
             .mapNotNull { heart ->
-                val sender = memberQueryService.findProfile(heart.fromAccountId) ?: return@mapNotNull null
-                // 창은 마지막으로 마음이 오간 때부터 흐른다 — 내가 하트를 돌려보냈다면 그때부터.
+                val peerId = peerOf(heart)
+                val peer = memberQueryService.findProfile(peerId) ?: return@mapNotNull null
+                // 창은 마지막으로 마음이 오간 때부터 흐른다 — 하트가 되돌아왔다면 그때부터.
                 val open = ProfileAccess.isOpen(
-                    contactedAt[heart.fromAccountId] ?: heart.createdAt,
-                    unlocked = heart.fromAccountId in unlockedPeers,
+                    contactedAt[peerId] ?: heart.createdAt,
+                    unlocked = peerId in unlockedPeers,
                 )
-                ReceivedHeartView(
-                    nickname = sender.nickname,
-                    age = sender.age(),
-                    region = sender.region,
-                    avatarId = sender.avatarId,
+                HeartPeerView(
+                    nickname = peer.nickname,
+                    age = peer.age(),
+                    region = peer.region,
+                    avatarId = peer.avatarId,
                     // 사진은 창이 열려 있을 때만. 목록에 얼굴이 남으면 잠근 의미가 없다.
-                    photoUrl = if (open) sender.photoUrls.firstOrNull() else null,
+                    photoUrl = if (open) peer.photoUrls.firstOrNull() else null,
                     locked = !open,
-                    // 하트를 보냈다 = 그 질문에 답해 잠금을 풀었다 — 답이 없는 경우는 옛 데이터뿐.
-                    peerAnswerId = answerRepository.findByAccountIdAndQuestionId(heart.fromAccountId, heart.questionId)?.id,
-                    mutual = heartRepository.existsFromTo(accountId, heart.fromAccountId),
-                    mailSent = mailRepository.existsBySenderAndRecipient(accountId, heart.fromAccountId),
+                    // 하트가 오간 질문의 상대 답변 — 답이 없는 경우는 옛 데이터뿐.
+                    peerAnswerId = answerRepository.findByAccountIdAndQuestionId(peerId, heart.questionId)?.id,
+                    mutual = heartRepository.existsFromTo(accountId, peerId) && heartRepository.existsFromTo(peerId, accountId),
+                    mailSent = mailRepository.existsBySenderAndRecipient(accountId, peerId),
                     createdAt = heart.createdAt,
                 )
             }
     }
 }
 
-/** 받은 하트 한 줄 — 보낸 사람 요약 + 행동 대상 답변 id(null이면 행동 불가). 상호면 편지 차례. */
-data class ReceivedHeartView(
+/** 하트로 이어진 상대 한 줄(받은/보낸 공용) — 상대 요약 + 행동 대상 답변 id(null이면 행동 불가). 상호면 편지 차례. */
+data class HeartPeerView(
     val nickname: String,
     val age: Int,
     val region: String,

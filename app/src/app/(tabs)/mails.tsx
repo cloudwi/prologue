@@ -3,12 +3,13 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 
 import { Avatar } from '@/components/avatar';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isSessionExpired } from '@/lib/api';
-import { getPeerProfile, getReceivedHearts, type ReceivedHeart } from '@/lib/daily';
+import { getPeerProfile, getReceivedHearts, getSentHearts, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
 import { INK_PRICE } from '@/lib/ink';
 import { RevealableContact } from '@/components/revealable-contact';
@@ -26,14 +27,23 @@ export default function MailsScreen() {
   const router = useRouter();
 
   const [hearts, setHearts] = useState<ReceivedHeart[]>([]);
+  // 내가 보낸 하트 — 기본은 접어 둔다. 답 없는 목록을 매일 마주하게 두면 기다림이 무거워진다.
+  const [sentHearts, setSentHearts] = useState<ReceivedHeart[]>([]);
+  const [sentOpen, setSentOpen] = useState(false);
   const [mails, setMails] = useState<ReceivedMail[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [h, m] = await Promise.all([getReceivedHearts(), getReceivedMails()]);
+      const [h, sh, m] = await Promise.all([
+        getReceivedHearts(),
+        // 보낸 하트는 구버전 서버엔 없다 — 못 받아도 나머지는 그린다.
+        getSentHearts().catch(() => [] as ReceivedHeart[]),
+        getReceivedMails(),
+      ]);
       setHearts(h);
+      setSentHearts(sh);
       setMails(m);
     } catch (e) {
       // 세션 만료를 조용히 삼키면 화면이 멈춘 것처럼 보인다 — 로그인으로 보낸다.
@@ -116,7 +126,74 @@ export default function MailsScreen() {
     ]);
   }
 
-  const isEmpty = hearts.length === 0 && mails.length === 0;
+  /**
+   * 하트로 이어진 상대 한 줄 — 받은 하트·보낸 하트가 같은 카드를 쓴다.
+   * 카드 전체가 프로필 상세로 가는 버튼이고, 오른쪽 칩은 그 다음 할 일(편지 쓰기·편지 확인·프로필 열기/보기)을 가리킨다.
+   */
+  function renderHeartCard(h: ReceivedHeart, key: string) {
+    return (
+      <Pressable
+        key={key}
+        onPress={() => openPeerDetail(h.peerAnswerId)}
+        disabled={!h.peerAnswerId}
+        accessibilityRole="button"
+        accessibilityLabel={`${h.nickname}님의 프로필 보기`}
+        style={({ pressed }) => [
+          styles.heartCard,
+          { backgroundColor: c.backgroundElement, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        {h.photoUrl ? (
+          <Image
+            source={{ uri: h.photoUrl }}
+            style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <Avatar avatarId={h.avatarId} nickname={h.nickname} size={48} c={c} />
+        )}
+        <View style={styles.rowBody}>
+          <Text style={[styles.rowName, { color: c.text }]}>{h.nickname}</Text>
+          <Text style={[styles.rowMeta, { color: c.textSecondary }]}>
+            {h.locked
+              ? '3일이 지나 프로필이 닫혔어요'
+              : h.mutual
+                ? '서로 하트 · 편지를 보낼 차례예요'
+                : `만 ${h.age}세 · ${h.region}`}
+          </Text>
+        </View>
+        {h.peerAnswerId && h.locked && (
+          // 프로필이 닫혔으면 행동도 닫는다 — 보지 못하는 상대에게 하트를 보내게 두면
+          // 잠근 의미가 없다. 카드를 누르면 상세에서 잉크로 열 수 있다.
+          <View style={[styles.mailBtn, { borderColor: c.border }]}>
+            <Text style={[styles.mailBtnText, { color: c.textSecondary }]}>프로필 열기</Text>
+          </View>
+        )}
+        {h.peerAnswerId &&
+          !h.locked &&
+          (h.mailSent || h.mutual ? (
+            <Pressable
+              onPress={() => openCompose(h)}
+              accessibilityRole="button"
+              accessibilityLabel={h.mailSent ? `${h.nickname}님에게 보낸 편지 확인` : `${h.nickname}님에게 편지 쓰기`}
+              style={[styles.mailBtn, { borderColor: h.mailSent ? c.border : c.primaryStrong }]}
+            >
+              <Text style={[styles.mailBtnText, { color: h.mailSent ? c.textSecondary : c.primaryStrong }]}>
+                {h.mailSent ? '편지 확인' : '편지 쓰기'}
+              </Text>
+            </Pressable>
+          ) : (
+            // 하트 되보내기는 프로필 상세에서만 — 카드 전체가 상세로 가는 버튼이라 이 칩은 그 길을 가리킬 뿐이다.
+            <View style={[styles.mailBtn, { borderColor: c.primaryStrong }]}>
+              <Text style={[styles.mailBtnText, { color: c.primaryStrong }]}>프로필 보기</Text>
+            </View>
+          ))}
+      </Pressable>
+    );
+  }
+
+  const isEmpty = hearts.length === 0 && sentHearts.length === 0 && mails.length === 0;
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' });
 
   return (
@@ -140,72 +217,37 @@ export default function MailsScreen() {
             {hearts.length > 0 && (
               <>
                 <Text style={[styles.sectionEyebrow, { color: c.primary }]}>나에게 온 하트 {hearts.length}</Text>
-                {hearts.map((h, i) => (
-                  <Pressable
-                    key={h.peerAnswerId ?? `${h.nickname}-${i}`}
-                    onPress={() => openPeerDetail(h.peerAnswerId)}
-                    disabled={!h.peerAnswerId}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${h.nickname}님의 프로필 보기`}
-                    style={({ pressed }) => [
-                      styles.heartCard,
-                      { backgroundColor: c.backgroundElement, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
-                    ]}
-                  >
-                    {h.photoUrl ? (
-                      <Image
-                        source={{ uri: h.photoUrl }}
-                        style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
-                        contentFit="cover"
-                        transition={150}
-                      />
-                    ) : (
-                      <Avatar avatarId={h.avatarId} nickname={h.nickname} size={48} c={c} />
-                    )}
-                    <View style={styles.rowBody}>
-                      <Text style={[styles.rowName, { color: c.text }]}>{h.nickname}</Text>
-                      <Text style={[styles.rowMeta, { color: c.textSecondary }]}>
-                        {h.locked
-                          ? '3일이 지나 프로필이 닫혔어요'
-                          : h.mutual
-                            ? '서로 하트 · 편지를 보낼 차례예요'
-                            : `만 ${h.age}세 · ${h.region}`}
-                      </Text>
-                    </View>
-                    {h.peerAnswerId && h.locked && (
-                      // 프로필이 닫혔으면 행동도 닫는다 — 보지 못하는 상대에게 하트를 보내게 두면
-                      // 잠근 의미가 없다. 카드를 누르면 상세에서 잉크로 열 수 있다.
-                      <View style={[styles.mailBtn, { borderColor: c.border }]}>
-                        <Text style={[styles.mailBtnText, { color: c.textSecondary }]}>프로필 열기</Text>
-                      </View>
-                    )}
-                    {h.peerAnswerId &&
-                      !h.locked &&
-                      (h.mailSent || h.mutual ? (
-                        <Pressable
-                          onPress={() => openCompose(h)}
-                          accessibilityRole="button"
-                          accessibilityLabel={h.mailSent ? `${h.nickname}님에게 보낸 편지 확인` : `${h.nickname}님에게 편지 쓰기`}
-                          style={[styles.mailBtn, { borderColor: h.mailSent ? c.border : c.primaryStrong }]}
-                        >
-                          <Text style={[styles.mailBtnText, { color: h.mailSent ? c.textSecondary : c.primaryStrong }]}>
-                            {h.mailSent ? '편지 확인' : '편지 쓰기'}
-                          </Text>
-                        </Pressable>
-                      ) : (
-                        // 하트 되보내기는 프로필 상세에서만 — 카드 전체가 상세로 가는 버튼이라 이 칩은 그 길을 가리킬 뿐이다.
-                        <View style={[styles.mailBtn, { borderColor: c.primaryStrong }]}>
-                          <Text style={[styles.mailBtnText, { color: c.primaryStrong }]}>프로필 보기</Text>
-                        </View>
-                      ))}
-                  </Pressable>
-                ))}
+                {hearts.map((h, i) => renderHeartCard(h, h.peerAnswerId ?? `${h.nickname}-${i}`))}
+              </>
+            )}
+
+            {sentHearts.length > 0 && (
+              <>
+                {/* 접힌 섹션 — 궁금할 때만 펼친다. 헤더 전체가 토글. */}
+                <Pressable
+                  onPress={() => setSentOpen((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`내가 보낸 하트 ${sentHearts.length}, ${sentOpen ? '접기' : '펼치기'}`}
+                  hitSlop={6}
+                  style={[styles.sentHeader, { marginTop: hearts.length > 0 ? 14 : 0 }]}
+                >
+                  <Text style={[styles.sectionEyebrow, { color: c.primary, marginBottom: 0 }]}>
+                    내가 보낸 하트 {sentHearts.length}
+                  </Text>
+                  <Ionicons name={sentOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.textSecondary} />
+                </Pressable>
+                {sentOpen && sentHearts.map((h, i) => renderHeartCard(h, `sent-${h.peerAnswerId ?? `${h.nickname}-${i}`}`))}
               </>
             )}
 
             {mails.length > 0 && (
               <>
-                <Text style={[styles.sectionEyebrow, { color: c.primary, marginTop: hearts.length > 0 ? 26 : 0 }]}>
+                <Text
+                  style={[
+                    styles.sectionEyebrow,
+                    { color: c.primary, marginTop: hearts.length > 0 || sentHearts.length > 0 ? 26 : 0 },
+                  ]}
+                >
                   받은 편지 {mails.length}
                 </Text>
                 {mails.map((m) => (
@@ -339,6 +381,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', paddingHorizontal: 25, paddingTop: 8, paddingBottom: 4 },
   content: { paddingHorizontal: 25, paddingTop: 12, paddingBottom: 40 },
   sectionEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+  sentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, marginBottom: 6 },
 
   heartCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 12 },
   profilePhoto: { width: 48, height: 48, borderRadius: 24 },

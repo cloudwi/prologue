@@ -1,8 +1,9 @@
 package com.prologue.backend.dailymeet.interfaces.rest.dto
 
-import com.prologue.backend.dailymeet.application.service.ReceivedHeartView
+import com.prologue.backend.dailymeet.application.service.HeartPeerView
 import java.time.Instant
 
+/** 하트로 이어진 상대 목록 — 받은 하트(/hearts/received)와 보낸 하트(/hearts/sent)가 같은 모양으로 쓴다. */
 data class ReceivedHeartsResponse(
     val hearts: List<Item>,
 ) {
@@ -24,7 +25,7 @@ data class ReceivedHeartsResponse(
     )
 
     companion object {
-        fun from(views: List<ReceivedHeartView>): ReceivedHeartsResponse =
+        fun from(views: List<HeartPeerView>): ReceivedHeartsResponse =
             ReceivedHeartsResponse(
                 views.map {
                     Item(

@@ -157,6 +157,12 @@ export async function getReceivedHearts(): Promise<ReceivedHeart[]> {
   return res.hearts;
 }
 
+/** 내가 하트를 보낸 사람들 — 답이 온 사람(mutual)도, 아직인 사람도. 받은 하트와 같은 모양 (GET /daily/hearts/sent). */
+export async function getSentHearts(): Promise<ReceivedHeart[]> {
+  const res = await authedRequest<{ hearts: ReceivedHeart[] }>('GET', '/daily/hearts/sent');
+  return res.hearts;
+}
+
 export type UnlockResult = {
   /** false면 이미 열려 있어 잉크를 쓰지 않았다는 뜻(멱등). */
   spent: boolean;
