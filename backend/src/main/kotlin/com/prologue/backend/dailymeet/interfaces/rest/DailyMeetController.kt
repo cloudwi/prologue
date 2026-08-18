@@ -102,15 +102,15 @@ class DailyMeetController(
         return MyAnswersResponse.from(dailyAnswerService.myAnswers(accountId))
     }
 
-    /** 오늘의 질문에 답변(작성/수정). 답변 후 갱신된 현황 반환. */
+    /** 오늘의 질문에 답변(작성/수정). 답변 후 갱신된 현황 + 이번에 고인 잉크를 반환. */
     @PostMapping("/today/answer")
     fun answer(
         authentication: Authentication,
         @Valid @RequestBody request: AnswerRequest,
     ): TodayResponse {
         val accountId = UUID.fromString(authentication.name)
-        dailyAnswerService.answerToday(accountId, request.content)
-        return TodayResponse.from(dailyAnswerService.today(accountId))
+        val result = dailyAnswerService.answerToday(accountId, request.content)
+        return TodayResponse.from(dailyAnswerService.today(accountId), inkEarned = result.inkEarned)
     }
 
     /** 익명 상대 답변에 하트. 상호 하트면 매칭 성립. */

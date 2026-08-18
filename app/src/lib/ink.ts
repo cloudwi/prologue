@@ -23,6 +23,8 @@ export const INK_PRICE = {
   MAIL_MUTUAL: 35,
   /** 사흘이 지나 닫힌 프로필을 다시 여는 값. */
   PROFILE_UNLOCK: 8,
+  /** 오늘의 질문에 답을 남기면 하루 한 번 고이는 잉크. */
+  DAILY_ANSWER: 2,
 } as const;
 
 /** 내 잉크 잔액 (GET /ink). */
@@ -57,6 +59,8 @@ export function inkReasonLabel(reason: string): string {
       return '대화 신청'; // 편지 도입 전의 내역 — 라벨은 남긴다
     case 'MAIL':
       return '편지 보내기';
+    case 'ANSWER':
+      return '오늘의 답변';
     case 'WEEKLY':
       return '주간 지급';
     case 'EVENT':

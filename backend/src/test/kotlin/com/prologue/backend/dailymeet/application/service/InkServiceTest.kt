@@ -57,6 +57,39 @@ class InkServiceTest {
         assertEquals(35, InkPrice.MAIL_MUTUAL)
     }
 
+    @Test
+    fun `오늘의 답변 보상 - 오늘 처음이면 지급하고 원장에 남긴다`() {
+        val wallet = InkWallet.reconstitute(me, 10, Instant.now(), Instant.now())
+        every { walletRepository.findByAccountId(me) } returns wallet
+        every { walletRepository.save(any()) } answers { firstArg() }
+        every { ledgerRepository.latestAt(me, InkService.REASON_ANSWER) } returns null
+
+        assertEquals(InkPrice.DAILY_ANSWER, service.rewardDailyAnswer(me))
+        assertEquals(10 + InkPrice.DAILY_ANSWER, wallet.ink)
+        verify { ledgerRepository.append(me, InkPrice.DAILY_ANSWER, InkService.REASON_ANSWER) }
+    }
+
+    @Test
+    fun `오늘의 답변 보상 - 오늘 이미 받았으면 0`() {
+        val wallet = InkWallet.reconstitute(me, 10, Instant.now(), Instant.now())
+        every { walletRepository.findByAccountId(me) } returns wallet
+        every { ledgerRepository.latestAt(me, InkService.REASON_ANSWER) } returns Instant.now()
+
+        assertEquals(0, service.rewardDailyAnswer(me))
+        assertEquals(10, wallet.ink)
+        verify(exactly = 0) { ledgerRepository.append(me, InkPrice.DAILY_ANSWER, InkService.REASON_ANSWER) }
+    }
+
+    @Test
+    fun `오늘의 답변 보상 - 어제 받았으면 오늘 다시 준다`() {
+        val wallet = InkWallet.reconstitute(me, 10, Instant.now(), Instant.now())
+        every { walletRepository.findByAccountId(me) } returns wallet
+        every { walletRepository.save(any()) } answers { firstArg() }
+        every { ledgerRepository.latestAt(me, InkService.REASON_ANSWER) } returns Instant.now().minusSeconds(48 * 3600)
+
+        assertEquals(InkPrice.DAILY_ANSWER, service.rewardDailyAnswer(me))
+    }
+
 
 
 

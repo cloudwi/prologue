@@ -50,6 +50,8 @@ export default function DiscoverScreen() {
   const [answerExpanded, setAnswerExpanded] = useState(false);
   const [pastPeers, setPastPeers] = useState<PastPeer[]>([]);
   const [ink, setInk] = useState<number | null>(null);
+  // 이번 세션에 답변으로 고인 잉크 — 저장 직후 "✓ 오늘 답변했어요" 옆에 잠시 붙여 보여준다.
+  const [inkEarnedNote, setInkEarnedNote] = useState(0);
 
   async function loadPeers() {
     setPeersLoading(true);
@@ -115,10 +117,15 @@ export default function DiscoverScreen() {
     try {
       const wasAnswered = today?.answered ?? false;
       const updated = await answerToday(draft.trim());
-      track('answer_submitted');
+      track('answer_submitted', { inkEarned: updated.inkEarned });
       setToday(updated);
       setDraft(updated.myAnswer ?? '');
       setEditing(false);
+      // 오늘의 답변으로 고인 잉크 — 칩을 그 자리에서 올리고, 어디서 늘었는지 한 줄로 알려준다.
+      if (updated.inkEarned > 0) {
+        setInk((n) => (n == null ? n : n + updated.inkEarned));
+        setInkEarnedNote(updated.inkEarned);
+      }
       if (!wasAnswered && updated.answered) loadPeers();
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -220,7 +227,9 @@ export default function DiscoverScreen() {
               </>
             ) : (
               <>
-                <Text style={[styles.answeredTag, { color: c.primaryStrong }]}>✓ 오늘 답변했어요</Text>
+                <Text style={[styles.answeredTag, { color: c.primaryStrong }]}>
+                  ✓ 오늘 답변했어요{inkEarnedNote ? `  ·  잉크 +${inkEarnedNote}` : ''}
+                </Text>
                 <View style={[styles.myAnswerCard, { backgroundColor: c.backgroundElement }]}>
                   <Text
                     style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}

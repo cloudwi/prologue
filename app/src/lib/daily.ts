@@ -5,6 +5,8 @@ export type Today = {
   content: string;
   answered: boolean;
   myAnswer: string | null;
+  /** 이번 요청으로 고인 잉크 — 답변 저장 응답에서 하루 한 번 0보다 크다. 조회는 늘 0. */
+  inkEarned: number;
 };
 
 /** 오늘의 질문 + 내 답변 여부 (GET /daily/today). */

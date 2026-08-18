@@ -8,6 +8,7 @@ import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -21,7 +22,8 @@ class DailyAnswerServiceTest {
 
     private val questionRepository = mockk<QuestionRepository>()
     private val answerRepository = mockk<AnswerRepository>()
-    private val service = DailyAnswerService(questionRepository, answerRepository)
+    private val inkService = mockk<InkService> { every { rewardDailyAnswer(any()) } returns 0 }
+    private val service = DailyAnswerService(questionRepository, answerRepository, inkService)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -60,8 +62,30 @@ class DailyAnswerServiceTest {
 
         val result = service.answerToday(accountId, "  나의 답변  ")
 
-        assertEquals("나의 답변", result.content)
-        assertEquals(1L, result.questionId)
+        assertEquals("나의 답변", result.answer.content)
+        assertEquals(1L, result.answer.questionId)
+    }
+
+    @Test
+    fun `답변을 저장하면 오늘의 답변 잉크가 함께 돌아온다`() {
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { answerRepository.save(any()) } answers { firstArg() }
+        every { inkService.rewardDailyAnswer(accountId) } returns 2
+
+        val result = service.answerToday(accountId, "오늘의 답")
+
+        assertEquals(2, result.inkEarned)
+        verify(exactly = 1) { inkService.rewardDailyAnswer(accountId) }
+    }
+
+    @Test
+    fun `답변이 검증에 막히면 잉크도 주지 않는다`() {
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+
+        assertFailsWith<DailyMeetException> { service.answerToday(accountId, "   ") }
+        verify(exactly = 0) { inkService.rewardDailyAnswer(any()) }
     }
 
     @Test
@@ -73,7 +97,7 @@ class DailyAnswerServiceTest {
 
         val result = service.answerToday(accountId, "새 답변")
 
-        assertEquals("새 답변", result.content)
+        assertEquals("새 답변", result.answer.content)
     }
 
     @Test
