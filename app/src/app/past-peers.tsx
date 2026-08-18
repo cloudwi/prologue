@@ -87,7 +87,12 @@ function PastPeerGrid({ items, c }: { items: PastPeer[]; c: ThemeColors }) {
 const PAST_GRID_COLUMNS = 3;
 const PAST_GRID_GAP = 12;
 
-/** 지난 상대 미니 카드 — 사진과 이름만. 자세한 건 상세(청첩장)에서. 폭은 그리드가 계산해 내려준다. */
+/**
+ * 지난 상대 미니 카드 — 사진과 이름, 그리고 내가 이 사람에게 무엇을 건넸는지(하트·편지) 작은 표시.
+ * 내가 보낸 하트를 따로 모아 보는 화면은 없다 — 하트는 신호일 뿐이라 목록으로 세지 않는다.
+ * 대신 만난 사람들 사이에서 "이 사람에겐 이미 보냈지"를 한눈에 알 수 있게 여기 표시한다.
+ * 자세한 건 상세(청첩장)에서. 폭은 그리드가 계산해 내려준다.
+ */
 function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: ThemeColors }) {
   const router = useRouter();
   const locked = item.peer.locked;
@@ -106,13 +111,30 @@ function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: Th
 
   return (
     <Pressable onPress={openDetail} style={({ pressed }) => [{ width, opacity: pressed ? 0.7 : 1 }]}>
-      {photo ? (
-        <Image source={{ uri: photo }} style={[styles.photo, photoSize, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
-      ) : (
-        <View style={[styles.photo, photoSize, styles.avatarWrap, { backgroundColor: c.backgroundSelected }]}>
-          <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname ?? undefined} size={44} c={c} />
-        </View>
-      )}
+      <View style={photoSize}>
+        {photo ? (
+          <Image source={{ uri: photo }} style={[styles.photo, photoSize, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+        ) : (
+          <View style={[styles.photo, photoSize, styles.avatarWrap, { backgroundColor: c.backgroundSelected }]}>
+            <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname ?? undefined} size={44} c={c} />
+          </View>
+        )}
+        {/* 내가 건넨 것 — 하트(보냄)·우표(편지 보냄). 사진 위 구석에 작게, 상대의 얼굴을 가리지 않게. */}
+        {(item.peer.hearted || item.peer.mailSent) && (
+          <View style={styles.badges}>
+            {item.peer.mailSent && (
+              <View style={[styles.badge, { backgroundColor: c.primary }]} accessibilityLabel="편지를 보냈어요">
+                <Image source={require('@/assets/images/stamp.png')} style={styles.badgeIcon} contentFit="contain" tintColor={c.primaryText} />
+              </View>
+            )}
+            {item.peer.hearted && (
+              <View style={[styles.badge, { backgroundColor: c.primary }]} accessibilityLabel="하트를 보냈어요">
+                <Image source={require('@/assets/images/match-heart.png')} style={styles.badgeIcon} contentFit="contain" tintColor={c.primaryText} />
+              </View>
+            )}
+          </View>
+        )}
+      </View>
       <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>
         {item.peer.nickname ?? '이름 없음'}
       </Text>
@@ -137,6 +159,9 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: PAST_GRID_GAP },
   photo: { borderRadius: Radius.md },
   avatarWrap: { alignItems: 'center', justifyContent: 'center' },
+  badges: { position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 },
+  badge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  badgeIcon: { width: 12, height: 12 },
   name: { fontSize: 13.5, fontWeight: '600', marginTop: 7 },
   day: { fontSize: 12, marginTop: 2 },
 });
