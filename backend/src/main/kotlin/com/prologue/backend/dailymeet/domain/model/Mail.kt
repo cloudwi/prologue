@@ -55,7 +55,7 @@ class Mail private constructor(
             MailStatus.DECLINED, MailStatus.RECALLED -> throw DailyMeetException("이미 사라진 편지예요")
             MailStatus.PENDING -> Unit
         }
-        if (!isRecallableAt(now)) throw DailyMeetException("보낸 지 사흘이 지나야 회수할 수 있어요")
+        if (!isRecallableAt(now)) throw DailyMeetException("보낸 지 3일이 지나야 회수할 수 있어요")
         status = MailStatus.RECALLED
     }
 

@@ -152,7 +152,7 @@ export default function InkTopupScreen() {
         </View>
 
         <Text style={[styles.guide, { color: c.textSecondary }]}>
-          편지 한 통에 {INK_PRICE.MAIL}, 사흘이 지난 프로필을 다시 여는 데 {INK_PRICE.PROFILE_UNLOCK}이 쓰여요.
+          편지 한 통에 {INK_PRICE.MAIL}, 3일이 지난 프로필을 다시 여는 데 {INK_PRICE.PROFILE_UNLOCK}이 쓰여요.
         </Text>
 
         {loading ? (

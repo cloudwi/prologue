@@ -166,7 +166,7 @@ export default function PeerDetailScreen() {
           <Avatar avatarId={peer.avatarId} nickname={peer.nickname ?? undefined} size={72} c={c} />
           <Text style={[styles.lockedName, { color: c.text }]}>{peer.nickname ?? '이름 없음'}</Text>
           {meta.length > 0 && <Text style={[styles.lockedMeta, { color: c.textSecondary }]}>{meta}</Text>}
-          <Text style={[styles.lockedBody, { color: c.textSecondary }]}>사흘이 지나 프로필이 닫혔어요.</Text>
+          <Text style={[styles.lockedBody, { color: c.textSecondary }]}>3일이 지나 프로필이 닫혔어요.</Text>
           {peer.peerAnswerId && (
             <Pressable
               onPress={confirmUnlock}

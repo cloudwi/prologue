@@ -48,7 +48,7 @@ export default function PastPeersScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* 사라진다고 먼저 말하지 않는다 — 같은 규칙이라도 기간으로 적으면 재촉이 아니라 여유가 된다.
               카드의 "2일 남음"이 무엇을 세는지 알려주는 역할도 겸한다. */}
-          <Text style={[styles.sub, { color: c.textSecondary }]}>소개는 사흘 동안 이어져요.</Text>
+          <Text style={[styles.sub, { color: c.textSecondary }]}>소개는 3일 동안 이어져요.</Text>
           <PastPeerGrid items={peers} c={c} />
         </ScrollView>
       )}

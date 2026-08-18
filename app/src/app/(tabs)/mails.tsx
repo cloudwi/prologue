@@ -166,7 +166,7 @@ export default function MailsScreen() {
                       <Text style={[styles.rowName, { color: c.text }]}>{h.nickname}</Text>
                       <Text style={[styles.rowMeta, { color: c.textSecondary }]}>
                         {h.locked
-                          ? '사흘이 지나 프로필이 닫혔어요'
+                          ? '3일이 지나 프로필이 닫혔어요'
                           : h.mutual
                             ? '서로 하트 · 편지를 보낼 차례예요'
                             : `만 ${h.age}세 · ${h.region}`}
