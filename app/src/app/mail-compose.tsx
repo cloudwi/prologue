@@ -28,8 +28,8 @@ const CONTENT_MAX = 300;
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
- * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인) — 답장도 같은 규칙이다.
- * 값은 서버 견적(GET /mails/quote)이 정한다. 화면은 견적이 오기 전엔 정가를 보여준다.
+ * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인), 받은 편지에 답장은 25(50% 할인).
+ * 값은 서버 견적(GET /mails/quote)이 정한다. 화면은 견적이 오기 전엔 정가(답장이면 답장값)를 보여준다.
  * 상대는 둘 중 하나로 정해진다: 답변 id(peerAnswerId) 또는 답장할 원본 편지(replyMailId).
  * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
@@ -50,8 +50,10 @@ export default function MailComposeScreen() {
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
   const [ink, setInk] = useState<number | null>(null);
-  // 편지값 견적 — 서로 하트면 할인가. 견적을 못 받으면 정가로 보여준다(서버가 실제 값을 정하므로 안전하다).
-  const [quote, setQuote] = useState<MailQuote>({ price: INK_PRICE.MAIL, mutual: false });
+  // 편지값 견적 — 답장이면 절반, 서로 하트면 30% 할인. 견적을 못 받으면 아는 값으로 보여준다(실제 값은 서버가 정한다).
+  const [quote, setQuote] = useState<MailQuote>(
+    replyMailId ? { price: INK_PRICE.MAIL_REPLY, discount: 'REPLY' } : { price: INK_PRICE.MAIL, discount: null },
+  );
 
   useEffect(() => track('mail_compose_started'), []);
 
@@ -139,7 +141,7 @@ export default function MailComposeScreen() {
         : await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
-      track('mail_sent', { mutual: quote.mutual });
+      track('mail_sent', { discount: quote.discount ?? 'NONE' });
       Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -154,7 +156,11 @@ export default function MailComposeScreen() {
     Alert.alert(
       '편지 보내기',
       [
-        quote.mutual ? `서로 하트를 주고받은 사이라 잉크 ${quote.price}으로 보내요.` : `잉크 ${quote.price}을 사용해요.`,
+        quote.discount === 'REPLY'
+          ? `답장은 절반값이라 잉크 ${quote.price}으로 보내요.`
+          : quote.discount === 'MUTUAL'
+            ? `서로 하트를 주고받은 사이라 잉크 ${quote.price}으로 보내요.`
+            : `잉크 ${quote.price}을 사용해요.`,
         ink != null ? `(남은 잉크 ${ink})` : null,
       ]
         .filter(Boolean)
@@ -254,10 +260,12 @@ export default function MailComposeScreen() {
           </ScrollView>
 
           <View style={styles.footer}>
-            {/* 서로 하트면 할인 — 정가를 함께 보여줘야 "무료로도 이어질 수 있다"는 약속이 눈에 보인다 */}
-            {quote.mutual && (
+            {/* 할인이면 이유와 정가를 함께 — "무료로도 이어질 수 있다"는 약속이 눈에 보여야 한다 */}
+            {quote.discount && (
               <Text style={[styles.discountNote, { color: c.primaryStrong }]}>
-                서로 하트를 주고받은 사이라 30% 할인 (정가 {INK_PRICE.MAIL})
+                {quote.discount === 'REPLY'
+                  ? `받은 편지에 답장은 50% 할인 (정가 ${INK_PRICE.MAIL})`
+                  : `서로 하트를 주고받은 사이라 30% 할인 (정가 ${INK_PRICE.MAIL})`}
               </Text>
             )}
             <Pressable

@@ -20,14 +20,29 @@ data class SendMailResult(
     val inkSpent: Int,
 )
 
+/** 편지값이 정가에서 내려간 이유. 화면이 "왜 싼지"를 말해줄 수 있게 값과 함께 준다. */
+enum class MailDiscount {
+    /** 서로 하트를 주고받은 사이 — [InkPrice.MAIL_MUTUAL]. */
+    MUTUAL,
+    /** 받은 편지에 답장 — [InkPrice.MAIL_REPLY]. 상호 하트보다 우선한다(더 낮다). */
+    REPLY,
+}
+
 /**
  * 편지값 견적 — 부치기 전에 화면이 "얼마가 드는지"를 물을 때.
- * 상호 하트면 할인가([InkPrice.MAIL_MUTUAL]), 아니면 정가([InkPrice.MAIL]).
+ * 답장이면 [InkPrice.MAIL_REPLY], 상호 하트면 [InkPrice.MAIL_MUTUAL], 아니면 정가([InkPrice.MAIL]).
  */
 data class MailQuote(
     val price: Int,
-    val mutual: Boolean,
-)
+    /** 할인 이유. 정가면 null. */
+    val discount: MailDiscount?,
+) {
+    companion object {
+        val FULL = MailQuote(InkPrice.MAIL, null)
+        val MUTUAL = MailQuote(InkPrice.MAIL_MUTUAL, MailDiscount.MUTUAL)
+        val REPLY = MailQuote(InkPrice.MAIL_REPLY, MailDiscount.REPLY)
+    }
+}
 
 /** 내가 보낸 편지 한 통 — 부친 뒤에는 고칠 수 없는 기록이라 읽기 전용이다. */
 data class SentMailView(
@@ -69,8 +84,9 @@ data class ReceivedMailView(
 
 /**
  * 편지 유스케이스 — 인앱 채팅 대신 연락처(전화번호/카카오톡 ID)를 건넨다.
- * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인). 답장도 같은 규칙이다 —
- * 값은 "누구에게"로 정해지지, 첫 편지냐 답장이냐로 정해지지 않는다.
+ * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인), 받은 편지에 답장은 25(50% 할인).
+ * 값은 "어떤 관계에서 부치는가"로 정해진다 — 먼저 다가가는 편지가 가장 무겁고, 이미 값을 치른
+ * 마음에 답하는 편지가 가장 가볍다.
  * 전화번호는 위조를 막기 위해 요청이 아니라 프로필에서 읽는다.
  *
  * 읽히지 않은 편지는 사흘 뒤 되찾아갈 수 있고, 그때 부친 잉크의 절반이 돌아온다.
@@ -94,19 +110,20 @@ class MailService(
         return quoteBetween(senderAccountId, peerAnswer.accountId)
     }
 
-    /** 받은 편지(mailId)에 답장할 때 드는 값. */
+    /** 받은 편지(mailId)에 답장할 때 드는 값 — 답장은 늘 [InkPrice.MAIL_REPLY]. */
     @Transactional(readOnly = true)
     fun quoteForReply(accountId: UUID, mailId: UUID): MailQuote {
         val original = mailRepository.findById(mailId)
             ?: throw DailyMeetException("편지를 찾을 수 없어요")
         if (original.recipientAccountId != accountId) throw DailyMeetException("내가 받은 편지에만 답장할 수 있어요")
-        return quoteBetween(accountId, original.senderAccountId)
+        return MailQuote.REPLY
     }
 
+    /** 첫 편지의 값 — 서로 하트를 주고받은 사이면 할인, 아니면 정가. */
     private fun quoteBetween(senderAccountId: UUID, recipientId: UUID): MailQuote {
         val mutual = heartRepository.existsFromTo(senderAccountId, recipientId) &&
             heartRepository.existsFromTo(recipientId, senderAccountId)
-        return MailQuote(price = if (mutual) InkPrice.MAIL_MUTUAL else InkPrice.MAIL, mutual = mutual)
+        return if (mutual) MailQuote.MUTUAL else MailQuote.FULL
     }
 
     /** 상대 답변(peerAnswerId)의 주인에게 편지를 보낸다. */
@@ -120,10 +137,11 @@ class MailService(
     ): SendMailResult {
         val peerAnswer = answerRepository.findById(peerAnswerId)
             ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
-        return sendTo(senderAccountId, peerAnswer.accountId, content, includePhone, kakaoId)
+        val recipientId = peerAnswer.accountId
+        return sendTo(senderAccountId, recipientId, content, includePhone, kakaoId, quoteBetween(senderAccountId, recipientId))
     }
 
-    /** 받은 편지에 답장한다 — 상대는 원본 편지의 발신인. 답장도 한 통의 편지라 값은 같다. */
+    /** 받은 편지에 답장한다 — 상대는 원본 편지의 발신인. 답장은 절반값([InkPrice.MAIL_REPLY]). */
     @Transactional
     fun reply(
         accountId: UUID,
@@ -135,7 +153,7 @@ class MailService(
         val original = mailRepository.findById(mailId)
             ?: throw DailyMeetException("편지를 찾을 수 없어요")
         if (original.recipientAccountId != accountId) throw DailyMeetException("내가 받은 편지에만 답장할 수 있어요")
-        return sendTo(accountId, original.senderAccountId, content, includePhone, kakaoId)
+        return sendTo(accountId, original.senderAccountId, content, includePhone, kakaoId, MailQuote.REPLY)
     }
 
     private fun sendTo(
@@ -144,6 +162,7 @@ class MailService(
         content: String,
         includePhone: Boolean,
         kakaoId: String?,
+        quote: MailQuote,
     ): SendMailResult {
         if (senderAccountId == recipientId) throw DailyMeetException("자신에게는 편지를 보낼 수 없어요")
         if (mailRepository.existsBySenderAndRecipient(senderAccountId, recipientId)) {
@@ -158,7 +177,7 @@ class MailService(
         }
 
         // 검증을 모두 통과한 뒤에 소모 — 같은 트랜잭션이라 저장이 실패하면 잉크도 돌아간다.
-        val price = quoteBetween(senderAccountId, recipientId).price
+        val price = quote.price
         inkService.spend(senderAccountId, price, InkService.REASON_MAIL)
 
         val saved = mailRepository.save(

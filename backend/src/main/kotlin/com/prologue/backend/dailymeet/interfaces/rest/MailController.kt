@@ -30,7 +30,7 @@ class MailController(
 ) {
     /**
      * 편지값 견적 — 부치기 전에 화면이 얼마가 드는지 묻는다.
-     * peerAnswerId(첫 편지)나 replyMailId(답장) 중 하나로 상대를 정한다. 서로 하트면 할인가.
+     * peerAnswerId(첫 편지)나 replyMailId(답장) 중 하나로 상대를 정한다. 답장 25, 서로 하트 35, 그 외 50.
      */
     @GetMapping("/quote")
     fun quote(
@@ -71,7 +71,7 @@ class MailController(
         )
     }
 
-    /** 받은 편지에 답장 — 답장도 한 통의 편지, 값은 같은 규칙(정가/상호 하트 할인가). */
+    /** 받은 편지에 답장 — 답장은 절반값(잉크 25). */
     @PostMapping("/{mailId}/reply")
     fun reply(
         authentication: Authentication,

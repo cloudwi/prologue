@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, sendHeart, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
+import { INK_PRICE } from '@/lib/ink';
 import { RevealableContact } from '@/components/revealable-contact';
 import { promptReport } from '@/lib/reports';
 
@@ -314,7 +315,7 @@ export default function MailsScreen() {
                           </View>
                         )}
 
-                        {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장도 한 통의 편지(잉크 50).
+                        {/* 답장 — 나도 연락처를 건네고 싶을 때. 답장은 절반값(잉크 25) — 상대가 이미 값을 치른 마음이라.
                             이미 보냈으면 다시 쓰는 대신 보낸 편지를 보여준다 — 부친 편지는 고칠 수 없다. */}
                         {m.replied && !m.peerAnswerId ? null : (
                           <Pressable
@@ -332,7 +333,7 @@ export default function MailsScreen() {
                             ]}
                           >
                             <Text style={[styles.replyBtnText, { color: m.replied ? c.textSecondary : c.primaryStrong }]}>
-                              {m.replied ? '보낸 편지 확인' : '답장하기'}
+                              {m.replied ? '보낸 편지 확인' : `답장하기 (잉크 ${INK_PRICE.MAIL_REPLY})`}
                             </Text>
                           </Pressable>
                         )}

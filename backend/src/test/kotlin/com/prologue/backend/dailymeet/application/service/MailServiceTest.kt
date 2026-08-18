@@ -21,7 +21,6 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -108,18 +107,40 @@ class MailServiceTest {
         val quote = service.quoteFor(senderId, peerAnswerId)
 
         assertEquals(InkPrice.MAIL, quote.price)
-        assertFalse(quote.mutual)
+        assertNull(quote.discount)
     }
 
     @Test
-    fun `견적 - 상호 하트면 할인가와 함께 mutual=true`() {
+    fun `견적 - 상호 하트면 할인가와 함께 discount=MUTUAL`() {
         every { answerRepository.findById(peerAnswerId) } returns peerAnswer
         mutualHearts()
 
         val quote = service.quoteFor(senderId, peerAnswerId)
 
         assertEquals(InkPrice.MAIL_MUTUAL, quote.price)
-        assertTrue(quote.mutual)
+        assertEquals(MailDiscount.MUTUAL, quote.discount)
+    }
+
+    @Test
+    fun `답장 견적 - 상호 하트가 없어도 절반값이고 discount=REPLY`() {
+        val mailId = UUID.randomUUID()
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, senderId)
+
+        val quote = service.quoteForReply(senderId, mailId)
+
+        assertEquals(InkPrice.MAIL_REPLY, quote.price)
+        assertEquals(InkPrice.MAIL / 2, quote.price)
+        assertEquals(MailDiscount.REPLY, quote.discount)
+    }
+
+    @Test
+    fun `답장은 상호 하트 할인보다 낮다 - 둘 다 해당돼도 답장값`() {
+        val mailId = UUID.randomUUID()
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, senderId)
+        mutualHearts()
+
+        assertEquals(InkPrice.MAIL_REPLY, service.quoteForReply(senderId, mailId).price)
+        assertTrue(InkPrice.MAIL_REPLY < InkPrice.MAIL_MUTUAL)
     }
 
     @Test
@@ -187,16 +208,23 @@ class MailServiceTest {
     }
 
     @Test
-    fun `받은 편지에 답장하면 원본 발신인에게 잉크 1장으로 보내진다`() {
+    fun `받은 편지에 답장하면 원본 발신인에게 절반값으로 보내지고 편지에 그 값이 남는다`() {
         val mailId = UUID.randomUUID()
         every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, senderId)
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
         every { memberQueryService.findProfile(senderId) } returns sender()
-        stubSaved()
+        val saved = slot<Mail>()
+        every { mailRepository.save(capture(saved)) } answers {
+            val m = saved.captured
+            Mail.reconstitute(UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.inkPaid, m.status, m.createdAt)
+        }
 
-        service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
+        val result = service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
 
-        verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
+        assertEquals(InkPrice.MAIL_REPLY, result.inkSpent)
+        assertEquals(InkPrice.MAIL_REPLY, saved.captured.inkPaid)
+        assertEquals(recipientId, saved.captured.recipientAccountId)
+        verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL_REPLY, InkService.REASON_MAIL) }
     }
 
     @Test

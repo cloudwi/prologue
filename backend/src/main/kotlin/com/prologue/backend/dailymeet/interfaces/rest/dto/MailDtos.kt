@@ -37,14 +37,14 @@ data class SendMailResponse(
     }
 }
 
-/** 편지값 견적 — 부치기 전에 화면이 보여줄 값. mutual=true면 서로 하트 할인가다. */
+/** 편지값 견적 — 부치기 전에 화면이 보여줄 값. discount는 MUTUAL(서로 하트)·REPLY(답장)·null(정가). */
 data class MailQuoteResponse(
     val price: Int,
-    val mutual: Boolean,
+    val discount: String?,
 ) {
     companion object {
         fun from(quote: com.prologue.backend.dailymeet.application.service.MailQuote): MailQuoteResponse =
-            MailQuoteResponse(quote.price, quote.mutual)
+            MailQuoteResponse(quote.price, quote.discount?.name)
     }
 }
 

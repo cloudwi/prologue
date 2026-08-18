@@ -11,10 +11,13 @@ export type SendMailResult = {
   inkSpent: number;
 };
 
-/** 편지값 견적 — mutual=true면 서로 하트를 주고받은 사이라 할인가다. */
+/** 편지값이 내려간 이유 — MUTUAL(서로 하트, 35), REPLY(받은 편지에 답장, 25). 정가면 null. */
+export type MailDiscount = 'MUTUAL' | 'REPLY';
+
+/** 편지값 견적 — 서버가 관계를 보고 정한 값과 그 이유. */
 export type MailQuote = {
   price: number;
-  mutual: boolean;
+  discount: MailDiscount | null;
 };
 
 /**
@@ -39,7 +42,7 @@ export async function sendMail(
   return authedRequest<SendMailResult>('POST', '/mails', { peerAnswerId, content, includePhone, kakaoId });
 }
 
-/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장도 한 통의 편지 — 값은 같은 규칙. */
+/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장은 절반값(잉크 25). */
 export async function sendMailReply(
   mailId: string,
   content: string,
