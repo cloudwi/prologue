@@ -25,6 +25,11 @@
     "production": {
       "ios": {
         "ascAppId": "6792233022"
+      },
+      "android": {
+        "serviceAccountKeyPath": "../release/secrets/fcm-service-account.json",
+        "track": "alpha",
+        "releaseStatus": "draft"
       }
     }
   }
