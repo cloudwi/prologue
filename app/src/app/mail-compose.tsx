@@ -165,7 +165,7 @@ export default function MailComposeScreen() {
         quote.discount === 'REPLY'
           ? `답장은 절반값이라 잉크 ${quote.price}으로 보내요.`
           : quote.discount === 'MUTUAL'
-            ? `서로 하트를 주고받은 사이라 잉크 ${quote.price}으로 보내요.`
+            ? `서로 호감을 주고받은 사이라 잉크 ${quote.price}으로 보내요.`
             : `잉크 ${quote.price}을 사용해요.`,
         ink != null ? `(남은 잉크 ${ink})` : null,
       ]
@@ -271,7 +271,7 @@ export default function MailComposeScreen() {
               <Text style={[styles.discountNote, { color: c.primaryStrong }]}>
                 {quote.discount === 'REPLY'
                   ? `받은 편지에 답장은 50% 할인 (정가 ${INK_PRICE.MAIL})`
-                  : `서로 하트를 주고받은 사이라 30% 할인 (정가 ${INK_PRICE.MAIL})`}
+                  : `서로 호감을 주고받은 사이라 30% 할인 (정가 ${INK_PRICE.MAIL})`}
               </Text>
             )}
             <Pressable

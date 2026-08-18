@@ -28,7 +28,8 @@ export default function MailsScreen() {
 
   const [hearts, setHearts] = useState<ReceivedHeart[]>([]);
   // 내가 보낸 하트 — 기본은 접어 둔다. 답 없는 목록을 매일 마주하게 두면 기다림이 무거워진다.
-  const [sentHearts, setSentHearts] = useState<ReceivedHeart[]>([]);
+  // null이면 서버가 이 목록을 모른다(구버전) — 섹션 자체를 숨긴다. 빈 배열이면 '0'으로 자리를 지킨다.
+  const [sentHearts, setSentHearts] = useState<ReceivedHeart[] | null>(null);
   const [sentOpen, setSentOpen] = useState(false);
   const [mails, setMails] = useState<ReceivedMail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function MailsScreen() {
       const [h, sh, m] = await Promise.all([
         getReceivedHearts(),
         // 보낸 하트는 구버전 서버엔 없다 — 못 받아도 나머지는 그린다.
-        getSentHearts().catch(() => [] as ReceivedHeart[]),
+        getSentHearts().catch(() => null),
         getReceivedMails(),
       ]);
       setHearts(h);
@@ -159,7 +160,7 @@ export default function MailsScreen() {
             {h.locked
               ? '3일이 지나 프로필이 닫혔어요'
               : h.mutual
-                ? '서로 하트 · 편지를 보낼 차례예요'
+                ? '서로 호감 · 편지를 보낼 차례예요'
                 : `만 ${h.age}세 · ${h.region}`}
           </Text>
         </View>
@@ -193,7 +194,7 @@ export default function MailsScreen() {
     );
   }
 
-  const isEmpty = hearts.length === 0 && sentHearts.length === 0 && mails.length === 0;
+  const isEmpty = hearts.length === 0 && (sentHearts?.length ?? 0) === 0 && mails.length === 0;
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' });
 
   return (
@@ -209,33 +210,38 @@ export default function MailsScreen() {
           <View style={[styles.flex, styles.center, { paddingHorizontal: 40 }]}>
             <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>아직 도착한 편지가 없어요</Text>
             <Text style={[styles.emptyText, { color: c.textSecondary }]}>
-              발견에서 마음에 드는 상대에게{'\n'}하트와 편지를 보내보세요.
+              발견에서 마음에 드는 상대에게{'\n'}호감과 편지를 보내보세요.
             </Text>
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.content}>
             {hearts.length > 0 && (
               <>
-                <Text style={[styles.sectionEyebrow, { color: c.primary }]}>나에게 온 하트 {hearts.length}</Text>
+                <Text style={[styles.sectionEyebrow, { color: c.primary }]}>나에게 온 호감 {hearts.length}</Text>
                 {hearts.map((h, i) => renderHeartCard(h, h.peerAnswerId ?? `${h.nickname}-${i}`))}
               </>
             )}
 
-            {sentHearts.length > 0 && (
+            {sentHearts && (
               <>
-                {/* 접힌 섹션 — 궁금할 때만 펼친다. 헤더 전체가 토글. */}
+                {/* 접힌 섹션 — 궁금할 때만 펼친다. 헤더 전체가 토글. 0이어도 자리를 지켜 어디서 보는지 알려준다. */}
                 <Pressable
                   onPress={() => setSentOpen((v) => !v)}
                   accessibilityRole="button"
-                  accessibilityLabel={`내가 보낸 하트 ${sentHearts.length}, ${sentOpen ? '접기' : '펼치기'}`}
+                  accessibilityLabel={`내가 보낸 호감 ${sentHearts.length}, ${sentOpen ? '접기' : '펼치기'}`}
                   hitSlop={6}
                   style={[styles.sentHeader, { marginTop: hearts.length > 0 ? 14 : 0 }]}
                 >
                   <Text style={[styles.sectionEyebrow, { color: c.primary, marginBottom: 0 }]}>
-                    내가 보낸 하트 {sentHearts.length}
+                    내가 보낸 호감 {sentHearts.length}
                   </Text>
                   <Ionicons name={sentOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.textSecondary} />
                 </Pressable>
+                {sentOpen && sentHearts.length === 0 && (
+                  <Text style={[styles.sentEmpty, { color: c.textSecondary }]}>
+                    아직 보낸 호감이 없어요. 발견에서 마음에 드는 상대에게 보내보세요.
+                  </Text>
+                )}
                 {sentOpen && sentHearts.map((h, i) => renderHeartCard(h, `sent-${h.peerAnswerId ?? `${h.nickname}-${i}`}`))}
               </>
             )}
@@ -245,7 +251,7 @@ export default function MailsScreen() {
                 <Text
                   style={[
                     styles.sectionEyebrow,
-                    { color: c.primary, marginTop: hearts.length > 0 || sentHearts.length > 0 ? 26 : 0 },
+                    { color: c.primary, marginTop: hearts.length > 0 || sentHearts ? 26 : 0 },
                   ]}
                 >
                   받은 편지 {mails.length}
@@ -382,6 +388,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 25, paddingTop: 12, paddingBottom: 40 },
   sectionEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
   sentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, marginBottom: 6 },
+  sentEmpty: { fontSize: 13, lineHeight: 19, marginBottom: 8 },
 
   heartCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 12 },
   profilePhoto: { width: 48, height: 48, borderRadius: 24 },

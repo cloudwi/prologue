@@ -128,7 +128,7 @@ function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: Th
               </View>
             )}
             {item.peer.hearted && (
-              <View style={[styles.badge, { backgroundColor: c.primary }]} accessibilityLabel="하트를 보냈어요">
+              <View style={[styles.badge, { backgroundColor: c.primary }]} accessibilityLabel="호감을 보냈어요">
                 <Image source={require('@/assets/images/match-heart.png')} style={styles.badgeIcon} contentFit="contain" tintColor={c.primaryText} />
               </View>
             )}

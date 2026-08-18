@@ -16,7 +16,7 @@ class Heart private constructor(
 ) {
     companion object {
         fun send(fromAccountId: UUID, toAccountId: UUID, questionId: Long, now: Instant = Instant.now()): Heart {
-            if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 하트를 보낼 수 없어요")
+            if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 호감을 보낼 수 없어요")
             return Heart(null, fromAccountId, toAccountId, questionId, now)
         }
 

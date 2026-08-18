@@ -144,12 +144,12 @@ export default function PeerDetailScreen() {
       track('heart_sent');
       setHearted(true);
       if (result.matched) {
-        Alert.alert('서로 호감이에요!', '두 사람 모두 하트를 보냈어요. 편지로 연락처를 건네보세요.', [
+        Alert.alert('서로 호감이에요!', '두 사람 모두 호감을 보냈어요. 편지로 연락처를 건네보세요.', [
           { text: '나중에', style: 'cancel' },
           { text: '편지 쓰기', onPress: openCompose },
         ]);
       } else {
-        Alert.alert('하트를 보냈어요', '상대도 하트를 보내면 서로의 마음을 알 수 있어요.');
+        Alert.alert('호감을 보냈어요', '상대도 호감을 보내면 서로의 마음을 알 수 있어요.');
       }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -228,7 +228,7 @@ export default function PeerDetailScreen() {
             onPress={heart}
             disabled={hearting || hearted}
             accessibilityRole="button"
-            accessibilityLabel={hearted ? '호감을 보냈어요' : '하트 보내기'}
+            accessibilityLabel={hearted ? '호감을 보냈어요' : '호감 보내기'}
             style={[
               styles.heartFab,
               {

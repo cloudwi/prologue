@@ -60,7 +60,7 @@ class NotificationService(
     fun heartArrived(recipientAccountId: UUID) = notify(
         recipientAccountId,
         PushMessage(
-            title = "누군가 하트를 보냈어요",
+            title = "누군가 호감을 보냈어요",
             body = "편지함에서 확인해 보세요.",
             data = mapOf("screen" to "mails"),
         ),

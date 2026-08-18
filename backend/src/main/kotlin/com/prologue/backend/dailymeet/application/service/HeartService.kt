@@ -37,7 +37,7 @@ class HeartService(
         val peerAnswer = answerRepository.findById(peerAnswerId)
             ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
         val toAccountId = peerAnswer.accountId
-        if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 하트를 보낼 수 없어요")
+        if (fromAccountId == toAccountId) throw DailyMeetException("자신에게는 호감을 보낼 수 없어요")
 
         // 이미 이 사람에게 보냈다면 아무 일도 일어나지 않는다(멱등).
         if (!heartRepository.existsFromTo(fromAccountId, toAccountId)) {
