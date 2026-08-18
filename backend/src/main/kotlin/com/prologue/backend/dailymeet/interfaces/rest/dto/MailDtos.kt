@@ -28,10 +28,23 @@ data class ReplyMailRequest(
 
 data class SendMailResponse(
     val mailId: String,
+    /** 실제로 쓴 잉크 — 상호 하트 할인이 적용됐으면 정가보다 적다. */
+    val inkSpent: Int,
 ) {
     companion object {
         fun from(result: SendMailResult): SendMailResponse =
-            SendMailResponse(result.mailId.toString())
+            SendMailResponse(result.mailId.toString(), result.inkSpent)
+    }
+}
+
+/** 편지값 견적 — 부치기 전에 화면이 보여줄 값. mutual=true면 서로 하트 할인가다. */
+data class MailQuoteResponse(
+    val price: Int,
+    val mutual: Boolean,
+) {
+    companion object {
+        fun from(quote: com.prologue.backend.dailymeet.application.service.MailQuote): MailQuoteResponse =
+            MailQuoteResponse(quote.price, quote.mutual)
     }
 }
 
@@ -49,6 +62,8 @@ data class SentMailToResponse(
         val status: String,
         /** 지금 회수할 수 있는지 — 안 읽힌 채 사흘이 지났을 때만 true. */
         val recallable: Boolean,
+        /** 회수하면 돌아올 잉크 — 부친 값의 절반. */
+        val recallRefund: Int,
         val createdAt: Instant,
     )
 
@@ -64,6 +79,7 @@ data class SentMailToResponse(
                         kakaoId = it.kakaoId,
                         status = it.status.name,
                         recallable = it.recallable,
+                        recallRefund = it.recallRefund,
                         createdAt = it.createdAt,
                     )
                 },

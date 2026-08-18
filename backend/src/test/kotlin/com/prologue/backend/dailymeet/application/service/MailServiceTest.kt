@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.Mail
 import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
+import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.domain.model.Gender
@@ -20,6 +21,7 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -27,10 +29,12 @@ class MailServiceTest {
 
     private val answerRepository = mockk<AnswerRepository>()
     private val mailRepository = mockk<MailRepository>()
+    // 기본은 하트가 오간 적 없는 사이 — 상호 하트 테스트에서만 덮어쓴다.
+    private val heartRepository = mockk<HeartRepository> { every { existsFromTo(any(), any()) } returns false }
     private val memberQueryService = mockk<MemberQueryService>()
     private val inkService = mockk<InkService>(relaxed = true)
     private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
-    private val service = MailService(answerRepository, mailRepository, memberQueryService, inkService, notificationService)
+    private val service = MailService(answerRepository, mailRepository, heartRepository, memberQueryService, inkService, notificationService)
 
     private val senderId = UUID.randomUUID()
     private val recipientId = UUID.randomUUID()
@@ -47,12 +51,23 @@ class MailServiceTest {
         val saved = slot<Mail>()
         every { mailRepository.save(capture(saved)) } answers {
             val m = saved.captured
-            Mail.reconstitute(m.id ?: UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.status, m.createdAt)
+            Mail.reconstitute(m.id ?: UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.inkPaid, m.status, m.createdAt)
         }
     }
 
-    private fun mailOf(id: UUID, sender: UUID, recipient: UUID, status: MailStatus = MailStatus.OPENED): Mail =
-        Mail.reconstitute(id, sender, recipient, "연락 주세요", "01012345678", null, status, Instant.now())
+    private fun mailOf(
+        id: UUID,
+        sender: UUID,
+        recipient: UUID,
+        status: MailStatus = MailStatus.OPENED,
+        inkPaid: Int = InkPrice.MAIL,
+        createdAt: Instant = Instant.now(),
+    ): Mail = Mail.reconstitute(id, sender, recipient, "연락 주세요", "01012345678", null, inkPaid, status, createdAt)
+
+    private fun mutualHearts() {
+        every { heartRepository.existsFromTo(senderId, recipientId) } returns true
+        every { heartRepository.existsFromTo(recipientId, senderId) } returns true
+    }
 
     @Test
     fun `편지 한 통에 잉크 1장을 쓴다`() {
@@ -64,6 +79,68 @@ class MailServiceTest {
         service.send(senderId, peerAnswerId, "만나서 반가웠어요", includePhone = true, kakaoId = null)
 
         verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
+    }
+
+    @Test
+    fun `서로 하트를 주고받은 상대에게는 30% 할인가로 부쳐지고 편지에 낸 값이 남는다`() {
+        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
+        every { memberQueryService.findProfile(senderId) } returns sender()
+        mutualHearts()
+        val saved = slot<Mail>()
+        every { mailRepository.save(capture(saved)) } answers {
+            val m = saved.captured
+            Mail.reconstitute(UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.inkPaid, m.status, m.createdAt)
+        }
+
+        val result = service.send(senderId, peerAnswerId, "마음이 통했네요", includePhone = true, kakaoId = null)
+
+        assertEquals(InkPrice.MAIL_MUTUAL, result.inkSpent)
+        assertEquals(InkPrice.MAIL_MUTUAL, saved.captured.inkPaid)
+        verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL_MUTUAL, InkService.REASON_MAIL) }
+    }
+
+    @Test
+    fun `한쪽만 하트를 보낸 사이는 정가다`() {
+        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        every { heartRepository.existsFromTo(senderId, recipientId) } returns true
+
+        val quote = service.quoteFor(senderId, peerAnswerId)
+
+        assertEquals(InkPrice.MAIL, quote.price)
+        assertFalse(quote.mutual)
+    }
+
+    @Test
+    fun `견적 - 상호 하트면 할인가와 함께 mutual=true`() {
+        every { answerRepository.findById(peerAnswerId) } returns peerAnswer
+        mutualHearts()
+
+        val quote = service.quoteFor(senderId, peerAnswerId)
+
+        assertEquals(InkPrice.MAIL_MUTUAL, quote.price)
+        assertTrue(quote.mutual)
+    }
+
+    @Test
+    fun `답장 견적 - 내가 받은 편지가 아니면 예외`() {
+        val mailId = UUID.randomUUID()
+        every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, UUID.randomUUID())
+
+        assertFailsWith<DailyMeetException> { service.quoteForReply(senderId, mailId) }
+    }
+
+    @Test
+    fun `회수 환급은 정가가 아니라 그 편지에 낸 값의 절반이다`() {
+        val mailId = UUID.randomUUID()
+        val fourDaysAgo = Instant.now().minus(java.time.Duration.ofDays(4))
+        every { mailRepository.findById(mailId) } returns
+            mailOf(mailId, senderId, recipientId, MailStatus.PENDING, inkPaid = InkPrice.MAIL_MUTUAL, createdAt = fourDaysAgo)
+        every { mailRepository.save(any()) } answers { firstArg() }
+
+        service.recall(senderId, mailId)
+
+        verify(exactly = 1) { inkService.grantTo(senderId, InkPrice.MAIL_MUTUAL / 2, InkService.REASON_MAIL_RECALL) }
     }
 
     @Test

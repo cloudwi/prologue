@@ -49,7 +49,7 @@ class ReportServiceTest {
     fun `편지 신고 - 내가 받은 편지만 신고할 수 있다`() {
         val mailId = UUID.randomUUID()
         every { mailRepository.findById(mailId) } returns
-            Mail.reconstitute(mailId, other, UUID.randomUUID(), "남의 편지", "01000000000", null, MailStatus.OPENED, Instant.now())
+            Mail.reconstitute(mailId, other, UUID.randomUUID(), "남의 편지", "01000000000", null, 50, MailStatus.OPENED, Instant.now())
 
         assertFailsWith<DailyMeetException> { service.reportMail(me, mailId, "SPAM") }
     }

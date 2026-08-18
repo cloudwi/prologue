@@ -6,7 +6,6 @@ import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
-import { INK_PRICE } from '@/lib/ink';
 import { getSentMailTo, recallMail, type SentMail } from '@/lib/mails';
 import { RevealableContact } from '@/components/revealable-contact';
 
@@ -15,7 +14,7 @@ import { RevealableContact } from '@/components/revealable-contact';
  * 종이 편지가 그렇듯, 부친 뒤에는 내용을 되돌릴 수 없다는 걸 화면이 그대로 말한다.
  *
  * 다만 상대가 읽지 않은 채 사흘이 지나면 되찾아갈 수 있다 — 전해지지 않은 편지까지
- * 값을 물릴 이유는 없어서. 그때 부친 잉크의 절반이 돌아온다.
+ * 값을 물릴 이유는 없어서. 그때 부친 잉크의 절반이 돌아온다 — 할인받아 부쳤으면 그 값의 절반이라 서버가 셈해 준다.
  */
 export default function MailViewScreen() {
   const c = useTheme();
@@ -49,7 +48,7 @@ export default function MailViewScreen() {
     if (!mail || recalling) return;
     Alert.alert(
       '편지를 회수할까요?',
-      `잉크 ${INK_PRICE.MAIL_RECALL_REFUND}이 돌아와요. 회수한 편지는 사라지고, 같은 분에게 다시 보낼 수는 없어요.`,
+      `잉크 ${mail.recallRefund}이 돌아와요. 회수한 편지는 사라지고, 같은 분에게 다시 보낼 수는 없어요.`,
       [
         { text: '그냥 둘게요', style: 'cancel' },
         {
@@ -60,7 +59,7 @@ export default function MailViewScreen() {
             try {
               await recallMail(mail.mailId);
               track('mail_recalled');
-              Alert.alert('편지를 회수했어요', `잉크 ${INK_PRICE.MAIL_RECALL_REFUND}이 돌아왔어요.`, [
+              Alert.alert('편지를 회수했어요', `잉크 ${mail.recallRefund}이 돌아왔어요.`, [
                 { text: '확인', onPress: () => router.back() },
               ]);
             } catch (e) {
@@ -111,7 +110,7 @@ export default function MailViewScreen() {
               style={[styles.recallBtn, { borderColor: c.border, opacity: recalling ? 0.6 : 1 }]}
             >
               <Text style={[styles.recallText, { color: c.textSecondary }]}>
-                편지 회수하기 (잉크 {INK_PRICE.MAIL_RECALL_REFUND} 환급)
+                편지 회수하기 (잉크 {mail.recallRefund} 환급)
               </Text>
             </Pressable>
           )}

@@ -7,9 +7,29 @@ import { authedRequest } from './api';
 
 export type SendMailResult = {
   mailId: string;
+  /** 실제로 쓴 잉크 — 서로 하트 할인이 적용됐으면 정가보다 적다. */
+  inkSpent: number;
 };
 
-/** 편지 보내기 (POST /mails). 한 통에 잉크 1장. 전화번호는 서버가 내 프로필에서 읽는다. */
+/** 편지값 견적 — mutual=true면 서로 하트를 주고받은 사이라 할인가다. */
+export type MailQuote = {
+  price: number;
+  mutual: boolean;
+};
+
+/**
+ * 부치기 전에 얼마가 드는지 묻는다 (GET /mails/quote).
+ * 첫 편지는 peerAnswerId로, 답장은 replyMailId로 상대를 정한다.
+ */
+export async function getMailQuote(target: { peerAnswerId: string } | { replyMailId: string }): Promise<MailQuote> {
+  const query =
+    'peerAnswerId' in target
+      ? `peerAnswerId=${encodeURIComponent(target.peerAnswerId)}`
+      : `replyMailId=${encodeURIComponent(target.replyMailId)}`;
+  return authedRequest<MailQuote>('GET', `/mails/quote?${query}`);
+}
+
+/** 편지 보내기 (POST /mails). 한 통에 잉크 50, 서로 하트면 35. 전화번호는 서버가 내 프로필에서 읽는다. */
 export async function sendMail(
   peerAnswerId: string,
   content: string,
@@ -19,7 +39,7 @@ export async function sendMail(
   return authedRequest<SendMailResult>('POST', '/mails', { peerAnswerId, content, includePhone, kakaoId });
 }
 
-/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장도 한 통의 편지 — 잉크 1장. */
+/** 받은 편지에 답장 (POST /mails/{mailId}/reply). 답장도 한 통의 편지 — 값은 같은 규칙. */
 export async function sendMailReply(
   mailId: string,
   content: string,
@@ -74,6 +94,8 @@ export type SentMail = {
   status: 'PENDING' | 'OPENED' | 'DECLINED' | 'RECALLED' | (string & {});
   /** 지금 회수할 수 있는지 — 안 읽힌 채 사흘이 지났을 때만 true. */
   recallable: boolean;
+  /** 회수하면 돌아올 잉크 — 부친 값의 절반이라 편지마다 다르다. */
+  recallRefund: number;
   createdAt: string;
 };
 

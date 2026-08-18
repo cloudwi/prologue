@@ -5,6 +5,7 @@ import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.Mail
 import com.prologue.backend.dailymeet.domain.model.MailStatus
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
+import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.notification.application.service.NotificationService
@@ -15,6 +16,17 @@ import java.util.UUID
 
 data class SendMailResult(
     val mailId: UUID,
+    /** 실제로 쓴 잉크 — 정가인지 상호 하트 할인가인지 화면이 그대로 말해줄 수 있게. */
+    val inkSpent: Int,
+)
+
+/**
+ * 편지값 견적 — 부치기 전에 화면이 "얼마가 드는지"를 물을 때.
+ * 상호 하트면 할인가([InkPrice.MAIL_MUTUAL]), 아니면 정가([InkPrice.MAIL]).
+ */
+data class MailQuote(
+    val price: Int,
+    val mutual: Boolean,
 )
 
 /** 내가 보낸 편지 한 통 — 부친 뒤에는 고칠 수 없는 기록이라 읽기 전용이다. */
@@ -28,6 +40,8 @@ data class SentMailView(
     val status: MailStatus,
     /** 지금 회수할 수 있는지 — 화면이 버튼을 미리 감출 수 있도록 서버가 판정해 준다. */
     val recallable: Boolean,
+    /** 회수하면 돌아올 잉크 — 부친 값의 절반이라 편지마다 다르다. 화면이 값표에서 셈하지 않도록 서버가 준다. */
+    val recallRefund: Int,
     val createdAt: Instant,
 )
 
@@ -55,7 +69,8 @@ data class ReceivedMailView(
 
 /**
  * 편지 유스케이스 — 인앱 채팅 대신 연락처(전화번호/카카오톡 ID)를 건넨다.
- * 한 통에 잉크 50 — 상호 하트여도 마찬가지(하트는 신호일 뿐, 부치는 값은 같다).
+ * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인). 답장도 같은 규칙이다 —
+ * 값은 "누구에게"로 정해지지, 첫 편지냐 답장이냐로 정해지지 않는다.
  * 전화번호는 위조를 막기 위해 요청이 아니라 프로필에서 읽는다.
  *
  * 읽히지 않은 편지는 사흘 뒤 되찾아갈 수 있고, 그때 부친 잉크의 절반이 돌아온다.
@@ -66,10 +81,34 @@ data class ReceivedMailView(
 class MailService(
     private val answerRepository: AnswerRepository,
     private val mailRepository: MailRepository,
+    private val heartRepository: HeartRepository,
     private val memberQueryService: MemberQueryService,
     private val inkService: InkService,
     private val notificationService: NotificationService,
 ) {
+    /** 상대 답변(peerAnswerId)의 주인에게 부칠 때 드는 값. */
+    @Transactional(readOnly = true)
+    fun quoteFor(senderAccountId: UUID, peerAnswerId: UUID): MailQuote {
+        val peerAnswer = answerRepository.findById(peerAnswerId)
+            ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
+        return quoteBetween(senderAccountId, peerAnswer.accountId)
+    }
+
+    /** 받은 편지(mailId)에 답장할 때 드는 값. */
+    @Transactional(readOnly = true)
+    fun quoteForReply(accountId: UUID, mailId: UUID): MailQuote {
+        val original = mailRepository.findById(mailId)
+            ?: throw DailyMeetException("편지를 찾을 수 없어요")
+        if (original.recipientAccountId != accountId) throw DailyMeetException("내가 받은 편지에만 답장할 수 있어요")
+        return quoteBetween(accountId, original.senderAccountId)
+    }
+
+    private fun quoteBetween(senderAccountId: UUID, recipientId: UUID): MailQuote {
+        val mutual = heartRepository.existsFromTo(senderAccountId, recipientId) &&
+            heartRepository.existsFromTo(recipientId, senderAccountId)
+        return MailQuote(price = if (mutual) InkPrice.MAIL_MUTUAL else InkPrice.MAIL, mutual = mutual)
+    }
+
     /** 상대 답변(peerAnswerId)의 주인에게 편지를 보낸다. */
     @Transactional
     fun send(
@@ -119,14 +158,15 @@ class MailService(
         }
 
         // 검증을 모두 통과한 뒤에 소모 — 같은 트랜잭션이라 저장이 실패하면 잉크도 돌아간다.
-        inkService.spend(senderAccountId, InkPrice.MAIL, InkService.REASON_MAIL)
+        val price = quoteBetween(senderAccountId, recipientId).price
+        inkService.spend(senderAccountId, price, InkService.REASON_MAIL)
 
         val saved = mailRepository.save(
-            Mail.write(senderAccountId, recipientId, content, phone, kakaoId),
+            Mail.write(senderAccountId, recipientId, content, phone, kakaoId, inkPaid = price),
         )
         // 받는 사람이 모르고 지나가면 보낸 사람의 잉크가 헛되이 사라진다.
         notificationService.letterArrived(recipientId)
-        return SendMailResult(mailId = requireNotNull(saved.id))
+        return SendMailResult(mailId = requireNotNull(saved.id), inkSpent = price)
     }
 
     /** 받은 편지 목록, 최신순. 봉투는 요약만, 열린 편지는 내용·연락처까지. 거절한 편지는 아예 없다. */
@@ -159,7 +199,7 @@ class MailService(
         if (mail.senderAccountId != accountId) throw DailyMeetException("내가 보낸 편지만 회수할 수 있어요")
         mail.recall()
         mailRepository.save(mail)
-        inkService.grantTo(accountId, InkPrice.MAIL_RECALL_REFUND, InkService.REASON_MAIL_RECALL)
+        inkService.grantTo(accountId, InkPrice.recallRefund(mail.inkPaid), InkService.REASON_MAIL_RECALL)
     }
 
     /**
@@ -174,7 +214,7 @@ class MailService(
     @Transactional
     fun refundPendingMailsTo(recipientAccountId: UUID) {
         mailRepository.findPendingTo(recipientAccountId).forEach { mail ->
-            inkService.grantTo(mail.senderAccountId, InkPrice.MAIL_RECALL_REFUND, InkService.REASON_MAIL_RECALL)
+            inkService.grantTo(mail.senderAccountId, InkPrice.recallRefund(mail.inkPaid), InkService.REASON_MAIL_RECALL)
         }
     }
 
@@ -225,6 +265,7 @@ class MailService(
             kakaoId = mail.kakaoId,
             status = mail.status,
             recallable = mail.isRecallableAt(),
+            recallRefund = InkPrice.recallRefund(mail.inkPaid),
             createdAt = mail.createdAt,
         )
     }

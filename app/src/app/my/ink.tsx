@@ -50,7 +50,7 @@ export default function InkScreen() {
               {wallet?.balance ?? 0}
             </Text>
             <Text style={[styles.balanceHint, { color: c.textSecondary }]}>
-              편지 한 통에 잉크 {INK_PRICE.MAIL},{'\n'}사흘이 지난 프로필을 다시 여는 데 {INK_PRICE.PROFILE_UNLOCK}이 쓰여요.
+              편지 한 통에 잉크 {INK_PRICE.MAIL}(서로 하트면 {INK_PRICE.MAIL_MUTUAL}),{'\n'}사흘이 지난 프로필을 다시 여는 데 {INK_PRICE.PROFILE_UNLOCK}이 쓰여요.
             </Text>
           </View>
 

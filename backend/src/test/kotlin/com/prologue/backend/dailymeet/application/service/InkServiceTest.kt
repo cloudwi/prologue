@@ -48,7 +48,13 @@ class InkServiceTest {
     @Test
     fun `편지 회수 환급은 부친 값의 절반이다`() {
         // 전액이면 뿌리고 되거두는 게 공짜가 되고, 한 푼도 안 주면 읽지도 않은 값을 그대로 잃는다.
-        assertEquals(InkPrice.MAIL / 2, InkPrice.MAIL_RECALL_REFUND)
+        assertEquals(InkPrice.MAIL / 2, InkPrice.recallRefund(InkPrice.MAIL))
+        assertEquals(InkPrice.MAIL_MUTUAL / 2, InkPrice.recallRefund(InkPrice.MAIL_MUTUAL))
+    }
+
+    @Test
+    fun `상호 하트 편지값은 정가의 30% 할인이다`() {
+        assertEquals(35, InkPrice.MAIL_MUTUAL)
     }
 
 

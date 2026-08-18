@@ -53,6 +53,7 @@ class MailPersistenceAdapter(
             content = content,
             phone = phone,
             kakaoId = kakaoId,
+            inkPaid = inkPaid,
             status = status.name,
             createdAt = createdAt,
         )
@@ -65,6 +66,7 @@ class MailPersistenceAdapter(
             content = content,
             phone = phone,
             kakaoId = kakaoId,
+            inkPaid = inkPaid,
             status = MailStatus.valueOf(status),
             createdAt = createdAt,
         )

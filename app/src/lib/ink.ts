@@ -19,10 +19,10 @@ export const INK_PRODUCTS = [
 export const INK_PRICE = {
   /** 편지 한 통을 부치는 값. */
   MAIL: 50,
+  /** 서로 하트를 주고받은 상대에게 부치는 값 — 30% 할인. 실제 값은 견적(GET /mails/quote)이 준다. */
+  MAIL_MUTUAL: 35,
   /** 사흘이 지나 닫힌 프로필을 다시 여는 값. */
   PROFILE_UNLOCK: 8,
-  /** 읽히지 않은 편지를 회수했을 때 돌아오는 잉크 — 부친 값의 절반. */
-  MAIL_RECALL_REFUND: 25,
 } as const;
 
 /** 내 잉크 잔액 (GET /ink). */

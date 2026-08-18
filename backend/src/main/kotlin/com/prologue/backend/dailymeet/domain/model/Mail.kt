@@ -22,6 +22,8 @@ class Mail private constructor(
     val content: String,
     val phone: String?,
     val kakaoId: String?,
+    /** 부칠 때 낸 잉크. 회수 환급의 기준 — 정가인지 상호 하트 할인가인지 편지마다 다르다. */
+    val inkPaid: Int,
     status: MailStatus,
     val createdAt: Instant,
 ) {
@@ -41,7 +43,7 @@ class Mail private constructor(
     }
 
     /**
-     * 되찾아간다 — 봉투째 사라지고 보낸 사람은 잉크의 절반을 돌려받는다.
+     * 되찾아간다 — 봉투째 사라지고 보낸 사람은 부친 잉크([inkPaid])의 절반을 돌려받는다.
      *
      * 읽히지 않은 편지만, 그리고 사흘이 지난 뒤에만. 바로 회수할 수 있으면
      * 보내고 물리는 일이 반복돼 받는 쪽 편지함이 흔들리고, 잉크를 쓴 의미도 없어진다.
@@ -73,6 +75,7 @@ class Mail private constructor(
             content: String,
             phone: String?,
             kakaoId: String?,
+            inkPaid: Int,
             now: Instant = Instant.now(),
         ): Mail {
             val trimmed = content.trim()
@@ -82,7 +85,7 @@ class Mail private constructor(
             if (phone == null && kakao == null) {
                 throw DailyMeetException("전화번호나 카카오톡 ID 중 하나는 함께 보내야 해요")
             }
-            return Mail(null, senderAccountId, recipientAccountId, trimmed, phone, kakao, MailStatus.PENDING, now)
+            return Mail(null, senderAccountId, recipientAccountId, trimmed, phone, kakao, inkPaid, MailStatus.PENDING, now)
         }
 
         fun reconstitute(
@@ -92,8 +95,9 @@ class Mail private constructor(
             content: String,
             phone: String?,
             kakaoId: String?,
+            inkPaid: Int,
             status: MailStatus,
             createdAt: Instant,
-        ): Mail = Mail(id, senderAccountId, recipientAccountId, content, phone, kakaoId, status, createdAt)
+        ): Mail = Mail(id, senderAccountId, recipientAccountId, content, phone, kakaoId, inkPaid, status, createdAt)
     }
 }

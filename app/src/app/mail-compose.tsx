@@ -20,7 +20,7 @@ import { track } from '@/lib/analytics';
 import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts';
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
-import { sendMail, sendMailReply } from '@/lib/mails';
+import { getMailQuote, sendMail, sendMailReply, type MailQuote } from '@/lib/mails';
 import { getInkBalance, INK_PRICE } from '@/lib/ink';
 
 const CONTENT_MAX = 300;
@@ -28,7 +28,8 @@ const CONTENT_MAX = 300;
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
  * 300자 메시지에 전화번호/카카오톡 ID 중 하나 이상을 반드시 싣는다.
- * 한 통에 잉크 50 — 서로 하트여도, 답장이어도 부치는 값은 같다.
+ * 한 통에 잉크 50, 서로 하트를 주고받은 상대에게는 35(30% 할인) — 답장도 같은 규칙이다.
+ * 값은 서버 견적(GET /mails/quote)이 정한다. 화면은 견적이 오기 전엔 정가를 보여준다.
  * 상대는 둘 중 하나로 정해진다: 답변 id(peerAnswerId) 또는 답장할 원본 편지(replyMailId).
  * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
@@ -49,8 +50,22 @@ export default function MailComposeScreen() {
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
   const [ink, setInk] = useState<number | null>(null);
+  // 편지값 견적 — 서로 하트면 할인가. 견적을 못 받으면 정가로 보여준다(서버가 실제 값을 정하므로 안전하다).
+  const [quote, setQuote] = useState<MailQuote>({ price: INK_PRICE.MAIL, mutual: false });
 
   useEffect(() => track('mail_compose_started'), []);
+
+  useEffect(() => {
+    const target = peerAnswerId ? { peerAnswerId } : replyMailId ? { replyMailId } : null;
+    if (!target) return;
+    let active = true;
+    getMailQuote(target)
+      .then((q) => active && setQuote(q))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [peerAnswerId, replyMailId]);
   const [sending, setSending] = useState(false);
   // 초안을 읽기 전에는 자동 저장을 멈춰둔다 — 빈 값이 초안을 덮어쓰지 않게.
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -119,12 +134,13 @@ export default function MailComposeScreen() {
       const body = content.trim();
       const withPhone = includePhone && !!myPhone;
       const kakao = kakaoId.trim() || null;
-      if (replyMailId) await sendMailReply(replyMailId, body, withPhone, kakao);
-      else await sendMail(peerAnswerId!, body, withPhone, kakao);
+      const result = replyMailId
+        ? await sendMailReply(replyMailId, body, withPhone, kakao)
+        : await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
-      track('mail_sent');
-      Alert.alert('편지를 보냈어요', `잉크 ${INK_PRICE.MAIL}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
+      track('mail_sent', { mutual: quote.mutual });
+      Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -137,9 +153,12 @@ export default function MailComposeScreen() {
     if (!canSend) return;
     Alert.alert(
       '편지 보내기',
-      ink != null
-        ? `잉크 ${INK_PRICE.MAIL}을 사용해요. (남은 잉크 ${ink})`
-        : `잉크 ${INK_PRICE.MAIL}을 사용해요.`,
+      [
+        quote.mutual ? `서로 하트를 주고받은 사이라 잉크 ${quote.price}으로 보내요.` : `잉크 ${quote.price}을 사용해요.`,
+        ink != null ? `(남은 잉크 ${ink})` : null,
+      ]
+        .filter(Boolean)
+        .join(' '),
       [
         { text: '취소', style: 'cancel' },
         { text: '보내기', onPress: () => void send() },
@@ -235,13 +254,19 @@ export default function MailComposeScreen() {
           </ScrollView>
 
           <View style={styles.footer}>
+            {/* 서로 하트면 할인 — 정가를 함께 보여줘야 "무료로도 이어질 수 있다"는 약속이 눈에 보인다 */}
+            {quote.mutual && (
+              <Text style={[styles.discountNote, { color: c.primaryStrong }]}>
+                서로 하트를 주고받은 사이라 30% 할인 (정가 {INK_PRICE.MAIL})
+              </Text>
+            )}
             <Pressable
               onPress={confirmSend}
               disabled={!canSend}
               style={[styles.submit, { backgroundColor: c.primary, opacity: canSend ? 1 : 0.5 }]}
             >
               <Text style={[styles.submitText, { color: c.primaryText }]}>
-                {sending ? '보내는 중...' : `잉크 ${INK_PRICE.MAIL}으로 보내기`}
+                {sending ? '보내는 중...' : `잉크 ${quote.price}으로 보내기`}
               </Text>
             </Pressable>
           </View>
@@ -290,6 +315,7 @@ const styles = StyleSheet.create({
   contactHint: { fontSize: 12.5, marginTop: 10 },
 
   footer: { paddingHorizontal: 20, paddingBottom: 12 },
+  discountNote: { fontSize: 12.5, fontWeight: '600', textAlign: 'center', marginBottom: 8 },
   submit: { height: 54, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   submitText: { fontSize: 15.5, fontWeight: '700' },
 });
