@@ -95,3 +95,12 @@ management:
   health:
     db:
       enabled: true           # 핑 시 DB도 함께 깨움 → Supabase 일시정지 방지
+
+# 스토어 결제 검증(잉크 충전). 자격증명이 없으면 그 플랫폼의 결제는 거절된다 — 잉크는 돈이라 닫힌 쪽이 기본값.
+#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=<Play Console에 초대된 서비스 계정 키 JSON 전체(한 줄)>
+#   서비스 계정에는 Play Console "재무 데이터 보기" 권한이 있어야 purchases.products.get이 열린다.
+store:
+  google-play:
+    package-name: ${GOOGLE_PLAY_PACKAGE_NAME:com.juyoung.prologue}
+    service-account-json: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:}
+
