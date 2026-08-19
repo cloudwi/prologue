@@ -1,20 +1,61 @@
 ---
 import '../styles/global.css';
+import {
+  APPLE_APP_ID,
+  APP_STORE_URL,
+  CONTACT_EMAIL,
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  PLAY_STORE_URL,
+  SITE_NAME,
+  TAGLINE,
+} from '../lib/site';
 
 interface Props {
   title?: string;
   description?: string;
+  /** og:type — 블로그 글은 'article'. */
+  type?: 'website' | 'article';
+  /** 검색 색인 제외(어드민·인증 콜백 등). */
+  noindex?: boolean;
+  /** 페이지별 구조화 데이터(JSON-LD). Organization·WebSite는 항상 들어가고, 여기 넘긴 것이 추가된다. */
+  jsonLd?: Record<string, unknown>[];
 }
 
 const {
-  title = '프롤로그 — 하루 한 문답, 가치관 블라인드 소개팅',
-  description = '하루 한 문답으로 알아가는, 가치관이 꼭 맞는 소중한 인연. 가치관 블라인드 소개팅, 프롤로그.',
+  title = DEFAULT_TITLE,
+  description = DEFAULT_DESCRIPTION,
+  type = 'website',
+  noindex = false,
+  jsonLd = [],
 } = Astro.props;
 
 // 공유 미리보기용 절대 URL — site는 astro.config에서 관리(도메인 교체 시 그쪽만 갱신).
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 // 쿼리는 캐시 버스터 — 이미지를 바꾸면 숫자를 올린다(카카오 등이 이미지 URL 단위로 캐싱).
 const ogImageUrl = new URL('/og.png?v=2', Astro.site);
+const logoUrl = new URL('/brand-mark.png', Astro.site);
+
+// 모든 페이지 공통 구조화 데이터 — 검색 엔진이 "프롤로그"라는 조직과 사이트를 하나로 묶어 읽게 한다.
+const baseJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE_NAME,
+    url: Astro.site?.toString(),
+    logo: logoUrl.toString(),
+    slogan: TAGLINE,
+    email: CONTACT_EMAIL,
+    sameAs: [APP_STORE_URL, PLAY_STORE_URL],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: Astro.site?.toString(),
+    inLanguage: 'ko-KR',
+  },
+];
 ---
 
 <!doctype html>
@@ -24,22 +65,27 @@ const ogImageUrl = new URL('/og.png?v=2', Astro.site);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex, nofollow" /> : <meta name="robots" content="index, follow, max-image-preview:large" />}
     <link rel="canonical" href={canonicalUrl} />
+    <meta name="theme-color" content="#f6f8fa" />
+    <meta name="apple-itunes-app" content={`app-id=${APPLE_APP_ID}`} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="프롤로그" />
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={SITE_NAME} />
     <meta property="og:locale" content="ko_KR" />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="하루 한 문답으로 닿는 인연 — 가치관으로 만나는 소개팅, 프롤로그" />
+    <meta property="og:image:alt" content="프롤로그 — 새로운 시작을 알리는 하루 한 문답 소개팅" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
     <link rel="icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -47,17 +93,22 @@ const ogImageUrl = new URL('/og.png?v=2', Astro.site);
       href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
     />
     <link rel="alternate" type="application/rss+xml" title="프롤로그 스토리" href="/rss.xml" />
+    {[...baseJsonLd, ...jsonLd].map((data) => (
+      <script type="application/ld+json" set:html={JSON.stringify(data)} />
+    ))}
+    <slot name="head" />
   </head>
   <body>
     <header class="site-header">
       <div class="container">
         <a href="/" class="header-brand">
-          <img src="/brand-mark.png" alt="" />
-          프롤로그
+          <img src="/brand-mark.png" alt="" width="39" height="28" />
+          {SITE_NAME}
         </a>
-        <nav class="header-nav">
+        <nav class="header-nav" aria-label="주요 메뉴">
+          <a href="/#how">이용 방법</a>
           <a href="/story">스토리</a>
-          <a href="/#download" class="cta">앱 다운로드</a>
+          <a href="/download" class="cta">앱 다운로드</a>
         </nav>
       </div>
     </header>
@@ -68,12 +119,34 @@ const ogImageUrl = new URL('/og.png?v=2', Astro.site);
 
     <footer class="site-footer">
       <div class="container">
-        <div>© {new Date().getFullYear()} 프롤로그 · prologue.kr.team@gmail.com</div>
-        <nav>
-          <a href="/terms">이용약관</a>
-          <a href="/privacy">개인정보처리방침</a>
-          <a href="/rss.xml">RSS</a>
-        </nav>
+        <div class="footer-top">
+          <div class="footer-brand">
+            <img src="/brand-mark.png" alt="" width="39" height="28" />
+            <div>
+              <strong>{SITE_NAME}</strong>
+              <p>{TAGLINE} · 하루 한 문답</p>
+            </div>
+          </div>
+          <div class="store-links small">
+            <a href={APP_STORE_URL} rel="noopener" target="_blank" aria-label="App Store에서 다운로드">
+              <img src="/badges/app-store.svg" alt="App Store에서 다운로드" height="40" />
+            </a>
+            <a href={PLAY_STORE_URL} rel="noopener" target="_blank" aria-label="Google Play에서 다운로드">
+              <img src="/badges/google-play.png" alt="Google Play에서 다운로드" height="40" />
+            </a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <div>© {new Date().getFullYear()} {SITE_NAME} · <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></div>
+          <nav aria-label="바닥글 메뉴">
+            <a href="/download">다운로드</a>
+            <a href="/story">스토리</a>
+            <a href="/terms">이용약관</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/account-deletion">계정 삭제</a>
+            <a href="/rss.xml">RSS</a>
+          </nav>
+        </div>
       </div>
     </footer>
   </body>

@@ -1,0 +1,18 @@
+---
+// 스토어 배지 한 쌍 — 히어로·CTA·다운로드 페이지가 같은 링크를 쓰도록 컴포넌트로 묶는다.
+import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
+
+interface Props {
+  size?: 'md' | 'lg';
+}
+const { size = 'md' } = Astro.props;
+---
+
+<div class:list={['store-links', size]}>
+  <a href={APP_STORE_URL} rel="noopener" target="_blank" aria-label="App Store에서 프롤로그 다운로드">
+    <img src="/badges/app-store.svg" alt="App Store에서 다운로드" />
+  </a>
+  <a href={PLAY_STORE_URL} rel="noopener" target="_blank" aria-label="Google Play에서 프롤로그 다운로드">
+    <img src="/badges/google-play.png" alt="Google Play에서 다운로드" />
+  </a>
+</div>

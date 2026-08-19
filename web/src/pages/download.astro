@@ -1,0 +1,33 @@
+---
+// /download — 하나의 링크로 어느 기기든 제 스토어로 보낸다.
+// SNS 프로필·QR·인쇄물에는 이 주소 하나만 적으면 된다. 폰이면 스토어로 바로 넘기고,
+// 데스크톱이면 배지 두 개를 보여준다(검색 엔진도 이 페이지를 색인할 수 있게 리다이렉트는 JS로만).
+import Base from '../layouts/Base.astro';
+import StoreBadges from '../components/StoreBadges.astro';
+import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
+---
+
+<Base
+  title="프롤로그 앱 다운로드 — App Store · Google Play"
+  description="하루 한 문답 소개팅 앱 프롤로그를 iPhone과 Android에서 무료로 내려받으세요. 매일 정오, 같은 질문에 답한 사람이 도착해요."
+>
+  <section class="hero download-hero">
+    <img src="/brand-mark.png" alt="" class="brand-mark" width="106" height="76" />
+    <h1>프롤로그 앱 다운로드</h1>
+    <p class="sub">iPhone과 Android에서 무료로 시작할 수 있어요.<br />기기에 맞는 스토어를 골라주세요.</p>
+    <div class="actions">
+      <StoreBadges size="lg" />
+    </div>
+    <p class="hero-note">폰에서 여셨다면 잠시 뒤 스토어로 이동해요. 이동하지 않으면 위 버튼을 눌러주세요.</p>
+    <p class="hero-note"><a href="/">← 프롤로그 소개로 돌아가기</a></p>
+  </section>
+
+  <script is:inline define:vars={{ APP_STORE_URL, PLAY_STORE_URL }}>
+    // 모바일에서만 자동 이동 — 데스크톱은 배지를 보고 고르게 둔다.
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    const target = isIOS ? APP_STORE_URL : isAndroid ? PLAY_STORE_URL : null;
+    if (target) setTimeout(() => window.location.replace(target), 400);
+  </script>
+</Base>

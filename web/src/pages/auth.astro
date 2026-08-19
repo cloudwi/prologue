@@ -1,11 +1,8 @@
 ---
 import '../styles/global.css';
 
-// 출시 후 실제 주소로 교체할 것.
-// - 구글 플레이는 패키지명으로 주소가 정해지지만 게시 전에는 404가 난다.
-// - 앱스토어는 심사 통과 후 발급되는 숫자 ID가 필요하다.
-const APP_STORE_URL = ''; // 예: https://apps.apple.com/kr/app/id0000000000
-const PLAY_STORE_URL = ''; // 예: https://play.google.com/store/apps/details?id=com.juyoung.prologue
+// 스토어 주소는 src/lib/site.ts 한 곳에서 관리한다.
+import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
 ---
 
 <!doctype html>
