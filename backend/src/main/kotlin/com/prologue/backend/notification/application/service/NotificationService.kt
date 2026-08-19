@@ -78,6 +78,18 @@ class NotificationService(
         ),
     )
 
+    /** 내 초대 코드로 친구가 들어왔다 — 보상이 들어왔다는 것도 함께. */
+    @Async
+    @Transactional(readOnly = true)
+    fun referralRewarded(inviterAccountId: UUID, ink: Int) = notify(
+        inviterAccountId,
+        PushMessage(
+            title = "친구가 프롤로그에 들어왔어요",
+            body = "초대 보상으로 잉크 $ink 을 받았어요.",
+            data = mapOf("screen" to "ink"),
+        ),
+    )
+
     private fun notify(accountId: UUID, message: PushMessage) {
         val tokens = deviceTokenRepository.findAllByAccountId(accountId).map { it.token }
         pushSender.send(tokens, message)

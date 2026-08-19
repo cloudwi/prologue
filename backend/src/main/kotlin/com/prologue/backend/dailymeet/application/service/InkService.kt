@@ -93,6 +93,8 @@ class InkService(
         const val REASON_PROFILE_UNLOCK = "PROFILE_UNLOCK"
         /** 읽히지 않은 편지를 회수해 절반을 돌려받음. */
         const val REASON_MAIL_RECALL = "MAIL_RECALL"
+        /** 친구 초대 — 초대한 쪽·초대받은 쪽 모두 이 사유로 받는다. */
+        const val REASON_REFERRAL = "REFERRAL"
         private const val HISTORY_LIMIT = 50
         private val KST = ZoneId.of("Asia/Seoul")
     }
