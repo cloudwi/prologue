@@ -69,8 +69,9 @@ object InkPrice {
      * 친구 초대 보상 — 초대한 쪽과 초대받은 쪽 모두에게.
      *
      * 소개팅은 친구가 친구를 데려오는 구조라 가장 값싼 유입이고, 초기에 사람을 모으는 일이
-     * 무엇보다 급하다. 다만 편지 한 통(50)보다는 가볍게 — 초대가 "공짜 편지 생성기"가 되면 안 된다.
-     * 초대한 쪽은 [ReferralPolicy.MAX_REWARDED_INVITES]까지만 받는다.
+     * 무엇보다 급하다. 편지 두 통어치 — 초대가 정말 값진 기회라는 판단(2026-08-19)으로 넉넉히 둔다.
+     * 대신 초대한 쪽은 [ReferralPolicy.MAX_REWARDED_INVITES]까지만 받아 가입을 찍어내 캐는 길을 막는다.
+     * 운영자가 만드는 특별 코드는 이 값을 쓰지 않고 코드에 적힌 보상을 쓴다([InviteCode.inviteeReward]).
      */
-    const val REFERRAL = 20
+    const val REFERRAL = 100
 }

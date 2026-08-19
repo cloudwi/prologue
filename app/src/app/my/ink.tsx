@@ -78,7 +78,7 @@ export default function InkScreen() {
           >
             <View style={styles.flex}>
               <Text style={[styles.eventEntryLabel, { color: c.text }]}>친구 초대</Text>
-              <Text style={[styles.eventEntryHint, { color: c.textSecondary }]}>친구가 내 코드로 들어오면 둘 다 잉크 20</Text>
+              <Text style={[styles.eventEntryHint, { color: c.textSecondary }]}>친구가 내 코드로 들어오면 둘 다 잉크 100</Text>
             </View>
             <Text style={[styles.chevron, { color: c.textSecondary }]}>›</Text>
           </Pressable>

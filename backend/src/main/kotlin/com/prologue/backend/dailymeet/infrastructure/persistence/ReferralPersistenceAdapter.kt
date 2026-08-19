@@ -17,13 +17,19 @@ import java.util.UUID
 @Entity
 @Table(name = "invite_codes")
 class InviteCodeJpaEntity(
-    @Id @Column(name = "account_id", nullable = false, updatable = false) val accountId: UUID,
+    @Id @Column(name = "id", nullable = false, updatable = false) val id: UUID,
+    @Column(name = "account_id", nullable = false, updatable = false) val accountId: UUID,
     @Column(name = "code", nullable = false, updatable = false, unique = true) val code: String,
     @Column(name = "created_at", nullable = false, updatable = false) val createdAt: Instant,
+    @Column(name = "kind", nullable = false, updatable = false) val kind: String,
+    @Column(name = "invitee_reward", updatable = false) val inviteeReward: Int?,
+    @Column(name = "inviter_reward", updatable = false) val inviterReward: Int?,
+    @Column(name = "max_uses", updatable = false) val maxUses: Int?,
 )
 
 interface InviteCodeJpaRepository : JpaRepository<InviteCodeJpaEntity, UUID> {
     fun findByCode(code: String): InviteCodeJpaEntity?
+    fun findFirstByAccountIdAndKind(accountId: UUID, kind: String): InviteCodeJpaEntity?
 }
 
 @Entity
@@ -32,11 +38,13 @@ class ReferralJpaEntity(
     @Id @Column(name = "id", nullable = false, updatable = false) val id: UUID,
     @Column(name = "inviter_account_id", nullable = false, updatable = false) val inviterAccountId: UUID,
     @Column(name = "invitee_account_id", nullable = false, updatable = false, unique = true) val inviteeAccountId: UUID,
+    @Column(name = "code", updatable = false) val code: String?,
     @Column(name = "created_at", nullable = false, updatable = false) val createdAt: Instant,
 )
 
 interface ReferralJpaRepository : JpaRepository<ReferralJpaEntity, UUID> {
-    fun countByInviterAccountId(inviterAccountId: UUID): Long
+    fun countByInviterAccountIdAndCode(inviterAccountId: UUID, code: String): Long
+    fun countByCode(code: String): Long
     fun existsByInviteeAccountId(inviteeAccountId: UUID): Boolean
 }
 
@@ -47,14 +55,26 @@ class ReferralPersistenceAdapter(
     private val referrals: ReferralJpaRepository,
 ) : InviteCodeRepository, ReferralRepository {
 
+    /** 개인 코드만 — 운영자의 특별 코드는 그 사람의 "내 코드"가 아니다. */
     override fun findByAccountId(accountId: UUID): InviteCode? =
-        codes.findById(accountId).orElse(null)?.toDomain()
+        codes.findFirstByAccountIdAndKind(accountId, InviteCode.Kind.PERSONAL.name)?.toDomain()
 
     override fun findByCode(code: String): InviteCode? = codes.findByCode(code)?.toDomain()
 
     override fun saveIfCodeFree(inviteCode: InviteCode): Boolean =
         try {
-            codes.saveAndFlush(InviteCodeJpaEntity(inviteCode.accountId, inviteCode.code, inviteCode.createdAt))
+            codes.saveAndFlush(
+                InviteCodeJpaEntity(
+                    id = UUID.randomUUID(),
+                    accountId = inviteCode.accountId,
+                    code = inviteCode.code,
+                    createdAt = inviteCode.createdAt,
+                    kind = inviteCode.kind.name,
+                    inviteeReward = inviteCode.inviteeReward,
+                    inviterReward = inviteCode.inviterReward,
+                    maxUses = inviteCode.maxUses,
+                ),
+            )
             true
         } catch (e: DataIntegrityViolationException) {
             false
@@ -63,16 +83,23 @@ class ReferralPersistenceAdapter(
     override fun saveIfNew(referral: Referral): Boolean {
         if (referrals.existsByInviteeAccountId(referral.inviteeAccountId)) return false
         return try {
-            referrals.saveAndFlush(ReferralJpaEntity(referral.id, referral.inviterAccountId, referral.inviteeAccountId, referral.createdAt))
+            referrals.saveAndFlush(
+                ReferralJpaEntity(referral.id, referral.inviterAccountId, referral.inviteeAccountId, referral.code, referral.createdAt),
+            )
             true
         } catch (e: DataIntegrityViolationException) {
             false // 같은 순간 두 번 들어온 같은 요청 — 먼저 온 쪽만 남는다
         }
     }
 
-    override fun countByInviter(inviterAccountId: UUID): Long = referrals.countByInviterAccountId(inviterAccountId)
+    override fun countByInviterAndCode(inviterAccountId: UUID, code: String): Long =
+        referrals.countByInviterAccountIdAndCode(inviterAccountId, code)
+
+    override fun countByCode(code: String): Long = referrals.countByCode(code)
 
     override fun existsByInvitee(inviteeAccountId: UUID): Boolean = referrals.existsByInviteeAccountId(inviteeAccountId)
 
-    private fun InviteCodeJpaEntity.toDomain() = InviteCode.reconstitute(accountId, code, createdAt)
+    private fun InviteCodeJpaEntity.toDomain() = InviteCode.reconstitute(
+        accountId, code, createdAt, InviteCode.Kind.valueOf(kind), inviteeReward, inviterReward, maxUses,
+    )
 }

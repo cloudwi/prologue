@@ -95,11 +95,11 @@ export default function InviteScreen() {
                 <TextInput
                   value={code}
                   onChangeText={(t) => setCode(t.toUpperCase())}
-                  placeholder="예: P7K3MQ"
+                  placeholder="친구의 초대 코드"
                   placeholderTextColor={c.textSecondary}
                   autoCapitalize="characters"
                   autoCorrect={false}
-                  maxLength={8}
+                  maxLength={20}
                   returnKeyType="done"
                   onSubmitEditing={redeem}
                   style={[styles.input, { color: c.text, borderColor: c.border, fontFamily: Fonts.serif }]}

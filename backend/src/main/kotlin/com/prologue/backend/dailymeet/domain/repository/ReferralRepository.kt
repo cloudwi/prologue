@@ -15,6 +15,8 @@ interface InviteCodeRepository {
 interface ReferralRepository {
     /** 저장. 이 invitee가 이미 초대를 쓴 적 있으면 false. */
     fun saveIfNew(referral: Referral): Boolean
-    fun countByInviter(inviterAccountId: UUID): Long
+    /** 이 사람이 개인 코드로 데려온 수 — 초대 보상 상한의 기준. 특별 코드 사용은 세지 않는다. */
+    fun countByInviterAndCode(inviterAccountId: UUID, code: String): Long
+    fun countByCode(code: String): Long
     fun existsByInvitee(inviteeAccountId: UUID): Boolean
 }

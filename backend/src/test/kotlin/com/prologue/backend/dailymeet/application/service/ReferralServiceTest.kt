@@ -56,14 +56,14 @@ class ReferralServiceTest {
         every { accountRepository.findById(AccountId(invitee)) } returns account(invitee, Instant.now().minus(createdAgo))
         every { memberQueryService.findProfile(invitee) } returns member(invitee)
         every { referralRepository.saveIfNew(any()) } returns true
-        every { referralRepository.countByInviter(inviter) } returns 1
+        every { referralRepository.countByInviterAndCode(inviter, "P7K3MQ") } returns 1
     }
 
     @Test
     fun `내 코드 - 없으면 만들어 두고 다음부터는 같은 코드를 돌려준다`() {
         every { inviteCodeRepository.findByAccountId(inviter) } returns null andThen code
         every { inviteCodeRepository.saveIfCodeFree(any()) } returns true
-        every { referralRepository.countByInviter(inviter) } returns 0
+        every { referralRepository.countByInviterAndCode(inviter, any()) } returns 0
         every { referralRepository.existsByInvitee(inviter) } returns false
 
         val first = service.mine(inviter)
@@ -90,7 +90,7 @@ class ReferralServiceTest {
     @Test
     fun `코드 쓰기 - 초대한 쪽은 상한까지만 받고 초대받은 쪽은 계속 받는다`() {
         freshInvitee()
-        every { referralRepository.countByInviter(inviter) } returns (ReferralPolicy.MAX_REWARDED_INVITES + 1).toLong()
+        every { referralRepository.countByInviterAndCode(inviter, "P7K3MQ") } returns (ReferralPolicy.MAX_REWARDED_INVITES + 1).toLong()
 
         service.redeem(invitee, "P7K3MQ")
 
@@ -123,5 +123,41 @@ class ReferralServiceTest {
         assertFailsWith<DailyMeetException> { service.redeem(invitee, "P7K3MQ") }
 
         verify(exactly = 0) { inkService.grantTo(any(), any(), any()) }
+    }
+
+    @Test
+    fun `특별 코드 - 코드에 적힌 보상을 주고, 초대한 쪽 상한을 타지 않으며, 정원이 차면 마감`() {
+        val owner = UUID.randomUUID()
+        val special = InviteCode.special(owner, "prologue-first", inviteeReward = 150, inviterReward = 0, maxUses = 2)
+        assertEquals("PROLOGUEFIRST", special.code)
+        every { inviteCodeRepository.findByCode("PROLOGUEFIRST") } returns special
+        every { accountRepository.findById(AccountId(invitee)) } returns account(invitee, Instant.now())
+        every { memberQueryService.findProfile(invitee) } returns member(invitee)
+        every { referralRepository.saveIfNew(any()) } returns true
+        every { referralRepository.countByCode("PROLOGUEFIRST") } returns 1
+        // 운영자는 이미 상한을 넘겼어도 상관없다 — 특별 코드는 상한을 보지 않는다
+        every { referralRepository.countByInviterAndCode(owner, any()) } returns 99
+
+        val granted = service.redeem(invitee, "Prologue-First")
+
+        assertEquals(150, granted)
+        verify { inkService.grantTo(invitee, 150, InkService.REASON_REFERRAL) }
+        verify(exactly = 0) { inkService.grantTo(owner, any(), any()) } // inviterReward 0
+
+        // 정원이 찼다
+        every { referralRepository.countByCode("PROLOGUEFIRST") } returns 2
+        assertFailsWith<DailyMeetException> { service.redeem(UUID.randomUUID().also {
+            every { accountRepository.findById(AccountId(it)) } returns account(it, Instant.now())
+            every { memberQueryService.findProfile(it) } returns member(it)
+        }, "PROLOGUEFIRST") }
+    }
+
+    @Test
+    fun `특별 코드 발급 - 모양이 틀리거나 이미 있으면 막는다`() {
+        assertFailsWith<DailyMeetException> { InviteCode.special(inviter, "ab", 100) }
+        assertFailsWith<DailyMeetException> { InviteCode.special(inviter, "한글코드", 100) }
+        assertFailsWith<DailyMeetException> { InviteCode.special(inviter, "FINE", 0) }
+        every { inviteCodeRepository.saveIfCodeFree(any()) } returns false
+        assertFailsWith<DailyMeetException> { service.issueSpecialCode(inviter, "TAKEN", 100, 0, null) }
     }
 }

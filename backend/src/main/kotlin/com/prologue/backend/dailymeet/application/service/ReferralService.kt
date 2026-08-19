@@ -40,7 +40,7 @@ class ReferralService(
         val code = inviteCodeRepository.findByAccountId(accountId) ?: issueCode(accountId)
         return ReferralView(
             code = code.code,
-            invitedCount = referralRepository.countByInviter(accountId).toInt(),
+            invitedCount = referralRepository.countByInviterAndCode(accountId, code.code).toInt(),
             rewardInk = InkPrice.REFERRAL,
             maxRewardedInvites = ReferralPolicy.MAX_REWARDED_INVITES,
             shareUrl = "$webBaseUrl/download?ref=${code.code}",
@@ -55,7 +55,7 @@ class ReferralService(
     @Transactional
     fun redeem(accountId: UUID, rawCode: String, now: Instant = Instant.now()): Int {
         val code = InviteCode.normalize(rawCode)
-        if (code.length != InviteCode.LENGTH) throw DailyMeetException("초대 코드는 6자리예요")
+        if (code.length !in InviteCode.MIN_LENGTH..InviteCode.MAX_LENGTH) throw DailyMeetException("초대 코드를 다시 확인해 주세요")
         val invite = inviteCodeRepository.findByCode(code) ?: throw DailyMeetException("없는 초대 코드예요. 다시 확인해 주세요")
         if (invite.accountId == accountId) throw DailyMeetException("내 초대 코드는 내가 쓸 수 없어요")
 
@@ -64,18 +64,39 @@ class ReferralService(
             throw DailyMeetException("초대 코드는 가입 후 ${ReferralPolicy.REDEEM_WINDOW.toDays()}일 안에만 쓸 수 있어요")
         }
         if (memberQueryService.findProfile(accountId) == null) throw DailyMeetException("프로필을 먼저 완성해 주세요")
-        if (!referralRepository.saveIfNew(Referral.create(invite.accountId, accountId, now))) {
+        // 특별 코드는 정원이 있다 — 뿌린 코드가 어디까지 퍼질지 운영자가 정한다
+        invite.maxUses?.let { max ->
+            if (referralRepository.countByCode(code) >= max) throw DailyMeetException("이 초대 코드는 마감됐어요")
+        }
+        if (!referralRepository.saveIfNew(Referral.create(invite.accountId, accountId, code, now))) {
             throw DailyMeetException("초대 코드는 한 번만 쓸 수 있어요")
         }
 
-        inkService.grantTo(accountId, InkPrice.REFERRAL, InkService.REASON_REFERRAL)
-        // 방금 저장한 한 건이 포함돼 있으니 "이전까지" 몇 명이었는지는 하나를 뺀다
-        val rewardedBefore = referralRepository.countByInviter(invite.accountId) - 1
-        if (ReferralPolicy.inviterRewarded(rewardedBefore)) {
-            inkService.grantTo(invite.accountId, InkPrice.REFERRAL, InkService.REASON_REFERRAL)
-            notificationService.referralRewarded(invite.accountId, InkPrice.REFERRAL)
+        val inviteeReward = invite.inviteeRewardOrDefault()
+        inkService.grantTo(accountId, inviteeReward, InkService.REASON_REFERRAL)
+
+        val inviterReward = invite.inviterRewardOrDefault()
+        if (inviterReward > 0 && inviterRewarded(invite)) {
+            inkService.grantTo(invite.accountId, inviterReward, InkService.REASON_REFERRAL)
+            notificationService.referralRewarded(invite.accountId, inviterReward)
         }
-        return InkPrice.REFERRAL
+        return inviteeReward
+    }
+
+    /** 개인 코드는 상한을 탄다. 방금 저장한 한 건이 포함돼 있으니 "이전까지" 몇 명이었는지는 하나를 뺀다. */
+    private fun inviterRewarded(invite: InviteCode): Boolean =
+        invite.kind == InviteCode.Kind.SPECIAL ||
+            ReferralPolicy.inviterRewarded(referralRepository.countByInviterAndCode(invite.accountId, invite.code) - 1)
+
+    /**
+     * 운영자용 — 특별 초대 코드 발급. [ownerAccountId]가 "초대한 사람"으로 기록되고 [inviterReward]를 받는다.
+     * 코드가 이미 있으면 예외 — 조용히 덮어쓰면 보상이 바뀐 줄 모른다.
+     */
+    @Transactional
+    fun issueSpecialCode(ownerAccountId: UUID, rawCode: String, inviteeReward: Int, inviterReward: Int, maxUses: Int?): InviteCode {
+        val code = InviteCode.special(ownerAccountId, rawCode, inviteeReward, inviterReward, maxUses)
+        if (!inviteCodeRepository.saveIfCodeFree(code)) throw DailyMeetException("이미 있는 초대 코드예요")
+        return code
     }
 
     private fun issueCode(accountId: UUID): InviteCode {
