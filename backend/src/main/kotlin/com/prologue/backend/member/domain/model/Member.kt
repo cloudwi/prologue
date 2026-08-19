@@ -153,7 +153,7 @@ class Member private constructor(
         private const val MIN_BIRTH_YEAR = 1920
         /** 가입 가능한 최소 만 나이 — 한국 성년(만 19세). */
         private const val ADULT_AGE = 19
-        private const val BIO_MAX = 100
+        private const val BIO_MAX = 300
         private const val KEYWORD_MAX = 15
         private const val KAKAO_ID_MAX = 30
         private val KST = ZoneId.of("Asia/Seoul")
