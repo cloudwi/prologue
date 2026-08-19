@@ -114,6 +114,7 @@ function Navigation() {
         <Stack.Screen name="my/letters" />
         <Stack.Screen name="my/answers" />
         <Stack.Screen name="my/events" />
+        <Stack.Screen name="my/invite" />
         <Stack.Screen name="my/guide" />
         <Stack.Screen name="my/withdraw" />
         <Stack.Screen name="peer" />

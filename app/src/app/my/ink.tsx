@@ -68,6 +68,21 @@ export default function InkScreen() {
             <Text style={[styles.topupText, { color: c.primaryText }]}>잉크 충전</Text>
           </Pressable>
 
+          {/* 친구 초대 — 무료로 고이는 길 중 가장 큰 것. 지갑에서 바로 보인다. */}
+          <Pressable
+            onPress={() => router.push('/my/invite')}
+            style={({ pressed }) => [
+              styles.eventEntry,
+              { backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <View style={styles.flex}>
+              <Text style={[styles.eventEntryLabel, { color: c.text }]}>친구 초대</Text>
+              <Text style={[styles.eventEntryHint, { color: c.textSecondary }]}>친구가 내 코드로 들어오면 둘 다 잉크 20</Text>
+            </View>
+            <Text style={[styles.chevron, { color: c.textSecondary }]}>›</Text>
+          </Pressable>
+
           {/* 이벤트 — 자세한 건 하위 화면에서. 지갑에는 문 하나만 둔다. */}
           <Pressable
             onPress={() => router.push('/my/events')}

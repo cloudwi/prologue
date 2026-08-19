@@ -196,8 +196,8 @@ export default function MyScreen() {
             value={ink != null ? `${ink}장` : undefined}
             onPress={() => router.push('/my/ink')}
             c={c}
-            last
           />
+          <Row label="친구 초대" value="서로 잉크 20" onPress={() => router.push('/my/invite')} c={c} last />
         </Section>
 
         <Section title="매칭" c={c}>

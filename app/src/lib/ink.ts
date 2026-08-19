@@ -73,6 +73,8 @@ export function inkReasonLabel(reason: string): string {
       return '프로필 다시 보기';
     case 'MAIL_RECALL':
       return '편지 회수 환급';
+    case 'REFERRAL':
+      return '친구 초대';
     default:
       return '잉크 변동';
   }

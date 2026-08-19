@@ -42,7 +42,10 @@ type AnalyticsEvent =
   | 'profile_unlocked'      // 잉크로 프로필 다시 열기
   | 'topup_viewed'          // 충전 화면 진입
   | 'topup_purchase_started' // 상품 탭(결제창 열림)
-  | 'topup_purchase_completed'; // 서버 지급까지 완료
+  | 'topup_purchase_completed' // 서버 지급까지 완료
+  // 초대
+  | 'referral_share_opened'  // 초대 공유 시트 열기
+  | 'referral_redeemed';     // 친구 코드 쓰기 성공
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {
   client?.capture(event, properties);
