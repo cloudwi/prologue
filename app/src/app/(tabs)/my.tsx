@@ -178,6 +178,12 @@ export default function MyScreen() {
          * 편집 화면은 각자 자기 것만 다룬다 — 사진을 고치러 들어갔다가 기본 정보로 새지 않도록.
          */}
         <Section title="프로필" c={c}>
+          <Row
+            label="자기소개"
+            value={profile?.bio?.trim() ? '작성함' : '아직 없음'}
+            onPress={() => router.push('/my/edit-bio')}
+            c={c}
+          />
           <Row label="사진" value={`${photos.length}장`} onPress={() => router.push('/my/edit-photos')} c={c} />
           <Row label="기본 정보" onPress={() => router.push('/my/edit-basic')} c={c} />
           <Row label="상세 소개" onPress={() => router.push('/my/edit-detail')} c={c} />

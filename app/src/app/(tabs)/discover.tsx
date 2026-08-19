@@ -549,6 +549,12 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
             <Text style={[styles.detailCtaText, { color: c.text }]}>프로필 보기</Text>
           </View>
         </View>
+        {/* 자기소개 — 상대가 먼저 건네는 인사 한 문단. 두 줄만, 나머지는 상세에서. */}
+        {peer.bio ? (
+          <Text style={[styles.peerBio, { color: c.text }]} numberOfLines={2}>
+            {peer.bio}
+          </Text>
+        ) : null}
         {keywords.length > 0 && (
           <View style={styles.peerChips}>
             {keywords.map((k) => (
@@ -627,6 +633,7 @@ const styles = StyleSheet.create({
   peerMeta: { fontSize: 13, marginTop: 2 },
   detailCta: { height: 34, paddingHorizontal: 14, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   detailCtaText: { fontSize: 13, fontWeight: '700' },
+  peerBio: { fontSize: 14, lineHeight: 21, marginTop: 12 },
   peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   peerChip: { paddingHorizontal: 10, height: 26, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 

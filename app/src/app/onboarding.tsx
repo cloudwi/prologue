@@ -34,7 +34,8 @@ import { completeOnboarding, type Gender } from '@/lib/member';
 import { uploadPhoto } from '@/lib/photo';
 import { useTheme } from '@/hooks/use-theme';
 
-const EMPTY_EXTRA: ProfileExtra = { avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
+const EMPTY_EXTRA: ProfileExtra = { bio: '', avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
+const BIO_MAX = 300;
 
 /** 가입 가능한 최소 만 나이 — 한국 성년. 서버(Member.validate)와 같은 기준. */
 const ADULT_AGE = 19;
@@ -235,6 +236,28 @@ export default function OnboardingScreen() {
 
   // 선택 스텝 — 가입 후 이성에게 더 잘 보이기 위해 채우는 항목. MY에서도 언제든 수정 가능.
   const optionalSteps: StepDef[] = [
+    {
+      // 자기소개 — 프로필 편지의 첫 문단. 문답이 나를 대신 말해주지만, 먼저 건네는 인사 한 문단은 있어야 한다.
+      key: 'bio',
+      title: '나를 한 문단으로 소개해 주세요',
+      subtitle: '상대가 내 프로필을 열면 가장 먼저 읽는 글이에요.\n인사처럼 가볍게, 나답게.',
+      optional: true,
+      filled: extra.bio.trim().length > 0,
+      content: (
+        <View>
+          <PlaceholderInput
+            value={extra.bio}
+            onChangeText={(bio) => patchExtra({ bio })}
+            placeholder="예: 주말엔 한강에서 달리고, 평일 밤엔 책 한 권을 끼고 살아요."
+            placeholderTextColor={c.textSecondary}
+            multiline
+            maxLength={BIO_MAX}
+            style={[styles.bioInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+          />
+          <Text style={[styles.bioCounter, { color: c.textSecondary }]}>{extra.bio.length}/{BIO_MAX}</Text>
+        </View>
+      ),
+    },
     {
       key: 'height',
       title: '키를 알려주세요',
@@ -510,6 +533,8 @@ const styles = StyleSheet.create({
   progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   stepCount: { fontSize: 12, fontVariant: ['tabular-nums'] },
+  bioInput: { minHeight: 160, borderRadius: 18, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
+  bioCounter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
   content: { padding: 25, paddingTop: 48, paddingBottom: 24 },
   stepEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 3 },
   title: { fontSize: 29, fontWeight: '700', marginTop: 12, lineHeight: 40 },

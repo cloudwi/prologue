@@ -9,6 +9,8 @@ import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile'
 import type { ThemeColors } from '@/constants/theme';
 
 export type ProfileExtra = {
+  /** 자기소개 — 프로필 편지의 첫 문단. 입력 UI는 별도 화면(my/edit-bio·온보딩 선택 스텝), 여기서는 값만 함께 나른다. */
+  bio: string;
   avatarId: number | null;
   height: string; // 입력 편의를 위해 문자열로 다룸
   hobbies: string[];
@@ -79,11 +81,12 @@ export function AvatarPicker({
 
 /**
  * ProfileExtra → API 필드로 변환.
- * bio는 다루지 않는다 — 자기소개는 짧은 상자 대신 매일의 문답으로 쌓인다.
+ * bio는 여기서 그리지 않는다 — 자기소개는 제 화면(my/edit-bio)에서 한 문단으로 쓴다(2026-08-19 결정: 편지의 첫 문단).
  * 여기서 키를 빼면 toRequest가 기존 저장값을 그대로 보존한다.
  */
 export function toProfilePayload(v: ProfileExtra) {
   return {
+    bio: v.bio.trim() || null,
     avatarId: v.avatarId,
     heightCm: /^\d{2,3}$/.test(v.height) ? Number(v.height) : null,
     hobbies: v.hobbies,

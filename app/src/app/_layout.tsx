@@ -107,6 +107,7 @@ function Navigation() {
         <Stack.Screen name="my/edit-photos" />
         <Stack.Screen name="my/edit-basic" />
         <Stack.Screen name="my/edit-detail" />
+        <Stack.Screen name="my/edit-bio" />
         <Stack.Screen name="my/preview" />
         <Stack.Screen name="my/preferences" />
         <Stack.Screen name="my/blocked" />

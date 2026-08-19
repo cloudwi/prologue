@@ -30,8 +30,8 @@ export type NextStep = { label: string; hint: string; href: string };
 /**
  * 프로필에서 지금 채우면 가장 도움이 되는 항목 하나.
  * 진행률 막대는 "무엇을 해야 하는지"를 알려주지 않아서, 다음 행동 하나만 제안한다.
- * 노출 효과가 큰 순서(사진 → 관심사 → 취미 → 강점 → 아바타)로 검사한다.
- * 자기소개 항목은 없다 — 소개는 매일의 문답으로 쌓인다.
+ * 노출 효과가 큰 순서(사진 → 자기소개 → 관심사 → 취미 → 강점 → 아바타)로 검사한다.
+ * 자기소개는 프로필 편지의 첫 문단이라 사진 다음에 묻는다(2026-08-19) — 나머지 소개는 매일의 문답으로 쌓인다.
  */
 export function nextStep(p: MemberProfile): NextStep | null {
   // 전화번호는 편지(연락처 교환)의 재료라 가장 먼저 챈다 — 필수 도입 이전 회원만 해당.
@@ -41,6 +41,9 @@ export function nextStep(p: MemberProfile): NextStep | null {
   const photos = p.photoUrls?.length ?? 0;
   if (photos < 2) {
     return { label: '사진을 2장 이상 올려주세요', hint: '사진이 있어야 상대에게 소개돼요', href: '/my/edit-photos' };
+  }
+  if (!p.bio?.trim()) {
+    return { label: '자기소개를 한 문단 써보세요', hint: '상대가 프로필을 열면 가장 먼저 읽는 글이에요', href: '/my/edit-bio' };
   }
   if (photos < 4) {
     return { label: '사진을 한 장 더 올려보세요', hint: '여러 장일수록 대화로 이어질 확률이 높아요', href: '/my/edit-photos' };
