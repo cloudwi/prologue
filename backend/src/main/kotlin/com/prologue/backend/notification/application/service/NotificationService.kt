@@ -66,6 +66,18 @@ class NotificationService(
         ),
     )
 
+    /** 정오 이후 늦게 채워진 오늘의 상대 — 빈 채로 닫힐 뻔한 하루에 한 번 더 문을 두드린다. */
+    @Async
+    @Transactional(readOnly = true)
+    fun peerArrived(accountId: UUID) = notify(
+        accountId,
+        PushMessage(
+            title = "오늘의 상대가 도착했어요",
+            body = "같은 질문에 답한 한 사람이 기다리고 있어요.",
+            data = mapOf("screen" to "discover"),
+        ),
+    )
+
     private fun notify(accountId: UUID, message: PushMessage) {
         val tokens = deviceTokenRepository.findAllByAccountId(accountId).map { it.token }
         pushSender.send(tokens, message)
