@@ -5,34 +5,25 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 /**
- * 매일 정해진 시각의 안내.
+ * 매일 정해진 시각의 안내 — 정오 한 번.
  *
- * 아침에 오늘의 질문을 알리고, 정오에 상대가 공개됐음을 알린다.
- * 밤에는 보내지 않는다 — 서비스 알림이라 법적 제약은 없지만, 잠을 깨우는 앱은 지워진다.
+ * 처음엔 아침 9시(오늘의 질문)와 정오(상대 공개) 두 번이었다. 하루 두 번은 서비스 알림치고 잦고,
+ * 두 알림이 결국 같은 화면(발견)으로 데려간다. 정오 한 번에 "답을 남기면 만난다"를 함께 말하는 편이
+ * 덜 성가시고 더 또렷하다. 밤에는 보내지 않는다 — 잠을 깨우는 앱은 지워진다.
  *
  * 인스턴스가 잠들면 그 시각을 놓칠 수 있다(무료 호스팅). 놓친 안내를 나중에 몰아 보내지는
- * 않는다 — 오후 3시에 "오늘의 질문이 도착했어요"는 안 보내느니만 못하다.
+ * 않는다 — 오후 3시에 "오늘의 인연이 도착했어요"는 안 보내느니만 못하다.
  */
 @Component
 class DailyNotificationScheduler(
     private val notificationService: NotificationService,
 ) {
-    /** 아침 9시(KST) — 오늘의 질문 안내. 답을 남겨야 상대를 만날 수 있다는 것도 함께. */
-    @Scheduled(cron = "0 0 9 * * *", zone = KST)
-    fun notifyNewQuestion() = notificationService.broadcast(
-        PushMessage(
-            title = "오늘의 질문이 도착했어요",
-            body = "답을 남기면 정오에 오늘의 인연을 만나요.",
-            data = mapOf("screen" to "discover"),
-        ),
-    )
-
-    /** 정오(KST) — 오늘의 상대 공개. */
+    /** 정오(KST) — 오늘의 상대 공개. 아직 답하지 않은 사람에게는 "답을 남기면 만난다"는 안내를 겸한다. */
     @Scheduled(cron = "0 0 12 * * *", zone = KST)
     fun notifyPeersRevealed() = notificationService.broadcast(
         PushMessage(
-            title = "오늘의 인연이 공개됐어요",
-            body = "어떤 분이 같은 질문에 답했는지 확인해 보세요.",
+            title = "오늘의 인연이 도착했어요",
+            body = "오늘의 질문에 답을 남기고, 같은 질문에 답한 사람을 만나보세요.",
             data = mapOf("screen" to "discover"),
         ),
     )
