@@ -1,9 +1,25 @@
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import { authedRequest } from './api';
+
+/**
+ * expo-notifications는 게을리 읽는다. 네이티브 모듈이 없는 환경(Expo Go, 이 모듈이 추가되기 전에 만든
+ * 개발 빌드)에서는 import 자체가 던져서 탭 레이아웃 전체가 못 뜬다 — 푸시는 없어도 앱은 돌아야 한다.
+ */
+type NotificationsModule = typeof import('expo-notifications');
+let notificationsModule: NotificationsModule | null | undefined;
+function loadNotifications(): NotificationsModule | null {
+  if (notificationsModule !== undefined) return notificationsModule;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    notificationsModule = require('expo-notifications') as NotificationsModule;
+  } catch {
+    notificationsModule = null;
+  }
+  return notificationsModule;
+}
 
 /**
  * 푸시 알림 — 등록과 해제.
@@ -33,6 +49,8 @@ async function writeDisabled(disabled: boolean): Promise<void> {
 /** 이 기기의 푸시 토큰. 시뮬레이터·웹처럼 받을 수 없는 환경이면 null. */
 async function pushToken(): Promise<string | null> {
   if (isWeb || !Device.isDevice) return null;
+  const Notifications = loadNotifications();
+  if (!Notifications) return null;
   const existing = await Notifications.getPermissionsAsync();
   const granted =
     existing.granted || (await Notifications.requestPermissionsAsync()).granted;
