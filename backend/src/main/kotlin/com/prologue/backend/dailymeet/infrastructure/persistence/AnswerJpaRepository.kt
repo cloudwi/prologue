@@ -16,4 +16,8 @@ interface AnswerJpaRepository : JpaRepository<AnswerJpaEntity, UUID> {
     fun findByQuestionIdInAndAccountIdNot(questionIds: List<Long>, accountId: UUID): List<AnswerJpaEntity>
 
     fun findByAccountIdOrderByCreatedAtDesc(accountId: UUID): List<AnswerJpaEntity>
+
+    fun findByCreatedAtAfterAndAccountIdNotOrderByCreatedAtDesc(since: java.time.Instant, accountId: UUID): List<AnswerJpaEntity>
+
+    fun findByQuestionId(questionId: Long): List<AnswerJpaEntity>
 }

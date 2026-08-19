@@ -1,6 +1,8 @@
 package com.prologue.backend.dailymeet.domain.model
 
 import com.prologue.backend.member.domain.model.Member
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -29,4 +31,17 @@ object PeerEligibility {
     /** 한 번 소개된 사람은 다시 만나지 않는다 — 지나간 인연이 돌아오면 소개가 아니라 반복이다. */
     private fun alreadyMetBefore(peer: Member, alreadyMet: Set<UUID>): Boolean =
         peer.accountId in alreadyMet
+
+    /**
+     * 이미 만난 사람을 다시 소개해도 되는가 — 새 후보가 한 명도 없을 때만 묻는 예외 규칙.
+     *
+     * 유저가 적으면 "한 번 만난 사람은 다시 안 본다"가 며칠 만에 풀을 비운다. 그렇다고 어제 본 사람을
+     * 오늘 또 내보내면 소개가 반복이 된다. 두 조건을 함께 요구한다 —
+     * 마지막 소개로부터 [cooldown]이 지났고, 그 뒤에 상대가 **새 답**을 남겼을 것.
+     * 새 답이 있어야 "같은 사람의 다른 이야기"지, 같은 카드를 다시 돌리는 게 아니다.
+     */
+    fun canReintroduce(lastRevealedAt: Instant?, answerWrittenAt: Instant, now: Instant, cooldown: Duration): Boolean =
+        lastRevealedAt != null &&
+            !lastRevealedAt.plus(cooldown).isAfter(now) &&
+            answerWrittenAt.isAfter(lastRevealedAt)
 }

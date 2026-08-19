@@ -20,6 +20,15 @@ interface AnswerRepository {
      */
     fun findOthersByQuestionIds(questionIds: List<Long>, excludeAccountId: UUID): List<Answer>
 
+    /**
+     * [since] 이후에 쓰인 '나 외의' 모든 답변 — 후보 풀을 "최근 며칠치 질문"보다 넓게, 사람이 적을 때
+     * "한 번이라도 최근에 답한 사람"까지 늘릴 때 쓴다. 질문이 무엇이든 상관없다.
+     */
+    fun findOthersAnsweredSince(since: java.time.Instant, excludeAccountId: UUID): List<Answer>
+
+    /** 한 질문에 달린 모든 답변 — 오늘 답한 사람 전원을 훑는 스케줄러용. */
+    fun findAllByQuestionId(questionId: Long): List<Answer>
+
     /** 한 사람이 남긴 모든 답변, 최신순. 본인 전용 기록 조회용. */
     fun findAllByAccountId(accountId: UUID): List<Answer>
 }

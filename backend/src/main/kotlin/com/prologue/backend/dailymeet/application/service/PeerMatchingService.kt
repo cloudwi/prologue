@@ -75,6 +75,16 @@ class PeerMatchingService(
      * 없는 사람을 만들어낼 수는 없고, 한쪽을 갈아 넣어 채우는 것보다 낫다.
      */
     @param:Value("\${daily.max-exposure-per-day:3}") private val maxExposurePerDay: Int = 3,
+    /**
+     * 첫 범위([candidateDays])에서 후보가 비면 순서대로 넓혀 보는 범위(일). 질문과 무관하게
+     * "그 기간 안에 답을 남긴 사람"을 가장 최근 답으로 소개한다. 사람이 적을 때 하루가 비지 않게.
+     */
+    @param:Value("\${daily.candidate-fallback-days:30,90}") private val candidateFallbackDays: String = "30,90",
+    /**
+     * 이미 만난 사람을 다시 소개하기까지의 최소 간격(일). 새 후보가 아무도 없을 때만, 그리고
+     * 그 사이 상대가 새 답을 남겼을 때만 쓰인다([PeerEligibility.canReintroduce]).
+     */
+    @param:Value("\${daily.reintroduce-after-days:14}") private val reintroduceAfterDays: Long = 14,
 ) {
     /**
      * 오늘의 상대 — 매일 정오(KST)에 [revealCount]명이 공개된다.
@@ -108,6 +118,10 @@ class PeerMatchingService(
     /**
      * 오늘 공개된 상대 목록. 이미 공개된 건 그대로 두고 [revealCount]에 모자란 만큼만 채운다.
      * 채우는 순서는 점수 순 — 자격을 통과한 후보 중 호감 가능성과 공평 분배를 함께 본 값이다.
+     *
+     * 후보는 가까운 범위부터 찾는다 — 최근 [candidateDays]치 질문에 답한 사람 → [candidateFallbackDays]
+     * 안에 답한 사람 → 그래도 없으면 이미 만났던 사람 중 다시 소개해도 되는 사람. 사람이 적을 때
+     * "오늘은 아무도 없음"이 되는 날을 최대한 줄이되, 가까운 결을 먼저 쓴다.
      */
     private fun fillRevealed(accountId: UUID, question: Question, questions: List<Question>): List<Answer> {
         val revealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id)
@@ -119,15 +133,70 @@ class PeerMatchingService(
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
         val seen = revealed.mapNotNull { it.id }.toSet()
         val alreadyMet = dailyRevealRepository.findEverPairedAccountIds(accountId)
+        val now = Instant.now()
 
-        // 후보는 최근 며칠치 질문에 걸쳐 찾는다. 프로필과 노출 횟수는 점수 계산에도 쓰이니
-        // 여기서 한 번만 읽는다 — 뽑을 때마다 다시 세면 후보 수만큼 질의가 반복된다.
-        val candidates = answerRepository
-            .findOthersByQuestionIds(QuestionRotation.recentIds(questions, LocalDate.now(KST), candidateDays), accountId)
+        // 후보 풀은 가까운 범위부터, 비어 있으면 다음 범위로. 각 풀은 필요할 때만 읽는다.
+        val pools: List<() -> List<Answer>> = listOf(
+            { answerRepository.findOthersByQuestionIds(QuestionRotation.recentIds(questions, LocalDate.now(KST), candidateDays), accountId) },
+        ) + fallbackDays().map { days ->
+            { answerRepository.findOthersAnsweredSince(now.minus(Duration.ofDays(days.toLong())), accountId) }
+        }
+
+        var candidates = mutableListOf<Candidate>()
+        for (pool in pools) {
+            candidates = toCandidates(pool(), me, question, seen) { peer, _ ->
+                PeerEligibility.isEligible(me, peer, alreadyMet)
+            }
+            if (candidates.isNotEmpty()) break
+        }
+
+        // 새 후보가 한 명도 없을 때만 — 만났던 사람 중 충분히 시간이 지났고 새 답을 남긴 사람.
+        if (candidates.isEmpty()) {
+            val widest = fallbackDays().maxOrNull() ?: candidateDays
+            val pool = answerRepository.findOthersAnsweredSince(now.minus(Duration.ofDays(widest.toLong())), accountId)
+            candidates = toCandidates(pool, me, question, seen) { peer, answer ->
+                PeerEligibility.isEligible(me, peer, alreadyMet = emptySet()) &&
+                    PeerEligibility.canReintroduce(
+                        lastRevealedAt = dailyRevealRepository.findLastRevealedAtBetween(accountId, peer.accountId),
+                        answerWrittenAt = answer.createdAt,
+                        now = now,
+                        cooldown = Duration.ofDays(reintroduceAfterDays),
+                    )
+            }
+        }
+
+        // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
+        while (revealed.size < revealCount && candidates.isNotEmpty()) {
+            val chosen = candidates.maxBy { PeerScore.of(me, it.peer, it.exposure) }
+            candidates.remove(chosen)
+            // 한 사람이 여러 답으로 풀에 있어도 하루에 한 번만 — 사람 단위로 걷어낸다
+            candidates.removeAll { it.peer.accountId == chosen.peer.accountId }
+            dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.answer.id!!))
+            revealed += chosen.answer
+        }
+        return revealed
+    }
+
+    /**
+     * 답변 목록을 자격 통과한 후보로 바꾼다. 같은 사람의 답이 여럿이면 가장 최근 것 하나만 남긴다 —
+     * 소개는 사람 단위고, 카드에 올릴 답은 그 사람의 가장 가까운 이야기가 맞다.
+     * 프로필과 노출 횟수는 점수 계산에도 쓰이니 여기서 한 번만 읽는다.
+     */
+    private fun toCandidates(
+        answers: List<Answer>,
+        me: Member,
+        question: Question,
+        seen: Set<UUID>,
+        eligible: (peer: Member, answer: Answer) -> Boolean,
+    ): MutableList<Candidate> =
+        answers
             .filter { it.id !in seen }
+            .groupBy { it.accountId }
+            .values
+            .map { perAccount -> perAccount.maxBy { it.createdAt } }
             .mapNotNull { answer ->
                 val peer = memberQueryService.findProfile(answer.accountId) ?: return@mapNotNull null
-                if (!PeerEligibility.isEligible(me, peer, alreadyMet)) return@mapNotNull null
+                if (!eligible(peer, answer)) return@mapNotNull null
                 val exposure = dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, answer.id!!)
                 // 오늘 이미 상한만큼 소개된 사람은 더 내보내지 않는다
                 if (exposure >= maxExposurePerDay) return@mapNotNull null
@@ -135,14 +204,23 @@ class PeerMatchingService(
             }
             .toMutableList()
 
-        // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
-        while (revealed.size < revealCount && candidates.isNotEmpty()) {
-            val chosen = candidates.maxBy { PeerScore.of(me, it.peer, it.exposure) }
-            candidates.remove(chosen)
-            dailyRevealRepository.save(DailyReveal.create(accountId, question.id, chosen.answer.id!!))
-            revealed += chosen.answer
-        }
-        return revealed
+    private fun fallbackDays(): List<Int> =
+        candidateFallbackDays.split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it > candidateDays }.sorted()
+
+    /**
+     * 정오 이후 늦게 생긴 후보로 빈자리를 채운다 — 스케줄러가 오늘 답한 사람마다 부른다.
+     * 새로 채워졌으면 true. 조회 때마다 채우는 [todayPeers]와 같은 규칙을 쓰되, 화면을 열지 않은
+     * 사람에게도 도착을 만들어 줘야 "도착했어요" 알림을 보낼 수 있다.
+     */
+    @Transactional
+    fun fillLateArrival(accountId: UUID, now: LocalTime = LocalTime.now(KST)): Boolean {
+        if (now.isBefore(revealTime)) return false
+        val questions = questionRepository.findAllOrdered()
+        val question = QuestionRotation.of(questions, LocalDate.now(KST))
+        if (answerRepository.findByAccountIdAndQuestionId(accountId, question.id) == null) return false
+        val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
+        if (before >= revealCount) return false
+        return fillRevealed(accountId, question, questions).size > before
     }
 
     /** 자격을 통과한 후보 하나 — 프로필과 오늘의 노출 횟수를 함께 들고 다닌다. */
