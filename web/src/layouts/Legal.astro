@@ -4,7 +4,7 @@ import Base from './Base.astro';
 const { frontmatter } = Astro.props;
 ---
 
-<Base title={`${frontmatter.title} — 프롤로그`}>
+<Base title={`${frontmatter.title} — 프롤로그`} description={`프롤로그 ${frontmatter.title} (시행일 ${frontmatter.updatedAt}). 하루 한 문답 소개팅 앱 프롤로그의 ${frontmatter.title}입니다.`}>
   <article class="prose">
     <h1>{frontmatter.title}</h1>
     <div class="meta">시행일: {frontmatter.updatedAt}</div>
