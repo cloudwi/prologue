@@ -68,6 +68,75 @@ class AdminMemberController(
         return AdminMembersResponse(rows)
     }
 
+    data class AdminQA(val question: String?, val content: String, val createdAt: Instant?)
+
+    data class AdminMemberProfile(
+        val nickname: String?,
+        val gender: String?,
+        val birthDate: String?,
+        val region: String?,
+        val bio: String?,
+        val heightCm: Int?,
+        val hobbies: String?,
+        val interests: String?,
+        val strengths: String?,
+        val phone: String?,
+        val photos: List<String>,
+        val letters: List<AdminQA>,
+        val answers: List<AdminQA>,
+    )
+
+    data class AdminMemberProfileResponse(val profile: AdminMemberProfile?)
+
+    /** 회원 프로필 상세 — 신고·검수 때 회원 화면을 오가지 않고 어드민에서 바로 본다. */
+    @GetMapping("/{accountId}/profile")
+    fun profile(@PathVariable accountId: UUID): AdminMemberProfileResponse {
+        val base = jdbc.query(
+            """
+            select nickname, gender, birth_date, region, bio, height_cm, hobbies, interests, strengths, phone, photo_urls
+            from members where account_id = ?
+            """.trimIndent(),
+            { rs, _ ->
+                AdminMemberProfile(
+                    nickname = rs.getString("nickname"),
+                    gender = rs.getString("gender"),
+                    birthDate = rs.getDate("birth_date")?.toString(),
+                    region = rs.getString("region"),
+                    bio = rs.getString("bio"),
+                    heightCm = rs.getObject("height_cm") as Int?,
+                    hobbies = rs.getString("hobbies"),
+                    interests = rs.getString("interests"),
+                    strengths = rs.getString("strengths"),
+                    phone = rs.getString("phone"),
+                    photos = (rs.getString("photo_urls") ?: "").split(",").filter { it.isNotBlank() },
+                    letters = emptyList(),
+                    answers = emptyList(),
+                )
+            },
+            accountId,
+        ).firstOrNull() ?: return AdminMemberProfileResponse(null)
+
+        val letters = jdbc.query(
+            """
+            select q.content as question, pl.content, pl.updated_at
+            from profile_letters pl left join questions q on q.id = pl.question_id
+            where pl.account_id = ? order by pl.created_at
+            """.trimIndent(),
+            { rs, _ -> AdminQA(rs.getString("question"), rs.getString("content"), rs.getTimestamp("updated_at")?.toInstant()) },
+            accountId,
+        )
+        val answers = jdbc.query(
+            """
+            select q.content as question, an.content, an.created_at
+            from answers an left join questions q on q.id = an.question_id
+            where an.account_id = ? order by an.created_at desc limit 10
+            """.trimIndent(),
+            { rs, _ -> AdminQA(rs.getString("question"), rs.getString("content"), rs.getTimestamp("created_at")?.toInstant()) },
+            accountId,
+        )
+        return AdminMemberProfileResponse(base.copy(letters = letters, answers = answers))
+    }
+
     @PostMapping("/{accountId}/suspend")
     fun suspend(@PathVariable accountId: UUID) = accountModerationService.suspend(accountId)
 

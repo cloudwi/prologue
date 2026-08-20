@@ -5,6 +5,7 @@ import com.prologue.backend.dailymeet.domain.model.Report
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.auth.application.service.AccountModerationService
+import com.prologue.backend.dailymeet.domain.repository.ProfileLetterRepository
 import com.prologue.backend.dailymeet.domain.repository.ReportRepository
 import com.prologue.backend.member.application.service.MemberQueryService
 import org.springframework.stereotype.Service
@@ -36,14 +37,28 @@ class ReportService(
     private val reportRepository: ReportRepository,
     private val memberQueryService: MemberQueryService,
     private val accountModerationService: AccountModerationService,
+    private val profileLetterRepository: ProfileLetterRepository,
 ) {
-    /** 답변 id로 신고 — 프로필 상세(그 답변의 주인)를 신고하는 경로. */
+    /**
+     * 답변 id로 신고 — 프로필 상세(그 답변의 주인)를 신고하는 경로.
+     *
+     * 스냅샷에는 답변만이 아니라 자기소개·프로필 문답까지 담는다. 프로필 신고에서
+     * 문제는 답변이 아니라 소개글에 있을 때가 많은데, 신고를 받고 상대가 고쳐버리면
+     * 검토할 증거가 사라진다. 담는 순서가 곧 잘림(1000자) 시의 우선순위다.
+     */
     @Transactional
     fun reportAnswer(reporterId: UUID, peerAnswerId: UUID, reason: String) {
         val answer = answerRepository.findById(peerAnswerId)
             ?: throw DailyMeetException("신고할 대상을 찾을 수 없어요")
+        val snapshot = buildString {
+            append("[답변] ").append(answer.content)
+            memberQueryService.findProfile(answer.accountId)?.bio?.let { append("\n[자기소개] ").append(it) }
+            profileLetterRepository.findAllByAccountId(answer.accountId).forEach {
+                append("\n[문답] ").append(it.content)
+            }
+        }
         reportRepository.save(
-            Report.file(reporterId, answer.accountId, Report.CONTEXT_ANSWER, reason, answer.content),
+            Report.file(reporterId, answer.accountId, Report.CONTEXT_ANSWER, reason, snapshot),
         )
     }
 

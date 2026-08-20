@@ -25,7 +25,10 @@ class ReportServiceTest {
     private val reportRepository = mockk<ReportRepository>()
     private val memberQueryService = mockk<MemberQueryService>()
     private val accountModerationService = mockk<com.prologue.backend.auth.application.service.AccountModerationService>(relaxed = true)
-    private val service = ReportService(answerRepository, mailRepository, reportRepository, memberQueryService, accountModerationService)
+    private val profileLetterRepository = mockk<com.prologue.backend.dailymeet.domain.repository.ProfileLetterRepository> {
+        every { findAllByAccountId(any()) } returns emptyList()
+    }
+    private val service = ReportService(answerRepository, mailRepository, reportRepository, memberQueryService, accountModerationService, profileLetterRepository)
 
     private val me = UUID.randomUUID()
     private val other = UUID.randomUUID()
@@ -35,13 +38,14 @@ class ReportServiceTest {
         val answerId = UUID.randomUUID()
         every { answerRepository.findById(answerId) } returns
             Answer.reconstitute(answerId, other, 1L, "문제의 답변", Instant.now())
+        every { memberQueryService.findProfile(other) } returns null
         val saved = slot<Report>()
         every { reportRepository.save(capture(saved)) } answers { saved.captured }
 
         service.reportAnswer(me, answerId, "ABUSE")
 
         assertEquals(other, saved.captured.reportedAccountId)
-        assertEquals("문제의 답변", saved.captured.snapshot)
+        assertEquals("[답변] 문제의 답변", saved.captured.snapshot)
         assertEquals(Report.CONTEXT_ANSWER, saved.captured.context)
     }
 
@@ -59,6 +63,7 @@ class ReportServiceTest {
         val answerId = UUID.randomUUID()
         every { answerRepository.findById(answerId) } returns
             Answer.reconstitute(answerId, other, 1L, "답변", Instant.now())
+        every { memberQueryService.findProfile(other) } returns null
 
         assertFailsWith<DailyMeetException> { service.reportAnswer(me, answerId, "WHATEVER") }
     }
