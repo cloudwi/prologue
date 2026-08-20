@@ -6,6 +6,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <p class="admin-desc" style="margin: 0 0 12px;">
     사진이 있는 최근 가입 회원 30명이에요. 자동 검수(얼굴)를 통과해도 부적절할 수 있어 사람 눈으로 한 번 더 봐요. 삭제하면 회원 프로필과 저장소에서 함께 지워져요.
   </p>
+  <div class="admin-field admin-search">
+    <input id="photo-q" type="search" placeholder="닉네임 검색 (비우면 최근 가입순)" />
+    <button type="button" class="admin-btn ghost" id="photo-search">검색</button>
+  </div>
   <div id="photo-list"></div>
 
   <script is:inline>
@@ -14,13 +18,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const listEl = $('photo-list');
       listEl.textContent = '불러오는 중...';
       try {
-        const data = await api('/admin/photos');
+        const q = $('photo-q').value.trim();
+        const data = await api('/admin/photos' + (q ? '?q=' + encodeURIComponent(q) : ''));
         render(data.members);
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
         listEl.textContent = e.message;
       }
     };
+
+    document.getElementById('photo-search').addEventListener('click', () => window.pageLoad());
+    document.getElementById('photo-q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') window.pageLoad();
+    });
 
     // innerHTML 금지 — 닉네임은 사용자 입력이라 전부 textContent로만 그린다.
     function render(items) {

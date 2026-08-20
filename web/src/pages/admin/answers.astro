@@ -6,6 +6,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <p class="admin-desc" style="margin: 0 0 12px;">
     최근 답변 50개예요. 부적절한 답변을 발견하면 닉네임 옆 "회원 보기"로 넘어가 조치하세요. 편지는 사적 대화라 여기서 보지 않아요 — 신고된 것만 신고 탭에서 봐요.
   </p>
+  <div class="admin-field admin-search">
+    <input id="answer-q" type="search" placeholder="닉네임 또는 답변 내용 검색 (비우면 최신순)" />
+    <button type="button" class="admin-btn ghost" id="answer-search">검색</button>
+  </div>
   <div id="answer-list" class="admin-card admin-list"></div>
 
   <script is:inline>
@@ -14,13 +18,19 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const listEl = $('answer-list');
       listEl.textContent = '불러오는 중...';
       try {
-        const data = await api('/admin/answers');
+        const q = $('answer-q').value.trim();
+        const data = await api('/admin/answers' + (q ? '?q=' + encodeURIComponent(q) : ''));
         render(data.answers);
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
         listEl.textContent = e.message;
       }
     };
+
+    document.getElementById('answer-search').addEventListener('click', () => window.pageLoad());
+    document.getElementById('answer-q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') window.pageLoad();
+    });
 
     // innerHTML 금지 — 답변·닉네임은 사용자 입력이라 전부 textContent로만 그린다.
     function render(items) {

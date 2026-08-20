@@ -3,7 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="회원 관리">
-  <div class="admin-field" style="margin: 0 0 12px;">
+  <div class="admin-field admin-search">
     <input id="member-q" type="search" placeholder="이메일 또는 닉네임 검색 (비우면 최근 가입순)" />
     <button type="button" class="admin-btn ghost" id="member-search">검색</button>
   </div>
@@ -44,10 +44,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         info.className = 'admin-row-info';
         const name = document.createElement('div');
         name.className = 'admin-row-name';
-        name.textContent =
-          (m.nickname || '(프로필 없음)') +
-          (m.gender ? ' · ' + (GENDER[m.gender] || m.gender) : '') +
-          ' · ' + (MEMBER_STATUS[m.status] || m.status);
+        // 이름은 텍스트로, 상태는 배지로 — 값은 전부 textContent라 안전하다.
+        const nick = document.createElement('span');
+        nick.textContent =
+          (m.nickname || '(프로필 없음)') + (m.gender ? ' · ' + (GENDER[m.gender] || m.gender) : '');
+        const badge = document.createElement('span');
+        badge.className =
+          'admin-badge' + (m.status === 'ACTIVE' ? ' ok' : m.status === 'SUSPENDED' ? ' warn' : '');
+        badge.textContent = MEMBER_STATUS[m.status] || m.status;
+        name.append(nick, badge);
         const email = document.createElement('div');
         email.className = 'admin-row-date';
         email.textContent = m.email;
