@@ -31,6 +31,7 @@ import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile'
 import { Fonts, type ThemeColors } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearConsent, getConsent } from '@/lib/consent';
+import { getLetterQuestions, writeLetter, LETTER_MIN_LENGTH, LETTER_MAX_LENGTH, type LetterQuestion } from '@/lib/letters';
 import { completeOnboarding, type Gender } from '@/lib/member';
 import { uploadPhoto } from '@/lib/photo';
 import { useTheme } from '@/hooks/use-theme';
@@ -87,6 +88,10 @@ export default function OnboardingScreen() {
   // 자르기를 기다리는 사진 줄 — 고른 순서대로 한 장씩 4:5 창을 거쳐 photos로 들어간다.
   const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
+  // 필수 문답 — 질문 하나를 골라 답하면 프로필 문답으로 올라간다. 프로필이 빈 채 시작하지 않게.
+  const [letterQuestions, setLetterQuestions] = useState<LetterQuestion[]>([]);
+  const [letterIndex, setLetterIndex] = useState(0);
+  const [letterDraft, setLetterDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
@@ -98,6 +103,18 @@ export default function OnboardingScreen() {
 
   // 스텝 전환 시 질문 블록이 아래에서 살짝 떠오르며 나타난다 — 장면이 넘어가는 호흡.
   const [enterAnim] = useState(() => new Animated.Value(1));
+
+  // 필수 문답용 질문 풀 — 섞어서 한 장씩 보여준다. 실패하면 카드에서 다시 시도할 수 있다.
+  function loadLetterQuestions() {
+    getLetterQuestions()
+      .then((qs) => setLetterQuestions([...qs].sort(() => Math.random() - 0.5)))
+      .catch(() => {});
+  }
+  useEffect(() => {
+    loadLetterQuestions();
+  }, []);
+  const currentLetterQuestion =
+    letterQuestions.length > 0 ? letterQuestions[letterIndex % letterQuestions.length] : null;
   useEffect(() => {
     enterAnim.setValue(0);
     Animated.timing(enterAnim, {
@@ -238,6 +255,49 @@ export default function OnboardingScreen() {
         />
       ),
     },
+    {
+      // 필수 문답 — 프로필이 빈 채로 시작하지 않게, 가입의 마지막에 글 하나를 받는다.
+      // 이 답은 프로필 문답(profile_letters)이 되어 상대가 프로필을 열면 바로 읽힌다.
+      key: 'letter',
+      title: '질문 하나에 답을 남겨주세요',
+      subtitle: '이 답이 내 프로필의 첫 문답이 돼요.\n상대는 사진보다 이 글을 먼저 읽어요.',
+      valid: !!currentLetterQuestion && letterDraft.trim().length >= LETTER_MIN_LENGTH,
+      content: (
+        <View>
+          <View style={[styles.letterCard, { backgroundColor: c.backgroundElement }]}>
+            {currentLetterQuestion ? (
+              <Text style={[styles.letterQuestion, { color: c.text, fontFamily: Fonts.serif }]}>
+                {currentLetterQuestion.content}
+              </Text>
+            ) : (
+              <Pressable onPress={loadLetterQuestions} hitSlop={8}>
+                <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>
+                  질문을 불러오지 못했어요. 탭해서 다시 시도
+                </Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => setLetterIndex((i) => i + 1)} hitSlop={8} style={styles.letterShuffleBtn}>
+              <Text style={[styles.letterShuffle, { color: c.primaryStrong }]}>다른 질문 보기</Text>
+            </Pressable>
+          </View>
+          <PlaceholderInput
+            value={letterDraft}
+            onChangeText={setLetterDraft}
+            placeholder="한두 문장이면 충분해요. 나중에 MY에서 고칠 수 있어요."
+            placeholderTextColor={c.textSecondary}
+            multiline
+            maxLength={LETTER_MAX_LENGTH}
+            style={[styles.bioInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+          />
+          <Text style={[styles.bioCounter, { color: c.textSecondary }]}>
+            {letterDraft.trim().length > 0 && letterDraft.trim().length < LETTER_MIN_LENGTH
+              ? `${LETTER_MIN_LENGTH}자 이상 · `
+              : ''}
+            {letterDraft.length}/{LETTER_MAX_LENGTH}
+          </Text>
+        </View>
+      ),
+    },
   ];
 
   // 선택 스텝 — 가입 후 이성에게 더 잘 보이기 위해 채우는 항목. MY에서도 언제든 수정 가능.
@@ -367,8 +427,17 @@ export default function OnboardingScreen() {
     const profileOk = await saveProfile();
     if (!profileOk) { setSubmitting(false); return; }
     const photosOk = await uploadPhotos();
+    if (!photosOk) { setSubmitting(false); return; }
+    // 필수 문답 — 골라둔 질문에 남긴 답을 프로필 문답으로 올린다(계정은 이미 만들어진 뒤라서 여기서).
+    try {
+      if (currentLetterQuestion) await writeLetter(currentLetterQuestion.questionId, letterDraft.trim());
+    } catch (e) {
+      setSubmitting(false);
+      Alert.alert('문답 저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+      return;
+    }
     setSubmitting(false);
-    if (photosOk) setPhase('choice');
+    setPhase('choice');
   }
 
   async function submitOptional() {
@@ -561,6 +630,11 @@ const styles = StyleSheet.create({
   stepCount: { fontSize: 12, fontVariant: ['tabular-nums'] },
   bioInput: { minHeight: 160, borderRadius: 18, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
   bioCounter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
+  // 필수 문답 — 질문은 카드로, 답은 그 아래에.
+  letterCard: { borderRadius: 18, padding: 18, marginBottom: 12 },
+  letterQuestion: { fontSize: 17, lineHeight: 26, fontWeight: '700' },
+  letterShuffleBtn: { alignSelf: 'flex-end', marginTop: 10 },
+  letterShuffle: { fontSize: 13, fontWeight: '700' },
   content: { padding: 25, paddingTop: 48, paddingBottom: 24 },
   stepEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 3 },
   title: { fontSize: 29, fontWeight: '700', marginTop: 12, lineHeight: 40 },

@@ -38,6 +38,8 @@ export default function LettersScreen() {
   const [busy, setBusy] = useState(false);
   const [letters, setLetters] = useState<ProfileLetter[]>([]);
   const [questions, setQuestions] = useState<LetterQuestion[]>([]);
+  // 질문 고르기 검색어 — 클라이언트 필터(질문 풀은 이미 다 받아온다).
+  const [questionQuery, setQuestionQuery] = useState('');
 
   /** 지금 쓰는 중인 문답. questionId가 null이면 질문 고르는 단계. */
   const [editing, setEditing] = useState<{ questionId: number | null; draft: string } | null>(null);
@@ -153,11 +155,25 @@ export default function LettersScreen() {
 
   // ── 질문 고르는 단계 ──
   if (editing) {
-    const available = questions.filter((q) => !usedIds.has(q.questionId));
+    const keyword = questionQuery.trim();
+    const available = questions.filter(
+      (q) => !usedIds.has(q.questionId) && (keyword === '' || q.content.includes(keyword)),
+    );
     return (
       <SubScreen title="질문 고르기" c={c}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={[styles.lead, { color: c.textSecondary }]}>어떤 질문에 답해볼까요?</Text>
+          {/* 질문이 수십 개라 스크롤로 찾기 어렵다 — 낱말로 바로 좁힌다. */}
+          <TextInput
+            value={questionQuery}
+            onChangeText={setQuestionQuery}
+            placeholder="질문 검색 (예: 여행, 아침, 가치)"
+            placeholderTextColor={c.textSecondary}
+            style={[styles.searchInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
+          />
+          {available.length === 0 && (
+            <Text style={[styles.lead, { color: c.textSecondary }]}>‘{keyword}’가 들어간 질문이 없어요.</Text>
+          )}
           {available.map((q) => (
             <Pressable
               key={q.questionId}
@@ -243,6 +259,7 @@ const styles = StyleSheet.create({
   questionCard: { borderRadius: Radius.md, padding: 20, marginBottom: 16 },
   questionText: { fontSize: 18, fontWeight: '600', lineHeight: 27 },
   questionOption: { borderRadius: Radius.md, padding: 18, marginBottom: 10 },
+  searchInput: { height: 44, borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, fontSize: 14.5, marginBottom: 14 },
   questionOptionText: { fontSize: 15.5, lineHeight: 23 },
   input: {
     minHeight: 180,
