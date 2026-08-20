@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "package": "com.juyoung.prologue",
+      "package": "com.cloudwi.prologue",
       "blockedPermissions": ["android.permission.READ_MEDIA_IMAGES"],
       "adaptiveIcon": {
         "backgroundColor": "#F6F8FA",
