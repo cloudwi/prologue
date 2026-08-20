@@ -29,7 +29,7 @@ const tabs = [
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.png" />
   </head>
-  <body class="admin-body">
+  <body class="admin-body admin-locked">
     <aside class="admin-side">
       <a class="admin-brand" href="/admin">
         <img src="/brand-mark.png" alt="" width="26" height="19" />
@@ -44,10 +44,12 @@ const tabs = [
     </aside>
 
     <main class="admin-main">
-      <!-- 로그인 — 앱과 같은 이메일 인증코드 방식 -->
+      <!-- 로그인 — 앱과 같은 이메일 인증코드 방식. 이때는 사이드바를 감춰(body.admin-locked)
+           메뉴 구성을 광고하지 않고, 카드 하나만 화면 정중앙에 둔다. -->
       <section id="login" class="admin-login" hidden>
         <div class="admin-card admin-login-card">
-          <h2 class="admin-sub">로그인</h2>
+          <img src="/brand-mark.png" alt="" width="42" height="30" class="admin-login-mark" />
+          <h2 class="admin-sub">프롤로그 어드민</h2>
           <p class="admin-desc">어드민 권한이 있는 계정의 이메일로 인증해 주세요.</p>
           <div class="admin-field">
             <input id="email" type="email" placeholder="이메일" autocomplete="email" />
@@ -129,12 +131,14 @@ const tabs = [
         refreshToken = '';
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(REFRESH_KEY);
+        document.body.classList.add('admin-locked'); // 사이드바·메뉴를 감춘다
         $('panel').hidden = true;
         $('login').hidden = false;
         $('login-msg').textContent = msg || '';
       }
 
       async function showPanel() {
+        document.body.classList.remove('admin-locked');
         $('login').hidden = true;
         $('panel').hidden = false;
         if (window.pageLoad) await window.pageLoad();
@@ -200,6 +204,11 @@ const tabs = [
         min-height: 100vh;
         display: flex;
         background: var(--paper);
+      }
+      /* display를 지정한 클래스가 [hidden]의 display:none을 덮어쓴다(로그인 카드가 안 사라지던 버그).
+         어드민 안에서는 hidden이 항상 이기게 못박는다. */
+      .admin-body [hidden] {
+        display: none !important;
       }
 
       /* ── 사이드바 ── */
@@ -292,14 +301,27 @@ const tabs = [
         margin: 6px 0 16px;
       }
 
-      /* ── 로그인 ── */
+      /* ── 로그인 — 잠긴 동안(body.admin-locked)은 사이드바 없이 카드 하나만 정중앙 ── */
+      .admin-locked .admin-side {
+        display: none;
+      }
+      .admin-locked .admin-main {
+        max-width: none;
+        padding: 0;
+      }
       .admin-login {
         display: grid;
         place-items: center;
-        min-height: 60vh;
+        min-height: 100vh;
+        padding: 24px;
       }
       .admin-login-card {
         width: min(420px, 100%);
+        padding: 30px 28px;
+      }
+      .admin-login-mark {
+        display: block;
+        margin-bottom: 14px;
       }
 
       /* ── 카드·리스트 ── */
@@ -402,10 +424,6 @@ const tabs = [
         display: flex;
         gap: 8px;
         margin-top: 10px;
-      }
-      /* display:flex가 [hidden]의 display:none을 이겨버린다 — 숨김이 항상 이기게 못박는다. */
-      .admin-field[hidden] {
-        display: none;
       }
       .admin-field input {
         flex: 1;
