@@ -5,9 +5,10 @@ import java.util.UUID
 
 /**
  * 편지의 상태 — 봉투로 도착해(PENDING) 열거나(OPENED) 조용히 거절된다(DECLINED).
- * 읽히지 않은 채 사흘이 지나면 보낸 사람이 되찾아갈 수 있다(RECALLED).
+ * 읽히지 않은 채 사흘이 지나면 보낸 사람이 되찾아갈 수 있고(RECALLED),
+ * 이레가 지나도록 열리지 않으면 시스템이 대신 회수한다(EXPIRED) — 절반 환급은 회수와 같다.
  */
-enum class MailStatus { PENDING, OPENED, DECLINED, RECALLED }
+enum class MailStatus { PENDING, OPENED, DECLINED, RECALLED, EXPIRED }
 
 /**
  * 편지 — 인앱 채팅 대신 연락처를 건네는 한 통.
@@ -30,16 +31,22 @@ class Mail private constructor(
     var status: MailStatus = status
         private set
 
-    /** 봉투를 연다 — 이미 열린 편지는 그대로(멱등). 거절한 편지는 되돌릴 수 없다. */
+    /** 봉투를 연다 — 이미 열린 편지는 그대로(멱등). 거절했거나 이미 사라진 편지는 되돌릴 수 없다. */
     fun open() {
-        if (status == MailStatus.DECLINED) throw DailyMeetException("거절한 편지는 열 수 없어요")
-        status = MailStatus.OPENED
+        when (status) {
+            MailStatus.DECLINED -> throw DailyMeetException("거절한 편지는 열 수 없어요")
+            MailStatus.RECALLED, MailStatus.EXPIRED -> throw DailyMeetException("이미 사라진 편지예요")
+            MailStatus.PENDING, MailStatus.OPENED -> status = MailStatus.OPENED
+        }
     }
 
     /** 조용히 거절한다 — 열어본 편지는 이미 마음을 받은 것이라 거절할 수 없다. */
     fun decline() {
-        if (status == MailStatus.OPENED) throw DailyMeetException("이미 열어본 편지예요")
-        status = MailStatus.DECLINED
+        when (status) {
+            MailStatus.OPENED -> throw DailyMeetException("이미 열어본 편지예요")
+            MailStatus.RECALLED, MailStatus.EXPIRED -> throw DailyMeetException("이미 사라진 편지예요")
+            MailStatus.PENDING, MailStatus.DECLINED -> status = MailStatus.DECLINED
+        }
     }
 
     /**
@@ -52,7 +59,7 @@ class Mail private constructor(
     fun recall(now: Instant = Instant.now()) {
         when (status) {
             MailStatus.OPENED -> throw DailyMeetException("이미 읽은 편지는 회수할 수 없어요")
-            MailStatus.DECLINED, MailStatus.RECALLED -> throw DailyMeetException("이미 사라진 편지예요")
+            MailStatus.DECLINED, MailStatus.RECALLED, MailStatus.EXPIRED -> throw DailyMeetException("이미 사라진 편지예요")
             MailStatus.PENDING -> Unit
         }
         if (!isRecallableAt(now)) throw DailyMeetException("보낸 지 3일이 지나야 회수할 수 있어요")
@@ -63,11 +70,28 @@ class Mail private constructor(
     fun isRecallableAt(now: Instant = Instant.now()): Boolean =
         status == MailStatus.PENDING && !now.isBefore(createdAt.plus(RECALL_AFTER))
 
+    /**
+     * 기한이 지난 봉투를 시스템이 회수한다 — 보낸 사람은 회수와 똑같이 절반을 돌려받는다.
+     *
+     * 편지함을 무한정 쌓아두지 않기 위한 규칙이다. 이레 안에 열리지 않은 편지는
+     * 닿지 않은 것으로 보고 정리한다 — 받은 쪽 편지함에서도, 보낸 쪽 기다림에서도.
+     * 열어본 편지는 이미 전해진 것이라 여기 해당하지 않는다.
+     */
+    fun expire(now: Instant = Instant.now()) {
+        if (status != MailStatus.PENDING) throw DailyMeetException("봉투 상태의 편지만 만료될 수 있어요")
+        if (now.isBefore(createdAt.plus(EXPIRE_AFTER))) throw DailyMeetException("아직 만료 기한이 되지 않았어요")
+        status = MailStatus.EXPIRED
+    }
+
     companion object {
         private const val MAX_LENGTH = 300 // 편지 한 통의 분량 — 대화가 아니라 건네는 인사
+        private const val MIN_LENGTH = 50 // 잉크를 낸 한 통이 인사 한 줄로 끝나지 않도록
 
         /** 회수까지 기다리는 기간 — 상대에게 읽을 시간을 주는 사흘. */
         val RECALL_AFTER: java.time.Duration = java.time.Duration.ofDays(3)
+
+        /** 열리지 않은 봉투가 스스로 사라지는 기한 — 이레. 그 뒤는 기다림이 아니라 방치다. */
+        val EXPIRE_AFTER: java.time.Duration = java.time.Duration.ofDays(7)
 
         fun write(
             senderAccountId: UUID,
@@ -80,6 +104,7 @@ class Mail private constructor(
         ): Mail {
             val trimmed = content.trim()
             if (trimmed.isBlank()) throw DailyMeetException("편지 내용을 적어주세요")
+            if (trimmed.length < MIN_LENGTH) throw DailyMeetException("편지는 ${MIN_LENGTH}자 이상 적어주세요")
             if (trimmed.length > MAX_LENGTH) throw DailyMeetException("편지는 ${MAX_LENGTH}자 이하여야 해요")
             val kakao = kakaoId?.trim()?.ifBlank { null }
             if (phone == null && kakao == null) {

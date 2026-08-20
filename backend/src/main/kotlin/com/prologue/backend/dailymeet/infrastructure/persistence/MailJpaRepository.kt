@@ -19,4 +19,7 @@ interface MailJpaRepository : JpaRepository<MailJpaEntity, UUID> {
     fun findBySenderAccountId(senderAccountId: UUID): List<MailJpaEntity>
 
     fun findByRecipientAccountId(recipientAccountId: UUID): List<MailJpaEntity>
+
+    /** 기준 시각 이전에 부쳐진 봉투(PENDING) — 만료 스케줄러가 회수 대상을 찾을 때. */
+    fun findByStatusAndCreatedAtBefore(status: String, cutoff: java.time.Instant): List<MailJpaEntity>
 }

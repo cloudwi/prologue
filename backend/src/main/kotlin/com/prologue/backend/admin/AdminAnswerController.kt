@@ -3,6 +3,7 @@ package com.prologue.backend.admin
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 import java.util.UUID
@@ -26,27 +27,32 @@ class AdminAnswerController(
 
     data class AdminAnswersResponse(val answers: List<AdminAnswerRow>)
 
-    /** 최근 답변 50개, 최신순. */
+    /** 최근 답변 50개, 최신순. q가 있으면 닉네임·답변 내용 부분 일치로 거른다. */
     @GetMapping
-    fun recent(): AdminAnswersResponse {
+    fun recent(@RequestParam(required = false) q: String?): AdminAnswersResponse {
+        val keyword = q?.trim().orEmpty()
+        val pattern = "%$keyword%"
         val rows = jdbc.query(
             """
             select an.account_id, an.content, an.created_at, m.nickname, q.content as question
             from answers an
             left join members m on m.account_id = an.account_id
             left join questions q on q.id = an.question_id
+            where ? = '' or m.nickname ilike ? or an.content ilike ?
             order by an.created_at desc
             limit 50
             """.trimIndent(),
-        ) { rs, _ ->
-            AdminAnswerRow(
-                accountId = rs.getObject("account_id", UUID::class.java).toString(),
-                nickname = rs.getString("nickname"),
-                question = rs.getString("question"),
-                content = rs.getString("content"),
-                createdAt = rs.getTimestamp("created_at").toInstant(),
-            )
-        }
+            { rs, _ ->
+                AdminAnswerRow(
+                    accountId = rs.getObject("account_id", UUID::class.java).toString(),
+                    nickname = rs.getString("nickname"),
+                    question = rs.getString("question"),
+                    content = rs.getString("content"),
+                    createdAt = rs.getTimestamp("created_at").toInstant(),
+                )
+            },
+            keyword, pattern, pattern,
+        )
         return AdminAnswersResponse(rows)
     }
 }

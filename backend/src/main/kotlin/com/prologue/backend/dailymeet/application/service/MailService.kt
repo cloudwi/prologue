@@ -222,6 +222,28 @@ class MailService(
     }
 
     /**
+     * 기한이 지난 봉투들을 시스템이 회수한다 — 스케줄러가 하루 한 번 부른다.
+     *
+     * 이레가 지나도록 열리지 않은 편지는 닿지 않은 것으로 보고 정리한다.
+     * 받은 쪽 편지함이 무한정 쌓이지 않고, 보낸 쪽도 하염없이 기다리지 않는다.
+     * 환급은 회수와 같은 절반 — 정책이 두 갈래가 되지 않도록 한다.
+     *
+     * @return 회수한 편지 수
+     */
+    @Transactional
+    fun expireStale(now: Instant = Instant.now()): Int {
+        val stale = mailRepository.findAllPendingBefore(now.minus(Mail.EXPIRE_AFTER))
+        stale.forEach { mail ->
+            mail.expire(now)
+            mailRepository.save(mail)
+            val refund = InkPrice.recallRefund(mail.inkPaid)
+            inkService.grantTo(mail.senderAccountId, refund, InkService.REASON_MAIL_EXPIRE)
+            notificationService.mailExpired(mail.senderAccountId, refund)
+        }
+        return stale.size
+    }
+
+    /**
      * 이 사람에게 온 봉투들을 보낸 사람에게 되돌린다 — 탈퇴 직전에 호출한다.
      *
      * 탈퇴하면 편지가 통째로 지워져서 회수할 대상 자체가 사라진다. 그대로 두면

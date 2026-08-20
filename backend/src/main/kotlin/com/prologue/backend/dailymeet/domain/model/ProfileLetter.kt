@@ -29,6 +29,8 @@ class ProfileLetter private constructor(
     companion object {
         const val MAX_PER_MEMBER = 3
         const val MAX_LENGTH = 400 // 자기소개를 대신하는 글 — 한 문답 답변(300자)보다 여유 있게
+        /** 최소 분량 — 프로필에 걸어두는 글이 한 마디로 끝나지 않도록. 답변과 같은 하한. */
+        const val MIN_LENGTH = 15
 
         fun write(accountId: UUID, questionId: Long, content: String, now: Instant = Instant.now()): ProfileLetter =
             ProfileLetter(null, accountId, questionId, validate(content), now, now)
@@ -45,6 +47,7 @@ class ProfileLetter private constructor(
         private fun validate(content: String): String {
             val trimmed = content.trim()
             if (trimmed.isBlank()) throw DailyMeetException("편지는 비어 있을 수 없습니다")
+            if (trimmed.length < MIN_LENGTH) throw DailyMeetException("조금 더 들려주세요 — ${MIN_LENGTH}자 이상 적어야 해요")
             if (trimmed.length > MAX_LENGTH) throw DailyMeetException("편지는 ${MAX_LENGTH}자 이하여야 합니다")
             return trimmed
         }

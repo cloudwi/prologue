@@ -166,10 +166,27 @@ class HeartServiceTest {
 
 
     @Test
-    fun `받은 하트 - 사흘이 지나면 사진이 가려지고 잠긴 것으로 표시된다`() {
+    fun `받은 하트 - 사흘이 지나도록 아무 움직임이 없으면 목록에서 사라진다`() {
         val stale = Instant.now().minus(java.time.Duration.ofDays(10))
         every { heartRepository.findAllTo(me) } returns
             listOf(Heart.reconstitute(UUID.randomUUID(), peer, me, 1L, stale))
+        every { heartRepository.existsFromTo(any(), any()) } returns false
+        every { memberQueryService.findProfile(peer) } returns Member.reconstitute(
+            peer, "닉", Gender.FEMALE, LocalDate.of(1995, 5, 14), Gender.MALE, "서울특별시 강남구", Instant.now(),
+            photoUrls = listOf("a.jpg", "b.jpg"),
+        )
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns peerAnswer
+
+        assertTrue(service.receivedHearts(me).isEmpty())
+    }
+
+    @Test
+    fun `받은 하트 - 사흘이 지나도 서로 하트면 잠긴 채로 남는다`() {
+        val stale = Instant.now().minus(java.time.Duration.ofDays(10))
+        every { heartRepository.findAllTo(me) } returns
+            listOf(Heart.reconstitute(UUID.randomUUID(), peer, me, 1L, stale))
+        every { heartRepository.existsFromTo(me, peer) } returns true
+        every { heartRepository.existsFromTo(peer, me) } returns true
         every { memberQueryService.findProfile(peer) } returns Member.reconstitute(
             peer, "닉", Gender.FEMALE, LocalDate.of(1995, 5, 14), Gender.MALE, "서울특별시 강남구", Instant.now(),
             photoUrls = listOf("a.jpg", "b.jpg"),
@@ -182,6 +199,22 @@ class HeartServiceTest {
         assertEquals(null, received.photoUrl)
         // 누구인지는 남는다 — 잉크를 쓸지 정하려면 알아야 한다
         assertEquals("닉", received.nickname)
+    }
+
+    @Test
+    fun `보낸 하트 - 사흘이 지나도 목록에 남는다(편지는 언제든 보낼 수 있다)`() {
+        val stale = Instant.now().minus(java.time.Duration.ofDays(10))
+        every { heartRepository.findAllFrom(me) } returns
+            listOf(Heart.reconstitute(UUID.randomUUID(), me, peer, 1L, stale))
+        every { heartRepository.existsFromTo(any(), any()) } returns false
+        every { memberQueryService.findProfile(peer) } returns Member.reconstitute(
+            peer, "닉", Gender.FEMALE, LocalDate.of(1995, 5, 14), Gender.MALE, "서울특별시 강남구", Instant.now(),
+            photoUrls = listOf("a.jpg", "b.jpg"),
+        )
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns peerAnswer
+
+        assertEquals(1, service.sentHearts(me).size)
+        assertTrue(service.sentHearts(me)[0].locked)
     }
 
     @Test

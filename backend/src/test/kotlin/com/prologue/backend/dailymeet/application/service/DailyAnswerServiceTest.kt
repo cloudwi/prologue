@@ -60,9 +60,9 @@ class DailyAnswerServiceTest {
         val saved = slot<Answer>()
         every { answerRepository.save(capture(saved)) } answers { saved.captured }
 
-        val result = service.answerToday(accountId, "  나의 답변  ")
+        val result = service.answerToday(accountId, "  나의 답변은 열다섯 자를 넘겨 쓴다  ")
 
-        assertEquals("나의 답변", result.answer.content)
+        assertEquals("나의 답변은 열다섯 자를 넘겨 쓴다", result.answer.content)
         assertEquals(1L, result.answer.questionId)
     }
 
@@ -73,7 +73,7 @@ class DailyAnswerServiceTest {
         every { answerRepository.save(any()) } answers { firstArg() }
         every { inkService.rewardDailyAnswer(accountId) } returns 2
 
-        val result = service.answerToday(accountId, "오늘의 답")
+        val result = service.answerToday(accountId, "오늘의 답은 이만큼 길게 적어 본다")
 
         assertEquals(2, result.inkEarned)
         verify(exactly = 1) { inkService.rewardDailyAnswer(accountId) }
@@ -95,9 +95,9 @@ class DailyAnswerServiceTest {
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns existing
         every { answerRepository.save(any()) } answers { firstArg() }
 
-        val result = service.answerToday(accountId, "새 답변")
+        val result = service.answerToday(accountId, "새로 고쳐 쓴 답변은 이만큼 길다")
 
-        assertEquals("새 답변", result.answer.content)
+        assertEquals("새로 고쳐 쓴 답변은 이만큼 길다", result.answer.content)
     }
 
     @Test

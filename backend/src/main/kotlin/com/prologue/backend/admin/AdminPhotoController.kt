@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 import java.util.UUID
@@ -31,25 +32,29 @@ class AdminPhotoController(
 
     data class RemovePhotoRequest(val accountId: UUID, val url: String)
 
-    /** 사진이 있는 최근 가입 회원 30명 — 검수 순찰 대상. */
+    /** 사진이 있는 최근 가입 회원 30명 — 검수 순찰 대상. q가 있으면 닉네임 부분 일치로 거른다. */
     @GetMapping
-    fun recent(): PhotosResponse {
+    fun recent(@RequestParam(required = false) q: String?): PhotosResponse {
+        val keyword = q?.trim().orEmpty()
         val rows = jdbc.query(
             """
             select account_id, nickname, created_at, photo_urls
             from members
             where photo_urls is not null and photo_urls <> ''
+              and (? = '' or nickname ilike ?)
             order by created_at desc
             limit 30
             """.trimIndent(),
-        ) { rs, _ ->
-            MemberPhotos(
-                accountId = rs.getObject("account_id", UUID::class.java).toString(),
-                nickname = rs.getString("nickname"),
-                createdAt = rs.getTimestamp("created_at").toInstant(),
-                photos = rs.getString("photo_urls").split(",").filter { it.isNotBlank() },
-            )
-        }
+            { rs, _ ->
+                MemberPhotos(
+                    accountId = rs.getObject("account_id", UUID::class.java).toString(),
+                    nickname = rs.getString("nickname"),
+                    createdAt = rs.getTimestamp("created_at").toInstant(),
+                    photos = rs.getString("photo_urls").split(",").filter { it.isNotBlank() },
+                )
+            },
+            keyword, "%$keyword%",
+        )
         return PhotosResponse(rows)
     }
 

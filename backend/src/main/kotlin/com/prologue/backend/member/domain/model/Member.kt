@@ -154,6 +154,14 @@ class Member private constructor(
         /** 가입 가능한 최소 만 나이 — 한국 성년(만 19세). */
         private const val ADULT_AGE = 19
         private const val BIO_MAX = 300
+
+        /**
+         * 자기소개의 최소 분량 — 쓰기로 했다면 인사 한 문단은 되도록.
+         * 자기소개 자체는 건너뛸 수 있다(null 허용) — 하한은 "쓴 글"에만 적용된다.
+         * 프로필을 연 상대가 가장 먼저 읽는 글이라, "안녕하세요" 한 마디가 걸려 있으면
+         * 프로필 전체가 성의 없어 보인다.
+         */
+        private const val BIO_MIN = 30
         private const val KEYWORD_MAX = 15
         private const val KAKAO_ID_MAX = 30
         private val KST = ZoneId.of("Asia/Seoul")
@@ -253,6 +261,9 @@ class Member private constructor(
             }
             if (region.isBlank()) throw MemberDomainException("지역은 필수입니다")
             if (bio != null && bio.trim().length > BIO_MAX) throw MemberDomainException("자기소개는 ${BIO_MAX}자 이하여야 합니다")
+            if (bio != null && bio.isNotBlank() && bio.trim().length < BIO_MIN) {
+                throw MemberDomainException("자기소개는 ${BIO_MIN}자 이상 적어주세요 — 비워둘 수는 있어요")
+            }
             if (heightCm != null && (heightCm < 120 || heightCm > 230)) throw MemberDomainException("키가 올바르지 않습니다")
         }
     }

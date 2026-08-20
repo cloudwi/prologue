@@ -34,9 +34,9 @@ class ProfileLetterServiceTest {
         val saved = slot<ProfileLetter>()
         every { profileLetterRepository.save(capture(saved)) } answers { saved.captured }
 
-        service.write(accountId, 1, "  저는 이런 사람이에요  ")
+        service.write(accountId, 1, "  저는 이런 사람이에요. 주말엔 산책을 좋아해요  ")
 
-        assertEquals("저는 이런 사람이에요", saved.captured.content)
+        assertEquals("저는 이런 사람이에요. 주말엔 산책을 좋아해요", saved.captured.content)
         assertEquals(1, saved.captured.questionId)
     }
 
@@ -48,9 +48,9 @@ class ProfileLetterServiceTest {
         every { profileLetterRepository.findAllByAccountId(accountId) } returns listOf(existing, letter(2), letter(3))
         every { profileLetterRepository.save(any()) } answers { firstArg() }
 
-        service.write(accountId, 1, "새 내용")
+        service.write(accountId, 1, "새로 고쳐 쓴 내용은 이만큼 길다")
 
-        verify { profileLetterRepository.save(match { it.content == "새 내용" }) }
+        verify { profileLetterRepository.save(match { it.content == "새로 고쳐 쓴 내용은 이만큼 길다" }) }
     }
 
     @Test

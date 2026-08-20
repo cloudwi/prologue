@@ -66,6 +66,18 @@ class NotificationService(
         ),
     )
 
+    /** 이레가 지나도록 열리지 않아 회수된 편지 — 보낸 사람에게 환급 사실을 알린다. */
+    @Async
+    @Transactional(readOnly = true)
+    fun mailExpired(senderAccountId: UUID, refund: Int) = notify(
+        senderAccountId,
+        PushMessage(
+            title = "편지가 돌아왔어요",
+            body = "7일 동안 열리지 않아 회수했어요. 잉크 $refund 이 돌아왔어요.",
+            data = mapOf("screen" to "mails"),
+        ),
+    )
+
     /** 정오 이후 늦게 채워진 오늘의 상대 — 빈 채로 닫힐 뻔한 하루에 한 번 더 문을 두드린다. */
     @Async
     @Transactional(readOnly = true)

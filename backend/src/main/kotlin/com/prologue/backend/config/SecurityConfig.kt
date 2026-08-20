@@ -55,7 +55,8 @@ class SecurityConfig(
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration().apply {
             allowedOrigins = this@SecurityConfig.allowedOrigins
-            allowedMethods = listOf("GET", "POST", "OPTIONS")
+            // PUT은 어드민의 질문 수정이 쓴다 — 빠져 있으면 프리플라이트에서 조용히 막힌다.
+            allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
             allowedHeaders = listOf("Authorization", "Content-Type")
         }
         return UrlBasedCorsConfigurationSource().apply { registerCorsConfiguration("/**", config) }

@@ -55,10 +55,14 @@ class HeartService(
     /**
      * 나에게 하트를 보낸 사람들 — 상호 하트가 된 사람도 남는다(편지를 보낼 상대라서).
      * 계정 id는 노출하지 않고, 행동 대상으로 상대 답변 id(불투명 식별자)를 준다.
+     *
+     * 사흘 안에 아무 움직임이 없던 하트는 목록에서 사라진다([ProfileAccess.WINDOW]와 같은 창).
+     * 받은 호감을 무한정 쌓아두면 편지함이 보관함이 되고, "지금 답해야 할 이유"도 사라진다.
+     * 서로 하트가 됐거나, 편지를 보냈거나, 잉크를 내고 프로필을 다시 연 상대는 남는다.
      */
     @Transactional(readOnly = true)
     fun receivedHearts(accountId: UUID): List<HeartPeerView> =
-        heartPeers(accountId, heartRepository.findAllTo(accountId)) { it.fromAccountId }
+        heartPeers(accountId, heartRepository.findAllTo(accountId), expireStale = true) { it.fromAccountId }
 
     /**
      * 내가 하트를 보낸 사람들 — 답이 온 사람(상호)도, 아직인 사람도 함께.
@@ -66,13 +70,21 @@ class HeartService(
      */
     @Transactional(readOnly = true)
     fun sentHearts(accountId: UUID): List<HeartPeerView> =
-        heartPeers(accountId, heartRepository.findAllFrom(accountId)) { it.toAccountId }
+        heartPeers(accountId, heartRepository.findAllFrom(accountId), expireStale = false) { it.toAccountId }
 
     /**
      * 하트 목록을 상대별 한 줄로 접는다 — 방향만 다르고 나머지는 같다.
      * [peerOf]가 하트에서 "상대"를 꺼낸다(받은 하트면 보낸 사람, 보낸 하트면 받는 사람).
+     *
+     * [expireStale]이 켜지면 창이 닫혔고 아무 움직임도 없던 하트를 걸러낸다 — 받은 목록에만 적용한다.
+     * 보낸 하트는 남긴다: 편지는 창과 무관하게 언제든 보낼 수 있어서, 내가 보낸 마음의 기록은 행동 가능하다.
      */
-    private fun heartPeers(accountId: UUID, hearts: List<Heart>, peerOf: (Heart) -> UUID): List<HeartPeerView> {
+    private fun heartPeers(
+        accountId: UUID,
+        hearts: List<Heart>,
+        expireStale: Boolean,
+        peerOf: (Heart) -> UUID,
+    ): List<HeartPeerView> {
         // 잠김 판정에 필요한 것들은 사람 수와 무관하게 한 번씩만 읽는다
         val unlockedPeers = profileAccessService.unlockedPeers(accountId)
         val contactedAt = profileAccessService.lastContactedAtByPeer(accountId)
@@ -87,6 +99,10 @@ class HeartService(
                     contactedAt[peerId] ?: heart.createdAt,
                     unlocked = peerId in unlockedPeers,
                 )
+                val mutual = heartRepository.existsFromTo(accountId, peerId) && heartRepository.existsFromTo(peerId, accountId)
+                val mailSent = mailRepository.existsBySenderAndRecipient(accountId, peerId)
+                // 사흘의 창이 닫혔는데 서로 하트도, 편지도, 재열람도 없었다면 — 지나간 호감이다.
+                if (expireStale && !open && !mutual && !mailSent) return@mapNotNull null
                 HeartPeerView(
                     nickname = peer.nickname,
                     age = peer.age(),
@@ -97,8 +113,8 @@ class HeartService(
                     locked = !open,
                     // 하트가 오간 질문의 상대 답변 — 답이 없는 경우는 옛 데이터뿐.
                     peerAnswerId = answerRepository.findByAccountIdAndQuestionId(peerId, heart.questionId)?.id,
-                    mutual = heartRepository.existsFromTo(accountId, peerId) && heartRepository.existsFromTo(peerId, accountId),
-                    mailSent = mailRepository.existsBySenderAndRecipient(accountId, peerId),
+                    mutual = mutual,
+                    mailSent = mailSent,
                     createdAt = heart.createdAt,
                 )
             }

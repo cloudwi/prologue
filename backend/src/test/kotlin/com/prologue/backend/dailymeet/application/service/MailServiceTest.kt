@@ -75,7 +75,7 @@ class MailServiceTest {
         every { memberQueryService.findProfile(senderId) } returns sender()
         stubSaved()
 
-        service.send(senderId, peerAnswerId, "만나서 반가웠어요", includePhone = true, kakaoId = null)
+        service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
 
         verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
     }
@@ -92,7 +92,7 @@ class MailServiceTest {
             Mail.reconstitute(UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.inkPaid, m.status, m.createdAt)
         }
 
-        val result = service.send(senderId, peerAnswerId, "마음이 통했네요", includePhone = true, kakaoId = null)
+        val result = service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
 
         assertEquals(InkPrice.MAIL_MUTUAL, result.inkSpent)
         assertEquals(InkPrice.MAIL_MUTUAL, saved.captured.inkPaid)
@@ -170,7 +170,7 @@ class MailServiceTest {
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
         stubSaved()
 
-        val result = service.send(senderId, peerAnswerId, "안녕하세요", includePhone = false, kakaoId = "kakao_id")
+        val result = service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = false, kakaoId = "kakao_id")
 
         assertEquals(36, result.mailId.toString().length)
         verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
@@ -183,7 +183,7 @@ class MailServiceTest {
         every { memberQueryService.findProfile(senderId) } returns sender(phone = null)
 
         assertFailsWith<DailyMeetException> {
-            service.send(senderId, peerAnswerId, "안녕하세요", includePhone = true, kakaoId = null)
+            service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
         }
     }
 
@@ -193,7 +193,7 @@ class MailServiceTest {
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns false
 
         assertFailsWith<DailyMeetException> {
-            service.send(senderId, peerAnswerId, "안녕하세요", includePhone = false, kakaoId = "  ")
+            service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = false, kakaoId = "  ")
         }
     }
 
@@ -203,7 +203,7 @@ class MailServiceTest {
         every { mailRepository.existsBySenderAndRecipient(senderId, recipientId) } returns true
 
         assertFailsWith<DailyMeetException> {
-            service.send(senderId, peerAnswerId, "또 인사드려요", includePhone = true, kakaoId = null)
+            service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
         }
     }
 
@@ -219,7 +219,7 @@ class MailServiceTest {
             Mail.reconstitute(UUID.randomUUID(), m.senderAccountId, m.recipientAccountId, m.content, m.phone, m.kakaoId, m.inkPaid, m.status, m.createdAt)
         }
 
-        val result = service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
+        val result = service.reply(senderId, mailId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
 
         assertEquals(InkPrice.MAIL_REPLY, result.inkSpent)
         assertEquals(InkPrice.MAIL_REPLY, saved.captured.inkPaid)
@@ -233,7 +233,7 @@ class MailServiceTest {
         every { mailRepository.findById(mailId) } returns mailOf(mailId, recipientId, UUID.randomUUID())
 
         assertFailsWith<DailyMeetException> {
-            service.reply(senderId, mailId, "답장이에요", includePhone = true, kakaoId = null)
+            service.reply(senderId, mailId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
         }
     }
 

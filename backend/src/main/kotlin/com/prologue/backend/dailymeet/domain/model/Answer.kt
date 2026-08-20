@@ -24,6 +24,13 @@ class Answer private constructor(
     companion object {
         private const val MAX_LENGTH = 300 // 한 문답에 맞는 분량 (짧은 글)
 
+        /**
+         * 최소 분량 — "ㅇㅇ", "비밀이에요" 같은 한 마디를 거른다.
+         * 답변은 상대에게 나를 소개하는 글이자 매칭의 재료라, 아무 말이나 적고 넘어가면
+         * 그 답을 받아 든 상대의 하루가 빈다. 성의의 하한이지 글솜씨의 문턱이 아니다 — 낮게 둔다.
+         */
+        private const val MIN_LENGTH = 15
+
         fun write(accountId: UUID, questionId: Long, content: String, now: Instant = Instant.now()): Answer =
             Answer(null, accountId, questionId, validate(content), now)
 
@@ -38,6 +45,7 @@ class Answer private constructor(
         private fun validate(content: String): String {
             val trimmed = content.trim()
             if (trimmed.isBlank()) throw DailyMeetException("답변은 비어 있을 수 없습니다")
+            if (trimmed.length < MIN_LENGTH) throw DailyMeetException("조금 더 들려주세요 — ${MIN_LENGTH}자 이상 적어야 해요")
             if (trimmed.length > MAX_LENGTH) throw DailyMeetException("답변은 ${MAX_LENGTH}자 이하여야 합니다")
             return trimmed
         }
