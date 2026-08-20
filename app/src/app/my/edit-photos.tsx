@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { PhotoCropModal } from '@/components/photo-crop';
 import { MAX_PHOTOS, MIN_PHOTOS, PhotoGrid, pickPhotos } from '@/components/photo-grid';
 import { SubScreen } from '@/components/sub-screen';
 import { ApiError } from '@/lib/api';
@@ -20,6 +21,8 @@ export default function EditPhotosScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  // 자르기를 기다리는 사진 줄 — 한 장씩 4:5 창을 거친 뒤에 업로드된다.
+  const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -42,14 +45,16 @@ export default function EditPhotosScreen() {
     if (busy) return;
     const picked = await pickPhotos(MAX_PHOTOS - photos.length);
     if (picked.length === 0) return;
+    // 바로 올리지 않는다 — 한 장씩 4:5 창에서 자른 뒤 업로드한다.
+    setCropQueue({ uris: picked, total: picked.length });
+  }
+
+  /** 자르기를 마친 한 장을 업로드한다 — 반려돼도 다음 장 자르기는 이어진다. */
+  async function uploadCropped(uri: string) {
     setBusy(true);
-    // 한 장이 반려돼도 그 전에 올라간 사진은 반영해야 목록이 서버와 어긋나지 않는다.
-    let latest = photos;
     try {
-      for (const uri of picked) {
-        const res = await uploadPhoto(uri);
-        latest = res.photoUrls;
-      }
+      const res = await uploadPhoto(uri);
+      setPhotos(res.photoUrls);
     } catch (e) {
       const rejected = e instanceof ApiError && e.code === 'PHOTO_REJECTED';
       Alert.alert(
@@ -57,7 +62,6 @@ export default function EditPhotosScreen() {
         e instanceof Error ? e.message : '잠시 후 다시 시도해주세요',
       );
     } finally {
-      setPhotos(latest);
       setBusy(false);
     }
   }
@@ -114,6 +118,21 @@ export default function EditPhotosScreen() {
             </View>
           )}
         </ScrollView>
+      )}
+
+      {/* 고른 사진을 한 장씩 4:5 창에서 자른다 — 프로필에 보이는 그대로 올라가도록. */}
+      {cropQueue && cropQueue.uris.length > 0 && (
+        <PhotoCropModal
+          key={cropQueue.uris[0]}
+          uri={cropQueue.uris[0]}
+          progress={{ index: cropQueue.total - cropQueue.uris.length, total: cropQueue.total }}
+          c={c}
+          onDone={(cropped) => {
+            void uploadCropped(cropped);
+            setCropQueue((q) => (q && q.uris.length > 1 ? { ...q, uris: q.uris.slice(1) } : null));
+          }}
+          onCancel={() => setCropQueue((q) => (q && q.uris.length > 1 ? { ...q, uris: q.uris.slice(1) } : null))}
+        />
       )}
     </SubScreen>
   );

@@ -97,8 +97,12 @@ export default function MailViewScreen() {
 
           <Text style={[styles.sealNote, { color: c.textSecondary }]}>
             {mail.status === 'PENDING'
-              ? '아직 봉투를 열지 않으셨어요.\n답이 온다면, 다음 이야기는 앱 밖에서 이어져요.'
-              : '한 번 부친 편지는 고칠 수 없어요.\n답이 온다면, 다음 이야기는 앱 밖에서 이어져요.'}
+              ? '아직 봉투를 열지 않으셨어요.\n7일 동안 열리지 않으면 잉크 절반과 함께 돌아와요.'
+              : mail.status === 'EXPIRED'
+                ? '7일 동안 열리지 않아 회수됐어요.\n잉크 절반이 돌아왔어요. 인연은 또 있을 거예요.'
+                : mail.status === 'RECALLED'
+                  ? '회수한 편지예요.\n잉크 절반이 돌아왔어요.'
+                  : '한 번 부친 편지는 고칠 수 없어요.\n답이 온다면, 다음 이야기는 앱 밖에서 이어져요.'}
           </Text>
 
           {mail.recallable && (

@@ -10,6 +10,8 @@ import { completeOnboarding, getMyProfile, type MemberProfile } from '@/lib/memb
 import { toRequest } from '@/lib/profile-form';
 
 const BIO_MAX = 300;
+// 쓰기로 했다면 인사 한 문단은 되도록 — 서버와 같은 값. 비워두는 것은 자유다.
+const BIO_MIN = 30;
 
 /**
  * 자기소개 — 프로필 편지의 첫 문단.
@@ -54,7 +56,13 @@ export default function EditBioScreen() {
   }
 
   return (
-    <SubScreen title="자기소개" c={c} onSave={save} saveDisabled={!base || bio === (base.bio ?? '')} saving={saving}>
+    <SubScreen
+      title="자기소개"
+      c={c}
+      onSave={save}
+      saveDisabled={!base || bio === (base.bio ?? '') || (bio.trim().length > 0 && bio.trim().length < BIO_MIN)}
+      saving={saving}
+    >
       {loading ? (
         <View style={[styles.flex, styles.center]}>
           <ActivityIndicator color={c.primary} />
@@ -76,7 +84,10 @@ export default function EditBioScreen() {
               maxLength={BIO_MAX}
               style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
             />
-            <Text style={[styles.counter, { color: c.textSecondary }]}>{bio.length}/{BIO_MAX}</Text>
+            <Text style={[styles.counter, { color: c.textSecondary }]}>
+              {bio.trim().length > 0 && bio.trim().length < BIO_MIN ? `${BIO_MIN}자 이상 · ` : ''}
+              {bio.length}/{BIO_MAX}
+            </Text>
             <Text style={[styles.tip, { color: c.textSecondary }]}>
               팁 — 무엇을 좋아하는지, 요즘 어떻게 지내는지, 어떤 사람을 만나고 싶은지 중 하나만 골라도 충분해요.
             </Text>

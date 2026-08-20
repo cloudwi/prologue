@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { Clipboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { showToast } from '@/components/toast';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { formatPhoneDigits } from '@/lib/phone';
 
@@ -17,9 +18,10 @@ import { formatPhoneDigits } from '@/lib/phone';
  *
  * 열린 뒤에는 줄마다 복사 버튼이 붙는다 — 번호를 외워 옮겨 적게 두면 틀리고,
  * 틀린 번호로 건 첫 전화는 되돌릴 수 없다.
+ * 복사 확인은 버튼을 바꾸지 않고 토스트로 말한다 — 버튼이 "복사했어요"로 늘어나면
+ * 그 순간 줄이 밀리며 레이아웃이 흔들린다.
  */
 const REVEAL_MS = 20_000;
-const COPIED_MS = 1_600;
 
 export function RevealableContact({
   phone,
@@ -31,7 +33,6 @@ export function RevealableContact({
   c: ThemeColors;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState<'phone' | 'kakao' | null>(null);
 
   // 열어둔 채 화면을 떠나거나 잊어버려도 알아서 닫힌다
   useEffect(() => {
@@ -40,18 +41,12 @@ export function RevealableContact({
     return () => clearTimeout(timer);
   }, [revealed]);
 
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(null), COPIED_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
   if (!phone && !kakaoId) return null;
 
   /** 복사는 RN 코어의 Clipboard — 새 네이티브 모듈 없이(OTA로 나갈 수 있게) 된다. */
-  function copy(kind: 'phone' | 'kakao', value: string) {
+  function copy(label: string, value: string) {
     Clipboard.setString(value);
-    setCopied(kind);
+    showToast(`${label}를 클립보드에 복사했어요`);
   }
 
   return (
@@ -70,8 +65,7 @@ export function RevealableContact({
             label="전화번호"
             value={revealed ? formatPhoneDigits(phone) : maskPhone(phone)}
             revealed={revealed}
-            copied={copied === 'phone'}
-            onCopy={() => copy('phone', phone.replace(/\D/g, ''))}
+            onCopy={() => copy('전화번호', phone.replace(/\D/g, ''))}
             c={c}
           />
         ) : null}
@@ -80,8 +74,7 @@ export function RevealableContact({
             label="카카오톡"
             value={revealed ? kakaoId : maskId(kakaoId)}
             revealed={revealed}
-            copied={copied === 'kakao'}
-            onCopy={() => copy('kakao', kakaoId)}
+            onCopy={() => copy('카카오톡 ID', kakaoId)}
             c={c}
           />
         ) : null}
@@ -96,14 +89,12 @@ function ContactLine({
   label,
   value,
   revealed,
-  copied,
   onCopy,
   c,
 }: {
   label: string;
   value: string;
   revealed: boolean;
-  copied: boolean;
   onCopy: () => void;
   c: ThemeColors;
 }) {
@@ -120,11 +111,11 @@ function ContactLine({
           accessibilityLabel={`${label} 복사`}
           style={({ pressed }) => [
             styles.copyBtn,
-            { backgroundColor: copied ? c.primary : c.backgroundElement, opacity: pressed ? 0.7 : 1 },
+            { backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={12} color={copied ? c.primaryText : c.primaryStrong} />
-          <Text style={[styles.copyText, { color: copied ? c.primaryText : c.primaryStrong }]}>{copied ? '복사했어요' : '복사'}</Text>
+          <Ionicons name="copy-outline" size={12} color={c.primaryStrong} />
+          <Text style={[styles.copyText, { color: c.primaryStrong }]}>복사</Text>
         </Pressable>
       )}
     </View>

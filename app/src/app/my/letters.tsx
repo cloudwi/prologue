@@ -18,6 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   LETTER_MAX,
   LETTER_MAX_LENGTH,
+  LETTER_MIN_LENGTH,
   deleteLetter,
   getLetterQuestions,
   getMyLetters,
@@ -126,14 +127,17 @@ export default function LettersScreen() {
               style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
             />
             <Text style={[styles.counter, { color: c.textSecondary }]}>
+              {editing.draft.trim().length > 0 && editing.draft.trim().length < LETTER_MIN_LENGTH
+                ? `${LETTER_MIN_LENGTH}자 이상 · `
+                : ''}
               {editing.draft.length}/{LETTER_MAX_LENGTH}
             </Text>
             <Pressable
               onPress={save}
-              disabled={editing.draft.trim().length === 0 || busy}
+              disabled={editing.draft.trim().length < LETTER_MIN_LENGTH || busy}
               style={[
                 styles.primaryBtn,
-                { backgroundColor: c.primary, opacity: editing.draft.trim().length === 0 || busy ? 0.5 : 1 },
+                { backgroundColor: c.primary, opacity: editing.draft.trim().length < LETTER_MIN_LENGTH || busy ? 0.5 : 1 },
               ]}
             >
               <Text style={[styles.primaryBtnText, { color: c.primaryText }]}>{busy ? '저장 중...' : '프로필에 올리기'}</Text>

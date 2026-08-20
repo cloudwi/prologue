@@ -45,9 +45,10 @@ export function PhotoGrid({
 }) {
   // 타일 크기는 그리드 폭에서 직접 계산한다.
   // aspectRatio에 맡겼더니 사진 타일은 3:4, 추가 칸은 내용 높이로 제각각이었다(줄바꿈된 타일에서 무너짐).
+  // 비율은 4:5 — 프로필 상세·발견 탭이 사진을 보여주는 비율 그대로. 이 타일이 곧 잘림 미리보기다.
   const [gridWidth, setGridWidth] = useState(0);
   const tileWidth = (gridWidth - GAP * (COLUMNS - 1)) / COLUMNS;
-  const tileSize = { width: tileWidth, height: (tileWidth * 4) / 3 };
+  const tileSize = { width: tileWidth, height: (tileWidth * 5) / 4 };
 
   return (
     <View style={styles.grid} onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}>

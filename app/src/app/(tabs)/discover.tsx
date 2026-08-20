@@ -26,6 +26,9 @@ import { writeLetter } from '@/lib/letters';
 import { getInkBalance } from '@/lib/ink';
 import { useTheme } from '@/hooks/use-theme';
 
+// 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
+const ANSWER_MIN = 15;
+
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
   if (peer.age != null) parts.push(`${peer.age}세`);
@@ -137,7 +140,7 @@ export default function DiscoverScreen() {
   );
 
   async function submit() {
-    if (draft.trim().length === 0 || submitting) return;
+    if (draft.trim().length < ANSWER_MIN || submitting) return;
     setSubmitting(true);
     try {
       const wasAnswered = today?.answered ?? false;
@@ -241,15 +244,19 @@ export default function DiscoverScreen() {
                       style={[styles.input, { color: c.text, backgroundColor: c.backgroundElement }]}
                     />
                     <View style={styles.editorRow}>
-                      <Text style={[styles.counter, { color: c.textSecondary }]}>{draft.length}/300</Text>
+                      <Text style={[styles.counter, { color: c.textSecondary }]}>
+                        {draft.trim().length > 0 && draft.trim().length < ANSWER_MIN
+                          ? `${ANSWER_MIN}자 이상 · ${draft.length}/300`
+                          : `${draft.length}/300`}
+                      </Text>
                       <View style={styles.editorActions}>
                         <Pressable onPress={cancelEdit} disabled={submitting} style={styles.cancel} hitSlop={6}>
                           <Text style={{ color: c.textSecondary, fontSize: 14, fontWeight: '600' }}>취소</Text>
                         </Pressable>
                         <Pressable
                           onPress={submit}
-                          disabled={draft.trim().length === 0 || submitting}
-                          style={[styles.submit, { backgroundColor: c.primary, opacity: draft.trim().length === 0 || submitting ? 0.5 : 1 }]}
+                          disabled={draft.trim().length < ANSWER_MIN || submitting}
+                          style={[styles.submit, { backgroundColor: c.primary, opacity: draft.trim().length < ANSWER_MIN || submitting ? 0.5 : 1 }]}
                         >
                           <Text style={[styles.submitText, { color: c.primaryText }]}>
                             {submitting ? '저장 중...' : today?.answered ? '수정 완료' : '답변 남기기'}

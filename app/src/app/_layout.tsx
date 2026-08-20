@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ToastHost } from '@/components/toast';
 import { UpdateRequired } from '@/components/update-required';
 import { requiredUpdateStoreUrl } from '@/lib/app-config';
 import { AppearanceProvider, useAppearance } from '@/lib/appearance';
@@ -123,6 +124,8 @@ function Navigation() {
         <Stack.Screen name="mail-compose" />
         <Stack.Screen name="mail-view" />
       </Stack>
+      {/* 전역 토스트 — 스택 위에 떠서 어느 화면에서든 showToast()로 말할 수 있다. */}
+      <ToastHost />
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );

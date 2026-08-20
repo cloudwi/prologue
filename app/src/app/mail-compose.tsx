@@ -24,6 +24,8 @@ import { getMailQuote, sendMail, sendMailReply, type MailQuote } from '@/lib/mai
 import { getInkBalance, INK_PRICE } from '@/lib/ink';
 
 const CONTENT_MAX = 300;
+// 잉크를 낸 한 통이 "연락주세요" 한 줄로 끝나지 않도록 — 서버도 같은 값으로 막는다.
+const CONTENT_MIN = 50;
 
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.
@@ -34,6 +36,19 @@ const CONTENT_MAX = 300;
  * 상대는 둘 중 하나로 정해진다: 답변 id(peerAnswerId) 또는 답장할 원본 편지(replyMailId).
  * 초안은 상대별로 기기에 임시저장된다: 쓰다 나가도 다음에 이어 쓰고, 보내면 지운다.
  */
+/**
+ * 스토어 리뷰 요청 — OS가 알아서 빈도를 제한하므로(연 3회 등) 부담 없이 부른다.
+ * 동적 import + try/catch: 네이티브 모듈이 없는 구버전 바이너리(OTA만 받은)에서는 조용히 넘어간다.
+ */
+async function requestStoreReview() {
+  try {
+    const StoreReview = await import('expo-store-review');
+    if (await StoreReview.isAvailableAsync()) await StoreReview.requestReview();
+  } catch {
+    // 다음 바이너리 빌드부터 동작한다 — 실패해도 아무 일도 없어야 한다.
+  }
+}
+
 export default function MailComposeScreen() {
   const c = useTheme();
   const router = useRouter();
@@ -133,7 +148,8 @@ export default function MailComposeScreen() {
   );
 
   const hasContact = (includePhone && !!myPhone) || kakaoId.trim().length > 0;
-  const canSend = (!!peerAnswerId || !!replyMailId) && !!quote && content.trim().length > 0 && hasContact && !sending;
+  const canSend =
+    (!!peerAnswerId || !!replyMailId) && !!quote && content.trim().length >= CONTENT_MIN && hasContact && !sending;
 
   async function send() {
     if (!canSend) return;
@@ -148,7 +164,16 @@ export default function MailComposeScreen() {
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
       track('mail_sent', { discount: quote?.discount ?? 'NONE' });
-      Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [{ text: '확인', onPress: () => router.back() }]);
+      Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [
+        {
+          text: '확인',
+          onPress: () => {
+            router.back();
+            // 답장 = 서로의 연락처가 열린 순간 — 이 앱에서 가장 행복한 순간에만 리뷰를 청한다.
+            if (replyMailId) setTimeout(() => void requestStoreReview(), 700);
+          },
+        },
+      ]);
     } catch (e) {
       Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -206,7 +231,11 @@ export default function MailComposeScreen() {
             />
             <View style={styles.counterRow}>
               <Text style={[styles.draftHint, { color: c.textSecondary }]}>
-                {content.trim().length > 0 ? '쓰다 나가도 임시저장돼요' : ''}
+                {content.trim().length > 0 && content.trim().length < CONTENT_MIN
+                  ? `${CONTENT_MIN}자 이상 적어야 보낼 수 있어요`
+                  : content.trim().length > 0
+                    ? '쓰다 나가도 임시저장돼요'
+                    : ''}
               </Text>
               <Text style={[styles.counter, { color: c.textSecondary }]}>
                 {content.length}/{CONTENT_MAX}

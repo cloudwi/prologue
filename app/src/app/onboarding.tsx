@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BirthDatePicker } from '@/components/birth-date-picker';
 import { HeightPicker } from '@/components/height-picker';
 import { KeywordChips } from '@/components/keyword-chips';
+import { PhotoCropModal } from '@/components/photo-crop';
 import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { track } from '@/lib/analytics';
@@ -36,6 +37,8 @@ import { useTheme } from '@/hooks/use-theme';
 
 const EMPTY_EXTRA: ProfileExtra = { bio: '', avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
 const BIO_MAX = 300;
+// 쓰기로 했다면 인사 한 문단은 되도록 — 서버와 같은 값. 비워두고 넘어가는 것은 자유다.
+const BIO_MIN = 30;
 
 /** 가입 가능한 최소 만 나이 — 한국 성년. 서버(Member.validate)와 같은 기준. */
 const ADULT_AGE = 19;
@@ -81,6 +84,8 @@ export default function OnboardingScreen() {
   const [region, setRegion] = useState('');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  // 자르기를 기다리는 사진 줄 — 고른 순서대로 한 장씩 4:5 창을 거쳐 photos로 들어간다.
+  const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
@@ -223,8 +228,9 @@ export default function OnboardingScreen() {
         <PhotoGrid
           photos={photos}
           onAdd={async () => {
+            // 고른 사진은 바로 넣지 않는다 — 한 장씩 4:5 창에서 자른 뒤에 들어간다.
             const picked = await pickPhotos(MAX_PHOTOS - photos.length);
-            if (picked.length > 0) setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+            if (picked.length > 0) setCropQueue({ uris: picked, total: picked.length });
           }}
           onRemove={(photo) => setPhotos((prev) => prev.filter((p) => p !== photo))}
           busy={submitting}
@@ -243,6 +249,8 @@ export default function OnboardingScreen() {
       subtitle: '상대가 내 프로필을 열면 가장 먼저 읽는 글이에요.\n인사처럼 가볍게, 나답게.',
       optional: true,
       filled: extra.bio.trim().length > 0,
+      // 쓰다 말면(1~29자) 저장이 서버에서 막힌다 — 비우거나 한 문단을 채워야 넘어간다.
+      valid: extra.bio.trim().length === 0 || extra.bio.trim().length >= BIO_MIN,
       content: (
         <View>
           <PlaceholderInput
@@ -254,7 +262,10 @@ export default function OnboardingScreen() {
             maxLength={BIO_MAX}
             style={[styles.bioInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }]}
           />
-          <Text style={[styles.bioCounter, { color: c.textSecondary }]}>{extra.bio.length}/{BIO_MAX}</Text>
+          <Text style={[styles.bioCounter, { color: c.textSecondary }]}>
+            {extra.bio.trim().length > 0 && extra.bio.trim().length < BIO_MIN ? `${BIO_MIN}자 이상 · ` : ''}
+            {extra.bio.length}/{BIO_MAX}
+          </Text>
         </View>
       ),
     },
@@ -297,7 +308,7 @@ export default function OnboardingScreen() {
 
   const step = steps[stepIndex];
   const isLast = stepIndex === steps.length - 1;
-  const canAdvance = step.optional ? true : !!step.valid;
+  const canAdvance = step.optional ? (step.valid ?? true) : !!step.valid;
 
   // PUT /members/me는 생성/수정 겸용 — 필수만으로 가입하고, 선택 입력 후 한 번 더 저장한다.
   async function saveProfile(): Promise<boolean> {
@@ -484,6 +495,21 @@ export default function OnboardingScreen() {
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      {/* 고른 사진을 한 장씩 4:5 창에서 자른다 — 프로필에 보이는 그대로 등록되도록. */}
+      {cropQueue && cropQueue.uris.length > 0 && (
+        <PhotoCropModal
+          key={cropQueue.uris[0]}
+          uri={cropQueue.uris[0]}
+          progress={{ index: cropQueue.total - cropQueue.uris.length, total: cropQueue.total }}
+          c={c}
+          onDone={(cropped) => {
+            setPhotos((prev) => [...prev, cropped].slice(0, MAX_PHOTOS));
+            setCropQueue((q) => (q && q.uris.length > 1 ? { ...q, uris: q.uris.slice(1) } : null));
+          }}
+          onCancel={() => setCropQueue((q) => (q && q.uris.length > 1 ? { ...q, uris: q.uris.slice(1) } : null))}
+        />
+      )}
     </View>
   );
 }

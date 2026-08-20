@@ -36,9 +36,12 @@ export default function MailsScreen() {
   const [mails, setMails] = useState<ReceivedMail[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  // 남은 기한 셈의 기준 시각 — 렌더 중 Date.now()는 순수성 규칙에 걸려, 목록을 읽는 순간 한 번 고정한다.
+  const [now, setNow] = useState(0);
 
   const load = useCallback(async () => {
     try {
+      setNow(Date.now());
       const [h, sh, m] = await Promise.all([
         getReceivedHearts(),
         // 보낸 하트는 구버전 서버엔 없다 — 못 받아도 나머지는 그린다.
@@ -130,10 +133,23 @@ export default function MailsScreen() {
   }
 
   /**
+   * 받은 호감이 사라지기까지 남은 시간 — 사흘 창, 서버와 같은 셈.
+   * "지금 답해야 할 이유"를 문장으로 만든다. 서로 호감이 되거나 편지를 보내면 시계가 멈춘다.
+   */
+  function heartTimeLeft(h: ReceivedHeart): string | null {
+    if (h.mutual || h.mailSent) return null;
+    const expiresAt = new Date(h.createdAt).getTime() + 3 * 24 * 60 * 60 * 1000;
+    const msLeft = expiresAt - now;
+    if (msLeft <= 0) return null; // 서버가 곧 거른다 — 새로고침 사이의 찰나
+    const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+    return daysLeft <= 1 ? '오늘까지만 보여요' : `${daysLeft}일 뒤 사라져요`;
+  }
+
+  /**
    * 하트로 이어진 상대 한 줄 — 받은 하트·보낸 하트가 같은 카드를 쓴다.
    * 카드 전체가 프로필 상세로 가는 버튼이고, 오른쪽 칩은 그 다음 할 일(편지 쓰기·편지 확인·프로필 열기/보기)을 가리킨다.
    */
-  function renderHeartCard(h: ReceivedHeart, key: string, last: boolean) {
+  function renderHeartCard(h: ReceivedHeart, key: string, last: boolean, received = false) {
     const chip = !h.peerAnswerId
       ? null
       : h.locked
@@ -175,6 +191,10 @@ export default function MailsScreen() {
                 ? '서로 호감 · 편지를 보낼 차례예요'
                 : `만 ${h.age}세 · ${h.region}`}
           </Text>
+          {/* 받은 호감의 남은 시간 — 사흘 안에 움직임이 없으면 사라진다. */}
+          {received && !h.locked && heartTimeLeft(h) ? (
+            <Text style={[styles.rowExpiry, { color: c.primaryStrong }]}>{heartTimeLeft(h)}</Text>
+          ) : null}
         </View>
         {chip && (
           // 하트 되보내기는 프로필 상세에서만 — 카드 전체가 상세로 가는 버튼이라 이 칩은 그 길을 가리킬 뿐이다.
@@ -202,6 +222,14 @@ export default function MailsScreen() {
         )}
       </Pressable>
     );
+  }
+
+  /** 봉투가 발신자에게 돌아가기까지 — 이레 창. 천천히 정하되, 무한히는 아니라는 것을 말해준다. */
+  function mailDaysLeft(m: ReceivedMail): string {
+    const expiresAt = new Date(m.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+    const daysLeft = Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000));
+    if (daysLeft <= 1) return '오늘까지 열리지 않으면 보낸 분에게 돌아가요.';
+    return `${daysLeft}일 안에 열리지 않으면 보낸 분에게 돌아가요.`;
   }
 
   const isEmpty = hearts.length === 0 && (sentHearts?.length ?? 0) === 0 && mails.length === 0;
@@ -288,7 +316,8 @@ export default function MailsScreen() {
                               {m.nickname}님의 편지가 도착했어요
                             </Text>
                             <Text style={[styles.sealedHint, { color: c.textSecondary }]}>
-                              연락처가 담긴 한 통이에요. 열어볼지는 천천히 정하셔도 돼요.
+                              연락처가 담긴 한 통이에요. 열어볼지는 천천히 정하셔도 돼요.{'\n'}
+                              {mailDaysLeft(m)}
                             </Text>
                           </View>
                           <View style={styles.sealedActions}>
@@ -394,7 +423,7 @@ export default function MailsScreen() {
                       <Text style={[styles.sectionCount, { color: c.textSecondary }]}>{hearts.length}</Text>
                     </View>
                     <View style={[styles.listCard, { backgroundColor: c.backgroundElement }]}>
-                      {hearts.map((h, i) => renderHeartCard(h, h.peerAnswerId ?? `${h.nickname}-${i}`, i === hearts.length - 1))}
+                      {hearts.map((h, i) => renderHeartCard(h, h.peerAnswerId ?? `${h.nickname}-${i}`, i === hearts.length - 1, true))}
                     </View>
                   </View>
                 )}
@@ -462,6 +491,7 @@ const styles = StyleSheet.create({
   rowBody: { marginLeft: 12, flex: 1 },
   rowName: { fontSize: 16, fontWeight: '700' },
   rowMeta: { fontSize: 12.5, marginTop: 2 },
+  rowExpiry: { fontSize: 11.5, fontWeight: '600', marginTop: 2 },
   chip: { height: 32, paddingHorizontal: 13, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontSize: 12.5, fontWeight: '700' },
   chevron: { fontSize: 20, fontWeight: '300', marginLeft: 6 },
