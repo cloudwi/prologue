@@ -20,8 +20,8 @@ interface MailRepository {
     /** 이 사람에게 온 편지 중 아직 열지 않은 것 — 탈퇴할 때 보낸 사람들에게 환급하기 위해. */
     fun findPendingTo(recipientAccountId: UUID): List<Mail>
 
-    /** 기준 시각 이전에 부쳐졌는데 아직 봉투인 편지 — 만료 스케줄러의 대상. */
-    fun findAllPendingBefore(cutoff: java.time.Instant): List<Mail>
+    /** 기준 시각 이전에 부쳐졌는데 열리지 않은 편지(봉투·조용한 거절) — 만료 스케줄러의 대상. */
+    fun findAllExpirableBefore(cutoff: java.time.Instant): List<Mail>
 
     /**
      * 이 사용자와 편지가 오간 상대별 마지막 편지 시각(방향 무관).

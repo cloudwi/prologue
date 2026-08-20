@@ -33,8 +33,12 @@ class MailPersistenceAdapter(
     override fun findPendingTo(recipientAccountId: UUID): List<Mail> =
         jpa.findByRecipientAccountIdAndStatus(recipientAccountId, MailStatus.PENDING.name).map { it.toDomain() }
 
-    override fun findAllPendingBefore(cutoff: java.time.Instant): List<Mail> =
-        jpa.findByStatusAndCreatedAtBefore(MailStatus.PENDING.name, cutoff).map { it.toDomain() }
+    override fun findAllExpirableBefore(cutoff: java.time.Instant): List<Mail> =
+        // 거절된 편지도 함께 — 봉투와 같은 결말(만료·환급)로 접어야 거절이 조용하다.
+        jpa.findByStatusInAndCreatedAtBefore(
+            listOf(MailStatus.PENDING.name, MailStatus.DECLINED.name),
+            cutoff,
+        ).map { it.toDomain() }
 
     /**
      * 보낸 편지와 받은 편지를 각각 읽어 상대별 최신 시각으로 접는다.

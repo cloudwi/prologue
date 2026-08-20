@@ -227,12 +227,13 @@ class MailService(
      * 이레가 지나도록 열리지 않은 편지는 닿지 않은 것으로 보고 정리한다.
      * 받은 쪽 편지함이 무한정 쌓이지 않고, 보낸 쪽도 하염없이 기다리지 않는다.
      * 환급은 회수와 같은 절반 — 정책이 두 갈래가 되지 않도록 한다.
+     * 거절된 편지도 같은 결말로 접는다 — 환급의 유무가 거절의 신호가 되지 않도록.
      *
      * @return 회수한 편지 수
      */
     @Transactional
     fun expireStale(now: Instant = Instant.now()): Int {
-        val stale = mailRepository.findAllPendingBefore(now.minus(Mail.EXPIRE_AFTER))
+        val stale = mailRepository.findAllExpirableBefore(now.minus(Mail.EXPIRE_AFTER))
         stale.forEach { mail ->
             mail.expire(now)
             mailRepository.save(mail)

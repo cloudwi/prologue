@@ -71,14 +71,20 @@ class Mail private constructor(
         status == MailStatus.PENDING && !now.isBefore(createdAt.plus(RECALL_AFTER))
 
     /**
-     * 기한이 지난 봉투를 시스템이 회수한다 — 보낸 사람은 회수와 똑같이 절반을 돌려받는다.
+     * 기한이 지난 편지를 시스템이 회수한다 — 보낸 사람은 회수와 똑같이 절반을 돌려받는다.
      *
      * 편지함을 무한정 쌓아두지 않기 위한 규칙이다. 이레 안에 열리지 않은 편지는
      * 닿지 않은 것으로 보고 정리한다 — 받은 쪽 편지함에서도, 보낸 쪽 기다림에서도.
      * 열어본 편지는 이미 전해진 것이라 여기 해당하지 않는다.
+     *
+     * 거절된 편지도 똑같이 만료·환급된다 — "조용히 거절한다"는 약속 때문이다.
+     * 열리지 않은 편지만 환급하면, 이레가 지나도 잉크가 돌아오지 않는 것 자체가
+     * 거절당했다는 신호가 된다. 두 경우를 같은 결말로 접어야 거절이 조용해진다.
      */
     fun expire(now: Instant = Instant.now()) {
-        if (status != MailStatus.PENDING) throw DailyMeetException("봉투 상태의 편지만 만료될 수 있어요")
+        if (status != MailStatus.PENDING && status != MailStatus.DECLINED) {
+            throw DailyMeetException("열리지 않은 편지만 만료될 수 있어요")
+        }
         if (now.isBefore(createdAt.plus(EXPIRE_AFTER))) throw DailyMeetException("아직 만료 기한이 되지 않았어요")
         status = MailStatus.EXPIRED
     }
