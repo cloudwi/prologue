@@ -45,7 +45,9 @@ type AnalyticsEvent =
   | 'topup_purchase_completed' // 서버 지급까지 완료
   // 초대
   | 'referral_share_opened'  // 초대 공유 시트 열기
-  | 'referral_redeemed';     // 친구 코드 쓰기 성공
+  | 'referral_redeemed'      // 친구 코드 쓰기 성공
+  // 오프라인 모임
+  | 'meetup_applied';        // 모임 신청
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {
   client?.capture(event, properties);

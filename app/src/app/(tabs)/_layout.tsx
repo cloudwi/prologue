@@ -23,6 +23,7 @@ type TabIcon = { outline: keyof typeof Ionicons.glyphMap; filled: keyof typeof I
 const ICONS: Record<string, TabIcon> = {
   mails: { outline: 'mail-outline', filled: 'mail' },
   discover: { outline: 'sparkles-outline', filled: 'sparkles' },
+  meetups: { outline: 'people-outline', filled: 'people' },
   my: { outline: 'person-outline', filled: 'person' },
 };
 
@@ -80,6 +81,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="mails" options={{ title: '편지함' }} />
       <Tabs.Screen name="discover" options={{ title: '발견' }} />
+      <Tabs.Screen name="meetups" options={{ title: '모임' }} />
       <Tabs.Screen name="my" options={{ title: 'MY' }} />
     </Tabs>
   );
