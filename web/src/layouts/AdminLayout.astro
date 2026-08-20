@@ -4,10 +4,11 @@ import '../styles/global.css';
 // 어드민 공용 셸 — 로그인(이메일 인증코드)·API 헬퍼·사이드바 내비를 제공한다.
 // 각 페이지는 패널 내용 마크업과 window.pageLoad()만 구현하면 된다.
 // 데스크톱은 왼쪽 사이드바, 좁은 화면은 위 탭바 — 운영 도구다운 밀도와 위계를 준다.
+// 모임장 콘솔(/host)도 같은 셸을 쓴다 — tabs·brandSuffix만 갈아끼운다(권한은 서버가 가른다).
 const API_BASE = 'https://api.prologue.day';
-const { title } = Astro.props;
-const path = Astro.url.pathname.replace(/\/$/, '') || '/admin';
-const tabs = [
+const { title, tabs: tabsProp, brandSuffix = '어드민', home = '/admin' } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, '') || home;
+const tabs = tabsProp ?? [
   { href: '/admin', label: '대시보드' },
   { href: '/admin/questions', label: '질문' },
   { href: '/admin/answers', label: '문답' },
@@ -23,7 +24,7 @@ const tabs = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} · 프롤로그 어드민</title>
+    <title>{title} · 프롤로그 {brandSuffix}</title>
     <!-- 운영 도구 — 색인·리퍼러 전달을 막는다 -->
     <meta name="robots" content="noindex,nofollow" />
     <meta name="referrer" content="no-referrer" />
@@ -31,9 +32,9 @@ const tabs = [
   </head>
   <body class="admin-body admin-locked">
     <aside class="admin-side">
-      <a class="admin-brand" href="/admin">
+      <a class="admin-brand" href={home}>
         <img src="/brand-mark.png" alt="" width="26" height="19" />
-        <span>프롤로그 <em>어드민</em></span>
+        <span>프롤로그 <em>{brandSuffix}</em></span>
       </a>
       <nav class="admin-nav">
         {tabs.map((t) => (
@@ -49,8 +50,8 @@ const tabs = [
       <section id="login" class="admin-login" hidden>
         <div class="admin-card admin-login-card">
           <img src="/brand-mark.png" alt="" width="42" height="30" class="admin-login-mark" />
-          <h2 class="admin-sub">프롤로그 어드민</h2>
-          <p class="admin-desc">어드민 권한이 있는 계정의 이메일로 인증해 주세요.</p>
+          <h2 class="admin-sub">프롤로그 {brandSuffix}</h2>
+          <p class="admin-desc">{brandSuffix} 권한이 있는 계정의 이메일로 인증해 주세요.</p>
           <div class="admin-field">
             <input id="email" type="email" placeholder="이메일" autocomplete="email" />
             <button type="button" class="admin-btn ghost" id="send-code">코드 받기</button>

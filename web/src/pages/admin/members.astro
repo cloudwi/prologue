@@ -53,6 +53,12 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           'admin-badge' + (m.status === 'ACTIVE' ? ' ok' : m.status === 'SUSPENDED' ? ' warn' : '');
         badge.textContent = MEMBER_STATUS[m.status] || m.status;
         name.append(nick, badge);
+        if (m.host) {
+          const hostBadge = document.createElement('span');
+          hostBadge.className = 'admin-badge';
+          hostBadge.textContent = '모임장';
+          name.append(hostBadge);
+        }
         const email = document.createElement('div');
         email.className = 'admin-row-date';
         email.textContent = m.email;
@@ -102,6 +108,18 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             grantInk(m.accountId, n, grant);
           };
           actions.append(grant);
+
+          // 모임장 지정/해제 — 승인제. 지정 후 당사자는 재로그인해야 /host에 들어갈 수 있다.
+          const host = document.createElement('button');
+          host.className = 'admin-btn ghost small';
+          host.textContent = m.host ? '모임장 해제' : '모임장 지정';
+          host.onclick = () => {
+            const q = m.host
+              ? (m.nickname || m.email) + ' 님의 모임장 권한을 해제할까요?'
+              : (m.nickname || m.email) + ' 님을 모임장으로 지정할까요? 지정 후 재로그인해야 /host에 들어갈 수 있어요.';
+            if (confirm(q)) act(m.accountId, m.host ? 'revoke-host' : 'grant-host', host);
+          };
+          actions.append(host);
         }
 
         row.append(info, actions);
