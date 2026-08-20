@@ -63,8 +63,18 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           (m.lastSeenAt ? ' · 최근 접속 ' + new Date(m.lastSeenAt).toLocaleString('ko-KR') : ' · 접속 기록 없음');
         info.append(name, email, date);
 
+        // 프로필 상세 — 행 아래에 접었다 펼친다. 신고 검토 때 회원 화면을 오갈 필요가 없게.
+        const detail = document.createElement('div');
+        detail.className = 'admin-profile-detail';
+        detail.hidden = true;
+
         const actions = document.createElement('div');
         actions.className = 'admin-row-actions';
+        const profileBtn = document.createElement('button');
+        profileBtn.className = 'admin-btn ghost small';
+        profileBtn.textContent = '프로필';
+        profileBtn.onclick = () => toggleProfile(m.accountId, detail, profileBtn);
+        actions.append(profileBtn);
         if (m.status === 'ACTIVE') {
           const suspend = document.createElement('button');
           suspend.className = 'admin-btn ghost small';
@@ -95,8 +105,97 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         }
 
         row.append(info, actions);
-        listEl.append(row);
+        listEl.append(row, detail);
       }
+    }
+
+    /** 프로필 상세를 펼친다/접는다 — 처음 펼칠 때만 불러온다. 값은 전부 textContent. */
+    async function toggleProfile(accountId, detail, btn) {
+      const { api, showLogin } = window.admin;
+      if (!detail.hidden) {
+        detail.hidden = true;
+        btn.textContent = '프로필';
+        return;
+      }
+      if (!detail.dataset.loaded) {
+        btn.disabled = true;
+        try {
+          const data = await api('/admin/members/' + accountId + '/profile');
+          renderProfile(detail, data.profile);
+          detail.dataset.loaded = '1';
+        } catch (e) {
+          if (e.auth) return showLogin('세션이 만료됐어요. 다시 로그인해 주세요.');
+          detail.textContent = e.message;
+        } finally {
+          btn.disabled = false;
+        }
+      }
+      detail.hidden = false;
+      btn.textContent = '접기';
+    }
+
+    function renderProfile(detail, p) {
+      detail.textContent = '';
+      if (!p) {
+        detail.textContent = '프로필이 없어요 (온보딩 미완료).';
+        return;
+      }
+      const line = (label, value) => {
+        if (!value) return null;
+        const div = document.createElement('div');
+        div.className = 'admin-profile-line';
+        const b = document.createElement('span');
+        b.className = 'admin-profile-label';
+        b.textContent = label;
+        const v = document.createElement('span');
+        v.textContent = value;
+        div.append(b, v);
+        return div;
+      };
+
+      if (p.photos.length) {
+        const grid = document.createElement('div');
+        grid.className = 'admin-photo-grid admin-profile-photos';
+        for (const url of p.photos) {
+          const img = document.createElement('img');
+          img.src = url;
+          img.loading = 'lazy';
+          img.alt = '프로필 사진';
+          grid.append(img);
+        }
+        detail.append(grid);
+      }
+
+      const meta = [
+        p.region,
+        p.birthDate ? '생일 ' + p.birthDate : null,
+        p.heightCm ? p.heightCm + 'cm' : null,
+        p.phone ? '☎ ' + p.phone : null,
+      ].filter(Boolean).join(' · ');
+      for (const el of [
+        line('소개', p.bio),
+        line('정보', meta),
+        line('취미', p.hobbies),
+        line('관심사', p.interests),
+        line('장점', p.strengths),
+      ]) if (el) detail.append(el);
+
+      const qa = (eyebrow, items) => {
+        for (const item of items) {
+          const box = document.createElement('div');
+          box.className = 'admin-profile-qa';
+          const q = document.createElement('div');
+          q.className = 'admin-row-date';
+          q.textContent = eyebrow + ' · ' + (item.question || '(삭제된 질문)');
+          const content = document.createElement('div');
+          content.className = 'admin-snapshot';
+          content.textContent = item.content;
+          box.append(q, content);
+          detail.append(box);
+        }
+      };
+      qa('문답', p.letters);
+      qa('답변', p.answers);
     }
 
     async function act(accountId, action, btn) {
