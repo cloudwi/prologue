@@ -45,6 +45,8 @@ class SecurityConfig(
                 it.requestMatchers("/error").permitAll()
                 it.requestMatchers("/auth/**", "/actuator/health", "/app-config").permitAll()
                 it.requestMatchers("/admin/**").hasRole("ADMIN")
+                // 모임장 콘솔 — 운영자도 겸할 수 있다(첫 모임장은 운영자 자신일 것이라).
+                it.requestMatchers("/host/**").hasAnyRole("HOST", "ADMIN")
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)

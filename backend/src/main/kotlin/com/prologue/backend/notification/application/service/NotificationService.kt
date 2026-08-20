@@ -66,6 +66,18 @@ class NotificationService(
         ),
     )
 
+    /** 모임장이 자리를 확정했다 — 입금 확인이 끝났다는 뜻이라 신청자가 가장 기다리는 소식. */
+    @Async
+    @Transactional(readOnly = true)
+    fun meetupConfirmed(applicantAccountId: UUID, meetupTitle: String) = notify(
+        applicantAccountId,
+        PushMessage(
+            title = "모임 참여가 확정됐어요",
+            body = "'$meetupTitle' — 모임장이 자리를 확정했어요.",
+            data = mapOf("screen" to "meetups"),
+        ),
+    )
+
     /** 이레가 지나도록 열리지 않아 회수된 편지 — 보낸 사람에게 환급 사실을 알린다. */
     @Async
     @Transactional(readOnly = true)
