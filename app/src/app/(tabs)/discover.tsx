@@ -456,6 +456,20 @@ function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string 
 }
 
 /**
+ * 가려진 답변 자리의 스켈레톤 세 줄 — 글이 있다는 것만 알리고 내용은 감춘다.
+ * 줄 길이를 다르게 두어 "문장"처럼 보이게 한다. 답변 글줄(lineHeight 27)과 같은 리듬.
+ */
+function MaskedLines({ c }: { c: ThemeColors }) {
+  return (
+    <View style={styles.maskLines} pointerEvents="none">
+      <View style={[styles.maskLine, { backgroundColor: c.backgroundSelected, width: '94%' }]} />
+      <View style={[styles.maskLine, { backgroundColor: c.backgroundSelected, width: '100%' }]} />
+      <View style={[styles.maskLine, { backgroundColor: c.backgroundSelected, width: '62%' }]} />
+    </View>
+  );
+}
+
+/**
  * 상대 1명 카드 — "사진보다 생각이 먼저".
  * 같은 질문에 대한 상대의 답이 카드의 첫 줄이고, 사진은 그 뒤에 온다. 하트는 상세(청첩장)의 플로팅 버튼에서만.
  */
@@ -481,42 +495,36 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
         </Text>
         {peer.answerUnlocked && peer.peerAnswer ? (
           <>
-            <Pressable onPress={() => setRevealed(true)} disabled={revealed}>
-              <Text
-                numberOfLines={revealed ? (expanded ? undefined : 6) : 3}
-                style={[
-                  styles.peerAnswer,
-                  { fontFamily: Fonts.serif },
-                  revealed
-                    ? { color: c.text }
-                    : { color: 'transparent', textShadowColor: c.text, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 9 },
-                ]}
-              >
-                {peer.peerAnswer}
-              </Text>
-              {!revealed && (
+            {/* 가려진 답변은 진짜 텍스트 대신 스켈레톤 줄로 그린다.
+                예전의 투명 글자 + textShadow 블러는 iOS에서만 흐릿하게 보였고,
+                Android에서는 그림자 렌더링이 달라 아예 비거나 이상하게 나왔다.
+                실제 텍스트를 렌더링하지 않으니 캡처로 새어 나갈 것도 없다. */}
+            {revealed ? (
+              <>
+                <Text
+                  numberOfLines={expanded ? undefined : 6}
+                  style={[styles.peerAnswer, { fontFamily: Fonts.serif, color: c.text }]}
+                >
+                  {peer.peerAnswer}
+                </Text>
+                {(peer.peerAnswer?.length ?? 0) > 140 && (
+                  <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
+                    <Text style={{ color: c.primaryStrong, fontSize: 13, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
+                  </Pressable>
+                )}
+              </>
+            ) : (
+              <Pressable onPress={() => setRevealed(true)} accessibilityRole="button" accessibilityLabel="탭하여 답변 읽기">
+                <MaskedLines c={c} />
                 <View style={styles.revealHint}>
                   <Text style={[styles.revealHintText, { color: c.primaryStrong }]}>탭하여 답변 읽기</Text>
                 </View>
-              )}
-            </Pressable>
-            {revealed && (peer.peerAnswer?.length ?? 0) > 140 && (
-              <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                <Text style={{ color: c.primaryStrong, fontSize: 13, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
               </Pressable>
             )}
           </>
         ) : (
           <View>
-            <Text
-              numberOfLines={3}
-              style={[
-                styles.peerAnswer,
-                { fontFamily: Fonts.serif, color: 'transparent', textShadowColor: c.textSecondary, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
-              ]}
-            >
-              오늘의 질문에 답을 남기면 이 상대의 답변이 열려요. 생각이 먼저 닿고, 사진은 그다음이에요.
-            </Text>
+            <MaskedLines c={c} />
             <View style={styles.revealHint}>
               <Ionicons name="lock-closed" size={13} color={c.textSecondary} />
               <Text style={[styles.revealHintText, { color: c.textSecondary, marginLeft: 6 }]}>내 답을 남기면 열려요</Text>
@@ -627,6 +635,9 @@ const styles = StyleSheet.create({
   peerAnswerBlock: { padding: 20, paddingBottom: 18 },
   peerAnswerQuestion: { fontSize: 12.5, lineHeight: 18, marginBottom: 8 },
   peerAnswer: { fontSize: 17, lineHeight: 27, fontWeight: '500' },
+  // 가려진 답변의 스켈레톤 — 글줄(lineHeight 27)과 같은 간격으로 세 줄.
+  maskLines: { paddingVertical: 4, gap: 12 },
+  maskLine: { height: 15, borderRadius: 7 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   revealHintText: { fontSize: 13.5, fontWeight: '700' },
   // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
