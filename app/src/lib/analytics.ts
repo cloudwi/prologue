@@ -47,7 +47,8 @@ type AnalyticsEvent =
   | 'referral_share_opened'  // 초대 공유 시트 열기
   | 'referral_redeemed'      // 친구 코드 쓰기 성공
   // 오프라인 모임
-  | 'meetup_applied';        // 모임 신청
+  | 'meetup_applied'         // 모임 신청
+  | 'meetup_created';        // 모임 열기 — 유저가 모임장이 된 순간
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {
   client?.capture(event, properties);

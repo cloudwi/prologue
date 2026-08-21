@@ -31,6 +31,10 @@ data class MeetupView(
     val myStatus: String?,
     /** 모임장의 오픈채팅 — 신청(APPLIED/CONFIRMED)한 사람에게만. 입금·대화는 카카오에서. */
     val kakaoLink: String?,
+    /** 확정된 참가자 닉네임 — 누가 오는지 보여야 모임에 속한 느낌이 든다. */
+    val participants: List<String>,
+    /** 내가 여는 모임인지 — 앱이 '관리' 동선을 보여줄 때. */
+    val isMine: Boolean,
 )
 
 /** 지난 모임 한 줄 — 잘 운영되고 있다는 공개 기록. */
@@ -71,7 +75,8 @@ data class HostMeetupView(
 /**
  * 오프라인 모임 유스케이스.
  *
- * 회원은 앱에서 신청하고, 모임장은 웹 콘솔(/host)에서 입금을 확인해 확정한다.
+ * 누구나 앱에서 모임을 열 수 있고(모임장 = 만든 사람), 회원은 앱에서 신청한다.
+ * 모임장은 앱(또는 웹 콘솔 /host)에서 입금을 확인해 확정한다.
  * 돈은 카카오에서 오간다 — 여기에는 신청·확정·개최의 기록만 남고,
  * 그 기록이 모임장의 신뢰 신호(개최 횟수·확정 인원)로 공개된다.
  */
@@ -88,10 +93,11 @@ class MeetupService(
     @Transactional(readOnly = true)
     fun upcoming(accountId: UUID): List<MeetupView> {
         val meetups = meetupRepository.findUpcoming(Instant.now())
-        val confirmed = applicationRepository.countConfirmedByMeetup(meetups.mapNotNull { it.id })
         val mine = applicationRepository.findAllByApplicant(accountId).associateBy { it.meetupId }
         return meetups.map { m ->
             val my = mine[m.id]?.takeIf { it.status != MeetupApplicationStatus.CANCELED }
+            val confirmedApps = applicationRepository.findAllByMeetup(requireNotNull(m.id))
+                .filter { it.status == MeetupApplicationStatus.CONFIRMED }
             MeetupView(
                 meetupId = requireNotNull(m.id),
                 title = m.title,
@@ -103,10 +109,12 @@ class MeetupService(
                 status = m.status.name,
                 hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
                 hostDoneCount = meetupRepository.countDoneByHost(m.hostAccountId),
-                confirmedCount = confirmed[m.id] ?: 0,
+                confirmedCount = confirmedApps.size,
                 myStatus = my?.status?.name,
                 // 링크는 손든 사람에게만 — 입금 안내가 오픈채팅에서 이뤄지므로 신청이 곧 입장권이다.
                 kakaoLink = if (my != null && my.status != MeetupApplicationStatus.DECLINED) m.kakaoLink else null,
+                participants = confirmedApps.mapNotNull { memberQueryService.findProfile(it.applicantAccountId)?.nickname },
+                isMine = m.hostAccountId == accountId,
             )
         }
     }
@@ -140,6 +148,12 @@ class MeetupService(
             existing.reapply()
             applicationRepository.save(existing)
         }
+        // 모임장에게 알린다 — 오픈채팅에서 새 신청자를 맞이하는 게 다음 할 일이라서.
+        notificationService.meetupApplied(
+            meetup.hostAccountId,
+            meetup.title,
+            memberQueryService.findProfile(accountId)?.nickname,
+        )
     }
 
     /** 신청 취소 — 확정 뒤에도 물릴 수 있다. 모임장이 목록에서 본다. */
@@ -226,8 +240,16 @@ class MeetupService(
     @Transactional
     fun complete(hostAccountId: UUID, meetupId: UUID) = withOwned(hostAccountId, meetupId) { it.complete() }
 
+    /** 모임 취소 — 기다리던 신청자(신청·확정)에게 푸시로 알린다. */
     @Transactional
-    fun cancelMeetup(hostAccountId: UUID, meetupId: UUID) = withOwned(hostAccountId, meetupId) { it.cancel() }
+    fun cancelMeetup(hostAccountId: UUID, meetupId: UUID) {
+        val meetup = owned(hostAccountId, meetupId)
+        meetup.cancel()
+        meetupRepository.save(meetup)
+        applicationRepository.findAllByMeetup(meetupId)
+            .filter { it.status == MeetupApplicationStatus.APPLIED || it.status == MeetupApplicationStatus.CONFIRMED }
+            .forEach { notificationService.meetupCanceled(it.applicantAccountId, meetup.title) }
+    }
 
     private fun withOwned(hostAccountId: UUID, meetupId: UUID, action: (Meetup) -> Unit) {
         val meetup = owned(hostAccountId, meetupId)

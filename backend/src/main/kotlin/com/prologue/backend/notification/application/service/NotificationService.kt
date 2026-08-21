@@ -78,6 +78,30 @@ class NotificationService(
         ),
     )
 
+    /** 새 신청이 들어왔다 — 모임장이 오픈채팅에서 맞이할 수 있게 바로 알린다. */
+    @Async
+    @Transactional(readOnly = true)
+    fun meetupApplied(hostAccountId: UUID, meetupTitle: String, applicantNickname: String?) = notify(
+        hostAccountId,
+        PushMessage(
+            title = "새 모임 신청이 왔어요",
+            body = "'$meetupTitle' — ${applicantNickname ?: "새 신청자"} 님이 손을 들었어요.",
+            data = mapOf("screen" to "my-meetups"),
+        ),
+    )
+
+    /** 모임이 취소됐다 — 기다리던 신청자가 헛걸음하지 않도록 바로 알린다. */
+    @Async
+    @Transactional(readOnly = true)
+    fun meetupCanceled(applicantAccountId: UUID, meetupTitle: String) = notify(
+        applicantAccountId,
+        PushMessage(
+            title = "모임이 취소됐어요",
+            body = "'$meetupTitle' — 모임장이 모임을 취소했어요.",
+            data = mapOf("screen" to "meetups"),
+        ),
+    )
+
     /** 이레가 지나도록 열리지 않아 회수된 편지 — 보낸 사람에게 환급 사실을 알린다. */
     @Async
     @Transactional(readOnly = true)

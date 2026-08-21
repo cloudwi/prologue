@@ -136,10 +136,25 @@ export default function MeetupsScreen() {
         ) : (
           <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
+              <View style={styles.headerRow}>
+                <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
+                <Pressable
+                  onPress={() => router.push('/meetup-create')}
+                  style={({ pressed }) => [styles.hostBtn, { backgroundColor: c.text, opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Ionicons name="add" size={16} color={c.background} />
+                  <Text style={[styles.hostBtnText, { color: c.background }]}>모임 열기</Text>
+                </Pressable>
+              </View>
               <Text style={[styles.subtitle, { color: c.textSecondary }]}>
                 {meetups.length > 0 ? '가까운 날짜의 모임부터 보여드려요' : '오프라인에서 만나는 작은 모임'}
               </Text>
+              {meetups.some((m) => m.isMine) && (
+                <Pressable onPress={() => router.push('/my-meetups')} hitSlop={6} style={styles.manageLink}>
+                  <Text style={[styles.manageLinkText, { color: c.primaryStrong }]}>내가 여는 모임 관리</Text>
+                  <Ionicons name="chevron-forward" size={14} color={c.primaryStrong} />
+                </Pressable>
+              )}
             </View>
 
             {meetups.length === 0 ? (
@@ -147,8 +162,14 @@ export default function MeetupsScreen() {
                 <Image source={require('@/assets/images/brand-mark.png')} style={styles.emptyMark} contentFit="contain" />
                 <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>준비 중인 모임이 없어요</Text>
                 <Text style={[styles.emptyText, { color: c.textSecondary }]}>
-                  새 모임이 열리면 여기에 도착해요.{'\n'}알림을 켜두시면 놓치지 않아요.
+                  새 모임이 열리면 여기에 도착해요.{'\n'}먼저 열어보는 건 어때요?
                 </Text>
+                <Pressable
+                  onPress={() => router.push('/meetup-create')}
+                  style={({ pressed }) => [styles.emptyHostBtn, { backgroundColor: c.primary, opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={[styles.applyBtnText, { color: c.primaryText }]}>첫 모임 열기</Text>
+                </Pressable>
               </Animated.View>
             ) : (
               meetups.map((m, i) => (
@@ -183,12 +204,31 @@ export default function MeetupsScreen() {
                     {m.hostDoneCount > 0 ? ` · 지금까지 ${m.hostDoneCount}회 개최` : ' · 첫 모임'}
                   </Text>
 
+                  {/* 확정된 참가자 — 누가 오는지 보여야 모임에 속한 느낌이 든다. */}
+                  {m.participants.length > 0 && (
+                    <Text style={[styles.participants, { color: c.textSecondary }]}>
+                      함께해요 · {m.participants.join(', ')}
+                    </Text>
+                  )}
+
                   {m.description ? (
                     <Text style={[styles.cardDesc, { color: c.text }]}>{m.description}</Text>
                   ) : null}
 
-                  {/* 내 상태에 따라 다음 할 일 하나만 보여준다. */}
-                  {m.myStatus === 'CONFIRMED' ? (
+                  {/* 내가 여는 모임이면 신청 대신 관리로. */}
+                  {m.isMine ? (
+                    <Pressable
+                      onPress={() => router.push('/my-meetups')}
+                      style={({ pressed }) => [
+                        styles.applyBtn,
+                        styles.applyBtnFull,
+                        { borderWidth: 1, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Text style={[styles.applyBtnText, { color: c.text }]}>내 모임 — 신청자 관리</Text>
+                    </Pressable>
+                  ) : /* 내 상태에 따라 다음 할 일 하나만 보여준다. */
+                  m.myStatus === 'CONFIRMED' ? (
                     <View style={styles.actionRow}>
                       <View style={[styles.confirmedChip, { backgroundColor: c.primary }]}>
                         <Ionicons name="checkmark" size={14} color={c.primaryText} />
@@ -293,8 +333,14 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8 },
 
   header: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 18 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.3 },
   subtitle: { fontSize: 14.5, marginTop: 4 },
+  hostBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 36, paddingLeft: 12, paddingRight: 15, borderRadius: Radius.pill },
+  hostBtnText: { fontSize: 14, fontWeight: '700' },
+  manageLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 10, alignSelf: 'flex-start' },
+  manageLinkText: { fontSize: 14, fontWeight: '700' },
+  participants: { fontSize: 13.5, marginTop: 8, lineHeight: 19 },
 
   card: { borderRadius: Radius.lg, padding: 18, marginBottom: 12 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -331,4 +377,5 @@ const styles = StyleSheet.create({
   emptyMark: { width: 54, height: 40, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
   emptyText: { fontSize: 14.5, lineHeight: 22, textAlign: 'center', marginTop: 8 },
+  emptyHostBtn: { height: 44, paddingHorizontal: 26, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
 });
