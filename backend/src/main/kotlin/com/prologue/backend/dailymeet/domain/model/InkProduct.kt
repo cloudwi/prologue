@@ -21,6 +21,17 @@ enum class InkProduct(val productId: String, val ink: Int) {
 
     /** 다섯 통어치. */
     INK_250("ink_250", 250),
+
+    // iOS(day.prologue.app) 전용 id — App Store 제품 id는 팀 전체에서 유일해야 해서
+    // 구 앱이 점유한 ink_50 계열 대신 언더스코어 없는 id로 등록했다. 지급량은 동일.
+    /** 편지 한 통어치(iOS). */
+    INK50_IOS("ink50", 50),
+
+    /** 세 통어치(iOS). */
+    INK150_IOS("ink150", 150),
+
+    /** 다섯 통어치(iOS). */
+    INK250_IOS("ink250", 250),
     ;
 
     companion object {

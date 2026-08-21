@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { authedRequest } from './api';
 
 /**
@@ -9,11 +11,15 @@ import { authedRequest } from './api';
  * 충전 상품 — 스토어에 등록한 상품 id와 지급되는 잉크 양.
  * 서버(InkProduct)가 단일 소스이고, 여기 표는 화면이 목록을 그리기 위한 사본이다.
  * 실제 가격은 스토어에서 받아 온다(나라마다 다르므로 앱이 정할 수 없다).
+ *
+ * iOS만 id가 다른 이유: App Store의 제품 id는 개발자 팀 전체에서 유일해야 해서,
+ * 구 앱(com.juyoung.prologue)이 점유한 ink_50 계열을 새 앱(day.prologue.app)이 쓸 수 없다.
+ * 그래서 iOS는 언더스코어 없는 ink50 계열로 등록했다. Android(Play)는 앱 단위 스코프라 그대로.
  */
 export const INK_PRODUCTS = [
-  { productId: 'ink_50', ink: 50, savingPercent: 0 },
-  { productId: 'ink_150', ink: 150, savingPercent: 9 },
-  { productId: 'ink_250', ink: 250, savingPercent: 20 },
+  { productId: Platform.OS === 'ios' ? 'ink50' : 'ink_50', ink: 50, savingPercent: 0 },
+  { productId: Platform.OS === 'ios' ? 'ink150' : 'ink_150', ink: 150, savingPercent: 9 },
+  { productId: Platform.OS === 'ios' ? 'ink250' : 'ink_250', ink: 250, savingPercent: 20 },
 ] as const;
 
 export const INK_PRICE = {

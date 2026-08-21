@@ -26,7 +26,7 @@
     "expo-secure-store": "~56.0.0",
     "expo-splash-screen": "~56.0.14",
     "expo-status-bar": "~56.0.4",
-    "expo-store-review": "~56.0.4",
+    "expo-store-review": "56.0.3",
     "expo-system-ui": "~56.0.5",
     "expo-updates": "~56.0.24",
     "posthog-react-native": "^4.63.0",

@@ -24,7 +24,7 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6792233022"
+        "ascAppId": "6803755105"
       },
       "android": {
         "serviceAccountKeyPath": "../release/secrets/fcm-service-account.json",
