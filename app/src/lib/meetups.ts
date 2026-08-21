@@ -71,6 +71,41 @@ export async function cancelMeetup(meetupId: string): Promise<void> {
   await authedRequest('POST', `/meetups/${meetupId}/cancel`);
 }
 
+// ── 표시 헬퍼 — 목록 카드와 상세가 같은 문구를 쓴다 ──
+
+/** 참가비 표시 — 성별별 요금이 있으면 나눠서 보여준다. */
+export function feeLabel(m: Pick<Meetup, 'fee' | 'feeFemale'>): string {
+  const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+  if (m.feeFemale != null && m.feeFemale !== m.fee) {
+    return `남 ${m.fee > 0 ? won(m.fee) : '무료'} · 여 ${m.feeFemale > 0 ? won(m.feeFemale) : '무료'}`;
+  }
+  return m.fee > 0 ? `참가비 ${won(m.fee)}` : '무료';
+}
+
+/** 한 성별의 조건 요약 — "25~39세·175cm+" 꼴. 없으면 null. */
+function genderConditions(minAge: number | null, maxAge: number | null, minHeight: number | null): string | null {
+  const parts: string[] = [];
+  if (minAge != null || maxAge != null) {
+    parts.push(minAge != null && maxAge != null ? `${minAge}~${maxAge}세` : minAge != null ? `${minAge}세+` : `~${maxAge}세`);
+  }
+  if (minHeight != null) parts.push(`${minHeight}cm+`);
+  return parts.length > 0 ? parts.join('·') : null;
+}
+
+/** 참가 조건 요약 — 성별별 기준을 나눠 보여준다. 없으면 null. */
+export function conditionLabel(
+  m: Pick<Meetup, 'genderLimit' | 'minAgeMale' | 'maxAgeMale' | 'minAgeFemale' | 'maxAgeFemale' | 'minHeightMaleCm' | 'minHeightFemaleCm'>,
+): string | null {
+  const male = m.genderLimit !== 'FEMALE' ? genderConditions(m.minAgeMale, m.maxAgeMale, m.minHeightMaleCm) : null;
+  const female = m.genderLimit !== 'MALE' ? genderConditions(m.minAgeFemale, m.maxAgeFemale, m.minHeightFemaleCm) : null;
+  const parts: string[] = [];
+  if (m.genderLimit) parts.push(m.genderLimit === 'MALE' ? '남성만' : '여성만');
+  if (male && female) parts.push(`남 ${male} · 여 ${female}`);
+  else if (male) parts.push(m.genderLimit === 'MALE' ? male : `남 ${male}`);
+  else if (female) parts.push(m.genderLimit === 'FEMALE' ? female : `여 ${female}`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 // ── 모임장으로서 ──
 
 export type HostApplication = {

@@ -1,23 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { track } from '@/lib/analytics';
 import { isSessionExpired } from '@/lib/api';
-import {
-  applyMeetup,
-  cancelMeetup,
-  getMeetupHistory,
-  getMeetups,
-  type Meetup,
-  type MeetupHistory,
-} from '@/lib/meetups';
+import { feeLabel, getMeetupHistory, getMeetups, type Meetup, type MeetupHistory } from '@/lib/meetups';
 
 /**
  * 모임 — 모임장이 여는 오프라인 모임에 손을 드는 곳.
@@ -27,37 +19,6 @@ import {
  * 지난 모임 기록(개최 횟수·참여 인원)을 함께 보여준다 — 잘 굴러가는 모임이라는
  * 증거는 우리가 말하는 것보다 기록이 말하는 게 낫다.
  */
-/** 참가비 표시 — 성별별 요금이 있으면 나눠서 보여준다. */
-function feeLabel(m: Meetup): string {
-  const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
-  if (m.feeFemale != null && m.feeFemale !== m.fee) {
-    return `남 ${m.fee > 0 ? won(m.fee) : '무료'} · 여 ${m.feeFemale > 0 ? won(m.feeFemale) : '무료'}`;
-  }
-  return m.fee > 0 ? `참가비 ${won(m.fee)}` : '무료';
-}
-
-/** 한 성별의 조건 요약 — "25~39세·175cm+" 꼴. 없으면 null. */
-function genderConditions(minAge: number | null, maxAge: number | null, minHeight: number | null): string | null {
-  const parts: string[] = [];
-  if (minAge != null || maxAge != null) {
-    parts.push(minAge != null && maxAge != null ? `${minAge}~${maxAge}세` : minAge != null ? `${minAge}세+` : `~${maxAge}세`);
-  }
-  if (minHeight != null) parts.push(`${minHeight}cm+`);
-  return parts.length > 0 ? parts.join('·') : null;
-}
-
-/** 참가 조건 요약 — 성별별 기준을 나눠 보여준다. 없으면 null(줄 자체를 그리지 않는다). */
-function conditionLabel(m: Meetup): string | null {
-  const male = m.genderLimit !== 'FEMALE' ? genderConditions(m.minAgeMale, m.maxAgeMale, m.minHeightMaleCm) : null;
-  const female = m.genderLimit !== 'MALE' ? genderConditions(m.minAgeFemale, m.maxAgeFemale, m.minHeightFemaleCm) : null;
-  const parts: string[] = [];
-  if (m.genderLimit) parts.push(m.genderLimit === 'MALE' ? '남성만' : '여성만');
-  if (male && female) parts.push(`남 ${male} · 여 ${female}`);
-  else if (male) parts.push(m.genderLimit === 'MALE' ? male : `남 ${male}`);
-  else if (female) parts.push(m.genderLimit === 'FEMALE' ? female : `여 ${female}`);
-  return parts.length > 0 ? parts.join(' · ') : null;
-}
-
 export default function MeetupsScreen() {
   const c = useTheme();
   const router = useRouter();
@@ -67,7 +28,6 @@ export default function MeetupsScreen() {
   const [history, setHistory] = useState<MeetupHistory[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -101,61 +61,6 @@ export default function MeetupsScreen() {
     hour: 'numeric',
     minute: '2-digit',
   });
-
-  /** 손들기 — 무엇이 어떻게 진행되는지(카카오에서 입금·확정) 먼저 말해준다. */
-  function confirmApply(m: Meetup) {
-    Alert.alert(
-      '모임에 신청할까요?',
-      [
-        '신청하면 모임장의 카카오 오픈채팅 링크가 열려요.',
-        m.fee > 0 || (m.feeFemale ?? 0) > 0 ? `참가비(${feeLabel(m)})는 오픈채팅에서 모임장에게 직접 보내요.` : '참가비는 없어요.',
-        '모임장이 확인하면 참여가 확정돼요.',
-      ].join('\n'),
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '신청하기',
-          onPress: async () => {
-            setBusy(m.meetupId);
-            try {
-              await applyMeetup(m.meetupId);
-              track('meetup_applied');
-              await load();
-            } catch (e) {
-              Alert.alert('신청하지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
-            } finally {
-              setBusy(null);
-            }
-          },
-        },
-      ],
-    );
-  }
-
-  function confirmCancel(m: Meetup) {
-    Alert.alert('신청을 취소할까요?', '이미 참가비를 보냈다면 모임장에게 오픈채팅으로 알려주세요.', [
-      { text: '그냥 둘게요', style: 'cancel' },
-      {
-        text: '신청 취소',
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(m.meetupId);
-          try {
-            await cancelMeetup(m.meetupId);
-            await load();
-          } catch (e) {
-            Alert.alert('취소하지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
-          } finally {
-            setBusy(null);
-          }
-        },
-      },
-    ]);
-  }
-
-  function openKakao(link: string) {
-    void Linking.openURL(link).catch(() => Alert.alert('링크를 열지 못했어요', link));
-  }
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
@@ -204,112 +109,59 @@ export default function MeetupsScreen() {
               </Animated.View>
             ) : (
               meetups.map((m, i) => (
-                <Animated.View
-                  key={m.meetupId}
-                  entering={FadeInDown.duration(380).delay(i * 60)}
-                  style={[styles.card, { backgroundColor: c.backgroundElement }]}
-                >
-                  <View style={styles.cardHead}>
-                    <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]}>{m.title}</Text>
-                    <View
-                      style={[
-                        styles.statusChip,
-                        { backgroundColor: m.status === 'OPEN' ? c.primary + '22' : c.backgroundSelected },
-                      ]}
-                    >
-                      <Text style={[styles.statusChipText, { color: m.status === 'OPEN' ? c.primaryStrong : c.textSecondary }]}>
-                        {m.status === 'OPEN' ? '모집 중' : '모집 마감'}
+                <Animated.View key={m.meetupId} entering={FadeInDown.duration(380).delay(i * 60)}>
+                  {/* 카드는 훑는 곳 — 핵심만 남기고, 결정은 상세에서. */}
+                  <Pressable
+                    onPress={() => router.push(`/meetup/${m.meetupId}`)}
+                    style={({ pressed }) => [
+                      styles.card,
+                      { backgroundColor: c.backgroundElement, opacity: pressed ? 0.85 : 1 },
+                    ]}
+                  >
+                    <View style={styles.cardHead}>
+                      <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={1}>
+                        {m.title}
                       </Text>
-                    </View>
-                  </View>
-
-                  <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
-                    {dateFmt.format(new Date(m.meetAt))} · {m.place}
-                  </Text>
-                  <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
-                    확정 {m.confirmedCount}/{m.capacity}명 · {feeLabel(m)}
-                  </Text>
-                  {conditionLabel(m) && (
-                    <Text style={[styles.cardMeta, { color: c.textSecondary }]}>참가 조건 · {conditionLabel(m)}</Text>
-                  )}
-                  {/* 모임장 신뢰 신호 — 이름과 함께 개최 기록을 숫자로. */}
-                  <Text style={[styles.hostLine, { color: c.textSecondary }]}>
-                    모임장 {m.hostNickname ?? '(알 수 없음)'}
-                    {m.hostDoneCount > 0 ? ` · 지금까지 ${m.hostDoneCount}회 개최` : ' · 첫 모임'}
-                  </Text>
-
-                  {/* 확정된 참가자 — 누가 오는지 보여야 모임에 속한 느낌이 든다. */}
-                  {m.participants.length > 0 && (
-                    <Text style={[styles.participants, { color: c.textSecondary }]}>
-                      함께해요 · {m.participants.join(', ')}
-                    </Text>
-                  )}
-
-                  {m.description ? (
-                    <Text style={[styles.cardDesc, { color: c.text }]}>{m.description}</Text>
-                  ) : null}
-
-                  {/* 내가 여는 모임이면 신청 대신 관리로. */}
-                  {m.isMine ? (
-                    <Pressable
-                      onPress={() => router.push('/my-meetups')}
-                      style={({ pressed }) => [
-                        styles.applyBtn,
-                        styles.applyBtnFull,
-                        { borderWidth: 1, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
-                      ]}
-                    >
-                      <Text style={[styles.applyBtnText, { color: c.text }]}>내 모임 — 신청자 관리</Text>
-                    </Pressable>
-                  ) : /* 내 상태에 따라 다음 할 일 하나만 보여준다. */
-                  m.myStatus === 'CONFIRMED' ? (
-                    <View style={styles.actionRow}>
-                      <View style={[styles.confirmedChip, { backgroundColor: c.primary }]}>
-                        <Ionicons name="checkmark" size={14} color={c.primaryText} />
-                        <Text style={[styles.confirmedText, { color: c.primaryText }]}>참여 확정</Text>
-                      </View>
-                      {m.kakaoLink && (
-                        <Pressable onPress={() => openKakao(m.kakaoLink!)} style={[styles.kakaoBtn, { borderColor: c.border }]}>
-                          <Text style={[styles.kakaoBtnText, { color: c.text }]}>오픈채팅 열기</Text>
-                        </Pressable>
+                      {m.isMine ? (
+                        <View style={[styles.statusChip, { backgroundColor: c.backgroundSelected }]}>
+                          <Text style={[styles.statusChipText, { color: c.textSecondary }]}>내 모임</Text>
+                        </View>
+                      ) : m.myStatus === 'CONFIRMED' ? (
+                        <View style={[styles.statusChip, { backgroundColor: c.primary }]}>
+                          <Text style={[styles.statusChipText, { color: c.primaryText }]}>참여 확정</Text>
+                        </View>
+                      ) : m.myStatus === 'APPLIED' ? (
+                        <View style={[styles.statusChip, { backgroundColor: c.primary + '22' }]}>
+                          <Text style={[styles.statusChipText, { color: c.primaryStrong }]}>신청함</Text>
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.statusChip,
+                            { backgroundColor: m.status === 'OPEN' ? c.primary + '22' : c.backgroundSelected },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.statusChipText, { color: m.status === 'OPEN' ? c.primaryStrong : c.textSecondary }]}
+                          >
+                            {m.status === 'OPEN' ? '모집 중' : '모집 마감'}
+                          </Text>
+                        </View>
                       )}
                     </View>
-                  ) : m.myStatus === 'APPLIED' ? (
-                    <View>
-                      <Text style={[styles.appliedNote, { color: c.primaryStrong }]}>
-                        신청했어요 — 오픈채팅에서 인사를 남기면 모임장이 확정해 드려요.
-                      </Text>
-                      <View style={styles.actionRow}>
-                        {m.kakaoLink && (
-                          <Pressable
-                            onPress={() => openKakao(m.kakaoLink!)}
-                            style={[styles.applyBtn, { backgroundColor: c.text }]}
-                          >
-                            <Text style={[styles.applyBtnText, { color: c.background }]}>오픈채팅 열기</Text>
-                          </Pressable>
-                        )}
-                        <Pressable onPress={() => confirmCancel(m)} hitSlop={8} disabled={busy != null}>
-                          <Text style={[styles.cancelLink, { color: c.textSecondary }]}>신청 취소</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  ) : m.myStatus === 'DECLINED' ? (
-                    <Text style={[styles.appliedNote, { color: c.textSecondary }]}>
-                      이번에는 함께하지 못했어요. 다음 모임에서 만나요.
+
+                    <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
+                      {dateFmt.format(new Date(m.meetAt))} · {m.place}
                     </Text>
-                  ) : m.status === 'OPEN' ? (
-                    <Pressable
-                      onPress={() => confirmApply(m)}
-                      disabled={busy != null}
-                      style={({ pressed }) => [
-                        styles.applyBtn,
-                        styles.applyBtnFull,
-                        { backgroundColor: c.primary, opacity: pressed || busy === m.meetupId ? 0.7 : 1 },
-                      ]}
-                    >
-                      <Text style={[styles.applyBtnText, { color: c.primaryText }]}>신청하기</Text>
-                    </Pressable>
-                  ) : null}
+                    <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
+                      {feeLabel(m)} · 확정 {m.confirmedCount}/{m.capacity}명
+                    </Text>
+
+                    <View style={styles.cardFoot}>
+                      <Text style={[styles.cardFootText, { color: c.primaryStrong }]}>자세히 보기</Text>
+                      <Ionicons name="chevron-forward" size={14} color={c.primaryStrong} />
+                    </View>
+                  </Pressable>
                 </Animated.View>
               ))
             )}
@@ -374,7 +226,6 @@ const styles = StyleSheet.create({
   hostBtnText: { fontSize: 14, fontWeight: '700' },
   manageLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 10, alignSelf: 'flex-start' },
   manageLinkText: { fontSize: 14, fontWeight: '700' },
-  participants: { fontSize: 13.5, marginTop: 8, lineHeight: 19 },
 
   card: { borderRadius: Radius.lg, padding: 18, marginBottom: 12 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -382,19 +233,10 @@ const styles = StyleSheet.create({
   statusChip: { height: 24, paddingHorizontal: 10, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   statusChipText: { fontSize: 12.5, fontWeight: '700' },
   cardMeta: { fontSize: 14, marginTop: 5 },
-  hostLine: { fontSize: 13.5, marginTop: 8, fontWeight: '600' },
-  cardDesc: { fontSize: 15.5, lineHeight: 23, marginTop: 12 },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 12 },
+  cardFootText: { fontSize: 13.5, fontWeight: '700' },
 
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 },
-  applyBtn: { height: 44, paddingHorizontal: 22, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  applyBtnFull: { marginTop: 14, alignSelf: 'stretch' },
   applyBtnText: { fontSize: 15.5, fontWeight: '700' },
-  cancelLink: { fontSize: 14, textDecorationLine: 'underline' },
-  appliedNote: { fontSize: 14, lineHeight: 20, marginTop: 12, fontWeight: '600' },
-  confirmedChip: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 13, borderRadius: Radius.pill },
-  confirmedText: { fontSize: 14, fontWeight: '700' },
-  kakaoBtn: { height: 36, paddingHorizontal: 14, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  kakaoBtnText: { fontSize: 14, fontWeight: '600' },
 
   section: { marginTop: 14, marginBottom: 26 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 10 },
