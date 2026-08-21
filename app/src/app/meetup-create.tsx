@@ -29,11 +29,8 @@ const CAPACITY_ITEMS: WheelItem[] = Array.from({ length: 49 }, (_, i) => {
   return { value: n, label: `${n}명` };
 });
 
-/** 참가비 — 1천 원 단위로 3만까지, 그 위는 5천 원 단위로 10만까지. */
-const FEE_STEPS: number[] = [
-  ...Array.from({ length: 30 }, (_, i) => (i + 1) * 1000),
-  ...Array.from({ length: 14 }, (_, i) => 35000 + i * 5000),
-];
+/** 참가비 — 1천 원 단위로 50만까지. */
+const FEE_STEPS: number[] = Array.from({ length: 500 }, (_, i) => (i + 1) * 1000);
 const FEE_ITEMS: WheelItem[] = FEE_STEPS.map((n) => ({ value: String(n), label: `${n.toLocaleString('ko-KR')}원` }));
 /** 성별별 요금엔 "무료"도 있다 — 여성 무료 모임처럼. */
 const FEE_ITEMS_WITH_FREE: WheelItem[] = [{ value: '0', label: '무료' }, ...FEE_ITEMS];
