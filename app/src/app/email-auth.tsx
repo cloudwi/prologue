@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -122,7 +123,14 @@ export default function EmailAuthScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.body}>
+          {/* 키보드가 화면 절반을 먹는 화면이라 중앙 정렬 대신 상단 정렬 —
+              제목·입력·버튼이 항상 키보드 위에 남는다. 작은 화면은 스크롤로 감당한다. */}
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.body}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
             {step === 'email' ? (
               <>
                 <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>
@@ -216,7 +224,7 @@ export default function EmailAuthScreen() {
                 </View>
               </>
             )}
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -247,7 +255,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, paddingHorizontal: 25 },
   header: { height: 44, justifyContent: 'center' },
   back: { fontSize: 16 },
-  body: { flex: 1, justifyContent: 'center' },
+  body: { paddingTop: 36, paddingBottom: 24 },
   title: { fontSize: 28, fontWeight: '700' },
   subtitle: { fontSize: 16, marginTop: 8, lineHeight: 23 },
   form: { marginTop: 32, gap: 12 },
