@@ -4,7 +4,6 @@ import '../styles/global.css';
 // 어드민 공용 셸 — 로그인(이메일 인증코드)·API 헬퍼·사이드바 내비를 제공한다.
 // 각 페이지는 패널 내용 마크업과 window.pageLoad()만 구현하면 된다.
 // 데스크톱은 왼쪽 사이드바, 좁은 화면은 위 탭바 — 운영 도구다운 밀도와 위계를 준다.
-// 모임장 콘솔(/host)도 같은 셸을 쓴다 — tabs·brandSuffix만 갈아끼운다(권한은 서버가 가른다).
 const API_BASE = 'https://api.prologue.day';
 const { title, tabs: tabsProp, brandSuffix = '어드민', home = '/admin' } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, '') || home;

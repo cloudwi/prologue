@@ -34,8 +34,6 @@ class AdminMemberController(
         val gender: String?,
         val createdAt: Instant,
         val lastSeenAt: Instant?,
-        /** 모임장(HOST 롤) 여부 — 지정/해제 버튼이 상태를 알아야 한다. */
-        val host: Boolean,
     )
 
     data class AdminMembersResponse(val members: List<AdminMemberRow>)
@@ -47,8 +45,7 @@ class AdminMemberController(
         val like = "%$query%"
         val rows = jdbc.query(
             """
-            select a.id, a.email, a.status, a.created_at, a.last_seen_at, m.nickname, m.gender,
-                   exists(select 1 from account_roles r where r.account_id = a.id and r.role = 'HOST') as host
+            select a.id, a.email, a.status, a.created_at, a.last_seen_at, m.nickname, m.gender
             from accounts a
             left join members m on m.account_id = a.id
             where ? = '' or a.email ilike ? or m.nickname ilike ?
@@ -64,7 +61,6 @@ class AdminMemberController(
                     gender = rs.getString("gender"),
                     createdAt = rs.getTimestamp("created_at").toInstant(),
                     lastSeenAt = rs.getTimestamp("last_seen_at")?.toInstant(),
-                    host = rs.getBoolean("host"),
                 )
             },
             query, like, like,
@@ -154,21 +150,4 @@ class AdminMemberController(
         inkService.grantTo(accountId, request.amount, "ADMIN_GRANT")
     }
 
-    /**
-     * 모임장 지정 — 오프라인 모임을 열 수 있는 HOST 롤을 준다. 승인제: 운영자가 아는 사람에게만.
-     * 롤은 JWT에 실리므로 당사자는 **재로그인해야** 웹 콘솔(/host)에 들어갈 수 있다.
-     */
-    @PostMapping("/{accountId}/grant-host")
-    fun grantHost(@PathVariable accountId: UUID) {
-        jdbc.update(
-            "insert into account_roles (account_id, role) values (?, 'HOST') on conflict do nothing",
-            accountId,
-        )
-    }
-
-    /** 모임장 해제 — 이미 만든 모임은 남는다(기록이므로). */
-    @PostMapping("/{accountId}/revoke-host")
-    fun revokeHost(@PathVariable accountId: UUID) {
-        jdbc.update("delete from account_roles where account_id = ? and role = 'HOST'", accountId)
-    }
 }
