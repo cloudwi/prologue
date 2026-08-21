@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   centerText: { justifyContent: 'center' },
-  multiline: { minHeight: 110, textAlignVertical: 'top' },
+  multiline: { minHeight: 110, textAlignVertical: 'top', paddingTop: 14 },
   row: { flexDirection: 'row', gap: 10 },
   rowItem: { flex: 1 },
   timeItem: { width: 104 },
