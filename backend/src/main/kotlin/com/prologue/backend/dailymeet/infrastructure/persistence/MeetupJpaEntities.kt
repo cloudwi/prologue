@@ -40,6 +40,21 @@ class MeetupJpaEntity(
     @Column(name = "fee", nullable = false)
     val fee: Int,
 
+    @Column(name = "fee_female")
+    val feeFemale: Int? = null,
+
+    @Column(name = "gender_limit", length = 6)
+    val genderLimit: String? = null,
+
+    @Column(name = "min_age")
+    val minAge: Int? = null,
+
+    @Column(name = "max_age")
+    val maxAge: Int? = null,
+
+    @Column(name = "min_height_cm")
+    val minHeightCm: Int? = null,
+
     @Column(name = "kakao_link", nullable = false, length = 300)
     val kakaoLink: String,
 

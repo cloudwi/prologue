@@ -27,6 +27,26 @@ import {
  * 지난 모임 기록(개최 횟수·참여 인원)을 함께 보여준다 — 잘 굴러가는 모임이라는
  * 증거는 우리가 말하는 것보다 기록이 말하는 게 낫다.
  */
+/** 참가비 표시 — 성별별 요금이 있으면 나눠서 보여준다. */
+function feeLabel(m: Meetup): string {
+  const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+  if (m.feeFemale != null && m.feeFemale !== m.fee) {
+    return `남 ${m.fee > 0 ? won(m.fee) : '무료'} · 여 ${m.feeFemale > 0 ? won(m.feeFemale) : '무료'}`;
+  }
+  return m.fee > 0 ? `참가비 ${won(m.fee)}` : '무료';
+}
+
+/** 참가 조건 요약 — 없으면 null(줄 자체를 그리지 않는다). */
+function conditionLabel(m: Meetup): string | null {
+  const parts: string[] = [];
+  if (m.genderLimit) parts.push(m.genderLimit === 'MALE' ? '남성만' : '여성만');
+  if (m.minAge != null || m.maxAge != null) {
+    parts.push(m.minAge != null && m.maxAge != null ? `${m.minAge}~${m.maxAge}세` : m.minAge != null ? `${m.minAge}세 이상` : `${m.maxAge}세 이하`);
+  }
+  if (m.minHeightCm != null) parts.push(`키 ${m.minHeightCm}cm 이상`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 export default function MeetupsScreen() {
   const c = useTheme();
   const router = useRouter();
@@ -77,7 +97,7 @@ export default function MeetupsScreen() {
       '모임에 신청할까요?',
       [
         '신청하면 모임장의 카카오 오픈채팅 링크가 열려요.',
-        m.fee > 0 ? `참가비 ${m.fee.toLocaleString('ko-KR')}원은 오픈채팅에서 모임장에게 직접 보내요.` : '참가비는 없어요.',
+        m.fee > 0 || (m.feeFemale ?? 0) > 0 ? `참가비(${feeLabel(m)})는 오픈채팅에서 모임장에게 직접 보내요.` : '참가비는 없어요.',
         '모임장이 확인하면 참여가 확정돼요.',
       ].join('\n'),
       [
@@ -196,8 +216,11 @@ export default function MeetupsScreen() {
                     {dateFmt.format(new Date(m.meetAt))} · {m.place}
                   </Text>
                   <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
-                    확정 {m.confirmedCount}/{m.capacity}명 · {m.fee > 0 ? `참가비 ${m.fee.toLocaleString('ko-KR')}원` : '무료'}
+                    확정 {m.confirmedCount}/{m.capacity}명 · {feeLabel(m)}
                   </Text>
+                  {conditionLabel(m) && (
+                    <Text style={[styles.cardMeta, { color: c.textSecondary }]}>참가 조건 · {conditionLabel(m)}</Text>
+                  )}
                   {/* 모임장 신뢰 신호 — 이름과 함께 개최 기록을 숫자로. */}
                   <Text style={[styles.hostLine, { color: c.textSecondary }]}>
                     모임장 {m.hostNickname ?? '(알 수 없음)'}

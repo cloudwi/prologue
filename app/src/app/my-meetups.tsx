@@ -109,7 +109,12 @@ export default function MyMeetupsScreen() {
                 {dateFmt.format(new Date(m.meetAt))} · {m.place}
               </Text>
               <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
-                확정 {m.confirmedCount}/{m.capacity}명 · {m.fee > 0 ? `참가비 ${m.fee.toLocaleString('ko-KR')}원` : '무료'}
+                확정 {m.confirmedCount}/{m.capacity}명 ·{' '}
+                {m.feeFemale != null && m.feeFemale !== m.fee
+                  ? `남 ${m.fee.toLocaleString('ko-KR')}원 · 여 ${m.feeFemale > 0 ? `${m.feeFemale.toLocaleString('ko-KR')}원` : '무료'}`
+                  : m.fee > 0
+                    ? `참가비 ${m.fee.toLocaleString('ko-KR')}원`
+                    : '무료'}
               </Text>
 
               {/* 신청자 — 확정은 입금 확인의 표시. */}

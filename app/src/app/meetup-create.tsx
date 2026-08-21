@@ -1,4 +1,5 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,6 +10,9 @@ import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { createMeetup } from '@/lib/meetups';
+
+/** 정원 휠 값 — 소모임(2)부터 대형(50)까지. */
+const CAPACITIES = Array.from({ length: 49 }, (_, i) => String(i + 2));
 
 /**
  * 모임 열기 — 누구나 모임장이 될 수 있다.
@@ -25,13 +29,26 @@ export default function MeetupCreateScreen() {
   const [meetAt, setMeetAt] = useState<Date | null>(null);
   const [place, setPlace] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [isPaid, setIsPaid] = useState(false);
+  /** 성별별로 참가비를 다르게 받는지 — 남 2만/여 무료 같은 모임이 흔하다. */
+  const [feeByGender, setFeeByGender] = useState(false);
   const [fee, setFee] = useState('');
+  const [feeFemaleInput, setFeeFemaleInput] = useState('');
   const [kakaoLink, setKakaoLink] = useState('');
+  // 참가 조건 (선택)
+  const [genderLimit, setGenderLimit] = useState<'MALE' | 'FEMALE' | null>(null);
+  const [minAge, setMinAge] = useState('');
+  const [maxAge, setMaxAge] = useState('');
+  const [minHeight, setMinHeight] = useState('');
   const [saving, setSaving] = useState(false);
 
   // iOS 바텀시트 휠용
   const [pickerOpen, setPickerOpen] = useState<'date' | 'time' | null>(null);
   const [draft, setDraft] = useState(new Date());
+
+  // 정원 휠 (양 플랫폼 공통)
+  const [capacityOpen, setCapacityOpen] = useState(false);
+  const [capacityDraft, setCapacityDraft] = useState('8');
 
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const timeFmt = new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' });
@@ -79,7 +96,12 @@ export default function MeetupCreateScreen() {
     if (title.trim().length === 0) return '모임 이름을 적어주세요.';
     if (meetAt == null) return '모임 날짜와 시간을 골라주세요.';
     if (place.trim().length === 0) return '모임 장소를 적어주세요.';
-    if (!Number.isInteger(capacityNum) || capacityNum < 2) return '정원을 2명 이상으로 적어주세요.';
+    if (!Number.isInteger(capacityNum) || capacityNum < 2) return '정원을 골라주세요.';
+    if (isPaid && !feeByGender && (!Number.isInteger(feeNum) || feeNum < 1)) return '참가비 금액을 적어주세요.';
+    if (isPaid && feeByGender && fee === '') return '남성 참가비를 적어주세요. (무료면 0)';
+    if (isPaid && feeByGender && feeFemaleInput === '') return '여성 참가비를 적어주세요. (무료면 0)';
+    if (minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge)) return '나이 범위가 뒤집혔어요.';
+    if (minHeight !== '' && (Number(minHeight) < 140 || Number(minHeight) > 210)) return '최소 키는 140~210cm 사이로 적어주세요.';
     if (normalizedLink() == null) {
       return kakaoLink.trim().length > 0
         ? '카카오 오픈채팅 링크가 올바르지 않아요. open.kakao.com 링크를 붙여넣어주세요.'
@@ -115,7 +137,12 @@ export default function MeetupCreateScreen() {
         meetAt: meetAt.toISOString(),
         place: place.trim(),
         capacity: capacityNum,
-        fee: feeNum,
+        fee: isPaid ? feeNum : 0,
+        feeFemale: isPaid && feeByGender ? Number(feeFemaleInput) : null,
+        genderLimit,
+        minAge: minAge === '' ? null : Number(minAge),
+        maxAge: maxAge === '' ? null : Number(maxAge),
+        minHeightCm: minHeight === '' ? null : Number(minHeight),
         kakaoLink: normalizedLink()!,
       });
       track('meetup_created');
@@ -178,26 +205,165 @@ export default function MeetupCreateScreen() {
         <View style={styles.row}>
           <View style={styles.rowItem}>
             <Field label="정원" c={c}>
+              <Pressable
+                onPress={() => {
+                  setCapacityDraft(capacity || '8');
+                  setCapacityOpen(true);
+                }}
+                style={[styles.input, styles.centerText, { backgroundColor: c.backgroundElement }]}
+              >
+                <Text style={{ color: capacity ? c.text : c.textSecondary, fontSize: 16 }}>
+                  {capacity ? `${capacity}명` : '정원 고르기'}
+                </Text>
+              </Pressable>
+            </Field>
+          </View>
+          <View style={styles.rowItem}>
+            <Field label="참가비" c={c}>
+              <View style={[styles.segment, { backgroundColor: c.backgroundElement }]}>
+                {([false, true] as const).map((paid) => (
+                  <Pressable
+                    key={String(paid)}
+                    onPress={() => {
+                      setIsPaid(paid);
+                      if (!paid) setFee('');
+                    }}
+                    style={[styles.segmentItem, isPaid === paid && { backgroundColor: c.background }]}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        { color: isPaid === paid ? c.text : c.textSecondary },
+                        isPaid === paid && styles.segmentTextActive,
+                      ]}
+                    >
+                      {paid ? '유료' : '무료'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Field>
+          </View>
+        </View>
+
+        {isPaid && (
+          <>
+            <Pressable onPress={() => setFeeByGender((v) => !v)} hitSlop={6} style={styles.checkRow}>
+              <View style={[styles.checkbox, { borderColor: c.border }, feeByGender && { backgroundColor: c.primary, borderColor: c.primary }]}>
+                {feeByGender && <Text style={[styles.checkboxMark, { color: c.primaryText }]}>✓</Text>}
+              </View>
+              <Text style={[styles.checkLabel, { color: c.text }]}>성별에 따라 다르게 받을게요</Text>
+            </Pressable>
+
+            {feeByGender ? (
+              <View style={styles.row}>
+                <View style={styles.rowItem}>
+                  <Field label="남성 참가비 (원)" c={c}>
+                    <PlaceholderInput
+                      value={fee}
+                      onChangeText={(t) => setFee(t.replace(/[^0-9]/g, ''))}
+                      placeholder="예) 20000"
+                      placeholderTextColor={c.textSecondary}
+                      keyboardType="number-pad"
+                      maxLength={7}
+                      style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+                    />
+                  </Field>
+                </View>
+                <View style={styles.rowItem}>
+                  <Field label="여성 참가비 (원)" c={c}>
+                    <PlaceholderInput
+                      value={feeFemaleInput}
+                      onChangeText={(t) => setFeeFemaleInput(t.replace(/[^0-9]/g, ''))}
+                      placeholder="0이면 무료"
+                      placeholderTextColor={c.textSecondary}
+                      keyboardType="number-pad"
+                      maxLength={7}
+                      style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+                    />
+                  </Field>
+                </View>
+              </View>
+            ) : (
+              <Field label="참가비 (원)" c={c} hint="오픈채팅에서 모임장에게 직접 보내는 금액이에요.">
+                <PlaceholderInput
+                  value={fee}
+                  onChangeText={(t) => setFee(t.replace(/[^0-9]/g, ''))}
+                  placeholder="예) 10000"
+                  placeholderTextColor={c.textSecondary}
+                  keyboardType="number-pad"
+                  maxLength={7}
+                  style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+                />
+              </Field>
+            )}
+          </>
+        )}
+
+        {/* 참가 조건 — 프로필(성별·나이·키)로 문 앞에서 걸러진다. 비워두면 제한 없음. */}
+        <Text style={[styles.sectionTitle, { color: c.text }]}>참가 조건 (선택)</Text>
+        <Field label="성별" c={c}>
+          <View style={[styles.segment, { backgroundColor: c.backgroundElement }]}>
+            {([
+              [null, '모두'],
+              ['MALE', '남성만'],
+              ['FEMALE', '여성만'],
+            ] as const).map(([value, label]) => (
+              <Pressable
+                key={label}
+                onPress={() => setGenderLimit(value)}
+                style={[styles.segmentItem, genderLimit === value && { backgroundColor: c.background }]}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    { color: genderLimit === value ? c.text : c.textSecondary },
+                    genderLimit === value && styles.segmentTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Field>
+
+        <View style={styles.row}>
+          <View style={styles.rowItem}>
+            <Field label="나이 (최소)" c={c}>
               <PlaceholderInput
-                value={capacity}
-                onChangeText={(t) => setCapacity(t.replace(/[^0-9]/g, ''))}
-                placeholder="예) 8"
+                value={minAge}
+                onChangeText={(t) => setMinAge(t.replace(/[^0-9]/g, ''))}
+                placeholder="제한 없음"
                 placeholderTextColor={c.textSecondary}
                 keyboardType="number-pad"
-                maxLength={3}
+                maxLength={2}
                 style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
               />
             </Field>
           </View>
           <View style={styles.rowItem}>
-            <Field label="참가비 (원)" c={c}>
+            <Field label="나이 (최대)" c={c}>
               <PlaceholderInput
-                value={fee}
-                onChangeText={(t) => setFee(t.replace(/[^0-9]/g, ''))}
-                placeholder="0이면 무료"
+                value={maxAge}
+                onChangeText={(t) => setMaxAge(t.replace(/[^0-9]/g, ''))}
+                placeholder="제한 없음"
                 placeholderTextColor={c.textSecondary}
                 keyboardType="number-pad"
-                maxLength={7}
+                maxLength={2}
+                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+              />
+            </Field>
+          </View>
+          <View style={styles.rowItem}>
+            <Field label="최소 키 (cm)" c={c}>
+              <PlaceholderInput
+                value={minHeight}
+                onChangeText={(t) => setMinHeight(t.replace(/[^0-9]/g, ''))}
+                placeholder="제한 없음"
+                placeholderTextColor={c.textSecondary}
+                keyboardType="number-pad"
+                maxLength={3}
                 style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
               />
             </Field>
@@ -235,6 +401,32 @@ export default function MeetupCreateScreen() {
           신청·확정·개최 기록이 모임장의 공개 프로필(개최 횟수)이 돼요.
         </Text>
       </ScrollView>
+
+      {/* 정원 휠 — 날짜와 같은 바텀시트 결. */}
+      <Modal visible={capacityOpen} transparent animationType="fade" onRequestClose={() => setCapacityOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setCapacityOpen(false)} />
+        <View style={[styles.sheet, { backgroundColor: c.background }]}>
+          <View style={styles.sheetHead}>
+            <Pressable onPress={() => setCapacityOpen(false)} hitSlop={10}>
+              <Text style={[styles.sheetBtn, { color: c.textSecondary }]}>취소</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setCapacity(capacityDraft);
+                setCapacityOpen(false);
+              }}
+              hitSlop={10}
+            >
+              <Text style={[styles.sheetBtn, { color: c.primaryStrong }]}>완료</Text>
+            </Pressable>
+          </View>
+          <Picker selectedValue={capacityDraft} onValueChange={setCapacityDraft} itemStyle={{ color: c.text }}>
+            {CAPACITIES.map((n) => (
+              <Picker.Item key={n} label={`${n}명`} value={n} />
+            ))}
+          </Picker>
+        </View>
+      </Modal>
 
       {/* iOS 바텀시트 휠 */}
       {Platform.OS === 'ios' && (
@@ -288,6 +480,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   centerText: { justifyContent: 'center' },
+  segment: { flexDirection: 'row', borderRadius: Radius.md, padding: 4, minHeight: 48 },
+  segmentItem: { flex: 1, borderRadius: Radius.md - 4, alignItems: 'center', justifyContent: 'center' },
+  segmentText: { fontSize: 15 },
+  segmentTextActive: { fontWeight: '700' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 14, paddingHorizontal: 2 },
+  checkbox: { width: 21, height: 21, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  checkboxMark: { fontSize: 13, fontWeight: '800' },
+  checkLabel: { fontSize: 15 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 10, marginBottom: 14, paddingHorizontal: 2 },
   multiline: { minHeight: 110, textAlignVertical: 'top', paddingTop: 14 },
   row: { flexDirection: 'row', gap: 10 },
   rowItem: { flex: 1 },

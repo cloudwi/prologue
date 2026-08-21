@@ -22,6 +22,13 @@ data class MeetupView(
     val place: String,
     val capacity: Int,
     val fee: Int,
+    /** 여성 참가비 — null이면 fee와 동일. */
+    val feeFemale: Int?,
+    /** 참가 조건 — null이면 제한 없음. */
+    val genderLimit: String?,
+    val minAge: Int?,
+    val maxAge: Int?,
+    val minHeightCm: Int?,
     val status: String,
     val hostNickname: String?,
     /** 이 모임장이 지금까지 개최를 완료한 횟수 — 신뢰 신호. */
@@ -66,6 +73,11 @@ data class HostMeetupView(
     val place: String,
     val capacity: Int,
     val fee: Int,
+    val feeFemale: Int?,
+    val genderLimit: String?,
+    val minAge: Int?,
+    val maxAge: Int?,
+    val minHeightCm: Int?,
     val kakaoLink: String,
     val status: String,
     val confirmedCount: Int,
@@ -106,6 +118,11 @@ class MeetupService(
                 place = m.place,
                 capacity = m.capacity,
                 fee = m.fee,
+                feeFemale = m.feeFemale,
+                genderLimit = m.genderLimit,
+                minAge = m.minAge,
+                maxAge = m.maxAge,
+                minHeightCm = m.minHeightCm,
                 status = m.status.name,
                 hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
                 hostDoneCount = meetupRepository.countDoneByHost(m.hostAccountId),
@@ -141,6 +158,7 @@ class MeetupService(
         val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
         if (!meetup.isOpen()) throw DailyMeetException("모집이 끝난 모임이에요")
         if (meetup.hostAccountId == accountId) throw DailyMeetException("내가 여는 모임이에요")
+        checkConditions(meetup, accountId)
         val existing = applicationRepository.findByMeetupAndApplicant(meetupId, accountId)
         if (existing == null) {
             applicationRepository.save(MeetupApplication.apply(meetupId, accountId))
@@ -176,12 +194,40 @@ class MeetupService(
         place: String,
         capacity: Int,
         fee: Int,
+        feeFemale: Int?,
+        genderLimit: String?,
+        minAge: Int?,
+        maxAge: Int?,
+        minHeightCm: Int?,
         kakaoLink: String,
     ): UUID {
         val saved = meetupRepository.save(
-            Meetup.create(hostAccountId, title, description, meetAt, place, capacity, fee, kakaoLink),
+            Meetup.create(
+                hostAccountId, title, description, meetAt, place, capacity,
+                fee, feeFemale, genderLimit, minAge, maxAge, minHeightCm, kakaoLink,
+            ),
         )
         return requireNotNull(saved.id)
+    }
+
+    /** 참가 조건 검사 — 프로필의 성별·나이·키로 문 앞에서 거른다. 조건이 없으면 그냥 통과. */
+    private fun checkConditions(meetup: Meetup, accountId: UUID) {
+        if (meetup.genderLimit == null && meetup.minAge == null && meetup.maxAge == null && meetup.minHeightCm == null) return
+        val profile = memberQueryService.findProfile(accountId)
+            ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
+        meetup.genderLimit?.let {
+            if (profile.gender.name != it) {
+                throw DailyMeetException(if (it == "MALE") "남성만 신청할 수 있는 모임이에요" else "여성만 신청할 수 있는 모임이에요")
+            }
+        }
+        val age = profile.age()
+        meetup.minAge?.let { if (age < it) throw DailyMeetException("${it}세 이상만 신청할 수 있는 모임이에요") }
+        meetup.maxAge?.let { if (age > it) throw DailyMeetException("${it}세 이하만 신청할 수 있는 모임이에요") }
+        meetup.minHeightCm?.let { min ->
+            val height = profile.heightCm
+                ?: throw DailyMeetException("키 조건이 있는 모임이에요 — 프로필에 키를 먼저 등록해주세요")
+            if (height < min) throw DailyMeetException("키 ${min}cm 이상만 신청할 수 있는 모임이에요")
+        }
     }
 
     /** 내 모임 전부 — 신청자 목록까지 한 번에(콘솔은 화면 하나로 끝낸다). */
@@ -197,6 +243,11 @@ class MeetupService(
                 place = m.place,
                 capacity = m.capacity,
                 fee = m.fee,
+                feeFemale = m.feeFemale,
+                genderLimit = m.genderLimit,
+                minAge = m.minAge,
+                maxAge = m.maxAge,
+                minHeightCm = m.minHeightCm,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },

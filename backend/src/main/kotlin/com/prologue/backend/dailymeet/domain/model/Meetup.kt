@@ -23,6 +23,13 @@ class Meetup private constructor(
     val place: String,
     val capacity: Int,
     val fee: Int,
+    /** 여성 참가비 — null이면 fee(공통)와 동일. 성별에 따라 값을 달리 받는 모임이 흔해서. */
+    val feeFemale: Int?,
+    /** 참가 성별 제한(MALE/FEMALE) — null이면 모두. */
+    val genderLimit: String?,
+    val minAge: Int?,
+    val maxAge: Int?,
+    val minHeightCm: Int?,
     val kakaoLink: String,
     status: MeetupStatus,
     val createdAt: Instant,
@@ -74,6 +81,11 @@ class Meetup private constructor(
             place: String,
             capacity: Int,
             fee: Int,
+            feeFemale: Int?,
+            genderLimit: String?,
+            minAge: Int?,
+            maxAge: Int?,
+            minHeightCm: Int?,
             kakaoLink: String,
             now: Instant = Instant.now(),
         ): Meetup {
@@ -87,6 +99,16 @@ class Meetup private constructor(
             if ((cleanDescription?.length ?: 0) > DESCRIPTION_MAX) throw DailyMeetException("소개는 ${DESCRIPTION_MAX}자 이하여야 해요")
             if (capacity < CAPACITY_MIN || capacity > CAPACITY_MAX) throw DailyMeetException("정원은 ${CAPACITY_MIN}~${CAPACITY_MAX}명이어야 해요")
             if (fee < 0) throw DailyMeetException("참가비가 올바르지 않아요")
+            if (feeFemale != null && feeFemale < 0) throw DailyMeetException("여성 참가비가 올바르지 않아요")
+            if (genderLimit != null && genderLimit != "MALE" && genderLimit != "FEMALE") {
+                throw DailyMeetException("성별 제한 값이 올바르지 않아요")
+            }
+            if (minAge != null && minAge < 19) throw DailyMeetException("나이 제한은 19세부터예요")
+            if (maxAge != null && maxAge > 100) throw DailyMeetException("나이 제한이 올바르지 않아요")
+            if (minAge != null && maxAge != null && minAge > maxAge) throw DailyMeetException("나이 범위가 뒤집혔어요")
+            if (minHeightCm != null && (minHeightCm < 140 || minHeightCm > 210)) {
+                throw DailyMeetException("키 제한은 140~210cm 사이여야 해요")
+            }
             if (meetAt.isBefore(now)) throw DailyMeetException("모임 일시는 미래여야 해요")
             val cleanLink = kakaoLink.trim()
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
@@ -94,7 +116,8 @@ class Meetup private constructor(
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
                 null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace,
-                capacity, fee, cleanLink, MeetupStatus.OPEN, now,
+                capacity, fee, feeFemale, genderLimit, minAge, maxAge, minHeightCm,
+                cleanLink, MeetupStatus.OPEN, now,
             )
         }
 
@@ -107,10 +130,18 @@ class Meetup private constructor(
             place: String,
             capacity: Int,
             fee: Int,
+            feeFemale: Int?,
+            genderLimit: String?,
+            minAge: Int?,
+            maxAge: Int?,
+            minHeightCm: Int?,
             kakaoLink: String,
             status: MeetupStatus,
             createdAt: Instant,
-        ): Meetup = Meetup(id, hostAccountId, title, description, meetAt, place, capacity, fee, kakaoLink, status, createdAt)
+        ): Meetup = Meetup(
+            id, hostAccountId, title, description, meetAt, place, capacity, fee,
+            feeFemale, genderLimit, minAge, maxAge, minHeightCm, kakaoLink, status, createdAt,
+        )
     }
 }
 

@@ -16,6 +16,13 @@ export type Meetup = {
   place: string;
   capacity: number;
   fee: number;
+  /** 여성 참가비 — null이면 fee와 동일. */
+  feeFemale: number | null;
+  /** 참가 조건 — null이면 제한 없음. */
+  genderLimit: 'MALE' | 'FEMALE' | null;
+  minAge: number | null;
+  maxAge: number | null;
+  minHeightCm: number | null;
   status: 'OPEN' | 'CLOSED' | string;
   hostNickname: string | null;
   /** 이 모임장이 지금까지 개최를 완료한 횟수 — 신뢰 신호. */
@@ -81,6 +88,11 @@ export type HostMeetup = {
   place: string;
   capacity: number;
   fee: number;
+  feeFemale: number | null;
+  genderLimit: 'MALE' | 'FEMALE' | null;
+  minAge: number | null;
+  maxAge: number | null;
+  minHeightCm: number | null;
   kakaoLink: string;
   status: 'OPEN' | 'CLOSED' | 'DONE' | 'CANCELED' | string;
   confirmedCount: number;
@@ -95,6 +107,11 @@ export type CreateMeetupInput = {
   place: string;
   capacity: number;
   fee: number;
+  feeFemale: number | null;
+  genderLimit: 'MALE' | 'FEMALE' | null;
+  minAge: number | null;
+  maxAge: number | null;
+  minHeightCm: number | null;
   kakaoLink: string;
 };
 
