@@ -14,13 +14,13 @@
       "policy": "appVersion"
     },
     "ios": {
-      "bundleIdentifier": "com.juyoung.prologue",
+      "bundleIdentifier": "day.prologue.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.cloudwi.prologue",
+      "package": "day.prologue.app",
       "blockedPermissions": ["android.permission.READ_MEDIA_IMAGES"],
       "adaptiveIcon": {
         "backgroundColor": "#F6F8FA",

@@ -70,7 +70,7 @@ app:
   min-supported-version: ${APP_MIN_SUPPORTED_VERSION:1.0.0}
   latest-version: ${APP_LATEST_VERSION:1.0.0}
   ios-store-url: ${APP_IOS_STORE_URL:https://apps.apple.com/app/id6792233022}
-  android-store-url: ${APP_ANDROID_STORE_URL:https://play.google.com/store/apps/details?id=com.cloudwi.prologue}
+  android-store-url: ${APP_ANDROID_STORE_URL:https://play.google.com/store/apps/details?id=day.prologue.app}
 
 # 인증코드 메일의 "앱에서 바로 입력하기" 버튼이 가리키는 웹 주소.
 # 휴대폰이면 이 페이지가 앱을 열어 코드를 자동 입력하고, 앱이 없거나 데스크탑이면 복사 버튼을 보여준다.
@@ -105,6 +105,6 @@ management:
 #   서비스 계정에는 Play Console "재무 데이터 보기" 권한이 있어야 purchases.products.get이 열린다.
 store:
   google-play:
-    package-name: ${GOOGLE_PLAY_PACKAGE_NAME:com.cloudwi.prologue}
+    package-name: ${GOOGLE_PLAY_PACKAGE_NAME:day.prologue.app}
     service-account-json: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:}
 

@@ -11,7 +11,7 @@ import kotlin.test.assertFalse
 class GooglePlayPurchaseVerifierTest {
 
     private fun verifier(json: String = "") =
-        GooglePlayPurchaseVerifier("com.cloudwi.prologue", json, RestClient.builder(), JsonMapper.builder().build())
+        GooglePlayPurchaseVerifier("day.prologue.app", json, RestClient.builder(), JsonMapper.builder().build())
 
     @Test
     fun `키가 없으면 configured=false이고 검증은 거절된다 - 닫힌 쪽이 기본값`() {
