@@ -459,12 +459,15 @@ function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string 
  * 가려진 답변 자리의 스켈레톤 세 줄 — 글이 있다는 것만 알리고 내용은 감춘다.
  * 줄 길이를 다르게 두어 "문장"처럼 보이게 한다. 답변 글줄(lineHeight 27)과 같은 리듬.
  */
-function MaskedLines({ c }: { c: ThemeColors }) {
+/**
+ * 가려진 답변 — 실제 텍스트는 렌더링하지 않는다(캡처로 새지 않게).
+ * 스켈레톤 줄무늬 대신 닫힌 편지 같은 단색 면 하나 — 답은 "봉투 안"에 있다.
+ */
+function MaskedAnswer({ icon, hint, tint, c }: { icon: keyof typeof Ionicons.glyphMap; hint: string; tint: string; c: ThemeColors }) {
   return (
-    <View style={styles.maskLines} pointerEvents="none">
-      <View style={[styles.maskLine, { backgroundColor: c.backgroundSelected, width: '94%' }]} />
-      <View style={[styles.maskLine, { backgroundColor: c.backgroundSelected, width: '100%' }]} />
-      <View style={[styles.maskLine, { backgroundColor: c.backgroundSelected, width: '62%' }]} />
+    <View style={[styles.maskPanel, { backgroundColor: c.backgroundSelected }]} pointerEvents="none">
+      <Ionicons name={icon} size={18} color={tint} />
+      <Text style={[styles.revealHintText, { color: tint }]}>{hint}</Text>
     </View>
   );
 }
@@ -515,21 +518,12 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
               </>
             ) : (
               <Pressable onPress={() => setRevealed(true)} accessibilityRole="button" accessibilityLabel="탭하여 답변 읽기">
-                <MaskedLines c={c} />
-                <View style={styles.revealHint}>
-                  <Text style={[styles.revealHintText, { color: c.primaryStrong }]}>탭하여 답변 읽기</Text>
-                </View>
+                <MaskedAnswer icon="mail-outline" hint="탭하여 답변 읽기" tint={c.primaryStrong} c={c} />
               </Pressable>
             )}
           </>
         ) : (
-          <View>
-            <MaskedLines c={c} />
-            <View style={styles.revealHint}>
-              <Ionicons name="lock-closed" size={13} color={c.textSecondary} />
-              <Text style={[styles.revealHintText, { color: c.textSecondary, marginLeft: 6 }]}>내 답을 남기면 열려요</Text>
-            </View>
-          </View>
+          <MaskedAnswer icon="lock-closed" hint="내 답을 남기면 열려요" tint={c.textSecondary} c={c} />
         )}
       </View>
 
@@ -636,9 +630,14 @@ const styles = StyleSheet.create({
   peerAnswerQuestion: { fontSize: 13.5, lineHeight: 19, marginBottom: 8 },
   peerAnswer: { fontSize: 18, lineHeight: 27, fontWeight: '500' },
   // 가려진 답변의 스켈레톤 — 글줄(lineHeight 27)과 같은 간격으로 세 줄.
-  maskLines: { paddingVertical: 4, gap: 12 },
-  maskLine: { height: 15, borderRadius: 7 },
-  revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  maskPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 26,
+    borderRadius: 14,
+  },
   revealHintText: { fontSize: 14.5, fontWeight: '700' },
   // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
   peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
