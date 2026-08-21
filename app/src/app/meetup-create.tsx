@@ -73,16 +73,36 @@ export default function MeetupCreateScreen() {
 
   const capacityNum = Number(capacity);
   const feeNum = fee === '' ? 0 : Number(fee);
-  const canSave =
-    title.trim().length > 0 &&
-    meetAt != null &&
-    place.trim().length > 0 &&
-    Number.isInteger(capacityNum) &&
-    capacityNum >= 2 &&
-    kakaoLink.trim().startsWith('http');
+
+  /** 비활성 버튼은 이유를 말하지 않는다 — 항상 눌리게 두고, 빠진 것을 말로 알려준다. */
+  function firstMissing(): string | null {
+    if (title.trim().length === 0) return '모임 이름을 적어주세요.';
+    if (meetAt == null) return '모임 날짜와 시간을 골라주세요.';
+    if (place.trim().length === 0) return '모임 장소를 적어주세요.';
+    if (!Number.isInteger(capacityNum) || capacityNum < 2) return '정원을 2명 이상으로 적어주세요.';
+    if (normalizedLink() == null) {
+      return kakaoLink.trim().length > 0
+        ? '카카오 오픈채팅 링크가 올바르지 않아요. open.kakao.com 링크를 붙여넣어주세요.'
+        : '카카오 오픈채팅 링크를 넣어주세요.';
+    }
+    return null;
+  }
+
+  /** https:// 없이 붙여넣는 게 보통이라 앞을 채워준다. 그래도 주소꼴이 아니면 null. */
+  function normalizedLink(): string | null {
+    let link = kakaoLink.trim();
+    if (link.length === 0) return null;
+    if (!/^https?:\/\//.test(link)) link = `https://${link}`;
+    return /^https?:\/\/[\w.-]+\.[a-z]{2,}([/?#].*)?$/i.test(link) ? link : null;
+  }
 
   async function save() {
-    if (!canSave || meetAt == null) return;
+    const missing = firstMissing();
+    if (missing) {
+      Alert.alert('조금만 더 채워주세요', missing);
+      return;
+    }
+    if (meetAt == null) return;
     if (meetAt.getTime() < Date.now()) {
       Alert.alert('지난 시각이에요', '모임 일시를 다시 골라주세요.');
       return;
@@ -96,7 +116,7 @@ export default function MeetupCreateScreen() {
         place: place.trim(),
         capacity: capacityNum,
         fee: feeNum,
-        kakaoLink: kakaoLink.trim(),
+        kakaoLink: normalizedLink()!,
       });
       track('meetup_created');
       Alert.alert('모임을 열었어요', '신청이 들어오면 알림으로 알려드릴게요.\n입금 확인과 확정은 [모임 관리]에서 해요.', [
@@ -110,7 +130,7 @@ export default function MeetupCreateScreen() {
   }
 
   return (
-    <SubScreen title="모임 열기" c={c} onSave={save} saveDisabled={!canSave} saving={saving}>
+    <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Field label="모임 이름" c={c}>
           <PlaceholderInput
