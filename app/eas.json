@@ -24,7 +24,10 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6803755105"
+        "ascAppId": "6803755105",
+        "ascApiKeyPath": "../release/secrets/AuthKey_G3HZSD7KQY.p8",
+        "ascApiKeyId": "G3HZSD7KQY",
+        "ascApiKeyIssuerId": "703a7bfc-e38f-4a35-8bbb-df098987733b"
       },
       "android": {
         "serviceAccountKeyPath": "../release/secrets/fcm-service-account.json",
