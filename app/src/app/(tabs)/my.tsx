@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
   heroThumb: { width: 52, height: 52, borderRadius: Radius.sm, overflow: 'hidden' },
   heroText: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 18 },
   heroName: { fontSize: 24, fontWeight: '700' },
-  heroMeta: { fontSize: 13.5, marginTop: 4 },
-  heroLink: { fontSize: 13, fontWeight: '700' },
+  heroMeta: { fontSize: 14.5, marginTop: 4 },
+  heroLink: { fontSize: 14, fontWeight: '700' },
 
   todo: {
     flexDirection: 'row',
@@ -315,20 +315,20 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: Radius.md,
   },
-  todoLabel: { fontSize: 15, fontWeight: '700' },
-  todoHint: { fontSize: 13, marginTop: 3 },
+  todoLabel: { fontSize: 16, fontWeight: '700' },
+  todoHint: { fontSize: 14, marginTop: 3 },
 
   // 섹션 사이를 넉넉히 띄우고 제목은 조용하게 — 목록이 빽빽해 보이지 않게.
   section: { marginTop: 34, paddingHorizontal: 20 },
-  sectionHead: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 10, paddingLeft: 4 },
+  sectionHead: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 10, paddingLeft: 4 },
   card: { borderRadius: Radius.md, overflow: 'hidden' },
   row: { paddingHorizontal: 20 },
   rowInner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 18 },
-  rowLabel: { flex: 1, fontSize: 15.5, fontWeight: '500' },
-  rowValue: { fontSize: 14 },
+  rowLabel: { flex: 1, fontSize: 16.5, fontWeight: '500' },
+  rowValue: { fontSize: 15 },
   chevron: { fontSize: 20, fontWeight: '300' },
 
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 32 },
-  footerLink: { fontSize: 12.5 },
-  footerDot: { fontSize: 12.5 },
+  footerLink: { fontSize: 13.5 },
+  footerDot: { fontSize: 13.5 },
 });

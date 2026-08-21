@@ -88,12 +88,12 @@ const styles = StyleSheet.create({
 
   emptyPad: { paddingHorizontal: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
-  emptyHint: { fontSize: 13.5, lineHeight: 21, textAlign: 'center', marginTop: 10 },
+  emptyHint: { fontSize: 14.5, lineHeight: 22, textAlign: 'center', marginTop: 10 },
 
   month: { marginBottom: 28 },
-  monthLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8, paddingLeft: 4 },
+  monthLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8, paddingLeft: 4 },
   card: { borderRadius: Radius.md, padding: 18, marginBottom: 12 },
-  cardDate: { fontSize: 12.5 },
-  cardQuestion: { fontSize: 16, fontWeight: '700', marginTop: 6, lineHeight: 23 },
-  cardContent: { fontSize: 14.5, lineHeight: 22, marginTop: 10 },
+  cardDate: { fontSize: 13.5 },
+  cardQuestion: { fontSize: 17, fontWeight: '700', marginTop: 6, lineHeight: 24 },
+  cardContent: { fontSize: 15.5, lineHeight: 23, marginTop: 10 },
 });

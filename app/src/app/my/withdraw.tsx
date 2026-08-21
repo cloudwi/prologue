@@ -86,8 +86,8 @@ const styles = StyleSheet.create({
   lead: { fontSize: 20, fontWeight: '700', lineHeight: 30, marginTop: 12, marginBottom: 22 },
   card: { borderRadius: Radius.md, paddingHorizontal: 18 },
   item: { paddingVertical: 16 },
-  itemText: { fontSize: 14.5, lineHeight: 21 },
-  note: { fontSize: 13, lineHeight: 20, marginTop: 14 },
+  itemText: { fontSize: 15.5, lineHeight: 22 },
+  note: { fontSize: 14, lineHeight: 21, marginTop: 14 },
   submit: {
     height: 52,
     borderRadius: Radius.md,
@@ -96,5 +96,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 32,
   },
-  submitText: { fontSize: 15.5, fontWeight: '700' },
+  submitText: { fontSize: 16.5, fontWeight: '700' },
 });

@@ -105,11 +105,11 @@ const styles = StyleSheet.create({
   brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 89, height: 64, marginBottom: 6 }, // 마크는 1.4:1 가로형
   wordmark: { fontSize: 36, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
-  wordmarkEn: { fontSize: 13, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
-  tagline: { fontSize: 15, marginTop: 6 },
+  wordmarkEn: { fontSize: 14, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
+  tagline: { fontSize: 16, marginTop: 6 },
   buttons: { gap: 12 },
   startBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  startBtnText: { fontSize: 16, fontWeight: '700' },
-  terms: { fontSize: 11, textAlign: 'center', marginTop: 12, marginBottom: 8, lineHeight: 17 },
+  startBtnText: { fontSize: 17, fontWeight: '700' },
+  terms: { fontSize: 12, textAlign: 'center', marginTop: 12, marginBottom: 8, lineHeight: 18 },
   termsLink: { textDecorationLine: 'underline', fontWeight: '600' },
 });

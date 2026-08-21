@@ -145,7 +145,7 @@ export default function LettersScreen() {
               <Text style={[styles.primaryBtnText, { color: c.primaryText }]}>{busy ? '저장 중...' : '프로필에 올리기'}</Text>
             </Pressable>
             <Pressable onPress={() => setEditing(null)} disabled={busy} style={styles.cancel} hitSlop={6}>
-              <Text style={{ color: c.textSecondary, fontSize: 14 }}>취소</Text>
+              <Text style={{ color: c.textSecondary, fontSize: 15 }}>취소</Text>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -187,7 +187,7 @@ export default function LettersScreen() {
             </Pressable>
           ))}
           <Pressable onPress={() => setEditing(null)} style={styles.cancel} hitSlop={6}>
-            <Text style={{ color: c.textSecondary, fontSize: 14 }}>취소</Text>
+            <Text style={{ color: c.textSecondary, fontSize: 15 }}>취소</Text>
           </Pressable>
         </ScrollView>
       </SubScreen>
@@ -238,13 +238,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
-  lead: { fontSize: 14, lineHeight: 21, marginBottom: 18 },
+  lead: { fontSize: 15, lineHeight: 22, marginBottom: 18 },
 
   letterCard: { borderRadius: Radius.md, padding: 20, marginBottom: 12 },
-  letterQuestion: { fontSize: 13, lineHeight: 19 },
-  letterContent: { fontSize: 15.5, lineHeight: 25, marginTop: 8 },
+  letterQuestion: { fontSize: 14, lineHeight: 20 },
+  letterContent: { fontSize: 16.5, lineHeight: 26, marginTop: 8 },
   letterActions: { flexDirection: 'row', gap: 18, marginTop: 14 },
-  letterAction: { fontSize: 13.5, fontWeight: '600' },
+  letterAction: { fontSize: 14.5, fontWeight: '600' },
 
   addCard: {
     borderRadius: Radius.md,
@@ -254,24 +254,24 @@ const styles = StyleSheet.create({
     paddingVertical: 26,
   },
   addPlus: { fontSize: 28, fontWeight: '300', lineHeight: 30 },
-  addLabel: { fontSize: 13, marginTop: 4 },
+  addLabel: { fontSize: 14, marginTop: 4 },
 
   questionCard: { borderRadius: Radius.md, padding: 20, marginBottom: 16 },
   questionText: { fontSize: 18, fontWeight: '600', lineHeight: 27 },
   questionOption: { borderRadius: Radius.md, padding: 18, marginBottom: 10 },
-  searchInput: { height: 44, borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, fontSize: 14.5, marginBottom: 14 },
-  questionOptionText: { fontSize: 15.5, lineHeight: 23 },
+  searchInput: { height: 44, borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 14, fontSize: 15.5, marginBottom: 14 },
+  questionOptionText: { fontSize: 16.5, lineHeight: 24 },
   input: {
     minHeight: 180,
     borderRadius: Radius.md,
     borderWidth: 1,
     padding: 16,
-    fontSize: 16,
-    lineHeight: 25,
+    fontSize: 17,
+    lineHeight: 26,
     textAlignVertical: 'top',
   },
-  counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
+  counter: { fontSize: 13, textAlign: 'right', marginTop: 6 },
   primaryBtn: { height: 54, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
-  primaryBtnText: { fontSize: 16, fontWeight: '700' },
+  primaryBtnText: { fontSize: 17, fontWeight: '700' },
   cancel: { alignSelf: 'center', marginTop: 16, padding: 6 },
 });

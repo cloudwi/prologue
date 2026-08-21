@@ -152,9 +152,9 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   emptyPad: { paddingHorizontal: 32 },
-  emptyText: { fontSize: 13.5, lineHeight: 21, textAlign: 'center' },
+  emptyText: { fontSize: 14.5, lineHeight: 22, textAlign: 'center' },
 
-  sub: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  sub: { fontSize: 14, lineHeight: 20, marginBottom: 14 },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: PAST_GRID_GAP },
   photo: { borderRadius: Radius.md },
@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   badges: { position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 },
   badge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   badgeIcon: { width: 12, height: 12 },
-  name: { fontSize: 13.5, fontWeight: '600', marginTop: 7 },
-  day: { fontSize: 12, marginTop: 2 },
+  name: { fontSize: 14.5, fontWeight: '600', marginTop: 7 },
+  day: { fontSize: 13, marginTop: 2 },
 });

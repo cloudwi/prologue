@@ -37,7 +37,7 @@ export function KeywordChips({
               { borderColor: on ? c.primary : c.border, backgroundColor: on ? c.primary : c.backgroundElement },
             ]}
           >
-            <Text style={{ color: on ? c.primaryText : c.text, fontSize: 14, fontWeight: on ? '700' : '500' }}>{k}</Text>
+            <Text style={{ color: on ? c.primaryText : c.text, fontSize: 15, fontWeight: on ? '700' : '500' }}>{k}</Text>
           </Pressable>
         );
       })}

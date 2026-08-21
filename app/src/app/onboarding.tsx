@@ -166,7 +166,7 @@ export default function OnboardingScreen() {
                   },
                 ]}
               >
-                <Text style={{ color: c.text, fontSize: 14 }}>{name}</Text>
+                <Text style={{ color: c.text, fontSize: 15 }}>{name}</Text>
               </Pressable>
             ))}
           </View>
@@ -494,7 +494,7 @@ export default function OnboardingScreen() {
               <Text style={[styles.submitText, { color: c.primaryText }]}>프로필 마저 채우기</Text>
             </Pressable>
             <Pressable onPress={() => router.replace('/discover')} hitSlop={8} style={styles.choiceLater}>
-              <Text style={{ color: c.textSecondary, fontSize: 15 }}>나중에 할게요</Text>
+              <Text style={{ color: c.textSecondary, fontSize: 16 }}>나중에 할게요</Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -627,31 +627,31 @@ const styles = StyleSheet.create({
   back: { fontSize: 34, fontWeight: '300', lineHeight: 36, marginTop: -4 },
   progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  stepCount: { fontSize: 12, fontVariant: ['tabular-nums'] },
-  bioInput: { minHeight: 160, borderRadius: 18, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
-  bioCounter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
+  stepCount: { fontSize: 13, fontVariant: ['tabular-nums'] },
+  bioInput: { minHeight: 160, borderRadius: 18, borderWidth: 1, padding: 16, fontSize: 17, lineHeight: 25, textAlignVertical: 'top' },
+  bioCounter: { fontSize: 13, textAlign: 'right', marginTop: 6 },
   // 필수 문답 — 질문은 카드로, 답은 그 아래에.
   letterCard: { borderRadius: 18, padding: 18, marginBottom: 12 },
-  letterQuestion: { fontSize: 17, lineHeight: 26, fontWeight: '700' },
+  letterQuestion: { fontSize: 18, lineHeight: 27, fontWeight: '700' },
   letterShuffleBtn: { alignSelf: 'flex-end', marginTop: 10 },
-  letterShuffle: { fontSize: 13, fontWeight: '700' },
+  letterShuffle: { fontSize: 14, fontWeight: '700' },
   content: { padding: 25, paddingTop: 48, paddingBottom: 24 },
-  stepEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 3 },
+  stepEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 3 },
   title: { fontSize: 29, fontWeight: '700', marginTop: 12, lineHeight: 40 },
-  subtitle: { fontSize: 15, marginTop: 10, lineHeight: 23 },
+  subtitle: { fontSize: 16, marginTop: 10, lineHeight: 24 },
   stepBody: { marginTop: 40 },
-  hint: { fontSize: 13, marginTop: 6 },
-  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
-  suggestHint: { fontSize: 13, marginBottom: 8 },
+  hint: { fontSize: 14, marginTop: 6 },
+  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 17 },
+  suggestHint: { fontSize: 14, marginBottom: 8 },
   suggestRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   footerAccessory: { marginBottom: 14 },
   suggestChip: { paddingHorizontal: 14, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
+  counter: { fontSize: 13, textAlign: 'right', marginTop: 6 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingHorizontal: 25, paddingBottom: 12 },
   submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  submitText: { fontSize: 16, fontWeight: '700' },
+  submitText: { fontSize: 17, fontWeight: '700' },
   choiceBody: { flex: 1, justifyContent: 'center', paddingHorizontal: 25 },
   choiceButtons: { paddingHorizontal: 25, paddingBottom: 12 },
   choiceLater: { alignItems: 'center', paddingVertical: 16 },

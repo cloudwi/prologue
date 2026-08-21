@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  save: { fontSize: 15, fontWeight: '700' },
+  save: { fontSize: 16, fontWeight: '700' },
   soonTitle: { fontSize: 18, fontWeight: '700' },
-  soonDesc: { fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 22 },
+  soonDesc: { fontSize: 15, textAlign: 'center', marginTop: 8, lineHeight: 23 },
 });

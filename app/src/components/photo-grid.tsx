@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  primaryBadgeText: { fontSize: 10, fontWeight: '700' },
+  primaryBadgeText: { fontSize: 11, fontWeight: '700' },
   removeBtn: {
     position: 'absolute',
     top: 6,
@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     opacity: 0.85,
   },
-  removeBtnText: { fontSize: 11, fontWeight: '700', lineHeight: 13 },
+  removeBtnText: { fontSize: 12, fontWeight: '700', lineHeight: 14 },
   addTile: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed' },
   addPlus: { fontSize: 30, fontWeight: '300', lineHeight: 34 },
-  addLabel: { fontSize: 12, marginTop: 2 },
+  addLabel: { fontSize: 13, marginTop: 2 },
 });

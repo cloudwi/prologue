@@ -114,7 +114,7 @@ export default function EditPhotosScreen() {
           {busy && (
             <View style={styles.busy}>
               <ActivityIndicator color={c.primary} />
-              <Text style={{ color: c.textSecondary, fontSize: 13 }}>처리 중이에요</Text>
+              <Text style={{ color: c.textSecondary, fontSize: 14 }}>처리 중이에요</Text>
             </View>
           )}
         </ScrollView>
@@ -142,8 +142,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
-  lead: { fontSize: 15, lineHeight: 22 },
-  sub: { fontSize: 13, marginTop: 6 },
+  lead: { fontSize: 16, lineHeight: 23 },
+  sub: { fontSize: 14, marginTop: 6 },
   grid: { marginTop: 18 },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
 });

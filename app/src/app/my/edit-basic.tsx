@@ -226,7 +226,7 @@ function GenderToggle({
               },
             ]}
           >
-            <Text style={{ color: on ? c.primaryText : c.text, fontSize: 15, fontWeight: '600' }}>{o.label}</Text>
+            <Text style={{ color: on ? c.primaryText : c.text, fontSize: 16, fontWeight: '600' }}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -239,13 +239,13 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
   field: { marginBottom: 22 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  fieldHint: { fontSize: 12.5, lineHeight: 18, marginTop: 7 },
-  input: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, fontSize: 16 },
+  label: { fontSize: 15, fontWeight: '600', marginBottom: 8 },
+  fieldHint: { fontSize: 13.5, lineHeight: 19, marginTop: 7 },
+  input: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, fontSize: 17 },
   // 입력칸과 같은 형태를 쓰되 눌린 면 색으로 두어 "만질 수 없는 값"임을 보이게 한다
   readonly: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, justifyContent: 'center' },
-  readonlyText: { fontSize: 16 },
-  readonlyHint: { fontSize: 12.5, lineHeight: 18, marginTop: 7 },
+  readonlyText: { fontSize: 17 },
+  readonlyHint: { fontSize: 13.5, lineHeight: 19, marginTop: 7 },
   toggleRow: { flexDirection: 'row', gap: 10 },
   toggle: { flex: 1, height: 50, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });

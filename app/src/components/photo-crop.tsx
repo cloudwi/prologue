@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   // 자르기는 사진에 집중하는 순간 — 테마와 무관하게 어두운 막 위에서 한다.
   backdrop: { flex: 1, backgroundColor: 'rgba(12, 14, 16, 0.96)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  title: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  hint: { color: 'rgba(255,255,255,0.65)', fontSize: 12.5, marginTop: 6, marginBottom: 18 },
+  title: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  hint: { color: 'rgba(255,255,255,0.65)', fontSize: 13.5, marginTop: 6, marginBottom: 18 },
   frame: {
     overflow: 'hidden',
     borderRadius: Radius.md,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 24 },
   skipBtn: { paddingHorizontal: 12, paddingVertical: 12 },
-  skipText: { color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: '600' },
+  skipText: { color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: '600' },
   applyBtn: { height: 48, paddingHorizontal: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  applyText: { fontSize: 15, fontWeight: '700' },
+  applyText: { fontSize: 16, fontWeight: '700' },
 });

@@ -286,12 +286,12 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   requestPillIcon: { width: 16, height: 16 },
-  requestPillText: { fontSize: 14.5, fontWeight: '700' },
+  requestPillText: { fontSize: 15.5, fontWeight: '700' },
 
   lockedPad: { paddingHorizontal: 40 },
   lockedName: { fontSize: 19, fontWeight: '700', marginTop: 16 },
-  lockedMeta: { fontSize: 13.5, marginTop: 5 },
-  lockedBody: { fontSize: 13.5, lineHeight: 21, textAlign: 'center', marginTop: 22 },
+  lockedMeta: { fontSize: 14.5, marginTop: 5 },
+  lockedBody: { fontSize: 14.5, lineHeight: 22, textAlign: 'center', marginTop: 22 },
   unlockBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -301,5 +301,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     marginTop: 24,
   },
-  unlockText: { fontSize: 15, fontWeight: '700' },
+  unlockText: { fontSize: 16, fontWeight: '700' },
 });

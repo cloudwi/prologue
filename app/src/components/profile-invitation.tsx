@@ -64,7 +64,7 @@ export function ProfileInvitation({
         {lastActive ? (
           <View style={[styles.activity, { backgroundColor: c.backgroundElement }]}>
             {lastActive === 'TODAY' ? <View style={[styles.activityDot, { backgroundColor: c.primary }]} /> : null}
-            <Text style={{ color: c.textSecondary, fontSize: 12 }}>{ACTIVITY_LABEL[lastActive]}</Text>
+            <Text style={{ color: c.textSecondary, fontSize: 13 }}>{ACTIVITY_LABEL[lastActive]}</Text>
           </View>
         ) : null}
       </View>
@@ -73,7 +73,7 @@ export function ProfileInvitation({
         <View style={styles.chipWrap}>
           {keywords.map((item) => (
             <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
-              <Text style={{ color: c.textSecondary, fontSize: 13 }}>{item}</Text>
+              <Text style={{ color: c.textSecondary, fontSize: 14 }}>{item}</Text>
             </View>
           ))}
         </View>
@@ -182,27 +182,27 @@ const styles = StyleSheet.create({
 
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
   name: { fontSize: 30, fontWeight: '700', letterSpacing: 1 },
-  meta: { fontSize: 13, letterSpacing: 1, marginTop: 10 },
+  meta: { fontSize: 14, letterSpacing: 1, marginTop: 10 },
   activity: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 28, borderRadius: Radius.pill, marginTop: 14 },
   activityDot: { width: 6, height: 6, borderRadius: 3 },
 
   divider: { alignItems: 'center', marginVertical: 30 },
   dividerLine: { width: 40, height: StyleSheet.hairlineWidth },
 
-  greeting: { fontSize: 16, textAlign: 'center', marginBottom: 26 },
+  greeting: { fontSize: 17, textAlign: 'center', marginBottom: 26 },
 
   letter: { paddingHorizontal: 32, marginBottom: 34 },
-  letterQuestion: { fontSize: 13, lineHeight: 20, textAlign: 'center' },
-  letterContent: { fontSize: 17, lineHeight: 30, textAlign: 'center', marginTop: 12 },
-  letterLocked: { fontSize: 14, lineHeight: 23, textAlign: 'center', marginTop: 12, opacity: 0.7 },
+  letterQuestion: { fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  letterContent: { fontSize: 18, lineHeight: 30, textAlign: 'center', marginTop: 12 },
+  letterLocked: { fontSize: 15, lineHeight: 24, textAlign: 'center', marginTop: 12, opacity: 0.7 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
 
   signature: { alignItems: 'center', marginTop: 44 },
-  signatureLead: { fontSize: 12.5, letterSpacing: 0.5 },
+  signatureLead: { fontSize: 13.5, letterSpacing: 0.5 },
   signatureName: { fontSize: 19, fontWeight: '700', marginTop: 6 },
 
   report: { alignItems: 'center', marginTop: 36 },
-  reportText: { fontSize: 12.5, textDecorationLine: 'underline' },
+  reportText: { fontSize: 13.5, textDecorationLine: 'underline' },
 });

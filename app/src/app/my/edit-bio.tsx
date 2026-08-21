@@ -102,8 +102,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
-  lead: { fontSize: 14, lineHeight: 21, marginBottom: 18 },
-  input: { minHeight: 200, borderRadius: Radius.md, borderWidth: 1, padding: 16, fontSize: 16, lineHeight: 25, textAlignVertical: 'top' },
-  counter: { fontSize: 12, textAlign: 'right', marginTop: 6 },
-  tip: { fontSize: 12.5, lineHeight: 19, marginTop: 18 },
+  lead: { fontSize: 15, lineHeight: 22, marginBottom: 18 },
+  input: { minHeight: 200, borderRadius: Radius.md, borderWidth: 1, padding: 16, fontSize: 17, lineHeight: 26, textAlignVertical: 'top' },
+  counter: { fontSize: 13, textAlign: 'right', marginTop: 6 },
+  tip: { fontSize: 13.5, lineHeight: 20, marginTop: 18 },
 });

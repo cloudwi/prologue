@@ -95,5 +95,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
-  lead: { fontSize: 14, lineHeight: 21, marginBottom: 20 },
+  lead: { fontSize: 15, lineHeight: 22, marginBottom: 20 },
 });

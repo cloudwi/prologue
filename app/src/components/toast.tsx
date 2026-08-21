@@ -68,5 +68,5 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     opacity: 0.94,
   },
-  text: { fontSize: 13.5, fontWeight: '600' },
+  text: { fontSize: 14.5, fontWeight: '600' },
 });

@@ -64,10 +64,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   title: { fontSize: 27, fontWeight: '700', marginTop: 4, letterSpacing: -0.3 },
-  updated: { fontSize: 12.5, marginTop: 7 },
+  updated: { fontSize: 13.5, marginTop: 7 },
   rule: { height: StyleSheet.hairlineWidth, marginTop: 20 },
   section: { marginTop: 26 },
-  heading: { fontSize: 15.5, fontWeight: '700', letterSpacing: -0.2 },
+  heading: { fontSize: 16.5, fontWeight: '700', letterSpacing: -0.2 },
   // 법 문서는 한 줄이 길어 행간이 좁으면 줄을 놓친다.
-  body: { fontSize: 14, lineHeight: 24, marginTop: 9 },
+  body: { fontSize: 15, lineHeight: 25, marginTop: 9 },
 });

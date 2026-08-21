@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
   },
   lines: { gap: 8, flexShrink: 1, flex: 1 },
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  line: { fontSize: 14, fontVariant: ['tabular-nums'], flexShrink: 1 },
+  line: { fontSize: 15, fontVariant: ['tabular-nums'], flexShrink: 1 },
   copyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 26, paddingHorizontal: 9, borderRadius: Radius.pill },
-  copyText: { fontSize: 12, fontWeight: '700' },
-  hint: { fontSize: 13, fontWeight: '700' },
+  copyText: { fontSize: 13, fontWeight: '700' },
+  hint: { fontSize: 14, fontWeight: '700' },
 });

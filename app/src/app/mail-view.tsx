@@ -130,14 +130,14 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   emptyPad: { paddingHorizontal: 32 },
-  emptyText: { fontSize: 13.5, textAlign: 'center' },
+  emptyText: { fontSize: 14.5, textAlign: 'center' },
 
   card: { borderRadius: Radius.md, padding: 20 },
   to: { fontSize: 19, fontWeight: '700' },
-  date: { fontSize: 12.5, marginTop: 4 },
-  body: { fontSize: 15.5, lineHeight: 26, marginTop: 16 },
+  date: { fontSize: 13.5, marginTop: 4 },
+  body: { fontSize: 16.5, lineHeight: 27, marginTop: 16 },
 
-  sealNote: { fontSize: 12.5, lineHeight: 19, textAlign: 'center', marginTop: 20 },
+  sealNote: { fontSize: 13.5, lineHeight: 20, textAlign: 'center', marginTop: 20 },
   recallBtn: {
     alignSelf: 'center',
     marginTop: 18,
@@ -148,5 +148,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recallText: { fontSize: 13, fontWeight: '600' },
+  recallText: { fontSize: 14, fontWeight: '600' },
 });

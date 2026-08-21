@@ -219,10 +219,10 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
 
   balanceCard: { borderRadius: Radius.md, paddingVertical: 22, alignItems: 'center' },
-  balanceLabel: { fontSize: 12.5 },
+  balanceLabel: { fontSize: 13.5 },
   balanceValue: { fontSize: 34, fontWeight: '800', marginTop: 6, letterSpacing: -0.5 },
 
-  guide: { fontSize: 13, lineHeight: 20, marginTop: 16, marginBottom: 18 },
+  guide: { fontSize: 14, lineHeight: 21, marginTop: 16, marginBottom: 18 },
 
   loading: { paddingVertical: 40, alignItems: 'center' },
 
@@ -237,9 +237,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardBody: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700' },
-  cardSaving: { fontSize: 12.5, fontWeight: '600', marginTop: 3 },
-  cardPrice: { fontSize: 15.5, fontWeight: '700' },
+  cardTitle: { fontSize: 17, fontWeight: '700' },
+  cardSaving: { fontSize: 13.5, fontWeight: '600', marginTop: 3 },
+  cardPrice: { fontSize: 16.5, fontWeight: '700' },
 
-  note: { fontSize: 12, lineHeight: 19, marginTop: 18 },
+  note: { fontSize: 13, lineHeight: 20, marginTop: 18 },
 });

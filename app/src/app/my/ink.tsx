@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   balanceCard: { borderRadius: Radius.md, alignItems: 'center', paddingVertical: 36, marginBottom: 14 },
   inkIcon: { marginBottom: 14 },
   balanceNumber: { fontSize: 44, fontWeight: '700' },
-  balanceHint: { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 14 },
+  balanceHint: { fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 14 },
 
   topupBtn: {
     height: 50,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 14,
   },
-  topupText: { fontSize: 15.5, fontWeight: '700' },
+  topupText: { fontSize: 16.5, fontWeight: '700' },
 
   eventEntry: {
     flexDirection: 'row',
@@ -160,14 +160,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginBottom: 28,
   },
-  eventEntryLabel: { fontSize: 15, fontWeight: '600' },
-  eventEntryHint: { fontSize: 12.5, marginTop: 3 },
+  eventEntryLabel: { fontSize: 16, fontWeight: '600' },
+  eventEntryHint: { fontSize: 13.5, marginTop: 3 },
   chevron: { fontSize: 20, fontWeight: '300' },
 
-  sectionLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
+  sectionLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
   historyCard: { borderRadius: Radius.md, paddingHorizontal: 18 },
   historyRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  historyLabel: { fontSize: 15, fontWeight: '600' },
-  historyDate: { fontSize: 12.5, marginTop: 3 },
-  historyAmount: { fontSize: 15, fontWeight: '700' },
+  historyLabel: { fontSize: 16, fontWeight: '600' },
+  historyDate: { fontSize: 13.5, marginTop: 3 },
+  historyAmount: { fontSize: 16, fontWeight: '700' },
 });

@@ -251,7 +251,7 @@ export default function DiscoverScreen() {
                       </Text>
                       <View style={styles.editorActions}>
                         <Pressable onPress={cancelEdit} disabled={submitting} style={styles.cancel} hitSlop={6}>
-                          <Text style={{ color: c.textSecondary, fontSize: 14, fontWeight: '600' }}>취소</Text>
+                          <Text style={{ color: c.textSecondary, fontSize: 15, fontWeight: '600' }}>취소</Text>
                         </Pressable>
                         <Pressable
                           onPress={submit}
@@ -288,7 +288,7 @@ export default function DiscoverScreen() {
                     </Text>
                     {(today?.myAnswer?.length ?? 0) > 100 && (
                       <Pressable onPress={() => setAnswerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                        <Text style={{ color: c.primaryStrong, fontSize: 13, fontWeight: '600' }}>
+                        <Text style={{ color: c.primaryStrong, fontSize: 14, fontWeight: '600' }}>
                           {answerExpanded ? '접기' : '더보기'}
                         </Text>
                       </Pressable>
@@ -509,7 +509,7 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
                 </Text>
                 {(peer.peerAnswer?.length ?? 0) > 140 && (
                   <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                    <Text style={{ color: c.primaryStrong, fontSize: 13, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
+                    <Text style={{ color: c.primaryStrong, fontSize: 14, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
                   </Pressable>
                 )}
               </>
@@ -574,7 +574,7 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
           <View style={styles.peerChips}>
             {keywords.map((k) => (
               <View key={k} style={[styles.peerChip, { borderColor: c.border }]}>
-                <Text style={{ color: c.textSecondary, fontSize: 12 }}>{k}</Text>
+                <Text style={{ color: c.textSecondary, fontSize: 13 }}>{k}</Text>
               </View>
             ))}
           </View>
@@ -594,74 +594,74 @@ const styles = StyleSheet.create({
   // 화면 가장자리까지 면을 내어 "카드"가 아니라 "표지"로 읽히게 한다. 색은 테라코타 8% 한 겹뿐.
   cover: { marginHorizontal: -20, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 26, borderBottomLeftRadius: Radius.lg + 8, borderBottomRightRadius: Radius.lg + 8 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 },
-  dateCaption: { fontSize: 12.5, fontWeight: '700', letterSpacing: 0.3 },
+  dateCaption: { fontSize: 13.5, fontWeight: '700', letterSpacing: 0.3 },
   inkChip: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 26, paddingHorizontal: 9, borderRadius: Radius.pill },
-  inkChipText: { fontSize: 12.5, fontWeight: '700' },
-  questionEyebrow: { fontSize: 12, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
+  inkChipText: { fontSize: 13.5, fontWeight: '700' },
+  questionEyebrow: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
   // 질문이 곧 헤더 — 크게, 왼쪽 정렬, 줄 간격 넉넉히.
   question: { fontSize: 27, fontWeight: '700', lineHeight: 38, letterSpacing: -0.3 },
 
   composeEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, height: 52, paddingHorizontal: 18, borderRadius: Radius.md },
-  composeEntryText: { fontSize: 15 },
+  composeEntryText: { fontSize: 16 },
   editor: { marginTop: 18 },
-  input: { minHeight: 150, borderRadius: Radius.md, padding: 16, fontSize: 16, lineHeight: 24, textAlignVertical: 'top' },
+  input: { minHeight: 150, borderRadius: Radius.md, padding: 16, fontSize: 17, lineHeight: 25, textAlignVertical: 'top' },
   editorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
   editorActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  counter: { fontSize: 12 },
+  counter: { fontSize: 13 },
   cancel: { padding: 4 },
   submit: { height: 42, paddingHorizontal: 18, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  submitText: { fontSize: 14.5, fontWeight: '700' },
+  submitText: { fontSize: 15.5, fontWeight: '700' },
 
   // 내 답 — 질문 아래 인용처럼. 왼쪽 테라코타 선 한 줄이 "내 목소리"라는 표시.
   myAnswerBlock: { flexDirection: 'row', marginTop: 20, gap: 14 },
   myAnswerRule: { width: 2, borderRadius: 1, marginTop: 4, marginBottom: 4 },
-  myAnswerText: { fontSize: 16.5, lineHeight: 26 },
+  myAnswerText: { fontSize: 17.5, lineHeight: 27 },
   moreBtn: { marginTop: 8, alignSelf: 'flex-start' },
   answerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, flexWrap: 'wrap', gap: 6 },
-  answeredTag: { fontSize: 12.5, fontWeight: '700' },
+  answeredTag: { fontSize: 13.5, fontWeight: '700' },
   answerLinks: { flexDirection: 'row', alignItems: 'center' },
-  answerLink: { fontSize: 13, fontWeight: '600' },
-  answerLinkDot: { marginHorizontal: 7, fontSize: 13 },
+  answerLink: { fontSize: 14, fontWeight: '600' },
+  answerLinkDot: { marginHorizontal: 7, fontSize: 14 },
 
   // ── 오늘의 상대 ──
   peerSection: { marginTop: 30 },
   peerHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14, paddingHorizontal: 2 },
-  peerEyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
-  peerSub: { fontSize: 12.5 },
+  peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
+  peerSub: { fontSize: 13.5 },
   // 카드가 화면 가장자리 밑으로 흐르게 좌우 패딩을 상쇄한다 — 옆 카드가 살짝 보이는 게 넘길 수 있다는 신호.
   carouselScroll: { marginHorizontal: -20, overflow: 'visible' },
   carouselContent: { paddingHorizontal: 20, gap: 12 },
   peerCard: { borderRadius: Radius.lg, overflow: 'hidden' },
   peerAnswerBlock: { padding: 20, paddingBottom: 18 },
-  peerAnswerQuestion: { fontSize: 12.5, lineHeight: 18, marginBottom: 8 },
-  peerAnswer: { fontSize: 17, lineHeight: 27, fontWeight: '500' },
+  peerAnswerQuestion: { fontSize: 13.5, lineHeight: 19, marginBottom: 8 },
+  peerAnswer: { fontSize: 18, lineHeight: 27, fontWeight: '500' },
   // 가려진 답변의 스켈레톤 — 글줄(lineHeight 27)과 같은 간격으로 세 줄.
   maskLines: { paddingVertical: 4, gap: 12 },
   maskLine: { height: 15, borderRadius: 7 },
   revealHint: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  revealHintText: { fontSize: 13.5, fontWeight: '700' },
+  revealHintText: { fontSize: 14.5, fontWeight: '700' },
   // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
   peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
   photoBadge: { position: 'absolute', right: 10, bottom: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.pill, opacity: 0.92 },
-  photoBadgeText: { fontSize: 11, fontWeight: '700' },
+  photoBadgeText: { fontSize: 12, fontWeight: '700' },
   peerBody: { padding: 18, paddingTop: 16 },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
   peerHeadBody: { flex: 1, marginLeft: 0 },
   peerName: { fontSize: 19, fontWeight: '700' },
-  peerMeta: { fontSize: 13, marginTop: 2 },
+  peerMeta: { fontSize: 14, marginTop: 2 },
   detailCta: { height: 34, paddingHorizontal: 14, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  detailCtaText: { fontSize: 13, fontWeight: '700' },
-  peerBio: { fontSize: 14, lineHeight: 21, marginTop: 12 },
+  detailCtaText: { fontSize: 14, fontWeight: '700' },
+  peerBio: { fontSize: 15, lineHeight: 22, marginTop: 12 },
   peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   peerChip: { paddingHorizontal: 10, height: 26, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
   // 기다림·빈 상태 — 박스 대신 마크 한 점과 문장.
   countdown: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 28 },
   countdownMark: { width: 54, height: 40, marginBottom: 16 },
-  countdownTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center', lineHeight: 25 },
-  countdownBody: { fontSize: 13.5, textAlign: 'center', lineHeight: 21, marginTop: 8 },
+  countdownTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center', lineHeight: 26 },
+  countdownBody: { fontSize: 14.5, textAlign: 'center', lineHeight: 22, marginTop: 8 },
   countdownAction: { marginTop: 14, padding: 4 },
-  countdownActionText: { fontSize: 14, fontWeight: '700' },
+  countdownActionText: { fontSize: 15, fontWeight: '700' },
 
   // 지난 상대 — 한 줄 링크.
   pastEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 26, paddingVertical: 8 },
@@ -669,5 +669,5 @@ const styles = StyleSheet.create({
   pastFace: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   pastFaceOverlap: { marginLeft: -8 },
   pastFaceFill: { width: '100%', height: '100%' },
-  pastEntryLabel: { fontSize: 13.5, fontWeight: '600' },
+  pastEntryLabel: { fontSize: 14.5, fontWeight: '600' },
 });

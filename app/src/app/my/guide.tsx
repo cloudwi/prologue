@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   lead: { fontSize: 22, fontWeight: '700', lineHeight: 32, marginBottom: 28 },
   step: { flexDirection: 'row', gap: 14, marginBottom: 26 },
   badge: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 13, fontWeight: '700' },
-  stepTitle: { fontSize: 16, fontWeight: '700' },
-  stepBody: { fontSize: 14, lineHeight: 22, marginTop: 6 },
+  badgeText: { fontSize: 14, fontWeight: '700' },
+  stepTitle: { fontSize: 17, fontWeight: '700' },
+  stepBody: { fontSize: 15, lineHeight: 23, marginTop: 6 },
 });

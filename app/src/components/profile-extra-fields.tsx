@@ -106,8 +106,8 @@ function Field({ label, c, children }: { label: string; c: ThemeColors; children
 
 const styles = StyleSheet.create({
   field: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
+  label: { fontSize: 15, fontWeight: '600', marginBottom: 8 },
+  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 17 },
   toggleRow: { flexDirection: 'row', gap: 12 },
   toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   avatarRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 89, height: 64, marginBottom: 20 }, // 마크는 1.4:1 가로형
   title: { fontSize: 24, fontWeight: '700' },
-  desc: { fontSize: 15, textAlign: 'center', marginTop: 14, lineHeight: 23 },
+  desc: { fontSize: 16, textAlign: 'center', marginTop: 14, lineHeight: 24 },
   btn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  btnText: { fontSize: 16, fontWeight: '700' },
+  btnText: { fontSize: 17, fontWeight: '700' },
 });

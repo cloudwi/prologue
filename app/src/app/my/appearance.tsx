@@ -68,10 +68,10 @@ function Option({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: 20, paddingBottom: 48 },
-  lead: { fontSize: 13.5, marginBottom: 14 },
+  lead: { fontSize: 14.5, marginBottom: 14 },
   card: { borderRadius: Radius.md, borderWidth: 1, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 15 },
-  label: { fontSize: 15, fontWeight: '600' },
-  desc: { fontSize: 12.5, marginTop: 2 },
-  check: { fontSize: 17, fontWeight: '700' },
+  label: { fontSize: 16, fontWeight: '600' },
+  desc: { fontSize: 13.5, marginTop: 2 },
+  check: { fontSize: 18, fontWeight: '700' },
 });
