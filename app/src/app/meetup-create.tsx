@@ -11,15 +11,104 @@ import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { createMeetup } from '@/lib/meetups';
 
-/** 정원 휠 값 — 소모임(2)부터 대형(50)까지. */
-const CAPACITIES = Array.from({ length: 49 }, (_, i) => String(i + 2));
-
 /**
  * 모임 열기 — 누구나 모임장이 될 수 있다.
  *
- * 폼은 모임의 뼈대(무엇을·언제·어디서·몇 명·얼마)와 오픈채팅 링크만 받는다.
+ * 숫자는 전부 휠로 고른다(타이핑보다 실수 없고, 값의 범위가 곧 가이드가 된다).
+ * 참가비·나이·키 조건은 남/녀 기준이 다른 모임이 보통이라 성별별로 받는다.
  * 입금 확인과 자리 배분은 카카오에서 모임장이 직접 한다 — 우리는 돈을 만지지 않는다.
  */
+
+type WheelItem = { value: string; label: string };
+
+const NONE: WheelItem = { value: '', label: '제한 없음' };
+
+/** 정원 — 소모임(2)부터 대형(50)까지. */
+const CAPACITY_ITEMS: WheelItem[] = Array.from({ length: 49 }, (_, i) => {
+  const n = String(i + 2);
+  return { value: n, label: `${n}명` };
+});
+
+/** 참가비 — 1천 원 단위로 3만까지, 그 위는 5천 원 단위로 10만까지. */
+const FEE_STEPS: number[] = [
+  ...Array.from({ length: 30 }, (_, i) => (i + 1) * 1000),
+  ...Array.from({ length: 14 }, (_, i) => 35000 + i * 5000),
+];
+const FEE_ITEMS: WheelItem[] = FEE_STEPS.map((n) => ({ value: String(n), label: `${n.toLocaleString('ko-KR')}원` }));
+/** 성별별 요금엔 "무료"도 있다 — 여성 무료 모임처럼. */
+const FEE_ITEMS_WITH_FREE: WheelItem[] = [{ value: '0', label: '무료' }, ...FEE_ITEMS];
+
+const AGE_ITEMS: WheelItem[] = [NONE, ...Array.from({ length: 42 }, (_, i) => {
+  const n = String(i + 19);
+  return { value: n, label: `${n}세` };
+})];
+
+const HEIGHT_ITEMS: WheelItem[] = [NONE, ...Array.from({ length: 61 }, (_, i) => {
+  const n = String(i + 140);
+  return { value: n, label: `${n}cm` };
+})];
+
+/** 숫자 고르기 공용 휠 — 트리거는 입력창처럼 보이고, 누르면 바텀시트 휠이 뜬다. */
+function WheelField({
+  value,
+  placeholder,
+  items,
+  defaultValue,
+  onChange,
+  c,
+}: {
+  value: string;
+  placeholder: string;
+  items: WheelItem[];
+  /** 미선택 상태에서 휠을 열 때 시작 위치. */
+  defaultValue?: string;
+  onChange: (value: string) => void;
+  c: ThemeColors;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const selected = items.find((i) => i.value === value);
+
+  function openSheet() {
+    setDraft(value || defaultValue || items[0]!.value);
+    setOpen(true);
+  }
+
+  return (
+    <>
+      <Pressable onPress={openSheet} style={[styles.input, styles.centerText, { backgroundColor: c.backgroundElement }]}>
+        <Text style={{ color: selected ? c.text : c.textSecondary, fontSize: 16 }}>
+          {selected ? selected.label : placeholder}
+        </Text>
+      </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
+        <View style={[styles.sheet, { backgroundColor: c.background }]}>
+          <View style={styles.sheetHead}>
+            <Pressable onPress={() => setOpen(false)} hitSlop={10}>
+              <Text style={[styles.sheetBtn, { color: c.textSecondary }]}>취소</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                onChange(draft);
+                setOpen(false);
+              }}
+              hitSlop={10}
+            >
+              <Text style={[styles.sheetBtn, { color: c.primaryStrong }]}>완료</Text>
+            </Pressable>
+          </View>
+          <Picker selectedValue={draft} onValueChange={setDraft} itemStyle={{ color: c.text }}>
+            {items.map((item) => (
+              <Picker.Item key={item.value || 'none'} label={item.label} value={item.value} />
+            ))}
+          </Picker>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
 export default function MeetupCreateScreen() {
   const c = useTheme();
   const router = useRouter();
@@ -35,20 +124,19 @@ export default function MeetupCreateScreen() {
   const [fee, setFee] = useState('');
   const [feeFemaleInput, setFeeFemaleInput] = useState('');
   const [kakaoLink, setKakaoLink] = useState('');
-  // 참가 조건 (선택)
+  // 참가 조건 (선택) — 성별별 기준
   const [genderLimit, setGenderLimit] = useState<'MALE' | 'FEMALE' | null>(null);
-  const [minAge, setMinAge] = useState('');
-  const [maxAge, setMaxAge] = useState('');
-  const [minHeight, setMinHeight] = useState('');
+  const [minAgeMale, setMinAgeMale] = useState('');
+  const [maxAgeMale, setMaxAgeMale] = useState('');
+  const [minHeightMale, setMinHeightMale] = useState('');
+  const [minAgeFemale, setMinAgeFemale] = useState('');
+  const [maxAgeFemale, setMaxAgeFemale] = useState('');
+  const [minHeightFemale, setMinHeightFemale] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // iOS 바텀시트 휠용
+  // iOS 날짜 바텀시트 휠용
   const [pickerOpen, setPickerOpen] = useState<'date' | 'time' | null>(null);
   const [draft, setDraft] = useState(new Date());
-
-  // 정원 휠 (양 플랫폼 공통)
-  const [capacityOpen, setCapacityOpen] = useState(false);
-  const [capacityDraft, setCapacityDraft] = useState('8');
 
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const timeFmt = new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' });
@@ -88,20 +176,17 @@ export default function MeetupCreateScreen() {
     setPickerOpen(null);
   }
 
-  const capacityNum = Number(capacity);
-  const feeNum = fee === '' ? 0 : Number(fee);
-
   /** 비활성 버튼은 이유를 말하지 않는다 — 항상 눌리게 두고, 빠진 것을 말로 알려준다. */
   function firstMissing(): string | null {
     if (title.trim().length === 0) return '모임 이름을 적어주세요.';
     if (meetAt == null) return '모임 날짜와 시간을 골라주세요.';
     if (place.trim().length === 0) return '모임 장소를 적어주세요.';
-    if (!Number.isInteger(capacityNum) || capacityNum < 2) return '정원을 골라주세요.';
-    if (isPaid && !feeByGender && (!Number.isInteger(feeNum) || feeNum < 1)) return '참가비 금액을 적어주세요.';
-    if (isPaid && feeByGender && fee === '') return '남성 참가비를 적어주세요. (무료면 0)';
-    if (isPaid && feeByGender && feeFemaleInput === '') return '여성 참가비를 적어주세요. (무료면 0)';
-    if (minAge !== '' && maxAge !== '' && Number(minAge) > Number(maxAge)) return '나이 범위가 뒤집혔어요.';
-    if (minHeight !== '' && (Number(minHeight) < 140 || Number(minHeight) > 210)) return '최소 키는 140~210cm 사이로 적어주세요.';
+    if (capacity === '') return '정원을 골라주세요.';
+    if (isPaid && !feeByGender && fee === '') return '참가비를 골라주세요.';
+    if (isPaid && feeByGender && fee === '') return '남성 참가비를 골라주세요.';
+    if (isPaid && feeByGender && feeFemaleInput === '') return '여성 참가비를 골라주세요.';
+    if (minAgeMale !== '' && maxAgeMale !== '' && Number(minAgeMale) > Number(maxAgeMale)) return '남성 나이 범위가 뒤집혔어요.';
+    if (minAgeFemale !== '' && maxAgeFemale !== '' && Number(minAgeFemale) > Number(maxAgeFemale)) return '여성 나이 범위가 뒤집혔어요.';
     if (normalizedLink() == null) {
       return kakaoLink.trim().length > 0
         ? '카카오 오픈채팅 링크가 올바르지 않아요. open.kakao.com 링크를 붙여넣어주세요.'
@@ -117,6 +202,11 @@ export default function MeetupCreateScreen() {
     if (!/^https?:\/\//.test(link)) link = `https://${link}`;
     return /^https?:\/\/[\w.-]+\.[a-z]{2,}([/?#].*)?$/i.test(link) ? link : null;
   }
+
+  /** 성별 제한과 어긋나는 조건은 버린다 — 여성만 모임에 남성 조건이 실려 가지 않게. */
+  const num = (v: string) => (v === '' ? null : Number(v));
+  const maleAllowed = genderLimit !== 'FEMALE';
+  const femaleAllowed = genderLimit !== 'MALE';
 
   async function save() {
     const missing = firstMissing();
@@ -136,13 +226,16 @@ export default function MeetupCreateScreen() {
         description: description.trim() || undefined,
         meetAt: meetAt.toISOString(),
         place: place.trim(),
-        capacity: capacityNum,
-        fee: isPaid ? feeNum : 0,
-        feeFemale: isPaid && feeByGender ? Number(feeFemaleInput) : null,
+        capacity: Number(capacity),
+        fee: isPaid ? Number(fee) : 0,
+        feeFemale: isPaid && feeByGender && femaleAllowed ? Number(feeFemaleInput) : null,
         genderLimit,
-        minAge: minAge === '' ? null : Number(minAge),
-        maxAge: maxAge === '' ? null : Number(maxAge),
-        minHeightCm: minHeight === '' ? null : Number(minHeight),
+        minAgeMale: maleAllowed ? num(minAgeMale) : null,
+        maxAgeMale: maleAllowed ? num(maxAgeMale) : null,
+        minAgeFemale: femaleAllowed ? num(minAgeFemale) : null,
+        maxAgeFemale: femaleAllowed ? num(maxAgeFemale) : null,
+        minHeightMaleCm: maleAllowed ? num(minHeightMale) : null,
+        minHeightFemaleCm: femaleAllowed ? num(minHeightFemale) : null,
         kakaoLink: normalizedLink()!,
       });
       track('meetup_created');
@@ -205,17 +298,14 @@ export default function MeetupCreateScreen() {
         <View style={styles.row}>
           <View style={styles.rowItem}>
             <Field label="정원" c={c}>
-              <Pressable
-                onPress={() => {
-                  setCapacityDraft(capacity || '8');
-                  setCapacityOpen(true);
-                }}
-                style={[styles.input, styles.centerText, { backgroundColor: c.backgroundElement }]}
-              >
-                <Text style={{ color: capacity ? c.text : c.textSecondary, fontSize: 16 }}>
-                  {capacity ? `${capacity}명` : '정원 고르기'}
-                </Text>
-              </Pressable>
+              <WheelField
+                value={capacity}
+                placeholder="정원 고르기"
+                items={CAPACITY_ITEMS}
+                defaultValue="8"
+                onChange={setCapacity}
+                c={c}
+              />
             </Field>
           </View>
           <View style={styles.rowItem}>
@@ -226,7 +316,11 @@ export default function MeetupCreateScreen() {
                     key={String(paid)}
                     onPress={() => {
                       setIsPaid(paid);
-                      if (!paid) setFee('');
+                      if (!paid) {
+                        setFee('');
+                        setFeeFemaleInput('');
+                        setFeeByGender(false);
+                      }
                     }}
                     style={[styles.segmentItem, isPaid === paid && { backgroundColor: c.background }]}
                   >
@@ -249,7 +343,9 @@ export default function MeetupCreateScreen() {
         {isPaid && (
           <>
             <Pressable onPress={() => setFeeByGender((v) => !v)} hitSlop={6} style={styles.checkRow}>
-              <View style={[styles.checkbox, { borderColor: c.border }, feeByGender && { backgroundColor: c.primary, borderColor: c.primary }]}>
+              <View
+                style={[styles.checkbox, { borderColor: c.border }, feeByGender && { backgroundColor: c.primary, borderColor: c.primary }]}
+              >
                 {feeByGender && <Text style={[styles.checkboxMark, { color: c.primaryText }]}>✓</Text>}
               </View>
               <Text style={[styles.checkLabel, { color: c.text }]}>성별에 따라 다르게 받을게요</Text>
@@ -258,43 +354,33 @@ export default function MeetupCreateScreen() {
             {feeByGender ? (
               <View style={styles.row}>
                 <View style={styles.rowItem}>
-                  <Field label="남성 참가비 (원)" c={c}>
-                    <PlaceholderInput
+                  <Field label="남성 참가비" c={c}>
+                    <WheelField
                       value={fee}
-                      onChangeText={(t) => setFee(t.replace(/[^0-9]/g, ''))}
-                      placeholder="예) 20000"
-                      placeholderTextColor={c.textSecondary}
-                      keyboardType="number-pad"
-                      maxLength={7}
-                      style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+                      placeholder="금액 고르기"
+                      items={FEE_ITEMS_WITH_FREE}
+                      defaultValue="20000"
+                      onChange={setFee}
+                      c={c}
                     />
                   </Field>
                 </View>
                 <View style={styles.rowItem}>
-                  <Field label="여성 참가비 (원)" c={c}>
-                    <PlaceholderInput
+                  <Field label="여성 참가비" c={c}>
+                    <WheelField
                       value={feeFemaleInput}
-                      onChangeText={(t) => setFeeFemaleInput(t.replace(/[^0-9]/g, ''))}
-                      placeholder="0이면 무료"
-                      placeholderTextColor={c.textSecondary}
-                      keyboardType="number-pad"
-                      maxLength={7}
-                      style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+                      placeholder="금액 고르기"
+                      items={FEE_ITEMS_WITH_FREE}
+                      defaultValue="10000"
+                      onChange={setFeeFemaleInput}
+                      c={c}
                     />
                   </Field>
                 </View>
               </View>
             ) : (
-              <Field label="참가비 (원)" c={c} hint="오픈채팅에서 모임장에게 직접 보내는 금액이에요.">
-                <PlaceholderInput
-                  value={fee}
-                  onChangeText={(t) => setFee(t.replace(/[^0-9]/g, ''))}
-                  placeholder="예) 10000"
-                  placeholderTextColor={c.textSecondary}
-                  keyboardType="number-pad"
-                  maxLength={7}
-                  style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-                />
+              <Field label="참가비 금액" c={c} hint="오픈채팅에서 모임장에게 직접 보내는 금액이에요.">
+                <WheelField value={fee} placeholder="금액 고르기" items={FEE_ITEMS} defaultValue="10000" onChange={setFee} c={c} />
               </Field>
             )}
           </>
@@ -328,47 +414,79 @@ export default function MeetupCreateScreen() {
           </View>
         </Field>
 
-        <View style={styles.row}>
-          <View style={styles.rowItem}>
-            <Field label="나이 (최소)" c={c}>
-              <PlaceholderInput
-                value={minAge}
-                onChangeText={(t) => setMinAge(t.replace(/[^0-9]/g, ''))}
-                placeholder="제한 없음"
-                placeholderTextColor={c.textSecondary}
-                keyboardType="number-pad"
-                maxLength={2}
-                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-              />
-            </Field>
-          </View>
-          <View style={styles.rowItem}>
-            <Field label="나이 (최대)" c={c}>
-              <PlaceholderInput
-                value={maxAge}
-                onChangeText={(t) => setMaxAge(t.replace(/[^0-9]/g, ''))}
-                placeholder="제한 없음"
-                placeholderTextColor={c.textSecondary}
-                keyboardType="number-pad"
-                maxLength={2}
-                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-              />
-            </Field>
-          </View>
-          <View style={styles.rowItem}>
-            <Field label="최소 키 (cm)" c={c}>
-              <PlaceholderInput
-                value={minHeight}
-                onChangeText={(t) => setMinHeight(t.replace(/[^0-9]/g, ''))}
-                placeholder="제한 없음"
-                placeholderTextColor={c.textSecondary}
-                keyboardType="number-pad"
-                maxLength={3}
-                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-              />
-            </Field>
-          </View>
-        </View>
+        {maleAllowed && (
+          <>
+            <Text style={[styles.condTitle, { color: c.textSecondary }]}>남성 조건</Text>
+            <View style={styles.row}>
+              <View style={styles.rowItem}>
+                <Field label="나이 (최소)" c={c}>
+                  <WheelField value={minAgeMale} placeholder="제한 없음" items={AGE_ITEMS} defaultValue="25" onChange={setMinAgeMale} c={c} />
+                </Field>
+              </View>
+              <View style={styles.rowItem}>
+                <Field label="나이 (최대)" c={c}>
+                  <WheelField value={maxAgeMale} placeholder="제한 없음" items={AGE_ITEMS} defaultValue="39" onChange={setMaxAgeMale} c={c} />
+                </Field>
+              </View>
+              <View style={styles.rowItem}>
+                <Field label="최소 키" c={c}>
+                  <WheelField
+                    value={minHeightMale}
+                    placeholder="제한 없음"
+                    items={HEIGHT_ITEMS}
+                    defaultValue="170"
+                    onChange={setMinHeightMale}
+                    c={c}
+                  />
+                </Field>
+              </View>
+            </View>
+          </>
+        )}
+
+        {femaleAllowed && (
+          <>
+            <Text style={[styles.condTitle, { color: c.textSecondary }]}>여성 조건</Text>
+            <View style={styles.row}>
+              <View style={styles.rowItem}>
+                <Field label="나이 (최소)" c={c}>
+                  <WheelField
+                    value={minAgeFemale}
+                    placeholder="제한 없음"
+                    items={AGE_ITEMS}
+                    defaultValue="23"
+                    onChange={setMinAgeFemale}
+                    c={c}
+                  />
+                </Field>
+              </View>
+              <View style={styles.rowItem}>
+                <Field label="나이 (최대)" c={c}>
+                  <WheelField
+                    value={maxAgeFemale}
+                    placeholder="제한 없음"
+                    items={AGE_ITEMS}
+                    defaultValue="37"
+                    onChange={setMaxAgeFemale}
+                    c={c}
+                  />
+                </Field>
+              </View>
+              <View style={styles.rowItem}>
+                <Field label="최소 키" c={c}>
+                  <WheelField
+                    value={minHeightFemale}
+                    placeholder="제한 없음"
+                    items={HEIGHT_ITEMS}
+                    defaultValue="158"
+                    onChange={setMinHeightFemale}
+                    c={c}
+                  />
+                </Field>
+              </View>
+            </View>
+          </>
+        )}
 
         <Field label="카카오 오픈채팅 링크" c={c} hint="신청한 사람에게만 보여요. 입금 안내와 대화는 여기서 해요.">
           <PlaceholderInput
@@ -402,33 +520,7 @@ export default function MeetupCreateScreen() {
         </Text>
       </ScrollView>
 
-      {/* 정원 휠 — 날짜와 같은 바텀시트 결. */}
-      <Modal visible={capacityOpen} transparent animationType="fade" onRequestClose={() => setCapacityOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setCapacityOpen(false)} />
-        <View style={[styles.sheet, { backgroundColor: c.background }]}>
-          <View style={styles.sheetHead}>
-            <Pressable onPress={() => setCapacityOpen(false)} hitSlop={10}>
-              <Text style={[styles.sheetBtn, { color: c.textSecondary }]}>취소</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setCapacity(capacityDraft);
-                setCapacityOpen(false);
-              }}
-              hitSlop={10}
-            >
-              <Text style={[styles.sheetBtn, { color: c.primaryStrong }]}>완료</Text>
-            </Pressable>
-          </View>
-          <Picker selectedValue={capacityDraft} onValueChange={setCapacityDraft} itemStyle={{ color: c.text }}>
-            {CAPACITIES.map((n) => (
-              <Picker.Item key={n} label={`${n}명`} value={n} />
-            ))}
-          </Picker>
-        </View>
-      </Modal>
-
-      {/* iOS 바텀시트 휠 */}
+      {/* iOS 날짜/시간 바텀시트 휠 */}
       {Platform.OS === 'ios' && (
         <Modal visible={pickerOpen != null} transparent animationType="fade" onRequestClose={() => setPickerOpen(null)}>
           <Pressable style={styles.backdrop} onPress={() => setPickerOpen(null)} />
@@ -489,6 +581,7 @@ const styles = StyleSheet.create({
   checkboxMark: { fontSize: 13, fontWeight: '800' },
   checkLabel: { fontSize: 15 },
   sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 10, marginBottom: 14, paddingHorizontal: 2 },
+  condTitle: { fontSize: 13.5, fontWeight: '700', marginBottom: 10, paddingHorizontal: 2 },
   multiline: { minHeight: 110, textAlignVertical: 'top', paddingTop: 14 },
   row: { flexDirection: 'row', gap: 10 },
   rowItem: { flex: 1 },

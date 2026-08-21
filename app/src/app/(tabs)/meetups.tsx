@@ -36,14 +36,25 @@ function feeLabel(m: Meetup): string {
   return m.fee > 0 ? `참가비 ${won(m.fee)}` : '무료';
 }
 
-/** 참가 조건 요약 — 없으면 null(줄 자체를 그리지 않는다). */
+/** 한 성별의 조건 요약 — "25~39세·175cm+" 꼴. 없으면 null. */
+function genderConditions(minAge: number | null, maxAge: number | null, minHeight: number | null): string | null {
+  const parts: string[] = [];
+  if (minAge != null || maxAge != null) {
+    parts.push(minAge != null && maxAge != null ? `${minAge}~${maxAge}세` : minAge != null ? `${minAge}세+` : `~${maxAge}세`);
+  }
+  if (minHeight != null) parts.push(`${minHeight}cm+`);
+  return parts.length > 0 ? parts.join('·') : null;
+}
+
+/** 참가 조건 요약 — 성별별 기준을 나눠 보여준다. 없으면 null(줄 자체를 그리지 않는다). */
 function conditionLabel(m: Meetup): string | null {
+  const male = m.genderLimit !== 'FEMALE' ? genderConditions(m.minAgeMale, m.maxAgeMale, m.minHeightMaleCm) : null;
+  const female = m.genderLimit !== 'MALE' ? genderConditions(m.minAgeFemale, m.maxAgeFemale, m.minHeightFemaleCm) : null;
   const parts: string[] = [];
   if (m.genderLimit) parts.push(m.genderLimit === 'MALE' ? '남성만' : '여성만');
-  if (m.minAge != null || m.maxAge != null) {
-    parts.push(m.minAge != null && m.maxAge != null ? `${m.minAge}~${m.maxAge}세` : m.minAge != null ? `${m.minAge}세 이상` : `${m.maxAge}세 이하`);
-  }
-  if (m.minHeightCm != null) parts.push(`키 ${m.minHeightCm}cm 이상`);
+  if (male && female) parts.push(`남 ${male} · 여 ${female}`);
+  else if (male) parts.push(m.genderLimit === 'MALE' ? male : `남 ${male}`);
+  else if (female) parts.push(m.genderLimit === 'FEMALE' ? female : `여 ${female}`);
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 

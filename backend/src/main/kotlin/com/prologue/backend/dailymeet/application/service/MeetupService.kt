@@ -24,11 +24,14 @@ data class MeetupView(
     val fee: Int,
     /** 여성 참가비 — null이면 fee와 동일. */
     val feeFemale: Int?,
-    /** 참가 조건 — null이면 제한 없음. */
+    /** 참가 조건 — null이면 제한 없음. 남/녀 기준이 달라 성별별로 내려간다. */
     val genderLimit: String?,
-    val minAge: Int?,
-    val maxAge: Int?,
-    val minHeightCm: Int?,
+    val minAgeMale: Int?,
+    val maxAgeMale: Int?,
+    val minAgeFemale: Int?,
+    val maxAgeFemale: Int?,
+    val minHeightMaleCm: Int?,
+    val minHeightFemaleCm: Int?,
     val status: String,
     val hostNickname: String?,
     /** 이 모임장이 지금까지 개최를 완료한 횟수 — 신뢰 신호. */
@@ -75,9 +78,12 @@ data class HostMeetupView(
     val fee: Int,
     val feeFemale: Int?,
     val genderLimit: String?,
-    val minAge: Int?,
-    val maxAge: Int?,
-    val minHeightCm: Int?,
+    val minAgeMale: Int?,
+    val maxAgeMale: Int?,
+    val minAgeFemale: Int?,
+    val maxAgeFemale: Int?,
+    val minHeightMaleCm: Int?,
+    val minHeightFemaleCm: Int?,
     val kakaoLink: String,
     val status: String,
     val confirmedCount: Int,
@@ -120,9 +126,12 @@ class MeetupService(
                 fee = m.fee,
                 feeFemale = m.feeFemale,
                 genderLimit = m.genderLimit,
-                minAge = m.minAge,
-                maxAge = m.maxAge,
-                minHeightCm = m.minHeightCm,
+                minAgeMale = m.minAgeMale,
+                maxAgeMale = m.maxAgeMale,
+                minAgeFemale = m.minAgeFemale,
+                maxAgeFemale = m.maxAgeFemale,
+                minHeightMaleCm = m.minHeightMaleCm,
+                minHeightFemaleCm = m.minHeightFemaleCm,
                 status = m.status.name,
                 hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
                 hostDoneCount = meetupRepository.countDoneByHost(m.hostAccountId),
@@ -196,23 +205,32 @@ class MeetupService(
         fee: Int,
         feeFemale: Int?,
         genderLimit: String?,
-        minAge: Int?,
-        maxAge: Int?,
-        minHeightCm: Int?,
+        minAgeMale: Int?,
+        maxAgeMale: Int?,
+        minAgeFemale: Int?,
+        maxAgeFemale: Int?,
+        minHeightMaleCm: Int?,
+        minHeightFemaleCm: Int?,
         kakaoLink: String,
     ): UUID {
         val saved = meetupRepository.save(
             Meetup.create(
                 hostAccountId, title, description, meetAt, place, capacity,
-                fee, feeFemale, genderLimit, minAge, maxAge, minHeightCm, kakaoLink,
+                fee, feeFemale, genderLimit,
+                minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
+                kakaoLink,
             ),
         )
         return requireNotNull(saved.id)
     }
 
-    /** 참가 조건 검사 — 프로필의 성별·나이·키로 문 앞에서 거른다. 조건이 없으면 그냥 통과. */
+    /** 참가 조건 검사 — 프로필의 성별·나이·키로 문 앞에서 거른다. 내 성별의 기준만 본다. */
     private fun checkConditions(meetup: Meetup, accountId: UUID) {
-        if (meetup.genderLimit == null && meetup.minAge == null && meetup.maxAge == null && meetup.minHeightCm == null) return
+        val hasCondition = meetup.genderLimit != null ||
+            meetup.minAgeMale != null || meetup.maxAgeMale != null ||
+            meetup.minAgeFemale != null || meetup.maxAgeFemale != null ||
+            meetup.minHeightMaleCm != null || meetup.minHeightFemaleCm != null
+        if (!hasCondition) return
         val profile = memberQueryService.findProfile(accountId)
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
         meetup.genderLimit?.let {
@@ -220,10 +238,14 @@ class MeetupService(
                 throw DailyMeetException(if (it == "MALE") "남성만 신청할 수 있는 모임이에요" else "여성만 신청할 수 있는 모임이에요")
             }
         }
+        val isMale = profile.gender.name == "MALE"
+        val minAge = if (isMale) meetup.minAgeMale else meetup.minAgeFemale
+        val maxAge = if (isMale) meetup.maxAgeMale else meetup.maxAgeFemale
+        val minHeight = if (isMale) meetup.minHeightMaleCm else meetup.minHeightFemaleCm
         val age = profile.age()
-        meetup.minAge?.let { if (age < it) throw DailyMeetException("${it}세 이상만 신청할 수 있는 모임이에요") }
-        meetup.maxAge?.let { if (age > it) throw DailyMeetException("${it}세 이하만 신청할 수 있는 모임이에요") }
-        meetup.minHeightCm?.let { min ->
+        minAge?.let { if (age < it) throw DailyMeetException("${it}세 이상만 신청할 수 있는 모임이에요") }
+        maxAge?.let { if (age > it) throw DailyMeetException("${it}세 이하만 신청할 수 있는 모임이에요") }
+        minHeight?.let { min ->
             val height = profile.heightCm
                 ?: throw DailyMeetException("키 조건이 있는 모임이에요 — 프로필에 키를 먼저 등록해주세요")
             if (height < min) throw DailyMeetException("키 ${min}cm 이상만 신청할 수 있는 모임이에요")
@@ -245,9 +267,12 @@ class MeetupService(
                 fee = m.fee,
                 feeFemale = m.feeFemale,
                 genderLimit = m.genderLimit,
-                minAge = m.minAge,
-                maxAge = m.maxAge,
-                minHeightCm = m.minHeightCm,
+                minAgeMale = m.minAgeMale,
+                maxAgeMale = m.maxAgeMale,
+                minAgeFemale = m.minAgeFemale,
+                maxAgeFemale = m.maxAgeFemale,
+                minHeightMaleCm = m.minHeightMaleCm,
+                minHeightFemaleCm = m.minHeightFemaleCm,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },

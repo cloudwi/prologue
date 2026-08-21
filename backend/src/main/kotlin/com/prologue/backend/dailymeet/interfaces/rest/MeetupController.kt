@@ -52,11 +52,14 @@ class MeetupController(
         /** 여성 참가비 — 성별에 따라 값을 달리 받는 모임. null이면 fee(공통). */
         @field:Min(value = 0, message = "여성 참가비는 0원 이상이어야 해요")
         val feeFemale: Int? = null,
-        /** 참가 조건(선택) — MALE/FEMALE, 나이 범위, 최소 키. 검증은 도메인이 한다. */
+        /** 참가 조건(선택) — 성별 제한, 성별별 나이 범위·최소 키. 검증은 도메인이 한다. */
         val genderLimit: String? = null,
-        val minAge: Int? = null,
-        val maxAge: Int? = null,
-        val minHeightCm: Int? = null,
+        val minAgeMale: Int? = null,
+        val maxAgeMale: Int? = null,
+        val minAgeFemale: Int? = null,
+        val maxAgeFemale: Int? = null,
+        val minHeightMaleCm: Int? = null,
+        val minHeightFemaleCm: Int? = null,
         @field:NotBlank(message = "카카오 오픈채팅 링크를 넣어주세요")
         val kakaoLink: String,
     )
@@ -107,9 +110,12 @@ class MeetupController(
             fee = request.fee,
             feeFemale = request.feeFemale,
             genderLimit = request.genderLimit,
-            minAge = request.minAge,
-            maxAge = request.maxAge,
-            minHeightCm = request.minHeightCm,
+            minAgeMale = request.minAgeMale,
+            maxAgeMale = request.maxAgeMale,
+            minAgeFemale = request.minAgeFemale,
+            maxAgeFemale = request.maxAgeFemale,
+            minHeightMaleCm = request.minHeightMaleCm,
+            minHeightFemaleCm = request.minHeightFemaleCm,
             kakaoLink = request.kakaoLink,
         )
         return CreateMeetupResponse(id.toString())

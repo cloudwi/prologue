@@ -46,14 +46,23 @@ class MeetupJpaEntity(
     @Column(name = "gender_limit", length = 6)
     val genderLimit: String? = null,
 
-    @Column(name = "min_age")
-    val minAge: Int? = null,
+    @Column(name = "min_age_male")
+    val minAgeMale: Int? = null,
 
-    @Column(name = "max_age")
-    val maxAge: Int? = null,
+    @Column(name = "max_age_male")
+    val maxAgeMale: Int? = null,
 
-    @Column(name = "min_height_cm")
-    val minHeightCm: Int? = null,
+    @Column(name = "min_age_female")
+    val minAgeFemale: Int? = null,
+
+    @Column(name = "max_age_female")
+    val maxAgeFemale: Int? = null,
+
+    @Column(name = "min_height_male_cm")
+    val minHeightMaleCm: Int? = null,
+
+    @Column(name = "min_height_female_cm")
+    val minHeightFemaleCm: Int? = null,
 
     @Column(name = "kakao_link", nullable = false, length = 300)
     val kakaoLink: String,

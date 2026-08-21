@@ -27,9 +27,13 @@ class Meetup private constructor(
     val feeFemale: Int?,
     /** 참가 성별 제한(MALE/FEMALE) — null이면 모두. */
     val genderLimit: String?,
-    val minAge: Int?,
-    val maxAge: Int?,
-    val minHeightCm: Int?,
+    // 참가 조건 — 남/녀의 기준이 다른 모임이 보통이라 성별별로 둔다. null = 제한 없음.
+    val minAgeMale: Int?,
+    val maxAgeMale: Int?,
+    val minAgeFemale: Int?,
+    val maxAgeFemale: Int?,
+    val minHeightMaleCm: Int?,
+    val minHeightFemaleCm: Int?,
     val kakaoLink: String,
     status: MeetupStatus,
     val createdAt: Instant,
@@ -83,9 +87,12 @@ class Meetup private constructor(
             fee: Int,
             feeFemale: Int?,
             genderLimit: String?,
-            minAge: Int?,
-            maxAge: Int?,
-            minHeightCm: Int?,
+            minAgeMale: Int?,
+            maxAgeMale: Int?,
+            minAgeFemale: Int?,
+            maxAgeFemale: Int?,
+            minHeightMaleCm: Int?,
+            minHeightFemaleCm: Int?,
             kakaoLink: String,
             now: Instant = Instant.now(),
         ): Meetup {
@@ -103,12 +110,8 @@ class Meetup private constructor(
             if (genderLimit != null && genderLimit != "MALE" && genderLimit != "FEMALE") {
                 throw DailyMeetException("성별 제한 값이 올바르지 않아요")
             }
-            if (minAge != null && minAge < 19) throw DailyMeetException("나이 제한은 19세부터예요")
-            if (maxAge != null && maxAge > 100) throw DailyMeetException("나이 제한이 올바르지 않아요")
-            if (minAge != null && maxAge != null && minAge > maxAge) throw DailyMeetException("나이 범위가 뒤집혔어요")
-            if (minHeightCm != null && (minHeightCm < 140 || minHeightCm > 210)) {
-                throw DailyMeetException("키 제한은 140~210cm 사이여야 해요")
-            }
+            validateConditions(minAgeMale, maxAgeMale, minHeightMaleCm)
+            validateConditions(minAgeFemale, maxAgeFemale, minHeightFemaleCm)
             if (meetAt.isBefore(now)) throw DailyMeetException("모임 일시는 미래여야 해요")
             val cleanLink = kakaoLink.trim()
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
@@ -116,7 +119,8 @@ class Meetup private constructor(
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
                 null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace,
-                capacity, fee, feeFemale, genderLimit, minAge, maxAge, minHeightCm,
+                capacity, fee, feeFemale, genderLimit,
+                minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 cleanLink, MeetupStatus.OPEN, now,
             )
         }
@@ -132,16 +136,30 @@ class Meetup private constructor(
             fee: Int,
             feeFemale: Int?,
             genderLimit: String?,
-            minAge: Int?,
-            maxAge: Int?,
-            minHeightCm: Int?,
+            minAgeMale: Int?,
+            maxAgeMale: Int?,
+            minAgeFemale: Int?,
+            maxAgeFemale: Int?,
+            minHeightMaleCm: Int?,
+            minHeightFemaleCm: Int?,
             kakaoLink: String,
             status: MeetupStatus,
             createdAt: Instant,
         ): Meetup = Meetup(
             id, hostAccountId, title, description, meetAt, place, capacity, fee,
-            feeFemale, genderLimit, minAge, maxAge, minHeightCm, kakaoLink, status, createdAt,
+            feeFemale, genderLimit,
+            minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
+            kakaoLink, status, createdAt,
         )
+
+        private fun validateConditions(minAge: Int?, maxAge: Int?, minHeightCm: Int?) {
+            if (minAge != null && minAge < 19) throw DailyMeetException("나이 제한은 19세부터예요")
+            if (maxAge != null && maxAge > 100) throw DailyMeetException("나이 제한이 올바르지 않아요")
+            if (minAge != null && maxAge != null && minAge > maxAge) throw DailyMeetException("나이 범위가 뒤집혔어요")
+            if (minHeightCm != null && (minHeightCm < 140 || minHeightCm > 210)) {
+                throw DailyMeetException("키 제한은 140~210cm 사이여야 해요")
+            }
+        }
     }
 }
 
