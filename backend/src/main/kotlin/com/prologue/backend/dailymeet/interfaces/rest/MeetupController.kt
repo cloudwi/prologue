@@ -1,6 +1,7 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.HostMeetupView
+import com.prologue.backend.dailymeet.application.service.MeetupMemberProfileView
 import com.prologue.backend.dailymeet.application.service.MeetupHistoryView
 import com.prologue.backend.dailymeet.application.service.MeetupService
 import com.prologue.backend.dailymeet.application.service.MeetupView
@@ -74,6 +75,11 @@ class MeetupController(
     /** 지난 모임 — 개최 완료 기록. 모임이 얼마나 잘 굴러가는지의 공개 신호. */
     @GetMapping("/history")
     fun history(): MeetupHistoryResponse = MeetupHistoryResponse(meetupService.history())
+
+    /** 모임 멤버 프로필 — 프로필과 모임 이력까지만 공개. 문답·편지는 응답에 없다. */
+    @GetMapping("/members/{accountId}")
+    fun memberProfile(@PathVariable accountId: String): MeetupMemberProfileView =
+        meetupService.memberProfile(parseId(accountId))
 
     // ── 참가자로서 ──
 

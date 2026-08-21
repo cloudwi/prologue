@@ -144,14 +144,20 @@ export default function MeetupDetailScreen() {
             {conditionLabel(meetup) && <InfoRow icon="filter-outline" text={`참가 조건 · ${conditionLabel(meetup)}`} c={c} />}
           </View>
 
-          {/* 모임장 — 이름과 함께 개최 기록을 숫자로. */}
+          {/* 모임장 — 이름과 함께 개최 기록을 숫자로. 탭하면 모임 프로필로. */}
           <Text style={[styles.sectionTitle, { color: c.text }]}>모임장</Text>
-          <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
-            <Text style={[styles.hostName, { color: c.text }]}>{meetup.hostNickname ?? '(알 수 없음)'}</Text>
-            <Text style={[styles.hostMeta, { color: c.textSecondary }]}>
-              {meetup.hostDoneCount > 0 ? `지금까지 ${meetup.hostDoneCount}회 개최` : '첫 모임이에요'}
-            </Text>
-          </View>
+          <Pressable
+            onPress={() => router.push(`/meetup-member/${meetup.hostAccountId}`)}
+            style={({ pressed }) => [styles.card, styles.hostCard, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.85 : 1 }]}
+          >
+            <View style={styles.flex}>
+              <Text style={[styles.hostName, { color: c.text }]}>{meetup.hostNickname ?? '(알 수 없음)'}</Text>
+              <Text style={[styles.hostMeta, { color: c.textSecondary }]}>
+                {meetup.hostDoneCount > 0 ? `지금까지 ${meetup.hostDoneCount}회 개최` : '첫 모임이에요'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={c.textSecondary} />
+          </Pressable>
 
           {meetup.description ? (
             <>
@@ -165,8 +171,17 @@ export default function MeetupDetailScreen() {
           {meetup.participants.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { color: c.text }]}>함께해요 ({meetup.participants.length})</Text>
-              <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
-                <Text style={[styles.desc, { color: c.textSecondary }]}>{meetup.participants.join(', ')}</Text>
+              <View style={[styles.card, styles.participantWrap, { backgroundColor: c.backgroundElement }]}>
+                {meetup.participants.map((p) => (
+                  <Pressable
+                    key={p.accountId}
+                    onPress={() => router.push(`/meetup-member/${p.accountId}`)}
+                    style={({ pressed }) => [styles.participantChip, { borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <Text style={[styles.participantName, { color: c.text }]}>{p.nickname ?? '(알 수 없음)'}</Text>
+                    <Ionicons name="chevron-forward" size={12} color={c.textSecondary} />
+                  </Pressable>
+                ))}
               </View>
             </>
           )}
@@ -256,9 +271,22 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 15.5, flexShrink: 1 },
 
   sectionTitle: { fontSize: 14, fontWeight: '700', marginTop: 14, marginBottom: 8, paddingHorizontal: 2 },
+  hostCard: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   hostName: { fontSize: 16, fontWeight: '700' },
   hostMeta: { fontSize: 13.5, marginTop: 3 },
   desc: { fontSize: 15.5, lineHeight: 23 },
+  participantWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  participantChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    height: 34,
+    paddingLeft: 13,
+    paddingRight: 9,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  participantName: { fontSize: 14, fontWeight: '600' },
 
   actions: { marginTop: 22, gap: 12 },
   bigBtn: { height: 50, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },

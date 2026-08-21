@@ -4,6 +4,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Meetup
 import com.prologue.backend.dailymeet.domain.model.MeetupApplication
 import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
+import com.prologue.backend.dailymeet.domain.model.MeetupStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
 import com.prologue.backend.member.application.service.MemberQueryService
@@ -41,10 +42,38 @@ data class MeetupView(
     val myStatus: String?,
     /** 모임장의 오픈채팅 — 신청(APPLIED/CONFIRMED)한 사람에게만. 입금·대화는 카카오에서. */
     val kakaoLink: String?,
-    /** 확정된 참가자 닉네임 — 누가 오는지 보여야 모임에 속한 느낌이 든다. */
-    val participants: List<String>,
+    /** 확정된 참가자 — 누가 오는지 보여야 모임에 속한 느낌이 든다. 탭하면 모임 프로필로. */
+    val participants: List<MeetupParticipantView>,
+    /** 모임장 프로필로 가는 열쇠. */
+    val hostAccountId: UUID,
     /** 내가 여는 모임인지 — 앱이 '관리' 동선을 보여줄 때. */
     val isMine: Boolean,
+)
+
+/** 확정 참가자 한 명 — 모임 프로필로 이어진다. */
+data class MeetupParticipantView(val accountId: UUID, val nickname: String?)
+
+/** 모임 멤버의 모임 이력 한 줄. */
+data class MeetupMemberHistoryRow(val title: String, val meetAt: Instant, val confirmedCount: Int)
+
+/**
+ * 모임 멤버 프로필 — 모임 세계의 평판.
+ * 프로필(닉네임·성별·나이·지역·아바타·소개)과 모임 이력까지만 공개한다.
+ * 문답 답변·편지는 여기 없다 — 화면에서 숨기는 게 아니라 응답에 아예 싣지 않는다.
+ */
+data class MeetupMemberProfileView(
+    val nickname: String?,
+    val gender: String?,
+    val age: Int?,
+    val region: String?,
+    val avatarId: Int?,
+    val bio: String?,
+    /** 개최 완료 횟수와 최근 개최 목록. */
+    val hostedCount: Int,
+    val hostedRecent: List<MeetupMemberHistoryRow>,
+    /** 확정 참여로 끝난 모임 횟수와 최근 참여 목록. */
+    val participatedCount: Int,
+    val participatedRecent: List<MeetupMemberHistoryRow>,
 )
 
 /** 지난 모임 한 줄 — 잘 운영되고 있다는 공개 기록. */
@@ -139,10 +168,45 @@ class MeetupService(
                 myStatus = my?.status?.name,
                 // 링크는 손든 사람에게만 — 입금 안내가 오픈채팅에서 이뤄지므로 신청이 곧 입장권이다.
                 kakaoLink = if (my != null && my.status != MeetupApplicationStatus.DECLINED) m.kakaoLink else null,
-                participants = confirmedApps.mapNotNull { memberQueryService.findProfile(it.applicantAccountId)?.nickname },
+                participants = confirmedApps.map {
+                    MeetupParticipantView(it.applicantAccountId, memberQueryService.findProfile(it.applicantAccountId)?.nickname)
+                },
+                hostAccountId = m.hostAccountId,
                 isMine = m.hostAccountId == accountId,
             )
         }
+    }
+
+    /** 모임 멤버 프로필 — 프로필과 모임 이력까지만. 문답·편지는 응답에 싣지 않는다. */
+    @Transactional(readOnly = true)
+    fun memberProfile(accountId: UUID): MeetupMemberProfileView {
+        val profile = memberQueryService.findProfile(accountId)
+        val hosted = meetupRepository.findAllByHost(accountId)
+            .filter { it.status == MeetupStatus.DONE }
+            .sortedByDescending { it.meetAt }
+        val hostedCounts = applicationRepository.countConfirmedByMeetup(hosted.mapNotNull { it.id })
+        val participated = applicationRepository.findAllByApplicant(accountId)
+            .filter { it.status == MeetupApplicationStatus.CONFIRMED }
+            .mapNotNull { meetupRepository.findById(it.meetupId) }
+            .filter { it.status == MeetupStatus.DONE }
+            .sortedByDescending { it.meetAt }
+        val participatedCounts = applicationRepository.countConfirmedByMeetup(participated.mapNotNull { it.id })
+        return MeetupMemberProfileView(
+            nickname = profile?.nickname,
+            gender = profile?.gender?.name,
+            age = profile?.age(),
+            region = profile?.region,
+            avatarId = profile?.avatarId,
+            bio = profile?.bio,
+            hostedCount = hosted.size,
+            hostedRecent = hosted.take(HISTORY_LIMIT).map {
+                MeetupMemberHistoryRow(it.title, it.meetAt, hostedCounts[it.id] ?: 0)
+            },
+            participatedCount = participated.size,
+            participatedRecent = participated.take(HISTORY_LIMIT).map {
+                MeetupMemberHistoryRow(it.title, it.meetAt, participatedCounts[it.id] ?: 0)
+            },
+        )
     }
 
     /** 지난 모임 — 개최 완료 기록, 최신순. */

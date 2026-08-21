@@ -35,11 +35,40 @@ export type Meetup = {
   myStatus: 'APPLIED' | 'CONFIRMED' | 'DECLINED' | null;
   /** 신청(APPLIED/CONFIRMED)한 사람에게만 담긴다. */
   kakaoLink: string | null;
-  /** 확정된 참가자 닉네임 — 누가 오는지. */
-  participants: string[];
+  /** 확정된 참가자 — 탭하면 모임 프로필로. */
+  participants: MeetupParticipant[];
+  /** 모임장 프로필로 가는 열쇠. */
+  hostAccountId: string;
   /** 내가 여는 모임인지. */
   isMine: boolean;
 };
+
+export type MeetupParticipant = { accountId: string; nickname: string | null };
+
+/** 모임 멤버의 모임 이력 한 줄. */
+export type MeetupMemberHistoryRow = { title: string; meetAt: string; confirmedCount: number };
+
+/**
+ * 모임 멤버 프로필 — 모임 세계의 평판.
+ * 프로필과 모임 이력까지만 온다. 문답 답변·편지는 서버가 아예 싣지 않는다.
+ */
+export type MeetupMemberProfile = {
+  nickname: string | null;
+  gender: 'MALE' | 'FEMALE' | string | null;
+  age: number | null;
+  region: string | null;
+  avatarId: number | null;
+  bio: string | null;
+  hostedCount: number;
+  hostedRecent: MeetupMemberHistoryRow[];
+  participatedCount: number;
+  participatedRecent: MeetupMemberHistoryRow[];
+};
+
+/** 모임 멤버 프로필 (GET /meetups/members/{accountId}). */
+export async function getMeetupMemberProfile(accountId: string): Promise<MeetupMemberProfile> {
+  return authedRequest('GET', `/meetups/members/${accountId}`);
+}
 
 export type MeetupHistory = {
   title: string;

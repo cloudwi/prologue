@@ -123,6 +123,7 @@ function Navigation() {
         <Stack.Screen name="past-peers" />
         <Stack.Screen name="meetup-create" />
         <Stack.Screen name="meetup/[id]" />
+        <Stack.Screen name="meetup-member/[id]" />
         <Stack.Screen name="my-meetups" />
         <Stack.Screen name="mail-compose" />
         <Stack.Screen name="mail-view" />
