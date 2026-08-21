@@ -38,6 +38,7 @@ export default function EmailAuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [codeFocused, setCodeFocused] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
@@ -87,6 +88,12 @@ export default function EmailAuthScreen() {
       setSubmitting(false);
     }
   }
+
+  // 여섯 자리가 차면 버튼을 기다리지 않는다 — 코드 입력의 끝이 곧 제출이다.
+  useEffect(() => {
+    if (step === 'code' && codeValid && !submitting) void submitCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, step]);
 
   async function submitCode() {
     if (!codeValid || submitting) return;
@@ -183,23 +190,49 @@ export default function EmailAuthScreen() {
                   <Text style={{ color: c.text }}>{email.trim()}</Text> 로 보낸 6자리 코드를 입력해 주세요
                 </Text>
                 <View style={styles.form}>
-                  <TextInput
-                    value={code}
-                    onChangeText={(t) => {
-                      setCode(t.replace(/\D/g, '').slice(0, 6));
-                      setError(null);
-                    }}
-                    placeholder="000000"
-                    placeholderTextColor={c.textSecondary}
-                    keyboardType="number-pad"
-                    autoComplete="one-time-code"
-                    textContentType="oneTimeCode"
-                    maxLength={6}
-                    autoFocus
-                    onSubmitEditing={submitCode}
-                    returnKeyType="go"
-                    style={[styles.codeInput, { backgroundColor: c.backgroundElement, color: c.text, borderColor: c.border }]}
-                  />
+                  {/* 6칸 분리형 코드 입력 — 실제 입력은 투명한 TextInput 하나가 받고
+                      (붙여넣기·iOS 문자 자동완성이 그대로 동작), 칸은 그리기만 한다. */}
+                  <View>
+                    <View style={styles.otpRow} pointerEvents="none">
+                      {Array.from({ length: 6 }, (_, i) => {
+                        const active = codeFocused && i === Math.min(code.length, 5);
+                        return (
+                          <View
+                            key={i}
+                            style={[
+                              styles.otpCell,
+                              {
+                                backgroundColor: c.backgroundElement,
+                                borderColor: active ? c.primary : c.border,
+                                borderWidth: active ? 2 : 1,
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.otpDigit, { color: c.text }]}>{code[i] ?? ''}</Text>
+                            {active && code.length <= i && <View style={[styles.otpCaret, { backgroundColor: c.primary }]} />}
+                          </View>
+                        );
+                      })}
+                    </View>
+                    <TextInput
+                      value={code}
+                      onChangeText={(t) => {
+                        setCode(t.replace(/\D/g, '').slice(0, 6));
+                        setError(null);
+                      }}
+                      onFocus={() => setCodeFocused(true)}
+                      onBlur={() => setCodeFocused(false)}
+                      keyboardType="number-pad"
+                      autoComplete="one-time-code"
+                      textContentType="oneTimeCode"
+                      maxLength={6}
+                      autoFocus
+                      onSubmitEditing={submitCode}
+                      returnKeyType="go"
+                      caretHidden
+                      style={styles.otpHiddenInput}
+                    />
+                  </View>
                   {error ? <Text style={[styles.error, { color: c.primary }]}>{error}</Text> : null}
                   <Pressable
                     onPress={submitCode}
@@ -260,16 +293,18 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, marginTop: 8, lineHeight: 23 },
   form: { marginTop: 32, gap: 12 },
   input: { height: 54, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 17 },
-  codeInput: {
-    height: 60,
+  otpRow: { flexDirection: 'row', gap: 8 },
+  otpCell: {
+    flex: 1,
+    height: 58,
     borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontSize: 26,
-    fontWeight: '700',
-    letterSpacing: 8,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  otpDigit: { fontSize: 24, fontWeight: '700' },
+  otpCaret: { position: 'absolute', width: 2, height: 24, borderRadius: 1 },
+  // 투명 입력 — 셀 전체를 덮어 어디를 눌러도 포커스되고, 자동완성도 이 입력이 받는다.
+  otpHiddenInput: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, opacity: 0.01, fontSize: 1 },
   error: { fontSize: 14, marginTop: 2, marginLeft: 4 },
   submit: { height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   submitText: { fontSize: 17, fontWeight: '700' },
