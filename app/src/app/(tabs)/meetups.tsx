@@ -187,11 +187,13 @@ export default function MeetupsScreen() {
                   >
                     <View style={styles.cardHead}>
                       <View style={styles.cardTitleWrap}>
-                        {m.emoji != null && (
+                        {m.coverUrl != null ? (
+                          <Image source={{ uri: m.coverUrl }} style={styles.coverTile} contentFit="cover" transition={120} />
+                        ) : m.emoji != null ? (
                           <View style={[styles.coverTile, { backgroundColor: m.color ?? c.backgroundSelected }]}>
                             <Text style={styles.coverTileEmoji}>{m.emoji}</Text>
                           </View>
-                        )}
+                        ) : null}
                         <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={1}>
                           {m.title}
                         </Text>

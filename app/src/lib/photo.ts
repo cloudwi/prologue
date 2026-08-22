@@ -83,3 +83,14 @@ export async function deletePhoto(publicUrl: string): Promise<PhotoUploadResult>
   }
   return data as PhotoUploadResult;
 }
+
+/** 모임 커버 사진 업로드 (POST /meetups/cover). 선정성 검사만 거치고 URL을 돌려받는다. */
+export async function uploadMeetupCover(localUri: string): Promise<string> {
+  const shrunk = await shrinkForUpload(localUri);
+  const formData = new FormData();
+  await appendPhotoPart(formData, shrunk);
+  const res = await authedFetch('/meetups/cover', { method: 'POST', body: formData });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, data?.code, data?.message);
+  return (data as { url: string }).url;
+}

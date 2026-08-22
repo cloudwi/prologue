@@ -29,6 +29,7 @@ export type Meetup = {
   /** 커버 — 이모지와 배경색. 없으면 기본 모양. */
   emoji: string | null;
   color: string | null;
+  coverUrl: string | null;
   status: 'OPEN' | 'CLOSED' | string;
   hostNickname: string | null;
   /** 이 모임장이 지금까지 개최를 완료한 횟수 — 신뢰 신호. */
@@ -168,6 +169,7 @@ export type HostMeetup = {
   minHeightFemaleCm: number | null;
   emoji: string | null;
   color: string | null;
+  coverUrl: string | null;
   kakaoLink: string;
   status: 'OPEN' | 'CLOSED' | 'DONE' | 'CANCELED' | string;
   confirmedCount: number;
@@ -192,6 +194,7 @@ export type CreateMeetupInput = {
   minHeightFemaleCm: number | null;
   emoji: string | null;
   color: string | null;
+  coverUrl: string | null;
   kakaoLink: string;
 };
 

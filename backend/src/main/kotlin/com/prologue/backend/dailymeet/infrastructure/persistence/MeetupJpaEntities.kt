@@ -70,6 +70,9 @@ class MeetupJpaEntity(
     @Column(name = "color", length = 7)
     val color: String? = null,
 
+    @Column(name = "cover_url", length = 500)
+    val coverUrl: String? = null,
+
     @Column(name = "kakao_link", nullable = false, length = 300)
     val kakaoLink: String,
 

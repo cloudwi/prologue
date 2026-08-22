@@ -1,6 +1,7 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.HostMeetupView
+import com.prologue.backend.dailymeet.application.service.MeetupCoverService
 import com.prologue.backend.dailymeet.application.service.MeetupMemberProfileView
 import com.prologue.backend.dailymeet.application.service.MeetupHistoryView
 import com.prologue.backend.dailymeet.application.service.MeetupService
@@ -31,7 +32,20 @@ import java.util.UUID
 @RequestMapping("/meetups")
 class MeetupController(
     private val meetupService: MeetupService,
+    private val meetupCoverService: MeetupCoverService,
 ) {
+    data class CoverUploadResponse(val url: String)
+
+    /** 커버 사진 업로드 — 모임 생성 전에 올리고 URL을 생성 요청에 싣는다. 선정성 검사만 건다. */
+    @PostMapping("/cover", consumes = [org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadCover(
+        authentication: Authentication,
+        @org.springframework.web.bind.annotation.RequestParam("file") file: org.springframework.web.multipart.MultipartFile,
+    ): CoverUploadResponse {
+        if (file.isEmpty) throw DailyMeetException("이미지 파일이 비어 있습니다")
+        return CoverUploadResponse(meetupCoverService.upload(UUID.fromString(authentication.name), file.bytes))
+    }
+
     data class MeetupsResponse(val meetups: List<MeetupView>)
     data class MeetupHistoryResponse(val meetups: List<MeetupHistoryView>)
     data class MyMeetupsResponse(val meetups: List<HostMeetupView>)
@@ -61,9 +75,10 @@ class MeetupController(
         val maxAgeFemale: Int? = null,
         val minHeightMaleCm: Int? = null,
         val minHeightFemaleCm: Int? = null,
-        /** 커버(선택) — 이모지 하나와 hex 색. */
+        /** 커버(선택) — 이모지 하나와 hex 색, 또는 업로드해 둔 사진 URL. */
         val emoji: String? = null,
         val color: String? = null,
+        val coverUrl: String? = null,
         @field:NotBlank(message = "카카오 오픈채팅 링크를 넣어주세요")
         val kakaoLink: String,
     )
@@ -127,6 +142,7 @@ class MeetupController(
             minHeightFemaleCm = request.minHeightFemaleCm,
             emoji = request.emoji,
             color = request.color,
+            coverUrl = request.coverUrl,
             kakaoLink = request.kakaoLink,
         )
         return CreateMeetupResponse(id.toString())

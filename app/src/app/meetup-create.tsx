@@ -2,14 +2,18 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Image } from 'expo-image';
+
+import { pickPhotos } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { createMeetup } from '@/lib/meetups';
+import { uploadMeetupCover } from '@/lib/photo';
 
 /**
  * 모임 열기 — 누구나 모임장이 될 수 있다.
@@ -123,6 +127,8 @@ export default function MeetupCreateScreen() {
   const [capacity, setCapacity] = useState('');
   const [emoji, setEmoji] = useState<string>(COVER_EMOJIS[0]!);
   const [color, setColor] = useState<string>(COVER_COLORS[0]!);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   /** 성별별로 참가비를 다르게 받는지 — 남 2만/여 무료 같은 모임이 흔하다. */
   const [feeByGender, setFeeByGender] = useState(false);
@@ -213,6 +219,20 @@ export default function MeetupCreateScreen() {
   const maleAllowed = genderLimit !== 'FEMALE';
   const femaleAllowed = genderLimit !== 'MALE';
 
+  /** 커버 사진 — 고르면 즉시 업로드해 URL을 받아 둔다. 선정성 검사에 걸리면 그 자리에서 알려준다. */
+  async function pickCover() {
+    const picked = await pickPhotos(1);
+    if (picked.length === 0) return;
+    setCoverUploading(true);
+    try {
+      setCoverUrl(await uploadMeetupCover(picked[0]!));
+    } catch (e) {
+      Alert.alert('사진을 올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally {
+      setCoverUploading(false);
+    }
+  }
+
   async function save() {
     const missing = firstMissing();
     if (missing) {
@@ -243,6 +263,7 @@ export default function MeetupCreateScreen() {
         minHeightFemaleCm: femaleAllowed ? num(minHeightFemale) : null,
         emoji,
         color,
+        coverUrl,
         kakaoLink: normalizedLink()!,
       });
       track('meetup_created');
@@ -259,10 +280,36 @@ export default function MeetupCreateScreen() {
   return (
     <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* 꾸미기 — 이모지 하나와 색 하나가 모임의 첫인상이 된다. */}
-        <View style={[styles.coverPreview, { backgroundColor: color }]}>
-          <Text style={styles.coverPreviewEmoji}>{emoji}</Text>
+        {/* 꾸미기 — 사진 한 장, 또는 이모지+색이 모임의 첫인상이 된다. */}
+        {coverUrl ? (
+          <View style={styles.coverPreview}>
+            <Image source={{ uri: coverUrl }} style={styles.coverPhoto} contentFit="cover" transition={150} />
+          </View>
+        ) : (
+          <View style={[styles.coverPreview, { backgroundColor: color }]}>
+            {coverUploading ? <ActivityIndicator color={c.text} /> : <Text style={styles.coverPreviewEmoji}>{emoji}</Text>}
+          </View>
+        )}
+        <View style={styles.coverBtnRow}>
+          <Pressable
+            onPress={pickCover}
+            disabled={coverUploading}
+            style={({ pressed }) => [styles.coverBtn, { borderColor: c.border, opacity: pressed || coverUploading ? 0.6 : 1 }]}
+          >
+            <Text style={[styles.coverBtnText, { color: c.text }]}>
+              {coverUploading ? '올리는 중...' : coverUrl ? '사진 바꾸기' : '커버 사진 올리기'}
+            </Text>
+          </Pressable>
+          {coverUrl != null && (
+            <Pressable onPress={() => setCoverUrl(null)} hitSlop={8}>
+              <Text style={[styles.coverBtnText, { color: c.textSecondary, textDecorationLine: 'underline' }]}>
+                사진 빼기
+              </Text>
+            </Pressable>
+          )}
         </View>
+        {coverUrl == null && (
+        <>
         <Field label="이모지" c={c}>
           <View style={styles.emojiGrid}>
             {COVER_EMOJIS.map((e) => (
@@ -295,6 +342,8 @@ export default function MeetupCreateScreen() {
             ))}
           </View>
         </Field>
+        </>
+        )}
 
         <Field label="모임 이름" c={c}>
           <PlaceholderInput
@@ -616,7 +665,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   centerText: { justifyContent: 'center' },
-  coverPreview: { height: 88, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  coverPreview: { height: 140, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
+  coverPhoto: { width: '100%', height: '100%' },
+  coverBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
+  coverBtn: { height: 36, paddingHorizontal: 14, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  coverBtnText: { fontSize: 13.5, fontWeight: '600' },
   coverPreviewEmoji: { fontSize: 44 },
   emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   emojiCell: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
