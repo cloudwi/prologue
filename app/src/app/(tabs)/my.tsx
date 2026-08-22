@@ -208,6 +208,7 @@ export default function MyScreen() {
 
         <Section title="매칭" c={c}>
           <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
+          <Row label="직장 인증" onPress={() => router.push('/my/job-verify')} c={c} />
           <Row label="지인 차단" onPress={() => router.push('/my/blocked')} c={c} last />
         </Section>
 

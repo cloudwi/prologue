@@ -7,6 +7,7 @@ import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
 import com.prologue.backend.dailymeet.domain.model.MeetupStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
+import com.prologue.backend.member.application.service.JobVerificationService
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.notification.application.service.NotificationService
 import org.springframework.stereotype.Service
@@ -21,6 +22,7 @@ data class MeetupView(
     val description: String?,
     val meetAt: Instant,
     val place: String,
+    val placeUrl: String?,
     val capacity: Int,
     val fee: Int,
     /** 여성 참가비 — null이면 fee와 동일. */
@@ -33,6 +35,7 @@ data class MeetupView(
     val maxAgeFemale: Int?,
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
+    val requireJobVerified: Boolean,
     /** 커버 — 사진이 있으면 사진, 없으면 이모지+색, 그마저 없으면 기본 모양. */
     val emoji: String?,
     val color: String?,
@@ -72,6 +75,8 @@ data class MeetupMemberProfileView(
     val region: String?,
     val avatarId: Int?,
     val bio: String?,
+    /** 직장 인증 여부 — 도메인은 공개하지 않는다(소속 노출은 프라이버시). */
+    val jobVerified: Boolean,
     /** 개최 완료 횟수와 최근 개최 목록. */
     val hostedCount: Int,
     val hostedRecent: List<MeetupMemberHistoryRow>,
@@ -107,6 +112,7 @@ data class HostMeetupView(
     val description: String?,
     val meetAt: Instant,
     val place: String,
+    val placeUrl: String?,
     val capacity: Int,
     val fee: Int,
     val feeFemale: Int?,
@@ -117,6 +123,7 @@ data class HostMeetupView(
     val maxAgeFemale: Int?,
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
+    val requireJobVerified: Boolean,
     val emoji: String?,
     val color: String?,
     val coverUrl: String?,
@@ -139,6 +146,7 @@ class MeetupService(
     private val meetupRepository: MeetupRepository,
     private val applicationRepository: MeetupApplicationRepository,
     private val memberQueryService: MemberQueryService,
+    private val jobVerificationService: JobVerificationService,
     private val notificationService: NotificationService,
 ) {
     // ── 회원(앱) ──
@@ -158,6 +166,7 @@ class MeetupService(
                 description = m.description,
                 meetAt = m.meetAt,
                 place = m.place,
+                placeUrl = m.placeUrl,
                 capacity = m.capacity,
                 fee = m.fee,
                 feeFemale = m.feeFemale,
@@ -168,6 +177,7 @@ class MeetupService(
                 maxAgeFemale = m.maxAgeFemale,
                 minHeightMaleCm = m.minHeightMaleCm,
                 minHeightFemaleCm = m.minHeightFemaleCm,
+                requireJobVerified = m.requireJobVerified,
                 emoji = m.emoji,
                 color = m.color,
                 coverUrl = m.coverUrl,
@@ -208,6 +218,7 @@ class MeetupService(
             region = profile?.region,
             avatarId = profile?.avatarId,
             bio = profile?.bio,
+            jobVerified = jobVerificationService.verifiedDomain(accountId) != null,
             hostedCount = hosted.size,
             hostedRecent = hosted.take(HISTORY_LIMIT).map {
                 MeetupMemberHistoryRow(it.title, it.meetAt, hostedCounts[it.id] ?: 0)
@@ -275,6 +286,7 @@ class MeetupService(
         description: String?,
         meetAt: Instant,
         place: String,
+        placeUrl: String?,
         capacity: Int,
         fee: Int,
         feeFemale: Int?,
@@ -285,6 +297,7 @@ class MeetupService(
         maxAgeFemale: Int?,
         minHeightMaleCm: Int?,
         minHeightFemaleCm: Int?,
+        requireJobVerified: Boolean,
         emoji: String?,
         color: String?,
         coverUrl: String?,
@@ -292,10 +305,10 @@ class MeetupService(
     ): UUID {
         val saved = meetupRepository.save(
             Meetup.create(
-                hostAccountId, title, description, meetAt, place, capacity,
+                hostAccountId, title, description, meetAt, place, placeUrl, capacity,
                 fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                emoji, color, coverUrl, kakaoLink,
+                requireJobVerified, emoji, color, coverUrl, kakaoLink,
             ),
         )
         return requireNotNull(saved.id)
@@ -306,8 +319,12 @@ class MeetupService(
         val hasCondition = meetup.genderLimit != null ||
             meetup.minAgeMale != null || meetup.maxAgeMale != null ||
             meetup.minAgeFemale != null || meetup.maxAgeFemale != null ||
-            meetup.minHeightMaleCm != null || meetup.minHeightFemaleCm != null
+            meetup.minHeightMaleCm != null || meetup.minHeightFemaleCm != null ||
+            meetup.requireJobVerified
         if (!hasCondition) return
+        if (meetup.requireJobVerified && jobVerificationService.verifiedDomain(accountId) == null) {
+            throw DailyMeetException("직장 인증을 마친 사람만 신청할 수 있는 모임이에요. MY 탭에서 회사 이메일로 인증해주세요.")
+        }
         val profile = memberQueryService.findProfile(accountId)
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
         meetup.genderLimit?.let {
@@ -340,6 +357,7 @@ class MeetupService(
                 description = m.description,
                 meetAt = m.meetAt,
                 place = m.place,
+                placeUrl = m.placeUrl,
                 capacity = m.capacity,
                 fee = m.fee,
                 feeFemale = m.feeFemale,
@@ -350,6 +368,7 @@ class MeetupService(
                 maxAgeFemale = m.maxAgeFemale,
                 minHeightMaleCm = m.minHeightMaleCm,
                 minHeightFemaleCm = m.minHeightFemaleCm,
+                requireJobVerified = m.requireJobVerified,
                 emoji = m.emoji,
                 color = m.color,
                 coverUrl = m.coverUrl,

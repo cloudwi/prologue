@@ -14,6 +14,8 @@ export type Meetup = {
   description: string | null;
   meetAt: string;
   place: string;
+  /** 지도 링크(카카오맵·네이버지도) — 있으면 상세에서 바로 연다. */
+  placeUrl: string | null;
   capacity: number;
   fee: number;
   /** 여성 참가비 — null이면 fee와 동일. */
@@ -26,6 +28,7 @@ export type Meetup = {
   maxAgeFemale: number | null;
   minHeightMaleCm: number | null;
   minHeightFemaleCm: number | null;
+  requireJobVerified: boolean;
   /** 커버 — 이모지와 배경색. 없으면 기본 모양. */
   emoji: string | null;
   color: string | null;
@@ -63,6 +66,8 @@ export type MeetupMemberProfile = {
   region: string | null;
   avatarId: number | null;
   bio: string | null;
+  /** 직장 인증 여부 — 도메인은 공개되지 않는다. */
+  jobVerified: boolean;
   hostedCount: number;
   hostedRecent: MeetupMemberHistoryRow[];
   participatedCount: number;
@@ -127,7 +132,10 @@ function genderConditions(minAge: number | null, maxAge: number | null, minHeigh
 
 /** 참가 조건 요약 — 성별별 기준을 나눠 보여준다. 없으면 null. */
 export function conditionLabel(
-  m: Pick<Meetup, 'genderLimit' | 'minAgeMale' | 'maxAgeMale' | 'minAgeFemale' | 'maxAgeFemale' | 'minHeightMaleCm' | 'minHeightFemaleCm'>,
+  m: Pick<
+    Meetup,
+    'genderLimit' | 'minAgeMale' | 'maxAgeMale' | 'minAgeFemale' | 'maxAgeFemale' | 'minHeightMaleCm' | 'minHeightFemaleCm' | 'requireJobVerified'
+  >,
 ): string | null {
   const male = m.genderLimit !== 'FEMALE' ? genderConditions(m.minAgeMale, m.maxAgeMale, m.minHeightMaleCm) : null;
   const female = m.genderLimit !== 'MALE' ? genderConditions(m.minAgeFemale, m.maxAgeFemale, m.minHeightFemaleCm) : null;
@@ -136,6 +144,7 @@ export function conditionLabel(
   if (male && female) parts.push(`남 ${male} · 여 ${female}`);
   else if (male) parts.push(m.genderLimit === 'MALE' ? male : `남 ${male}`);
   else if (female) parts.push(m.genderLimit === 'FEMALE' ? female : `여 ${female}`);
+  if (m.requireJobVerified) parts.push('직장인증');
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
@@ -157,6 +166,7 @@ export type HostMeetup = {
   description: string | null;
   meetAt: string;
   place: string;
+  placeUrl: string | null;
   capacity: number;
   fee: number;
   feeFemale: number | null;
@@ -167,6 +177,7 @@ export type HostMeetup = {
   maxAgeFemale: number | null;
   minHeightMaleCm: number | null;
   minHeightFemaleCm: number | null;
+  requireJobVerified: boolean;
   emoji: string | null;
   color: string | null;
   coverUrl: string | null;
@@ -182,6 +193,7 @@ export type CreateMeetupInput = {
   /** ISO-8601 (예: 2026-09-05T19:00:00+09:00). */
   meetAt: string;
   place: string;
+  placeUrl: string | null;
   capacity: number;
   fee: number;
   feeFemale: number | null;
@@ -192,6 +204,7 @@ export type CreateMeetupInput = {
   maxAgeFemale: number | null;
   minHeightMaleCm: number | null;
   minHeightFemaleCm: number | null;
+  requireJobVerified: boolean;
   emoji: string | null;
   color: string | null;
   coverUrl: string | null;

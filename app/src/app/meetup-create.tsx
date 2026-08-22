@@ -27,12 +27,6 @@ type WheelItem = { value: string; label: string };
 
 const NONE: WheelItem = { value: '', label: '제한 없음' };
 
-/** 커버 이모지 — 모임에서 흔한 것들만 큐레이션. 자유 입력은 받지 않는다(검수 부담 0). */
-const COVER_EMOJIS = ['🍻', '☕', '🍷', '🍜', '🥘', '🎲', '🎬', '🎨', '🎤', '📚', '🏃', '⛰️', '🚴', '🏸', '🧘', '🌊', '🎳', '🐶'];
-
-/** 커버 팔레트 — 차가운 회색 바탕에 앉는 저채도 톤만. */
-const COVER_COLORS = ['#F1E8E2', '#E7EDF3', '#E9F0E6', '#F5EAD8', '#EFE6F0', '#F7E8E8', '#E6EEF0', '#EDEDE9'];
-
 /** 정원 — 소모임(2)부터 대형(50)까지. */
 const CAPACITY_ITEMS: WheelItem[] = Array.from({ length: 49 }, (_, i) => {
   const n = String(i + 2);
@@ -124,9 +118,8 @@ export default function MeetupCreateScreen() {
   const [description, setDescription] = useState('');
   const [meetAt, setMeetAt] = useState<Date | null>(null);
   const [place, setPlace] = useState('');
+  const [placeUrl, setPlaceUrl] = useState('');
   const [capacity, setCapacity] = useState('');
-  const [emoji, setEmoji] = useState<string>(COVER_EMOJIS[0]!);
-  const [color, setColor] = useState<string>(COVER_COLORS[0]!);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
@@ -137,6 +130,7 @@ export default function MeetupCreateScreen() {
   const [kakaoLink, setKakaoLink] = useState('');
   // 참가 조건 (선택) — 성별별 기준
   const [genderLimit, setGenderLimit] = useState<'MALE' | 'FEMALE' | null>(null);
+  const [requireJobVerified, setRequireJobVerified] = useState(false);
   const [minAgeMale, setMinAgeMale] = useState('');
   const [maxAgeMale, setMaxAgeMale] = useState('');
   const [minHeightMale, setMinHeightMale] = useState('');
@@ -214,6 +208,14 @@ export default function MeetupCreateScreen() {
     return /^https?:\/\/[\w.-]+\.[a-z]{2,}([/?#].*)?$/i.test(link) ? link : null;
   }
 
+  /** 지도 링크 — https 없이 붙여넣으면 채워주고, 빈 값이면 null. */
+  function normalizedPlaceUrl(): string | null {
+    let link = placeUrl.trim();
+    if (link.length === 0) return null;
+    if (!/^https?:\/\//.test(link)) link = `https://${link}`;
+    return link;
+  }
+
   /** 성별 제한과 어긋나는 조건은 버린다 — 여성만 모임에 남성 조건이 실려 가지 않게. */
   const num = (v: string) => (v === '' ? null : Number(v));
   const maleAllowed = genderLimit !== 'FEMALE';
@@ -251,6 +253,7 @@ export default function MeetupCreateScreen() {
         description: description.trim() || undefined,
         meetAt: meetAt.toISOString(),
         place: place.trim(),
+        placeUrl: normalizedPlaceUrl(),
         capacity: Number(capacity),
         fee: isPaid ? Number(fee) : 0,
         feeFemale: isPaid && feeByGender && femaleAllowed ? Number(feeFemaleInput) : null,
@@ -261,8 +264,9 @@ export default function MeetupCreateScreen() {
         maxAgeFemale: femaleAllowed ? num(maxAgeFemale) : null,
         minHeightMaleCm: maleAllowed ? num(minHeightMale) : null,
         minHeightFemaleCm: femaleAllowed ? num(minHeightFemale) : null,
-        emoji,
-        color,
+        requireJobVerified,
+        emoji: null,
+        color: null,
         coverUrl,
         kakaoLink: normalizedLink()!,
       });
@@ -280,69 +284,24 @@ export default function MeetupCreateScreen() {
   return (
     <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* 꾸미기 — 사진 한 장, 또는 이모지+색이 모임의 첫인상이 된다. */}
-        {coverUrl ? (
-          <View style={styles.coverPreview}>
+        {/* 커버 사진(선택) — 모임의 첫인상. 없으면 목록에서 기본 모양으로 나간다. */}
+        <Pressable onPress={pickCover} disabled={coverUploading} style={[styles.coverPreview, { backgroundColor: c.backgroundElement }]}>
+          {coverUrl ? (
             <Image source={{ uri: coverUrl }} style={styles.coverPhoto} contentFit="cover" transition={150} />
-          </View>
-        ) : (
-          <View style={[styles.coverPreview, { backgroundColor: color }]}>
-            {coverUploading ? <ActivityIndicator color={c.text} /> : <Text style={styles.coverPreviewEmoji}>{emoji}</Text>}
-          </View>
-        )}
-        <View style={styles.coverBtnRow}>
-          <Pressable
-            onPress={pickCover}
-            disabled={coverUploading}
-            style={({ pressed }) => [styles.coverBtn, { borderColor: c.border, opacity: pressed || coverUploading ? 0.6 : 1 }]}
-          >
-            <Text style={[styles.coverBtnText, { color: c.text }]}>
-              {coverUploading ? '올리는 중...' : coverUrl ? '사진 바꾸기' : '커버 사진 올리기'}
-            </Text>
-          </Pressable>
-          {coverUrl != null && (
-            <Pressable onPress={() => setCoverUrl(null)} hitSlop={8}>
-              <Text style={[styles.coverBtnText, { color: c.textSecondary, textDecorationLine: 'underline' }]}>
-                사진 빼기
-              </Text>
-            </Pressable>
+          ) : coverUploading ? (
+            <ActivityIndicator color={c.text} />
+          ) : (
+            <View style={styles.coverEmptyInner}>
+              <Text style={[styles.coverEmptyText, { color: c.textSecondary }]}>커버 사진 올리기 (선택)</Text>
+            </View>
           )}
-        </View>
-        {coverUrl == null && (
-        <>
-        <Field label="이모지" c={c}>
-          <View style={styles.emojiGrid}>
-            {COVER_EMOJIS.map((e) => (
-              <Pressable
-                key={e}
-                onPress={() => setEmoji(e)}
-                style={[
-                  styles.emojiCell,
-                  { backgroundColor: c.backgroundElement },
-                  emoji === e && { borderWidth: 2, borderColor: c.primary },
-                ]}
-              >
-                <Text style={styles.emojiCellText}>{e}</Text>
-              </Pressable>
-            ))}
+        </Pressable>
+        {coverUrl != null && (
+          <View style={styles.coverBtnRow}>
+            <Pressable onPress={() => setCoverUrl(null)} hitSlop={8}>
+              <Text style={[styles.coverBtnText, { color: c.textSecondary, textDecorationLine: 'underline' }]}>사진 빼기</Text>
+            </Pressable>
           </View>
-        </Field>
-        <Field label="배경색" c={c}>
-          <View style={styles.colorRow}>
-            {COVER_COLORS.map((col) => (
-              <Pressable
-                key={col}
-                onPress={() => setColor(col)}
-                style={[
-                  styles.colorSwatch,
-                  { backgroundColor: col },
-                  color === col && { borderWidth: 2.5, borderColor: c.primary },
-                ]}
-              />
-            ))}
-          </View>
-        </Field>
-        </>
         )}
 
         <Field label="모임 이름" c={c}>
@@ -384,6 +343,20 @@ export default function MeetupCreateScreen() {
             placeholder="예) 성수역 3번 출구 앞 카페"
             placeholderTextColor={c.textSecondary}
             maxLength={120}
+            style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+          />
+        </Field>
+
+        <Field label="지도 링크 (선택)" c={c} hint="카카오맵·네이버지도에서 장소를 '공유'하면 링크가 복사돼요. 참가자가 바로 길을 찾을 수 있어요.">
+          <PlaceholderInput
+            value={placeUrl}
+            onChangeText={setPlaceUrl}
+            placeholder="https://map.kakao.com/... 또는 naver.me/..."
+            placeholderTextColor={c.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            maxLength={500}
             style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
           />
         </Field>
@@ -481,6 +454,14 @@ export default function MeetupCreateScreen() {
 
         {/* 참가 조건 — 프로필(성별·나이·키)로 문 앞에서 걸러진다. 비워두면 제한 없음. */}
         <Text style={[styles.sectionTitle, { color: c.text }]}>참가 조건 (선택)</Text>
+        <Pressable onPress={() => setRequireJobVerified((v) => !v)} hitSlop={6} style={styles.checkRow}>
+          <View
+            style={[styles.checkbox, { borderColor: c.border }, requireJobVerified && { backgroundColor: c.primary, borderColor: c.primary }]}
+          >
+            {requireJobVerified && <Text style={[styles.checkboxMark, { color: c.primaryText }]}>✓</Text>}
+          </View>
+          <Text style={[styles.checkLabel, { color: c.text }]}>직장 인증한 사람만 받을게요</Text>
+        </Pressable>
         <Field label="성별" c={c}>
           <View style={[styles.segment, { backgroundColor: c.backgroundElement }]}>
             {([
@@ -668,14 +649,9 @@ const styles = StyleSheet.create({
   coverPreview: { height: 140, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
   coverPhoto: { width: '100%', height: '100%' },
   coverBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
-  coverBtn: { height: 36, paddingHorizontal: 14, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   coverBtnText: { fontSize: 13.5, fontWeight: '600' },
-  coverPreviewEmoji: { fontSize: 44 },
-  emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  emojiCell: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  emojiCellText: { fontSize: 22 },
-  colorRow: { flexDirection: 'row', gap: 10 },
-  colorSwatch: { width: 36, height: 36, borderRadius: 18 },
+  coverEmptyInner: { alignItems: 'center' },
+  coverEmptyText: { fontSize: 14.5, fontWeight: '600' },
   segment: { flexDirection: 'row', borderRadius: Radius.md, padding: 4, minHeight: 48 },
   segmentItem: { flex: 1, borderRadius: Radius.md - 4, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontSize: 15 },

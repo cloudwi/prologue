@@ -34,6 +34,9 @@ class MeetupJpaEntity(
     @Column(name = "place", nullable = false, length = 120)
     val place: String,
 
+    @Column(name = "place_url", length = 500)
+    val placeUrl: String? = null,
+
     @Column(name = "capacity", nullable = false)
     val capacity: Int,
 
@@ -63,6 +66,9 @@ class MeetupJpaEntity(
 
     @Column(name = "min_height_female_cm")
     val minHeightFemaleCm: Int? = null,
+
+    @Column(name = "require_job_verified", nullable = false)
+    val requireJobVerified: Boolean = false,
 
     @Column(name = "emoji", length = 8)
     val emoji: String? = null,

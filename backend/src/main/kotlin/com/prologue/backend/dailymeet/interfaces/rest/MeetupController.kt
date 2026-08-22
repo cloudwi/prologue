@@ -59,6 +59,8 @@ class MeetupController(
         val meetAt: String,
         @field:NotBlank(message = "모임 장소를 적어주세요")
         val place: String,
+        /** 지도 링크(선택) — 카카오맵·네이버지도 공유 URL. */
+        val placeUrl: String? = null,
         @field:Min(value = 2, message = "정원은 2명 이상이어야 해요")
         @field:Max(value = 100, message = "정원은 100명까지예요")
         val capacity: Int,
@@ -75,6 +77,8 @@ class MeetupController(
         val maxAgeFemale: Int? = null,
         val minHeightMaleCm: Int? = null,
         val minHeightFemaleCm: Int? = null,
+        /** 직장 인증 필수(선택). */
+        val requireJobVerified: Boolean = false,
         /** 커버(선택) — 이모지 하나와 hex 색, 또는 업로드해 둔 사진 URL. */
         val emoji: String? = null,
         val color: String? = null,
@@ -130,6 +134,7 @@ class MeetupController(
             description = request.description,
             meetAt = meetAt,
             place = request.place,
+            placeUrl = request.placeUrl,
             capacity = request.capacity,
             fee = request.fee,
             feeFemale = request.feeFemale,
@@ -140,6 +145,7 @@ class MeetupController(
             maxAgeFemale = request.maxAgeFemale,
             minHeightMaleCm = request.minHeightMaleCm,
             minHeightFemaleCm = request.minHeightFemaleCm,
+            requireJobVerified = request.requireJobVerified,
             emoji = request.emoji,
             color = request.color,
             coverUrl = request.coverUrl,

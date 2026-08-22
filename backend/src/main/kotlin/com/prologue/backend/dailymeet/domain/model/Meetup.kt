@@ -21,6 +21,8 @@ class Meetup private constructor(
     val description: String?,
     val meetAt: Instant,
     val place: String,
+    /** 지도 링크(카카오맵·네이버지도 공유 URL) — 참가자가 바로 길을 찾는다. */
+    val placeUrl: String?,
     val capacity: Int,
     val fee: Int,
     /** 여성 참가비 — null이면 fee(공통)와 동일. 성별에 따라 값을 달리 받는 모임이 흔해서. */
@@ -34,6 +36,8 @@ class Meetup private constructor(
     val maxAgeFemale: Int?,
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
+    /** 직장 인증을 마친 사람만 받는 모임인지. */
+    val requireJobVerified: Boolean,
     /** 커버 — 이모지 하나와 배경색, 또는 사진. 모임의 첫인상을 모임장이 고른다. */
     val emoji: String?,
     val color: String?,
@@ -87,6 +91,7 @@ class Meetup private constructor(
             description: String?,
             meetAt: Instant,
             place: String,
+            placeUrl: String?,
             capacity: Int,
             fee: Int,
             feeFemale: Int?,
@@ -97,6 +102,7 @@ class Meetup private constructor(
             maxAgeFemale: Int?,
             minHeightMaleCm: Int?,
             minHeightFemaleCm: Int?,
+            requireJobVerified: Boolean,
             emoji: String?,
             color: String?,
             coverUrl: String?,
@@ -125,6 +131,10 @@ class Meetup private constructor(
             if (cleanColor != null && !cleanColor.matches(Regex("#[0-9a-fA-F]{6}"))) {
                 throw DailyMeetException("색상 값이 올바르지 않아요")
             }
+            val cleanPlaceUrl = placeUrl?.trim()?.ifBlank { null }
+            if (cleanPlaceUrl != null && (!cleanPlaceUrl.startsWith("https://") || cleanPlaceUrl.length > 500)) {
+                throw DailyMeetException("지도 링크가 올바르지 않아요")
+            }
             val cleanCover = coverUrl?.trim()?.ifBlank { null }
             if (cleanCover != null && (!cleanCover.startsWith("https://") || cleanCover.length > 500)) {
                 throw DailyMeetException("커버 사진 주소가 올바르지 않아요")
@@ -135,10 +145,10 @@ class Meetup private constructor(
             if (!cleanLink.startsWith("https://")) throw DailyMeetException("카카오 오픈채팅 링크(https://)를 넣어주세요")
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
-                null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace,
+                null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl,
                 capacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                cleanEmoji, cleanColor, cleanCover, cleanLink, MeetupStatus.OPEN, now,
+                requireJobVerified, cleanEmoji, cleanColor, cleanCover, cleanLink, MeetupStatus.OPEN, now,
             )
         }
 
@@ -149,6 +159,7 @@ class Meetup private constructor(
             description: String?,
             meetAt: Instant,
             place: String,
+            placeUrl: String?,
             capacity: Int,
             fee: Int,
             feeFemale: Int?,
@@ -159,6 +170,7 @@ class Meetup private constructor(
             maxAgeFemale: Int?,
             minHeightMaleCm: Int?,
             minHeightFemaleCm: Int?,
+            requireJobVerified: Boolean,
             emoji: String?,
             color: String?,
             coverUrl: String?,
@@ -166,10 +178,10 @@ class Meetup private constructor(
             status: MeetupStatus,
             createdAt: Instant,
         ): Meetup = Meetup(
-            id, hostAccountId, title, description, meetAt, place, capacity, fee,
+            id, hostAccountId, title, description, meetAt, place, placeUrl, capacity, fee,
             feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-            emoji, color, coverUrl, kakaoLink, status, createdAt,
+            requireJobVerified, emoji, color, coverUrl, kakaoLink, status, createdAt,
         )
 
         private fun validateConditions(minAge: Int?, maxAge: Int?, minHeightCm: Int?) {

@@ -151,7 +151,18 @@ export default function MeetupDetailScreen() {
           {/* 핵심 정보 — 한 칸에 한 사실. */}
           <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
             <InfoRow icon="calendar-outline" text={dateFmt.format(new Date(meetup.meetAt))} c={c} />
-            <InfoRow icon="location-outline" text={meetup.place} c={c} />
+            {meetup.placeUrl != null ? (
+              <Pressable onPress={() => void Linking.openURL(meetup.placeUrl!)} style={styles.infoRow}>
+                <Ionicons name="location-outline" size={17} color={c.textSecondary} />
+                <Text style={[styles.infoText, { color: c.text }]}>{meetup.place}</Text>
+                <View style={[styles.mapBtn, { borderColor: c.border }]}>
+                  <Ionicons name="map-outline" size={13} color={c.primaryStrong} />
+                  <Text style={[styles.mapBtnText, { color: c.primaryStrong }]}>지도</Text>
+                </View>
+              </Pressable>
+            ) : (
+              <InfoRow icon="location-outline" text={meetup.place} c={c} />
+            )}
             <InfoRow icon="cash-outline" text={feeLabel(meetup)} c={c} />
             <InfoRow icon="people-outline" text={`확정 ${meetup.confirmedCount}/${meetup.capacity}명`} c={c} />
             {conditionLabel(meetup) && <InfoRow icon="filter-outline" text={`참가 조건 · ${conditionLabel(meetup)}`} c={c} />}
@@ -285,6 +296,8 @@ const styles = StyleSheet.create({
   card: { borderRadius: Radius.lg, padding: 16, marginBottom: 8 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   infoText: { fontSize: 15.5, flexShrink: 1 },
+  mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 26, paddingHorizontal: 9, borderRadius: Radius.pill, borderWidth: 1, marginLeft: 'auto' },
+  mapBtnText: { fontSize: 12.5, fontWeight: '700' },
 
   sectionTitle: { fontSize: 14, fontWeight: '700', marginTop: 14, marginBottom: 8, paddingHorizontal: 2 },
   hostCard: { flexDirection: 'row', alignItems: 'center', gap: 10 },
