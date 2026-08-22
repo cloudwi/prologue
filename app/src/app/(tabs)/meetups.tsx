@@ -182,14 +182,18 @@ export default function MeetupsScreen() {
                     onPress={() => router.push(`/meetup/${m.meetupId}`)}
                     style={({ pressed }) => [
                       styles.card,
+                      styles.cardClip,
                       { backgroundColor: c.backgroundElement, opacity: pressed ? 0.85 : 1 },
                     ]}
                   >
+                    {/* 메인 사진 — 첫 장이 카드의 얼굴. 자를 때 보여준 16:9 그대로다. */}
+                    {m.coverUrls.length > 0 && (
+                      <Image source={{ uri: m.coverUrls[0] }} style={styles.cardCover} contentFit="cover" transition={150} />
+                    )}
+                    <View style={styles.cardBody}>
                     <View style={styles.cardHead}>
                       <View style={styles.cardTitleWrap}>
-                        {m.coverUrl != null ? (
-                          <Image source={{ uri: m.coverUrl }} style={styles.coverTile} contentFit="cover" transition={120} />
-                        ) : m.emoji != null ? (
+                        {m.coverUrls.length === 0 && m.emoji != null ? (
                           <View style={[styles.coverTile, { backgroundColor: m.color ?? c.backgroundSelected }]}>
                             <Text style={styles.coverTileEmoji}>{m.emoji}</Text>
                           </View>
@@ -236,6 +240,7 @@ export default function MeetupsScreen() {
                     <View style={styles.cardFoot}>
                       <Text style={[styles.cardFootText, { color: c.primaryStrong }]}>자세히 보기</Text>
                       <Ionicons name="chevron-forward" size={14} color={c.primaryStrong} />
+                    </View>
                     </View>
                   </Pressable>
                 </Animated.View>
@@ -304,6 +309,9 @@ const styles = StyleSheet.create({
   manageLinkText: { fontSize: 14, fontWeight: '700' },
 
   card: { borderRadius: Radius.lg, padding: 18, marginBottom: 12 },
+  cardClip: { padding: 0, overflow: 'hidden' },
+  cardCover: { width: '100%', aspectRatio: 16 / 9 },
+  cardBody: { padding: 18 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   cardTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
   cardTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },

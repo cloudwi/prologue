@@ -38,10 +38,10 @@ class Meetup private constructor(
     val minHeightFemaleCm: Int?,
     /** 직장 인증을 마친 사람만 받는 모임인지. */
     val requireJobVerified: Boolean,
-    /** 커버 — 이모지 하나와 배경색, 또는 사진. 모임의 첫인상을 모임장이 고른다. */
+    /** 커버 — 사진 여러 장(첫 장이 메인). 이모지+색은 옛 모임의 폴백. */
     val emoji: String?,
     val color: String?,
-    val coverUrl: String?,
+    val coverUrls: List<String>,
     val kakaoLink: String,
     status: MeetupStatus,
     val createdAt: Instant,
@@ -84,6 +84,7 @@ class Meetup private constructor(
         private const val KAKAO_LINK_MAX = 300
         private const val CAPACITY_MIN = 2
         private const val CAPACITY_MAX = 100
+        private const val COVER_MAX = 5
 
         fun create(
             hostAccountId: UUID,
@@ -105,7 +106,7 @@ class Meetup private constructor(
             requireJobVerified: Boolean,
             emoji: String?,
             color: String?,
-            coverUrl: String?,
+            coverUrls: List<String>,
             kakaoLink: String,
             now: Instant = Instant.now(),
         ): Meetup {
@@ -135,8 +136,9 @@ class Meetup private constructor(
             if (cleanPlaceUrl != null && (!cleanPlaceUrl.startsWith("https://") || cleanPlaceUrl.length > 500)) {
                 throw DailyMeetException("지도 링크가 올바르지 않아요")
             }
-            val cleanCover = coverUrl?.trim()?.ifBlank { null }
-            if (cleanCover != null && (!cleanCover.startsWith("https://") || cleanCover.length > 500)) {
+            val cleanCovers = coverUrls.map { it.trim() }.filter { it.isNotBlank() }
+            if (cleanCovers.size > COVER_MAX) throw DailyMeetException("커버 사진은 ${COVER_MAX}장까지예요")
+            if (cleanCovers.any { !it.startsWith("https://") || it.length > 500 }) {
                 throw DailyMeetException("커버 사진 주소가 올바르지 않아요")
             }
             if (meetAt.isBefore(now)) throw DailyMeetException("모임 일시는 미래여야 해요")
@@ -148,7 +150,7 @@ class Meetup private constructor(
                 null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl,
                 capacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, cleanEmoji, cleanColor, cleanCover, cleanLink, MeetupStatus.OPEN, now,
+                requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanLink, MeetupStatus.OPEN, now,
             )
         }
 
@@ -173,7 +175,7 @@ class Meetup private constructor(
             requireJobVerified: Boolean,
             emoji: String?,
             color: String?,
-            coverUrl: String?,
+            coverUrls: List<String>,
             kakaoLink: String,
             status: MeetupStatus,
             createdAt: Instant,
@@ -181,7 +183,7 @@ class Meetup private constructor(
             id, hostAccountId, title, description, meetAt, place, placeUrl, capacity, fee,
             feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-            requireJobVerified, emoji, color, coverUrl, kakaoLink, status, createdAt,
+            requireJobVerified, emoji, color, coverUrls, kakaoLink, status, createdAt,
         )
 
         private fun validateConditions(minAge: Int?, maxAge: Int?, minHeightCm: Int?) {

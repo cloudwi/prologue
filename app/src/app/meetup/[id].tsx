@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { PhotoPager } from '@/components/photo-pager';
 
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -122,13 +122,10 @@ export default function MeetupDetailScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-          {meetup.coverUrl != null ? (
-            <Image
-              source={{ uri: meetup.coverUrl }}
-              style={[styles.coverBanner, styles.coverBannerPhoto]}
-              contentFit="cover"
-              transition={150}
-            />
+          {meetup.coverUrls.length > 0 ? (
+            <View style={styles.coverPagerWrap}>
+              <PhotoPager photos={meetup.coverUrls} aspectRatio={16 / 9} backgroundColor={c.backgroundSelected} />
+            </View>
           ) : meetup.emoji != null ? (
             <View style={[styles.coverBanner, { backgroundColor: meetup.color ?? c.backgroundSelected }]}>
               <Text style={styles.coverBannerEmoji}>{meetup.emoji}</Text>
@@ -286,7 +283,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48 },
 
   coverBanner: { height: 96, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  coverBannerPhoto: { height: 180 },
+  coverPagerWrap: { borderRadius: Radius.lg, overflow: 'hidden', marginBottom: 14 },
   coverBannerEmoji: { fontSize: 48 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 2, marginBottom: 14 },
   title: { fontSize: 21, fontWeight: '700', flexShrink: 1 },

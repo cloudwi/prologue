@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Style
 
 import { Image } from 'expo-image';
 
+import { PhotoCropModal } from '@/components/photo-crop';
 import { pickPhotos } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
@@ -26,6 +27,10 @@ import { uploadMeetupCover } from '@/lib/photo';
 type WheelItem = { value: string; label: string };
 
 const NONE: WheelItem = { value: '', label: '제한 없음' };
+
+/** 커버 사진 장수 상한 · 표시 비율(목록/상세와 동일). */
+const COVER_MAX = 5;
+const COVER_ASPECT = 16 / 9;
 
 /** 정원 — 소모임(2)부터 대형(50)까지. */
 const CAPACITY_ITEMS: WheelItem[] = Array.from({ length: 49 }, (_, i) => {
@@ -120,8 +125,11 @@ export default function MeetupCreateScreen() {
   const [place, setPlace] = useState('');
   const [placeUrl, setPlaceUrl] = useState('');
   const [capacity, setCapacity] = useState('');
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverUrls, setCoverUrls] = useState<string[]>([]);
   const [coverUploading, setCoverUploading] = useState(false);
+  // 자르기를 기다리는 사진 줄 — 고른 순서대로 16:9 창을 거쳐 업로드된다.
+  const [cropQueue, setCropQueue] = useState<string[]>([]);
+  const [cropTotal, setCropTotal] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
   /** 성별별로 참가비를 다르게 받는지 — 남 2만/여 무료 같은 모임이 흔하다. */
   const [feeByGender, setFeeByGender] = useState(false);
@@ -221,13 +229,21 @@ export default function MeetupCreateScreen() {
   const maleAllowed = genderLimit !== 'FEMALE';
   const femaleAllowed = genderLimit !== 'MALE';
 
-  /** 커버 사진 — 고르면 즉시 업로드해 URL을 받아 둔다. 선정성 검사에 걸리면 그 자리에서 알려준다. */
+  /** 커버 사진 — 골라서 16:9로 자르면 즉시 업로드. 첫 장이 목록의 메인이 된다. */
   async function pickCover() {
-    const picked = await pickPhotos(1);
+    const picked = await pickPhotos(COVER_MAX - coverUrls.length);
     if (picked.length === 0) return;
+    setCropTotal(picked.length);
+    setCropQueue(picked);
+  }
+
+  /** 자르기 완료 한 장 — 업로드하고 다음 장으로. 선정성 검사에 걸리면 그 자리에서 알려준다. */
+  async function onCropped(croppedUri: string) {
+    setCropQueue((q) => q.slice(1));
     setCoverUploading(true);
     try {
-      setCoverUrl(await uploadMeetupCover(picked[0]!));
+      const url = await uploadMeetupCover(croppedUri);
+      setCoverUrls((urls) => [...urls, url]);
     } catch (e) {
       Alert.alert('사진을 올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -267,7 +283,7 @@ export default function MeetupCreateScreen() {
         requireJobVerified,
         emoji: null,
         color: null,
-        coverUrl,
+        coverUrls,
         kakaoLink: normalizedLink()!,
       });
       track('meetup_created');
@@ -284,23 +300,48 @@ export default function MeetupCreateScreen() {
   return (
     <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* 커버 사진(선택) — 모임의 첫인상. 없으면 목록에서 기본 모양으로 나간다. */}
-        <Pressable onPress={pickCover} disabled={coverUploading} style={[styles.coverPreview, { backgroundColor: c.backgroundElement }]}>
-          {coverUrl ? (
-            <Image source={{ uri: coverUrl }} style={styles.coverPhoto} contentFit="cover" transition={150} />
+        {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 보이는 그대로(16:9) 잘라 올린다. */}
+        <Pressable
+          onPress={pickCover}
+          disabled={coverUploading || coverUrls.length >= COVER_MAX}
+          style={[styles.coverPreview, { backgroundColor: c.backgroundElement }]}
+        >
+          {coverUrls.length > 0 ? (
+            <Image source={{ uri: coverUrls[0] }} style={styles.coverPhoto} contentFit="cover" transition={150} />
           ) : coverUploading ? (
             <ActivityIndicator color={c.text} />
           ) : (
             <View style={styles.coverEmptyInner}>
               <Text style={[styles.coverEmptyText, { color: c.textSecondary }]}>커버 사진 올리기 (선택)</Text>
+              <Text style={[styles.coverEmptyHint, { color: c.textSecondary }]}>목록에 보이는 그대로 잘라서 올려요</Text>
             </View>
           )}
         </Pressable>
-        {coverUrl != null && (
-          <View style={styles.coverBtnRow}>
-            <Pressable onPress={() => setCoverUrl(null)} hitSlop={8}>
-              <Text style={[styles.coverBtnText, { color: c.textSecondary, textDecorationLine: 'underline' }]}>사진 빼기</Text>
-            </Pressable>
+        {(coverUrls.length > 0 || coverUploading) && (
+          <View style={styles.coverThumbRow}>
+            {coverUrls.map((url, i) => (
+              <View key={url} style={styles.coverThumbWrap}>
+                <Image source={{ uri: url }} style={[styles.coverThumb, i === 0 && { borderWidth: 2, borderColor: c.primary }]} contentFit="cover" />
+                <Pressable
+                  onPress={() => setCoverUrls((urls) => urls.filter((u) => u !== url))}
+                  hitSlop={6}
+                  style={[styles.coverThumbRemove, { backgroundColor: c.text }]}
+                >
+                  <Text style={[styles.coverThumbRemoveText, { color: c.background }]}>×</Text>
+                </Pressable>
+              </View>
+            ))}
+            {coverUploading && (
+              <View style={[styles.coverThumb, styles.coverThumbLoading, { backgroundColor: c.backgroundElement }]}>
+                <ActivityIndicator size="small" color={c.text} />
+              </View>
+            )}
+            {coverUrls.length < COVER_MAX && !coverUploading && (
+              <Pressable onPress={pickCover} style={[styles.coverThumb, styles.coverThumbAdd, { borderColor: c.border }]}>
+                <Text style={[styles.coverThumbAddText, { color: c.textSecondary }]}>＋</Text>
+              </Pressable>
+            )}
+            <Text style={[styles.coverMainHint, { color: c.textSecondary }]}>첫 장이 메인</Text>
           </View>
         )}
 
@@ -594,6 +635,19 @@ export default function MeetupCreateScreen() {
         </Text>
       </ScrollView>
 
+      {/* 커버 자르기 — 보이는 그대로(16:9)의 창에서 고른다. */}
+      {cropQueue.length > 0 && (
+        <PhotoCropModal
+          key={cropQueue[0]}
+          uri={cropQueue[0]!}
+          aspect={COVER_ASPECT}
+          progress={cropTotal > 1 ? { index: cropTotal - cropQueue.length + 1, total: cropTotal } : undefined}
+          onDone={(cropped) => void onCropped(cropped)}
+          onCancel={() => setCropQueue([])}
+          c={c}
+        />
+      )}
+
       {/* iOS 날짜/시간 바텀시트 휠 */}
       {Platform.OS === 'ios' && (
         <Modal visible={pickerOpen != null} transparent animationType="fade" onRequestClose={() => setPickerOpen(null)}>
@@ -646,12 +700,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   centerText: { justifyContent: 'center' },
-  coverPreview: { height: 140, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
+  coverPreview: { aspectRatio: 16 / 9, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
   coverPhoto: { width: '100%', height: '100%' },
   coverBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
   coverBtnText: { fontSize: 13.5, fontWeight: '600' },
-  coverEmptyInner: { alignItems: 'center' },
+  coverEmptyInner: { alignItems: 'center', gap: 4 },
   coverEmptyText: { fontSize: 14.5, fontWeight: '600' },
+  coverEmptyHint: { fontSize: 12.5 },
+  coverThumbRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' },
+  coverThumbWrap: { position: 'relative' },
+  coverThumb: { width: 64, height: 40, borderRadius: 8 },
+  coverThumbLoading: { alignItems: 'center', justifyContent: 'center' },
+  coverThumbAdd: { borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  coverThumbAddText: { fontSize: 18, fontWeight: '300' },
+  coverThumbRemove: { position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  coverThumbRemoveText: { fontSize: 12, fontWeight: '700', lineHeight: 14 },
+  coverMainHint: { fontSize: 12 },
   segment: { flexDirection: 'row', borderRadius: Radius.md, padding: 4, minHeight: 48 },
   segmentItem: { flex: 1, borderRadius: Radius.md - 4, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontSize: 15 },

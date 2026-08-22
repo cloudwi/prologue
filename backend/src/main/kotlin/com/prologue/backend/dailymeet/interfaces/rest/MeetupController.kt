@@ -79,10 +79,10 @@ class MeetupController(
         val minHeightFemaleCm: Int? = null,
         /** 직장 인증 필수(선택). */
         val requireJobVerified: Boolean = false,
-        /** 커버(선택) — 이모지 하나와 hex 색, 또는 업로드해 둔 사진 URL. */
+        /** 커버(선택) — 업로드해 둔 사진 URL들(첫 장이 메인, 최대 5장). */
         val emoji: String? = null,
         val color: String? = null,
-        val coverUrl: String? = null,
+        val coverUrls: List<String> = emptyList(),
         @field:NotBlank(message = "카카오 오픈채팅 링크를 넣어주세요")
         val kakaoLink: String,
     )
@@ -148,7 +148,7 @@ class MeetupController(
             requireJobVerified = request.requireJobVerified,
             emoji = request.emoji,
             color = request.color,
-            coverUrl = request.coverUrl,
+            coverUrls = request.coverUrls,
             kakaoLink = request.kakaoLink,
         )
         return CreateMeetupResponse(id.toString())

@@ -26,19 +26,22 @@ export function PhotoCropModal({
   uri,
   /** 몇 번째/몇 장 — 여러 장을 이어서 자를 때 길잡이. 한 장이면 생략. */
   progress,
+  /** 잘리는 창의 비율(가로/세로). 프로필은 4:5(기본), 모임 커버는 16:9. */
+  aspect = CROP_ASPECT,
   onDone,
   onCancel,
   c,
 }: {
   uri: string;
   progress?: { index: number; total: number };
+  aspect?: number;
   onDone: (croppedUri: string) => void;
   onCancel: () => void;
   c: ThemeColors;
 }) {
   const { width: screenW } = useWindowDimensions();
   const frameW = Math.min(screenW - 48, 360);
-  const frameH = frameW / CROP_ASPECT;
+  const frameH = frameW / aspect;
 
   const [img, setImg] = useState<{ w: number; h: number } | null>(null);
   const [applying, setApplying] = useState(false);

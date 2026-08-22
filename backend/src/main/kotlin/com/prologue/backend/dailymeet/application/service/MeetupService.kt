@@ -36,10 +36,10 @@ data class MeetupView(
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
     val requireJobVerified: Boolean,
-    /** 커버 — 사진이 있으면 사진, 없으면 이모지+색, 그마저 없으면 기본 모양. */
+    /** 커버 — 사진 여러 장(첫 장이 메인). 없으면 이모지+색, 그마저 없으면 기본 모양. */
     val emoji: String?,
     val color: String?,
-    val coverUrl: String?,
+    val coverUrls: List<String>,
     val status: String,
     val hostNickname: String?,
     /** 이 모임장이 지금까지 개최를 완료한 횟수 — 신뢰 신호. */
@@ -126,7 +126,7 @@ data class HostMeetupView(
     val requireJobVerified: Boolean,
     val emoji: String?,
     val color: String?,
-    val coverUrl: String?,
+    val coverUrls: List<String>,
     val kakaoLink: String,
     val status: String,
     val confirmedCount: Int,
@@ -180,7 +180,7 @@ class MeetupService(
                 requireJobVerified = m.requireJobVerified,
                 emoji = m.emoji,
                 color = m.color,
-                coverUrl = m.coverUrl,
+                coverUrls = m.coverUrls,
                 status = m.status.name,
                 hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
                 hostDoneCount = meetupRepository.countDoneByHost(m.hostAccountId),
@@ -300,7 +300,7 @@ class MeetupService(
         requireJobVerified: Boolean,
         emoji: String?,
         color: String?,
-        coverUrl: String?,
+        coverUrls: List<String>,
         kakaoLink: String,
     ): UUID {
         val saved = meetupRepository.save(
@@ -308,7 +308,7 @@ class MeetupService(
                 hostAccountId, title, description, meetAt, place, placeUrl, capacity,
                 fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, emoji, color, coverUrl, kakaoLink,
+                requireJobVerified, emoji, color, coverUrls, kakaoLink,
             ),
         )
         return requireNotNull(saved.id)
@@ -371,7 +371,7 @@ class MeetupService(
                 requireJobVerified = m.requireJobVerified,
                 emoji = m.emoji,
                 color = m.color,
-                coverUrl = m.coverUrl,
+                coverUrls = m.coverUrls,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },
