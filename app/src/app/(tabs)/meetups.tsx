@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -28,6 +28,8 @@ export default function MeetupsScreen() {
   const [history, setHistory] = useState<MeetupHistory[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<'ALL' | 'APPLIED' | 'MINE'>('ALL');
 
   const load = useCallback(async () => {
     try {
@@ -62,6 +64,14 @@ export default function MeetupsScreen() {
     minute: '2-digit',
   });
 
+  // 검색·필터 — 목록이 작아 서버 없이 화면에서 거른다.
+  const q = query.trim();
+  const visible = meetups
+    .filter((m) => (filter === 'APPLIED' ? m.myStatus != null : filter === 'MINE' ? m.isMine : true))
+    .filter((m) => q === '' || m.title.includes(q) || m.place.includes(q) || (m.description ?? '').includes(q));
+  const appliedCount = meetups.filter((m) => m.myStatus != null).length;
+  const mineCount = meetups.filter((m) => m.isMine).length;
+
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
@@ -93,6 +103,57 @@ export default function MeetupsScreen() {
               )}
             </View>
 
+            {/* 검색과 필터 — 모임이 늘면 '내 것'부터 찾게 된다. */}
+            {meetups.length > 0 && (
+              <View style={styles.filterArea}>
+                <View style={[styles.searchBox, { backgroundColor: c.backgroundElement }]}>
+                  <Ionicons name="search" size={16} color={c.textSecondary} />
+                  <TextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="모임 이름·장소 검색"
+                    placeholderTextColor={c.textSecondary}
+                    returnKeyType="search"
+                    style={[styles.searchInput, { color: c.text }]}
+                  />
+                  {query.length > 0 && (
+                    <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color={c.textSecondary} />
+                    </Pressable>
+                  )}
+                </View>
+                <View style={styles.filterChips}>
+                  {([
+                    ['ALL', '전체', meetups.length],
+                    ['APPLIED', '신청한 모임', appliedCount],
+                    ['MINE', '내 모임', mineCount],
+                  ] as const).map(([value, label, count]) =>
+                    value !== 'ALL' && count === 0 ? null : (
+                      <Pressable
+                        key={value}
+                        onPress={() => setFilter(value)}
+                        style={[
+                          styles.filterChip,
+                          filter === value
+                            ? { backgroundColor: c.text }
+                            : { backgroundColor: c.backgroundElement },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            { color: filter === value ? c.background : c.textSecondary },
+                          ]}
+                        >
+                          {label} {count}
+                        </Text>
+                      </Pressable>
+                    ),
+                  )}
+                </View>
+              </View>
+            )}
+
             {meetups.length === 0 ? (
               <Animated.View entering={FadeInDown.duration(380)} style={[styles.emptyCard, { backgroundColor: c.backgroundElement }]}>
                 <Image source={require('@/assets/images/brand-mark.png')} style={styles.emptyMark} contentFit="contain" />
@@ -107,8 +168,14 @@ export default function MeetupsScreen() {
                   <Text style={[styles.applyBtnText, { color: c.primaryText }]}>첫 모임 열기</Text>
                 </Pressable>
               </Animated.View>
+            ) : visible.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: c.backgroundElement }]}>
+                <Text style={[styles.emptyText, { color: c.textSecondary }]}>
+                  {q !== '' ? `'${q}'에 맞는 모임이 없어요.` : '조건에 맞는 모임이 없어요.'}
+                </Text>
+              </View>
             ) : (
-              meetups.map((m, i) => (
+              visible.map((m, i) => (
                 <Animated.View key={m.meetupId} entering={FadeInDown.duration(380).delay(i * 60)}>
                   {/* 카드는 훑는 곳 — 핵심만 남기고, 결정은 상세에서. */}
                   <Pressable
@@ -234,6 +301,12 @@ const styles = StyleSheet.create({
   statusChipText: { fontSize: 12.5, fontWeight: '700' },
   cardMeta: { fontSize: 14, marginTop: 5 },
   cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 12 },
+  filterArea: { marginBottom: 14, gap: 10 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderRadius: Radius.pill, paddingHorizontal: 14 },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  filterChips: { flexDirection: 'row', gap: 8 },
+  filterChip: { height: 32, paddingHorizontal: 13, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  filterChipText: { fontSize: 13.5, fontWeight: '700' },
   cardFootText: { fontSize: 13.5, fontWeight: '700' },
 
   applyBtnText: { fontSize: 15.5, fontWeight: '700' },
