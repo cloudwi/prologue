@@ -90,7 +90,13 @@ export type MeetupHistory = {
 /** 다가오는 모임 — 가까운 날짜순 (GET /meetups). */
 export async function getMeetups(): Promise<Meetup[]> {
   const res = await authedRequest<{ meetups: Meetup[] }>('GET', '/meetups');
-  return res.meetups;
+  // 서버가 앱보다 구버전일 수 있다(배포 시차) — 새 필드는 기본값으로 메워 화면이 죽지 않게 한다.
+  return res.meetups.map((m) => ({
+    ...m,
+    coverUrls: m.coverUrls ?? [],
+    participants: m.participants ?? [],
+    requireJobVerified: m.requireJobVerified ?? false,
+  }));
 }
 
 /** 지난 모임 — 개최 완료 기록 (GET /meetups/history). */
@@ -220,7 +226,7 @@ export async function createMeetup(input: CreateMeetupInput): Promise<string> {
 /** 내가 여는 모임 전부 — 신청자 목록까지 (GET /meetups/mine). */
 export async function getMyMeetups(): Promise<HostMeetup[]> {
   const res = await authedRequest<{ meetups: HostMeetup[] }>('GET', '/meetups/mine');
-  return res.meetups;
+  return res.meetups.map((m) => ({ ...m, coverUrls: m.coverUrls ?? [], applications: m.applications ?? [] }));
 }
 
 /** 입금 확인 후 확정 — 신청자에게 푸시가 간다. */

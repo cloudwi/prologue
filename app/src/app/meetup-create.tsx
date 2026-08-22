@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Image } from 'expo-image';
@@ -12,6 +12,7 @@ import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { onAddressPicked, openAddressSearch } from '@/lib/address-search';
 import { track } from '@/lib/analytics';
 import { createMeetup } from '@/lib/meetups';
 import { uploadMeetupCover } from '@/lib/photo';
@@ -153,6 +154,16 @@ export default function MeetupCreateScreen() {
 
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const timeFmt = new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' });
+
+  // 주소 검색(브라우저 → 딥링크) 결과를 받아 장소와 네이버 지도 링크를 채운다.
+  useEffect(() => {
+    onAddressPicked(({ road, building }) => {
+      const label = building ? `${road} ${building}` : road;
+      setPlace(label);
+      setPlaceUrl(`https://map.naver.com/p/search/${encodeURIComponent(label)}`);
+    });
+    return () => onAddressPicked(null);
+  }, []);
 
   /** 미선택 시 시작 위치 — 다음 주 토요일 저녁 7시 언저리. */
   function initialDate(): Date {
@@ -377,15 +388,25 @@ export default function MeetupCreateScreen() {
           </View>
         </Field>
 
-        <Field label="장소" c={c}>
-          <PlaceholderInput
-            value={place}
-            onChangeText={setPlace}
-            placeholder="예) 성수역 3번 출구 앞 카페"
-            placeholderTextColor={c.textSecondary}
-            maxLength={120}
-            style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-          />
+        <Field label="장소" c={c} hint="주소 검색으로 고르면 지도 링크도 자동으로 채워져요. 상세 위치(층·가게명)는 이어서 적으면 돼요.">
+          <View style={styles.row}>
+            <View style={styles.rowItem}>
+              <PlaceholderInput
+                value={place}
+                onChangeText={setPlace}
+                placeholder="예) 성수역 3번 출구 앞 카페"
+                placeholderTextColor={c.textSecondary}
+                maxLength={120}
+                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+              />
+            </View>
+            <Pressable
+              onPress={openAddressSearch}
+              style={({ pressed }) => [styles.addressBtn, { backgroundColor: c.text, opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text style={[styles.addressBtnText, { color: c.background }]}>주소 검색</Text>
+            </Pressable>
+          </View>
         </Field>
 
         <Field label="지도 링크 (선택)" c={c} hint="카카오맵·네이버지도에서 장소를 '공유'하면 링크가 복사돼요. 참가자가 바로 길을 찾을 수 있어요.">
@@ -730,6 +751,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   rowItem: { flex: 1 },
   timeItem: { width: 104 },
+  addressBtn: { height: 48, paddingHorizontal: 16, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  addressBtnText: { fontSize: 14.5, fontWeight: '700' },
   note: { fontSize: 13, lineHeight: 19, marginTop: 6, paddingHorizontal: 2 },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },

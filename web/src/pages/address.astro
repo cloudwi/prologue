@@ -1,0 +1,40 @@
+---
+// 주소 검색 — 다음(카카오) 우편번호 서비스(키 불필요·무료)를 전체 화면으로 심는다.
+// 앱이 이 페이지를 브라우저로 열고, 주소를 고르면 딥링크(prologue://address?...)로 돌아간다.
+// WebView 네이티브 모듈 없이(OTA 유지) 주소 검색을 얹기 위한 다리다.
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>주소 검색 · 프롤로그</title>
+    <style>
+      html, body { margin: 0; height: 100%; }
+      #postcode { width: 100%; height: 100%; }
+      .fallback {
+        font-family: -apple-system, sans-serif; text-align: center; padding: 48px 24px; color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="postcode"></div>
+    <script is:inline src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <script is:inline>
+      new daum.Postcode({
+        oncomplete: function (data) {
+          var road = data.roadAddress || data.jibunAddress || '';
+          var building = data.buildingName || '';
+          // 앱으로 복귀 — 커스텀 스킴. 브라우저가 "프롤로그에서 열기"를 띄운다.
+          location.href =
+            'prologue://address?road=' + encodeURIComponent(road) +
+            '&building=' + encodeURIComponent(building);
+        },
+        width: '100%',
+        height: '100%',
+      }).embed(document.getElementById('postcode'));
+    </script>
+  </body>
+</html>
