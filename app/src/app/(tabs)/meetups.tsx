@@ -186,9 +186,16 @@ export default function MeetupsScreen() {
                     ]}
                   >
                     <View style={styles.cardHead}>
-                      <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={1}>
-                        {m.title}
-                      </Text>
+                      <View style={styles.cardTitleWrap}>
+                        {m.emoji != null && (
+                          <View style={[styles.coverTile, { backgroundColor: m.color ?? c.backgroundSelected }]}>
+                            <Text style={styles.coverTileEmoji}>{m.emoji}</Text>
+                          </View>
+                        )}
+                        <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={1}>
+                          {m.title}
+                        </Text>
+                      </View>
                       {m.isMine ? (
                         <View style={[styles.statusChip, { backgroundColor: c.backgroundSelected }]}>
                           <Text style={[styles.statusChipText, { color: c.textSecondary }]}>내 모임</Text>
@@ -297,6 +304,9 @@ const styles = StyleSheet.create({
   card: { borderRadius: Radius.lg, padding: 18, marginBottom: 12 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   cardTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
+  cardTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
+  coverTile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  coverTileEmoji: { fontSize: 20 },
   statusChip: { height: 24, paddingHorizontal: 10, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   statusChipText: { fontSize: 12.5, fontWeight: '700' },
   cardMeta: { fontSize: 14, marginTop: 5 },

@@ -61,6 +61,9 @@ class MeetupController(
         val maxAgeFemale: Int? = null,
         val minHeightMaleCm: Int? = null,
         val minHeightFemaleCm: Int? = null,
+        /** 커버(선택) — 이모지 하나와 hex 색. */
+        val emoji: String? = null,
+        val color: String? = null,
         @field:NotBlank(message = "카카오 오픈채팅 링크를 넣어주세요")
         val kakaoLink: String,
     )
@@ -122,6 +125,8 @@ class MeetupController(
             maxAgeFemale = request.maxAgeFemale,
             minHeightMaleCm = request.minHeightMaleCm,
             minHeightFemaleCm = request.minHeightFemaleCm,
+            emoji = request.emoji,
+            color = request.color,
             kakaoLink = request.kakaoLink,
         )
         return CreateMeetupResponse(id.toString())

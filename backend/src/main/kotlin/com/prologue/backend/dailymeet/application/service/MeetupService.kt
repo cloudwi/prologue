@@ -33,6 +33,9 @@ data class MeetupView(
     val maxAgeFemale: Int?,
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
+    /** 커버 — 이모지와 배경색. 없으면 앱이 기본 모양을 그린다. */
+    val emoji: String?,
+    val color: String?,
     val status: String,
     val hostNickname: String?,
     /** 이 모임장이 지금까지 개최를 완료한 횟수 — 신뢰 신호. */
@@ -113,6 +116,8 @@ data class HostMeetupView(
     val maxAgeFemale: Int?,
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
+    val emoji: String?,
+    val color: String?,
     val kakaoLink: String,
     val status: String,
     val confirmedCount: Int,
@@ -161,6 +166,8 @@ class MeetupService(
                 maxAgeFemale = m.maxAgeFemale,
                 minHeightMaleCm = m.minHeightMaleCm,
                 minHeightFemaleCm = m.minHeightFemaleCm,
+                emoji = m.emoji,
+                color = m.color,
                 status = m.status.name,
                 hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
                 hostDoneCount = meetupRepository.countDoneByHost(m.hostAccountId),
@@ -275,6 +282,8 @@ class MeetupService(
         maxAgeFemale: Int?,
         minHeightMaleCm: Int?,
         minHeightFemaleCm: Int?,
+        emoji: String?,
+        color: String?,
         kakaoLink: String,
     ): UUID {
         val saved = meetupRepository.save(
@@ -282,7 +291,7 @@ class MeetupService(
                 hostAccountId, title, description, meetAt, place, capacity,
                 fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                kakaoLink,
+                emoji, color, kakaoLink,
             ),
         )
         return requireNotNull(saved.id)
@@ -337,6 +346,8 @@ class MeetupService(
                 maxAgeFemale = m.maxAgeFemale,
                 minHeightMaleCm = m.minHeightMaleCm,
                 minHeightFemaleCm = m.minHeightFemaleCm,
+                emoji = m.emoji,
+                color = m.color,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },

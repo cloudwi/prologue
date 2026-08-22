@@ -23,6 +23,12 @@ type WheelItem = { value: string; label: string };
 
 const NONE: WheelItem = { value: '', label: '제한 없음' };
 
+/** 커버 이모지 — 모임에서 흔한 것들만 큐레이션. 자유 입력은 받지 않는다(검수 부담 0). */
+const COVER_EMOJIS = ['🍻', '☕', '🍷', '🍜', '🥘', '🎲', '🎬', '🎨', '🎤', '📚', '🏃', '⛰️', '🚴', '🏸', '🧘', '🌊', '🎳', '🐶'];
+
+/** 커버 팔레트 — 차가운 회색 바탕에 앉는 저채도 톤만. */
+const COVER_COLORS = ['#F1E8E2', '#E7EDF3', '#E9F0E6', '#F5EAD8', '#EFE6F0', '#F7E8E8', '#E6EEF0', '#EDEDE9'];
+
 /** 정원 — 소모임(2)부터 대형(50)까지. */
 const CAPACITY_ITEMS: WheelItem[] = Array.from({ length: 49 }, (_, i) => {
   const n = String(i + 2);
@@ -115,6 +121,8 @@ export default function MeetupCreateScreen() {
   const [meetAt, setMeetAt] = useState<Date | null>(null);
   const [place, setPlace] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [emoji, setEmoji] = useState<string>(COVER_EMOJIS[0]!);
+  const [color, setColor] = useState<string>(COVER_COLORS[0]!);
   const [isPaid, setIsPaid] = useState(false);
   /** 성별별로 참가비를 다르게 받는지 — 남 2만/여 무료 같은 모임이 흔하다. */
   const [feeByGender, setFeeByGender] = useState(false);
@@ -233,6 +241,8 @@ export default function MeetupCreateScreen() {
         maxAgeFemale: femaleAllowed ? num(maxAgeFemale) : null,
         minHeightMaleCm: maleAllowed ? num(minHeightMale) : null,
         minHeightFemaleCm: femaleAllowed ? num(minHeightFemale) : null,
+        emoji,
+        color,
         kakaoLink: normalizedLink()!,
       });
       track('meetup_created');
@@ -249,6 +259,43 @@ export default function MeetupCreateScreen() {
   return (
     <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* 꾸미기 — 이모지 하나와 색 하나가 모임의 첫인상이 된다. */}
+        <View style={[styles.coverPreview, { backgroundColor: color }]}>
+          <Text style={styles.coverPreviewEmoji}>{emoji}</Text>
+        </View>
+        <Field label="이모지" c={c}>
+          <View style={styles.emojiGrid}>
+            {COVER_EMOJIS.map((e) => (
+              <Pressable
+                key={e}
+                onPress={() => setEmoji(e)}
+                style={[
+                  styles.emojiCell,
+                  { backgroundColor: c.backgroundElement },
+                  emoji === e && { borderWidth: 2, borderColor: c.primary },
+                ]}
+              >
+                <Text style={styles.emojiCellText}>{e}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Field>
+        <Field label="배경색" c={c}>
+          <View style={styles.colorRow}>
+            {COVER_COLORS.map((col) => (
+              <Pressable
+                key={col}
+                onPress={() => setColor(col)}
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: col },
+                  color === col && { borderWidth: 2.5, borderColor: c.primary },
+                ]}
+              />
+            ))}
+          </View>
+        </Field>
+
         <Field label="모임 이름" c={c}>
           <PlaceholderInput
             value={title}
@@ -569,6 +616,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   centerText: { justifyContent: 'center' },
+  coverPreview: { height: 88, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  coverPreviewEmoji: { fontSize: 44 },
+  emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  emojiCell: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  emojiCellText: { fontSize: 22 },
+  colorRow: { flexDirection: 'row', gap: 10 },
+  colorSwatch: { width: 36, height: 36, borderRadius: 18 },
   segment: { flexDirection: 'row', borderRadius: Radius.md, padding: 4, minHeight: 48 },
   segmentItem: { flex: 1, borderRadius: Radius.md - 4, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontSize: 15 },

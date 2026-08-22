@@ -34,6 +34,9 @@ class Meetup private constructor(
     val maxAgeFemale: Int?,
     val minHeightMaleCm: Int?,
     val minHeightFemaleCm: Int?,
+    /** 커버 — 이모지 하나와 배경색. 모임의 첫인상을 모임장이 고른다. */
+    val emoji: String?,
+    val color: String?,
     val kakaoLink: String,
     status: MeetupStatus,
     val createdAt: Instant,
@@ -93,6 +96,8 @@ class Meetup private constructor(
             maxAgeFemale: Int?,
             minHeightMaleCm: Int?,
             minHeightFemaleCm: Int?,
+            emoji: String?,
+            color: String?,
             kakaoLink: String,
             now: Instant = Instant.now(),
         ): Meetup {
@@ -112,6 +117,12 @@ class Meetup private constructor(
             }
             validateConditions(minAgeMale, maxAgeMale, minHeightMaleCm)
             validateConditions(minAgeFemale, maxAgeFemale, minHeightFemaleCm)
+            val cleanEmoji = emoji?.trim()?.ifBlank { null }
+            if (cleanEmoji != null && cleanEmoji.length > 8) throw DailyMeetException("이모지가 올바르지 않아요")
+            val cleanColor = color?.trim()?.ifBlank { null }
+            if (cleanColor != null && !cleanColor.matches(Regex("#[0-9a-fA-F]{6}"))) {
+                throw DailyMeetException("색상 값이 올바르지 않아요")
+            }
             if (meetAt.isBefore(now)) throw DailyMeetException("모임 일시는 미래여야 해요")
             val cleanLink = kakaoLink.trim()
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
@@ -121,7 +132,7 @@ class Meetup private constructor(
                 null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace,
                 capacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                cleanLink, MeetupStatus.OPEN, now,
+                cleanEmoji, cleanColor, cleanLink, MeetupStatus.OPEN, now,
             )
         }
 
@@ -142,6 +153,8 @@ class Meetup private constructor(
             maxAgeFemale: Int?,
             minHeightMaleCm: Int?,
             minHeightFemaleCm: Int?,
+            emoji: String?,
+            color: String?,
             kakaoLink: String,
             status: MeetupStatus,
             createdAt: Instant,
@@ -149,7 +162,7 @@ class Meetup private constructor(
             id, hostAccountId, title, description, meetAt, place, capacity, fee,
             feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-            kakaoLink, status, createdAt,
+            emoji, color, kakaoLink, status, createdAt,
         )
 
         private fun validateConditions(minAge: Int?, maxAge: Int?, minHeightCm: Int?) {
