@@ -23,6 +23,7 @@ data class MeetupView(
     val meetAt: Instant,
     val place: String,
     val placeUrl: String?,
+    val placeAddress: String?,
     val capacity: Int,
     val fee: Int,
     /** 여성 참가비 — null이면 fee와 동일. */
@@ -113,6 +114,7 @@ data class HostMeetupView(
     val meetAt: Instant,
     val place: String,
     val placeUrl: String?,
+    val placeAddress: String?,
     val capacity: Int,
     val fee: Int,
     val feeFemale: Int?,
@@ -167,6 +169,7 @@ class MeetupService(
                 meetAt = m.meetAt,
                 place = m.place,
                 placeUrl = m.placeUrl,
+                placeAddress = m.placeAddress,
                 capacity = m.capacity,
                 fee = m.fee,
                 feeFemale = m.feeFemale,
@@ -287,6 +290,7 @@ class MeetupService(
         meetAt: Instant,
         place: String,
         placeUrl: String?,
+        placeAddress: String?,
         capacity: Int,
         fee: Int,
         feeFemale: Int?,
@@ -305,7 +309,7 @@ class MeetupService(
     ): UUID {
         val saved = meetupRepository.save(
             Meetup.create(
-                hostAccountId, title, description, meetAt, place, placeUrl, capacity,
+                hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity,
                 fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, kakaoLink,
@@ -358,6 +362,7 @@ class MeetupService(
                 meetAt = m.meetAt,
                 place = m.place,
                 placeUrl = m.placeUrl,
+                placeAddress = m.placeAddress,
                 capacity = m.capacity,
                 fee = m.fee,
                 feeFemale = m.feeFemale,

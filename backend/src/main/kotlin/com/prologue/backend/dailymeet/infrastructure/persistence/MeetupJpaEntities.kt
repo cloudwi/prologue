@@ -37,6 +37,9 @@ class MeetupJpaEntity(
     @Column(name = "place_url", length = 500)
     val placeUrl: String? = null,
 
+    @Column(name = "place_address", length = 200)
+    val placeAddress: String? = null,
+
     @Column(name = "capacity", nullable = false)
     val capacity: Int,
 

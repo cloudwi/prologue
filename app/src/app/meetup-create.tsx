@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Image } from 'expo-image';
@@ -12,7 +12,7 @@ import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { onAddressPicked, openAddressSearch } from '@/lib/address-search';
+import { AddressSearchModal } from '@/components/address-search-modal';
 import { track } from '@/lib/analytics';
 import { createMeetup } from '@/lib/meetups';
 import { uploadMeetupCover } from '@/lib/photo';
@@ -123,8 +123,9 @@ export default function MeetupCreateScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [meetAt, setMeetAt] = useState<Date | null>(null);
-  const [place, setPlace] = useState('');
-  const [placeUrl, setPlaceUrl] = useState('');
+  const [address, setAddress] = useState('');
+  const [placeDetail, setPlaceDetail] = useState('');
+  const [addressOpen, setAddressOpen] = useState(false);
   const [capacity, setCapacity] = useState('');
   const [coverUrls, setCoverUrls] = useState<string[]>([]);
   const [coverUploading, setCoverUploading] = useState(false);
@@ -154,16 +155,6 @@ export default function MeetupCreateScreen() {
 
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const timeFmt = new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' });
-
-  // 주소 검색(브라우저 → 딥링크) 결과를 받아 장소와 네이버 지도 링크를 채운다.
-  useEffect(() => {
-    onAddressPicked(({ road, building }) => {
-      const label = building ? `${road} ${building}` : road;
-      setPlace(label);
-      setPlaceUrl(`https://map.naver.com/p/search/${encodeURIComponent(label)}`);
-    });
-    return () => onAddressPicked(null);
-  }, []);
 
   /** 미선택 시 시작 위치 — 다음 주 토요일 저녁 7시 언저리. */
   function initialDate(): Date {
@@ -204,7 +195,7 @@ export default function MeetupCreateScreen() {
   function firstMissing(): string | null {
     if (title.trim().length === 0) return '모임 이름을 적어주세요.';
     if (meetAt == null) return '모임 날짜와 시간을 골라주세요.';
-    if (place.trim().length === 0) return '모임 장소를 적어주세요.';
+    if (address.trim().length === 0) return '주소 검색으로 모임 장소를 골라주세요.';
     if (capacity === '') return '정원을 골라주세요.';
     if (isPaid && !feeByGender && fee === '') return '참가비를 골라주세요.';
     if (isPaid && feeByGender && fee === '') return '남성 참가비를 골라주세요.';
@@ -225,14 +216,6 @@ export default function MeetupCreateScreen() {
     if (link.length === 0) return null;
     if (!/^https?:\/\//.test(link)) link = `https://${link}`;
     return /^https?:\/\/[\w.-]+\.[a-z]{2,}([/?#].*)?$/i.test(link) ? link : null;
-  }
-
-  /** 지도 링크 — https 없이 붙여넣으면 채워주고, 빈 값이면 null. */
-  function normalizedPlaceUrl(): string | null {
-    let link = placeUrl.trim();
-    if (link.length === 0) return null;
-    if (!/^https?:\/\//.test(link)) link = `https://${link}`;
-    return link;
   }
 
   /** 성별 제한과 어긋나는 조건은 버린다 — 여성만 모임에 남성 조건이 실려 가지 않게. */
@@ -279,8 +262,9 @@ export default function MeetupCreateScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
         meetAt: meetAt.toISOString(),
-        place: place.trim(),
-        placeUrl: normalizedPlaceUrl(),
+        place: placeDetail.trim() ? `${address.trim()} · ${placeDetail.trim()}` : address.trim(),
+        placeUrl: null,
+        placeAddress: address.trim(),
         capacity: Number(capacity),
         fee: isPaid ? Number(fee) : 0,
         feeFemale: isPaid && feeByGender && femaleAllowed ? Number(feeFemaleInput) : null,
@@ -388,40 +372,29 @@ export default function MeetupCreateScreen() {
           </View>
         </Field>
 
-        <Field label="장소" c={c} hint="주소 검색으로 고르면 지도 링크도 자동으로 채워져요. 상세 위치(층·가게명)는 이어서 적으면 돼요.">
-          <View style={styles.row}>
-            <View style={styles.rowItem}>
-              <PlaceholderInput
-                value={place}
-                onChangeText={setPlace}
-                placeholder="예) 성수역 3번 출구 앞 카페"
-                placeholderTextColor={c.textSecondary}
-                maxLength={120}
-                style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-              />
-            </View>
-            <Pressable
-              onPress={openAddressSearch}
-              style={({ pressed }) => [styles.addressBtn, { backgroundColor: c.text, opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Text style={[styles.addressBtnText, { color: c.background }]}>주소 검색</Text>
-            </Pressable>
-          </View>
+        <Field label="장소" c={c} hint="주소를 고르면 참가자 화면에 네이버·카카오 지도 버튼이 자동으로 생겨요.">
+          <Pressable
+            onPress={() => setAddressOpen(true)}
+            style={[styles.input, styles.centerText, { backgroundColor: c.backgroundElement }]}
+          >
+            <Text style={{ color: address ? c.text : c.textSecondary, fontSize: 16 }} numberOfLines={1}>
+              {address || '주소 검색'}
+            </Text>
+          </Pressable>
         </Field>
 
-        <Field label="지도 링크 (선택)" c={c} hint="카카오맵·네이버지도에서 장소를 '공유'하면 링크가 복사돼요. 참가자가 바로 길을 찾을 수 있어요.">
-          <PlaceholderInput
-            value={placeUrl}
-            onChangeText={setPlaceUrl}
-            placeholder="https://map.kakao.com/... 또는 naver.me/..."
-            placeholderTextColor={c.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            maxLength={500}
-            style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-          />
-        </Field>
+        {address !== '' && (
+          <Field label="상세 위치 (선택)" c={c}>
+            <PlaceholderInput
+              value={placeDetail}
+              onChangeText={setPlaceDetail}
+              placeholder="예) 2층 카페 프롤로그, 3번 출구 앞"
+              placeholderTextColor={c.textSecondary}
+              maxLength={60}
+              style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+            />
+          </Field>
+        )}
 
         <View style={styles.row}>
           <View style={styles.rowItem}>
@@ -656,6 +629,17 @@ export default function MeetupCreateScreen() {
         </Text>
       </ScrollView>
 
+      {/* 주소 검색 — 앱 안의 WebView(다음 우편번호). */}
+      <AddressSearchModal
+        visible={addressOpen}
+        onPicked={({ road, building }) => {
+          setAddress(building ? `${road} ${building}` : road);
+          setAddressOpen(false);
+        }}
+        onClose={() => setAddressOpen(false)}
+        c={c}
+      />
+
       {/* 커버 자르기 — 보이는 그대로(16:9)의 창에서 고른다. */}
       {cropQueue.length > 0 && (
         <PhotoCropModal
@@ -751,8 +735,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   rowItem: { flex: 1 },
   timeItem: { width: 104 },
-  addressBtn: { height: 48, paddingHorizontal: 16, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  addressBtnText: { fontSize: 14.5, fontWeight: '700' },
   note: { fontSize: 13, lineHeight: 19, marginTop: 6, paddingHorizontal: 2 },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },

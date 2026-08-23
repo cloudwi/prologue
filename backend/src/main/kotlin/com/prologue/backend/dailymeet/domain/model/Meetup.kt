@@ -21,8 +21,10 @@ class Meetup private constructor(
     val description: String?,
     val meetAt: Instant,
     val place: String,
-    /** 지도 링크(카카오맵·네이버지도 공유 URL) — 참가자가 바로 길을 찾는다. */
+    /** 지도 링크(구버전 호환) — 새 데이터는 placeAddress로 링크를 만든다. */
     val placeUrl: String?,
+    /** 도로명 주소(주소 검색 결과) — 네이버·카카오 지도 링크의 원료. */
+    val placeAddress: String?,
     val capacity: Int,
     val fee: Int,
     /** 여성 참가비 — null이면 fee(공통)와 동일. 성별에 따라 값을 달리 받는 모임이 흔해서. */
@@ -93,6 +95,7 @@ class Meetup private constructor(
             meetAt: Instant,
             place: String,
             placeUrl: String?,
+            placeAddress: String?,
             capacity: Int,
             fee: Int,
             feeFemale: Int?,
@@ -132,6 +135,8 @@ class Meetup private constructor(
             if (cleanColor != null && !cleanColor.matches(Regex("#[0-9a-fA-F]{6}"))) {
                 throw DailyMeetException("색상 값이 올바르지 않아요")
             }
+            val cleanPlaceAddress = placeAddress?.trim()?.ifBlank { null }
+            if (cleanPlaceAddress != null && cleanPlaceAddress.length > 200) throw DailyMeetException("주소가 너무 길어요")
             val cleanPlaceUrl = placeUrl?.trim()?.ifBlank { null }
             if (cleanPlaceUrl != null && (!cleanPlaceUrl.startsWith("https://") || cleanPlaceUrl.length > 500)) {
                 throw DailyMeetException("지도 링크가 올바르지 않아요")
@@ -147,7 +152,7 @@ class Meetup private constructor(
             if (!cleanLink.startsWith("https://")) throw DailyMeetException("카카오 오픈채팅 링크(https://)를 넣어주세요")
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
-                null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl,
+                null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl, cleanPlaceAddress,
                 capacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanLink, MeetupStatus.OPEN, now,
@@ -162,6 +167,7 @@ class Meetup private constructor(
             meetAt: Instant,
             place: String,
             placeUrl: String?,
+            placeAddress: String?,
             capacity: Int,
             fee: Int,
             feeFemale: Int?,
@@ -180,7 +186,7 @@ class Meetup private constructor(
             status: MeetupStatus,
             createdAt: Instant,
         ): Meetup = Meetup(
-            id, hostAccountId, title, description, meetAt, place, placeUrl, capacity, fee,
+            id, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity, fee,
             feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
             requireJobVerified, emoji, color, coverUrls, kakaoLink, status, createdAt,

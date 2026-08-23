@@ -14,8 +14,10 @@ export type Meetup = {
   description: string | null;
   meetAt: string;
   place: string;
-  /** 지도 링크(카카오맵·네이버지도) — 있으면 상세에서 바로 연다. */
+  /** 지도 링크(구버전 데이터) — 새 데이터는 placeAddress로 링크를 만든다. */
   placeUrl: string | null;
+  /** 도로명 주소 — 네이버·카카오 지도 버튼의 원료. */
+  placeAddress: string | null;
   capacity: number;
   fee: number;
   /** 여성 참가비 — null이면 fee와 동일. */
@@ -173,6 +175,7 @@ export type HostMeetup = {
   meetAt: string;
   place: string;
   placeUrl: string | null;
+  placeAddress: string | null;
   capacity: number;
   fee: number;
   feeFemale: number | null;
@@ -200,6 +203,7 @@ export type CreateMeetupInput = {
   meetAt: string;
   place: string;
   placeUrl: string | null;
+  placeAddress: string | null;
   capacity: number;
   fee: number;
   feeFemale: number | null;

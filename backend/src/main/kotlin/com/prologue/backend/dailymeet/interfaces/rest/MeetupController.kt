@@ -59,8 +59,10 @@ class MeetupController(
         val meetAt: String,
         @field:NotBlank(message = "모임 장소를 적어주세요")
         val place: String,
-        /** 지도 링크(선택) — 카카오맵·네이버지도 공유 URL. */
+        /** 지도 링크(선택, 구버전 호환) — 새 앱은 placeAddress를 보낸다. */
         val placeUrl: String? = null,
+        /** 도로명 주소(주소 검색 결과) — 지도 링크의 원료. */
+        val placeAddress: String? = null,
         @field:Min(value = 2, message = "정원은 2명 이상이어야 해요")
         @field:Max(value = 100, message = "정원은 100명까지예요")
         val capacity: Int,
@@ -135,6 +137,7 @@ class MeetupController(
             meetAt = meetAt,
             place = request.place,
             placeUrl = request.placeUrl,
+            placeAddress = request.placeAddress,
             capacity = request.capacity,
             fee = request.fee,
             feeFemale = request.feeFemale,
