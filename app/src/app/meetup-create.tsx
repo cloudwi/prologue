@@ -388,18 +388,16 @@ export default function MeetupCreateScreen() {
           </Pressable>
         </Field>
 
-        {address !== '' && (
-          <Field label="상세 위치 (선택)" c={c}>
-            <PlaceholderInput
-              value={placeDetail}
-              onChangeText={setPlaceDetail}
-              placeholder="예) 2층 카페 프롤로그, 3번 출구 앞"
-              placeholderTextColor={c.textSecondary}
-              maxLength={60}
-              style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
-            />
-          </Field>
-        )}
+        <Field label="상세 위치 (선택)" c={c} hint="주소로는 못 담는 위치 — 층·호수·가게 이름·만나는 지점을 적어주세요.">
+          <PlaceholderInput
+            value={placeDetail}
+            onChangeText={setPlaceDetail}
+            placeholder="예) 2층 카페 프롤로그, 3번 출구 앞"
+            placeholderTextColor={c.textSecondary}
+            maxLength={60}
+            style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text }]}
+          />
+        </Field>
 
         <View style={styles.row}>
           <View style={styles.rowItem}>
