@@ -28,6 +28,8 @@ export function PhotoCropModal({
   progress,
   /** 잘리는 창의 비율(가로/세로). 프로필은 4:5(기본), 모임 커버는 16:9. */
   aspect = CROP_ASPECT,
+  /** 머리말 — 어디에 보이는 그대로인지 화면마다 말이 다르다. */
+  title = '프로필에 보이는 그대로예요',
   onDone,
   onCancel,
   c,
@@ -35,6 +37,7 @@ export function PhotoCropModal({
   uri: string;
   progress?: { index: number; total: number };
   aspect?: number;
+  title?: string;
   onDone: (croppedUri: string) => void;
   onCancel: () => void;
   c: ThemeColors;
@@ -140,7 +143,7 @@ export function PhotoCropModal({
       <GestureHandlerRootView style={styles.flex}>
       <View style={styles.backdrop}>
         <Text style={styles.title}>
-          프로필에 보이는 그대로예요
+          {title}
           {progress && progress.total > 1 ? `  ·  ${progress.index + 1}/${progress.total}` : ''}
         </Text>
         <Text style={styles.hint}>끌어서 위치를, 두 손가락으로 크기를 맞춰주세요</Text>

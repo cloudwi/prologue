@@ -646,7 +646,8 @@ export default function MeetupCreateScreen() {
           key={cropQueue[0]}
           uri={cropQueue[0]!}
           aspect={COVER_ASPECT}
-          progress={cropTotal > 1 ? { index: cropTotal - cropQueue.length + 1, total: cropTotal } : undefined}
+          title="목록에 보이는 그대로예요"
+          progress={cropTotal > 1 ? { index: cropTotal - cropQueue.length, total: cropTotal } : undefined}
           onDone={(cropped) => void onCropped(cropped)}
           onCancel={() => setCropQueue([])}
           c={c}
