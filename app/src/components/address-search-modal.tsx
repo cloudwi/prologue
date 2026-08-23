@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 import type { ThemeColors } from '@/constants/theme';
@@ -48,9 +48,11 @@ export function AddressSearchModal({
   c: ThemeColors;
 }) {
   const source = useMemo(() => ({ html: POSTCODE_HTML, baseUrl: 'https://prologue.day' }), []);
+  // SafeAreaView는 Modal 안에서 인셋을 못 잡는다(알려진 제약) — 훅으로 받아 직접 패딩한다.
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
+      <View style={[styles.root, { backgroundColor: c.background, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.head}>
           <Text style={[styles.title, { color: c.text }]}>주소 검색</Text>
           <Pressable onPress={onClose} hitSlop={10}>
@@ -69,7 +71,7 @@ export function AddressSearchModal({
           }}
           style={styles.web}
         />
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
