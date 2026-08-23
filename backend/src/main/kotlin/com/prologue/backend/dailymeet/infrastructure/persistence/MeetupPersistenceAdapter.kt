@@ -35,6 +35,10 @@ class MeetupPersistenceAdapter(
     override fun countDoneByHost(hostAccountId: UUID): Int =
         jpa.countByHostAccountIdAndStatus(hostAccountId, MeetupStatus.DONE.name).toInt()
 
+    override fun findAll(): List<Meetup> = jpa.findAllByOrderByCreatedAtDesc().map { it.toDomain() }
+
+    override fun delete(id: UUID) = jpa.deleteById(id)
+
     private fun Meetup.toEntity(): MeetupJpaEntity =
         MeetupJpaEntity(
             id = id,

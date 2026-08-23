@@ -6,6 +6,8 @@ import java.time.Instant
 import java.util.UUID
 
 interface MeetupJpaRepository : JpaRepository<MeetupJpaEntity, UUID> {
+    fun findAllByOrderByCreatedAtDesc(): List<MeetupJpaEntity>
+
     fun findByStatusInAndMeetAtAfterOrderByMeetAtAsc(statuses: Collection<String>, after: Instant): List<MeetupJpaEntity>
 
     fun findByStatusOrderByMeetAtDesc(status: String, pageable: Pageable): List<MeetupJpaEntity>

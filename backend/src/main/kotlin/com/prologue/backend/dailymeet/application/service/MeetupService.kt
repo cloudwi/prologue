@@ -7,6 +7,7 @@ import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
 import com.prologue.backend.dailymeet.domain.model.MeetupStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
+import com.prologue.backend.member.application.port.PhotoStorage
 import com.prologue.backend.member.application.service.JobVerificationService
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.notification.application.service.NotificationService
@@ -86,6 +87,23 @@ data class MeetupMemberProfileView(
     val participatedRecent: List<MeetupMemberHistoryRow>,
 )
 
+/** 어드민 모임 한 줄 — 운영자가 전체를 훑고 문제 모임을 처리한다. */
+data class AdminMeetupView(
+    val meetupId: UUID,
+    val title: String,
+    val place: String,
+    val meetAt: Instant,
+    val status: String,
+    val fee: Int,
+    val feeFemale: Int?,
+    val capacity: Int,
+    val confirmedCount: Int,
+    val appliedCount: Int,
+    val hostNickname: String?,
+    val coverUrls: List<String>,
+    val createdAt: Instant,
+)
+
 /** 지난 모임 한 줄 — 잘 운영되고 있다는 공개 기록. */
 data class MeetupHistoryView(
     val title: String,
@@ -150,6 +168,7 @@ class MeetupService(
     private val memberQueryService: MemberQueryService,
     private val jobVerificationService: JobVerificationService,
     private val notificationService: NotificationService,
+    private val photoStorage: PhotoStorage,
 ) {
     // ── 회원(앱) ──
 
@@ -447,6 +466,48 @@ class MeetupService(
         val application = applicationRepository.findById(applicationId) ?: throw DailyMeetException("신청을 찾을 수 없어요")
         val meetup = owned(hostAccountId, application.meetupId)
         return meetup to application
+    }
+
+    // ── 어드민 ──
+
+    /** 전체 모임, 최신순. */
+    @Transactional(readOnly = true)
+    fun adminMeetups(): List<AdminMeetupView> = meetupRepository.findAll().map { m ->
+        val apps = applicationRepository.findAllByMeetup(requireNotNull(m.id))
+        AdminMeetupView(
+            meetupId = requireNotNull(m.id),
+            title = m.title,
+            place = m.place,
+            meetAt = m.meetAt,
+            status = m.status.name,
+            fee = m.fee,
+            feeFemale = m.feeFemale,
+            capacity = m.capacity,
+            confirmedCount = apps.count { it.status == MeetupApplicationStatus.CONFIRMED },
+            appliedCount = apps.count { it.status == MeetupApplicationStatus.APPLIED },
+            hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
+            coverUrls = m.coverUrls,
+            createdAt = m.createdAt,
+        )
+    }
+
+    /** 어드민 강제 취소 — 소유권 없이. 신청자(신청·확정)에게 취소 푸시가 간다. */
+    @Transactional
+    fun adminCancelMeetup(meetupId: UUID) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        meetup.cancel()
+        meetupRepository.save(meetup)
+        applicationRepository.findAllByMeetup(meetupId)
+            .filter { it.status == MeetupApplicationStatus.APPLIED || it.status == MeetupApplicationStatus.CONFIRMED }
+            .forEach { notificationService.meetupCanceled(it.applicantAccountId, meetup.title) }
+    }
+
+    /** 어드민 완전 삭제 — 부적절 모임 등. 커버 사진은 저장소에서도 지운다(베스트 에포트). */
+    @Transactional
+    fun adminDeleteMeetup(meetupId: UUID) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        meetup.coverUrls.forEach { photoStorage.deleteProfilePhoto(it) }
+        meetupRepository.delete(meetupId)
     }
 
     companion object {

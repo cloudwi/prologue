@@ -21,6 +21,12 @@ interface MeetupRepository {
 
     /** 이 모임장이 개최 완료한 모임 수 — 신뢰 신호. */
     fun countDoneByHost(hostAccountId: UUID): Int
+
+    /** 모임 전부, 최신순 — 어드민. */
+    fun findAll(): List<Meetup>
+
+    /** 완전 삭제 — 어드민 전용. 신청은 FK cascade로 함께 지워진다. */
+    fun delete(id: UUID)
 }
 
 interface MeetupApplicationRepository {
