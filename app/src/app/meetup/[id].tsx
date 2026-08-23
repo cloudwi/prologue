@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ImageViewerModal } from '@/components/image-viewer';
 import { PhotoPager } from '@/components/photo-pager';
 
 import { SubScreen } from '@/components/sub-screen';
@@ -29,6 +30,7 @@ export default function MeetupDetailScreen() {
   const [meetup, setMeetup] = useState<Meetup | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -124,7 +126,12 @@ export default function MeetupDetailScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           {meetup.coverUrls.length > 0 ? (
             <View style={styles.coverPagerWrap}>
-              <PhotoPager photos={meetup.coverUrls} aspectRatio={16 / 9} backgroundColor={c.backgroundSelected} />
+              <PhotoPager
+                photos={meetup.coverUrls}
+                aspectRatio={16 / 9}
+                backgroundColor={c.backgroundSelected}
+                onPressImage={setViewerIndex}
+              />
             </View>
           ) : meetup.emoji != null ? (
             <View style={[styles.coverBanner, { backgroundColor: meetup.color ?? c.backgroundSelected }]}>
@@ -278,6 +285,15 @@ export default function MeetupDetailScreen() {
             ) : null}
           </View>
         </ScrollView>
+      )}
+
+      {meetup != null && meetup.coverUrls.length > 0 && (
+        <ImageViewerModal
+          photos={meetup.coverUrls}
+          initialIndex={viewerIndex ?? 0}
+          visible={viewerIndex != null}
+          onClose={() => setViewerIndex(null)}
+        />
       )}
     </SubScreen>
   );

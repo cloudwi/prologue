@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Style
 import { Image } from 'expo-image';
 
 import { PhotoCropModal } from '@/components/photo-crop';
+import { ImageViewerModal } from '@/components/image-viewer';
 import { PhotoPager } from '@/components/photo-pager';
 import { pickPhotos } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
@@ -133,6 +134,7 @@ export default function MeetupCreateScreen() {
   // 자르기를 기다리는 사진 줄 — 고른 순서대로 16:9 창을 거쳐 업로드된다.
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [cropTotal, setCropTotal] = useState(0);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [isPaid, setIsPaid] = useState(false);
   /** 성별별로 참가비를 다르게 받는지 — 남 2만/여 무료 같은 모임이 흔하다. */
   const [feeByGender, setFeeByGender] = useState(false);
@@ -299,7 +301,7 @@ export default function MeetupCreateScreen() {
         {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 미리보기는 상세와 같은 페이저다. */}
         {coverUrls.length > 0 ? (
           <View style={[styles.coverPreview, { backgroundColor: c.backgroundElement }]}>
-            <PhotoPager photos={coverUrls} aspectRatio={16 / 9} backgroundColor={c.backgroundElement} />
+            <PhotoPager photos={coverUrls} aspectRatio={16 / 9} backgroundColor={c.backgroundElement} onPressImage={setViewerIndex} />
           </View>
         ) : (
           <Pressable
@@ -631,6 +633,15 @@ export default function MeetupCreateScreen() {
           신청·확정·개최 기록이 모임장의 공개 프로필(개최 횟수)이 돼요.
         </Text>
       </ScrollView>
+
+      {coverUrls.length > 0 && (
+        <ImageViewerModal
+          photos={coverUrls}
+          initialIndex={viewerIndex ?? 0}
+          visible={viewerIndex != null}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
 
       {/* 주소 검색 — 앱 안의 WebView(다음 우편번호). */}
       <AddressSearchModal

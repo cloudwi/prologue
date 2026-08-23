@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 /**
  * 사진을 가로로 넘겨 보는 페이저.
@@ -10,10 +10,13 @@ export function PhotoPager({
   photos,
   aspectRatio = 4 / 5,
   backgroundColor,
+  onPressImage,
 }: {
   photos: string[];
   aspectRatio?: number;
   backgroundColor?: string;
+  /** 사진 탭 — 있으면 확대 뷰어 같은 것을 연다. */
+  onPressImage?: (index: number) => void;
 }) {
   const [width, setWidth] = useState(0);
   const [page, setPage] = useState(0);
@@ -27,8 +30,10 @@ export function PhotoPager({
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
         >
-          {photos.map((url) => (
-            <Image key={url} source={{ uri: url }} style={{ width, aspectRatio }} contentFit="cover" transition={150} />
+          {photos.map((url, i) => (
+            <Pressable key={url} onPress={onPressImage ? () => onPressImage(i) : undefined} disabled={!onPressImage}>
+              <Image source={{ uri: url }} style={{ width, aspectRatio }} contentFit="cover" transition={150} />
+            </Pressable>
           ))}
         </ScrollView>
       )}
