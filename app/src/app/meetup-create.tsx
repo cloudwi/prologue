@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Style
 import { Image } from 'expo-image';
 
 import { PhotoCropModal } from '@/components/photo-crop';
+import { PhotoPager } from '@/components/photo-pager';
 import { pickPhotos } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
@@ -295,23 +296,27 @@ export default function MeetupCreateScreen() {
   return (
     <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 보이는 그대로(16:9) 잘라 올린다. */}
-        <Pressable
-          onPress={pickCover}
-          disabled={coverUploading || coverUrls.length >= COVER_MAX}
-          style={[styles.coverPreview, { backgroundColor: c.backgroundElement }]}
-        >
-          {coverUrls.length > 0 ? (
-            <Image source={{ uri: coverUrls[0] }} style={styles.coverPhoto} contentFit="cover" transition={150} />
-          ) : coverUploading ? (
-            <ActivityIndicator color={c.text} />
-          ) : (
-            <View style={styles.coverEmptyInner}>
-              <Text style={[styles.coverEmptyText, { color: c.textSecondary }]}>커버 사진 올리기 (선택)</Text>
-              <Text style={[styles.coverEmptyHint, { color: c.textSecondary }]}>목록에 보이는 그대로 잘라서 올려요</Text>
-            </View>
-          )}
-        </Pressable>
+        {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 미리보기는 상세와 같은 페이저다. */}
+        {coverUrls.length > 0 ? (
+          <View style={[styles.coverPreview, { backgroundColor: c.backgroundElement }]}>
+            <PhotoPager photos={coverUrls} aspectRatio={16 / 9} backgroundColor={c.backgroundElement} />
+          </View>
+        ) : (
+          <Pressable
+            onPress={pickCover}
+            disabled={coverUploading}
+            style={[styles.coverPreview, styles.coverEmpty, { backgroundColor: c.backgroundElement }]}
+          >
+            {coverUploading ? (
+              <ActivityIndicator color={c.text} />
+            ) : (
+              <View style={styles.coverEmptyInner}>
+                <Text style={[styles.coverEmptyText, { color: c.textSecondary }]}>커버 사진 올리기 (선택)</Text>
+                <Text style={[styles.coverEmptyHint, { color: c.textSecondary }]}>목록에 보이는 그대로 잘라서 올려요</Text>
+              </View>
+            )}
+          </Pressable>
+        )}
         {(coverUrls.length > 0 || coverUploading) && (
           <View style={styles.coverThumbRow}>
             {coverUrls.map((url, i) => (
@@ -706,8 +711,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   centerText: { justifyContent: 'center' },
-  coverPreview: { aspectRatio: 16 / 9, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
-  coverPhoto: { width: '100%', height: '100%' },
+  coverPreview: { borderRadius: Radius.lg, marginBottom: 10, overflow: 'hidden' },
+  coverEmpty: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center' },
   coverBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
   coverBtnText: { fontSize: 13.5, fontWeight: '600' },
   coverEmptyInner: { alignItems: 'center', gap: 4 },
