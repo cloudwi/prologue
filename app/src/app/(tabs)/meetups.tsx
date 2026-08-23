@@ -9,6 +9,8 @@ import { Image } from 'expo-image';
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isSessionExpired } from '@/lib/api';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
+
 import { getJobStatus } from '@/lib/job';
 import { getMyProfile } from '@/lib/member';
 import { feeLabel, getMeetupHistory, getMeetups, type Meetup, type MeetupHistory } from '@/lib/meetups';
@@ -21,8 +23,44 @@ import { feeLabel, getMeetupHistory, getMeetups, type Meetup, type MeetupHistory
  * 지난 모임 기록(개최 횟수·참여 인원)을 함께 보여준다 — 잘 굴러가는 모임이라는
  * 증거는 우리가 말하는 것보다 기록이 말하는 게 낫다.
  */
-type DateFilter = 'ALL' | 'TODAY' | 'WEEKEND' | 'WEEK';
+LocaleConfig.locales.ko = {
+  monthNames: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+  monthNamesShort: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+  dayNames: ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'],
+  dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
+  today: '오늘',
+};
+LocaleConfig.defaultLocale = 'ko';
+
+type DateRange = { start: string | null; end: string | null };
 type FeeFilter = 'ALL' | 'FREE' | 'PAID';
+
+/** YYYY-MM-DD (로컬). */
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** 범위 마킹 — 시작·끝은 진하게, 사이는 옅게. */
+function rangeMarks(range: DateRange, color: string, textColor: string): Record<string, object> {
+  const marks: Record<string, object> = {};
+  if (!range.start) return marks;
+  if (!range.end || range.start === range.end) {
+    marks[range.start] = { startingDay: true, endingDay: true, color, textColor };
+    return marks;
+  }
+  const start = new Date(range.start);
+  const end = new Date(range.end);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const key = toDateKey(d);
+    marks[key] =
+      key === range.start
+        ? { startingDay: true, color, textColor }
+        : key === range.end
+          ? { endingDay: true, color, textColor }
+          : { color: color + '55', textColor };
+  }
+  return marks;
+}
 
 /** 신청 가능 판정에 쓰는 내 정보 — 서버가 최종 판정하지만, 목록에서 미리 걸러주는 게 친절이다. */
 type MyEligibility = { gender: 'MALE' | 'FEMALE'; age: number; heightCm: number | null; jobVerified: boolean };
@@ -35,21 +73,12 @@ function ageFrom(birthDate: string): number {
   return age;
 }
 
-function inDateFilter(meetAt: string, filter: DateFilter): boolean {
-  if (filter === 'ALL') return true;
-  const d = new Date(meetAt);
-  const now = new Date();
-  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
-  const today = startOfDay(now);
-  const dayAfter = (base: Date, n: number) => new Date(base.getFullYear(), base.getMonth(), base.getDate() + n);
-  if (filter === 'TODAY') return d >= today && d < dayAfter(today, 1);
-  if (filter === 'WEEK') return d >= today && d < dayAfter(today, 8);
-  // WEEKEND: 다가오는 토·일(오늘이 주말이면 오늘부터 일요일까지)
-  const dow = now.getDay(); // 0=일
-  const satOffset = dow === 0 ? -1 : 6 - dow;
-  const saturday = dayAfter(today, satOffset);
-  const start = today > saturday ? today : saturday;
-  return d >= start && d < dayAfter(saturday, 2);
+/** 달력에서 고른 범위(포함) 안의 모임인지. 시작만 고르면 그 날 하루. */
+function inDateRange(meetAt: string, range: DateRange): boolean {
+  if (!range.start) return true;
+  const key = toDateKey(new Date(meetAt));
+  const end = range.end ?? range.start;
+  return key >= range.start && key <= end;
 }
 
 /** 조건(성별·나이·키·직장인증)을 내 프로필로 미리 대조 — 모집 중이고 내가 연 게 아닌 것만. */
@@ -78,7 +107,7 @@ export default function MeetupsScreen() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'APPLIED' | 'MINE'>('ALL');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('ALL');
+  const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
   const [feeFilter, setFeeFilter] = useState<FeeFilter>('ALL');
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -131,11 +160,11 @@ export default function MeetupsScreen() {
   const q = query.trim();
   const visible = meetups
     .filter((m) => (filter === 'APPLIED' ? m.myStatus != null : filter === 'MINE' ? m.isMine : true))
-    .filter((m) => inDateFilter(m.meetAt, dateFilter))
+    .filter((m) => inDateRange(m.meetAt, dateRange))
     .filter((m) => (feeFilter === 'FREE' ? m.fee === 0 && (m.feeFemale ?? 0) === 0 : feeFilter === 'PAID' ? m.fee > 0 || (m.feeFemale ?? 0) > 0 : true))
     .filter((m) => (eligibleOnly && my != null ? isEligible(m, my) : true))
     .filter((m) => q === '' || m.title.includes(q) || m.place.includes(q) || (m.description ?? '').includes(q));
-  const activeFilterCount = (dateFilter !== 'ALL' ? 1 : 0) + (feeFilter !== 'ALL' ? 1 : 0) + (eligibleOnly ? 1 : 0);
+  const activeFilterCount = (dateRange.start != null ? 1 : 0) + (feeFilter !== 'ALL' ? 1 : 0) + (eligibleOnly ? 1 : 0);
   const appliedCount = meetups.filter((m) => m.myStatus != null).length;
   const mineCount = meetups.filter((m) => m.isMine).length;
 
@@ -376,25 +405,37 @@ export default function MeetupsScreen() {
         <View style={[styles.sheet, { backgroundColor: c.background }]}>
           <Text style={[styles.sheetTitle, { color: c.text }]}>필터</Text>
 
-          <Text style={[styles.sheetLabel, { color: c.textSecondary }]}>기간</Text>
-          <View style={[styles.segment, { backgroundColor: c.backgroundElement }]}>
-            {([
-              ['ALL', '전체'],
-              ['TODAY', '오늘'],
-              ['WEEKEND', '이번 주말'],
-              ['WEEK', '7일 이내'],
-            ] as const).map(([value, label]) => (
-              <Pressable
-                key={value}
-                onPress={() => setDateFilter(value)}
-                style={[styles.segmentItem, dateFilter === value && { backgroundColor: c.background }]}
-              >
-                <Text style={[styles.segmentText, { color: dateFilter === value ? c.text : c.textSecondary }, dateFilter === value && styles.segmentTextActive]}>
-                  {label}
-                </Text>
+          <View style={styles.sheetLabelRow}>
+            <Text style={[styles.sheetLabel, { color: c.textSecondary }]}>기간</Text>
+            {dateRange.start != null && (
+              <Pressable onPress={() => setDateRange({ start: null, end: null })} hitSlop={8}>
+                <Text style={[styles.resetText, { color: c.textSecondary }]}>전체 기간</Text>
               </Pressable>
-            ))}
+            )}
           </View>
+          {/* 첫 탭 = 시작일, 둘째 탭 = 종료일. 시작 전을 찍으면 새로 시작한다. */}
+          <Calendar
+            minDate={toDateKey(new Date())}
+            markingType="period"
+            markedDates={rangeMarks(dateRange, c.primary, c.primaryText)}
+            onDayPress={(day) => {
+              setDateRange((r) => {
+                if (!r.start || r.end) return { start: day.dateString, end: null };
+                if (day.dateString < r.start) return { start: day.dateString, end: null };
+                return { start: r.start, end: day.dateString };
+              });
+            }}
+            theme={{
+              calendarBackground: 'transparent',
+              dayTextColor: c.text,
+              monthTextColor: c.text,
+              textSectionTitleColor: c.textSecondary,
+              todayTextColor: c.primaryStrong,
+              arrowColor: c.text,
+              textDisabledColor: c.border,
+            }}
+            style={styles.calendar}
+          />
 
           <Text style={[styles.sheetLabel, { color: c.textSecondary }]}>참가비</Text>
           <View style={[styles.segment, { backgroundColor: c.backgroundElement }]}>
@@ -428,7 +469,7 @@ export default function MeetupsScreen() {
           <View style={styles.sheetFoot}>
             <Pressable
               onPress={() => {
-                setDateFilter('ALL');
+                setDateRange({ start: null, end: null });
                 setFeeFilter('ALL');
                 setEligibleOnly(false);
               }}
@@ -488,6 +529,8 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 34 },
   sheetTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
   sheetLabel: { fontSize: 13.5, fontWeight: '700', marginTop: 14, marginBottom: 8 },
+  sheetLabelRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  calendar: { borderRadius: 12, overflow: 'hidden' },
   segment: { flexDirection: 'row', borderRadius: 12, padding: 4, minHeight: 44 },
   segmentItem: { flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   segmentText: { fontSize: 14 },
