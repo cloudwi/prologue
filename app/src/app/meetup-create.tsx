@@ -377,7 +377,7 @@ export default function MeetupCreateScreen() {
           </View>
         </Field>
 
-        <Field label="장소" c={c} hint="주소를 고르면 참가자 화면에 네이버·카카오 지도 버튼이 자동으로 생겨요.">
+        <Field label="장소" c={c}>
           <Pressable
             onPress={() => setAddressOpen(true)}
             style={[styles.input, styles.centerText, { backgroundColor: c.backgroundElement }]}
