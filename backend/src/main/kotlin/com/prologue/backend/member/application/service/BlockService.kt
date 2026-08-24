@@ -2,13 +2,10 @@ package com.prologue.backend.member.application.service
 
 import com.prologue.backend.member.domain.model.Member
 import com.prologue.backend.member.domain.model.MemberDomainException
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 
 /**
  * 지인 차단 — 아는 사람이 "오늘의 상대"로 오가지 않게 한다.
@@ -27,12 +24,7 @@ import javax.crypto.spec.SecretKeySpec
 class BlockService(
     private val jdbc: JdbcTemplate,
     private val jobVerificationService: JobVerificationService,
-    /**
-     * 전화번호 해시 페퍼. 번호는 경우의 수가 1억뿐이라 맨 SHA-256은 몇 초면 역산된다 —
-     * 서버만 아는 값을 섞어야 해시가 의미 있다. 따로 정하지 않으면 JWT 시크릿을 빌려 쓴다.
-     * 주의: 이 값이 바뀌면 기존 차단 해시가 전부 무효가 된다.
-     */
-    @param:Value("\${block.phone-pepper:\${jwt.secret}}") private val pepper: String,
+    private val privacyHasher: PrivacyHasher,
 ) {
     data class PhoneBlockView(val phoneHash: String, val phoneMasked: String)
     data class BlocksView(val sameCompany: Boolean, val jobDomain: String?, val phones: List<PhoneBlockView>)
@@ -62,7 +54,7 @@ class BlockService(
             insert into phone_blocks (account_id, phone_hash, phone_masked) values (?, ?, ?)
             on conflict (account_id, phone_hash) do nothing
             """.trimIndent(),
-            accountId, hash(digits), mask(digits),
+            accountId, privacyHasher.hash(digits), mask(digits),
         )
     }
 
@@ -104,7 +96,7 @@ class BlockService(
             jdbc.query(
                 "select account_id from phone_blocks where phone_hash = ?",
                 { rs, _ -> UUID.fromString(rs.getString(1)) },
-                hash(phone),
+                privacyHasher.hash(phone),
             ).toSet()
         } ?: emptySet()
         val myDomain = jobVerificationService.verifiedDomain(accountId)
@@ -124,7 +116,7 @@ class BlockService(
             ).filter { (_, theirsOn) -> mineOn || theirsOn }.map { it.first }.toSet()
         }
         if (myBlockedHashes.isEmpty() && blockedMeIds.isEmpty() && sameCompanyIds.isEmpty()) return Exclusion.NONE
-        return Exclusion(myBlockedHashes, blockedMeIds + sameCompanyIds, ::hash)
+        return Exclusion(myBlockedHashes, blockedMeIds + sameCompanyIds, privacyHasher::hash)
     }
 
     /** 미리 계산한 차단 집합 — 후보 하나를 걸러야 하는지 O(1)로 답한다. */
@@ -146,12 +138,6 @@ class BlockService(
         }
     }
 
-    private fun hash(digits: String): String {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(pepper.toByteArray(), "HmacSHA256"))
-        return mac.doFinal(digits.toByteArray()).joinToString("") { "%02x".format(it) }
-    }
-
     private fun mask(digits: String): String = digits.take(3) + "****" + digits.takeLast(4)
 
     /** 회원 가입의 전화번호 규칙과 같은 정규화 — 저장된 번호와 같은 꼴이어야 해시가 만난다. */
@@ -162,6 +148,7 @@ class BlockService(
     }
 
     companion object {
-        private const val PHONE_LIMIT = 100
+        /** 오남용 방지 상한일 뿐이다 — 연락처가 많은 사람도 걸리지 않을 만큼 넉넉하게. */
+        private const val PHONE_LIMIT = 1000
     }
 }
