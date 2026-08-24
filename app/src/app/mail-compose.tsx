@@ -21,7 +21,7 @@ import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts'
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
 import { getMailQuote, sendMail, sendMailReply, type MailQuote } from '@/lib/mails';
-import { getInkBalance, INK_PRICE } from '@/lib/ink';
+import { INK_PRICE } from '@/lib/ink';
 
 const CONTENT_MAX = 300;
 // 잉크를 낸 한 통이 "연락주세요" 한 줄로 끝나지 않도록 — 서버도 같은 값으로 막는다.
@@ -65,7 +65,6 @@ export default function MailComposeScreen() {
   const [includePhone, setIncludePhone] = useState(true);
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
-  const [ink, setInk] = useState<number | null>(null);
   // 편지값 견적 — 답장이면 절반, 서로 하트면 30% 할인. 올 때까지 null이라 화면은 스피너를 보여준다.
   // 견적을 못 받으면(구버전 서버 등) 아는 값으로 그린다 — 실제 차감은 서버가 정하므로 화면이 틀려도 돈은 안 샌다.
   const [quote, setQuote] = useState<MailQuote | null>(null);
@@ -104,7 +103,6 @@ export default function MailComposeScreen() {
       })
       .catch(() => active && setMyPhone(null))
       .finally(() => active && setLoading(false));
-    getInkBalance().then((n) => active && setInk(n)).catch(() => {});
     return () => {
       active = false;
     };
@@ -175,27 +173,31 @@ export default function MailComposeScreen() {
         },
       ]);
     } catch (e) {
-      Alert.alert('보내기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+      const msg = e instanceof Error ? e.message : '잠시 후 다시 시도해주세요';
+      // 잔액은 평소에 안 보여준다 — 모자란 순간에 충전으로 바로 보내는 게 답이다(유저 결정 2026-08-24).
+      if (msg.includes('잉크가 부족')) {
+        Alert.alert('잉크가 부족해요', '충전하고 다시 보내볼까요?', [
+          { text: '다음에', style: 'cancel' },
+          { text: '충전하러 가기', onPress: () => router.push('/my/ink-topup') },
+        ]);
+      } else {
+        Alert.alert('보내기 실패', msg);
+      }
     } finally {
       setSending(false);
     }
   }
 
-  /** 잉크를 쓰는 행동이라 한 번 확인한다 — 남은 잉크를 함께 보여주고. */
+  /** 잉크를 쓰는 행동이라 한 번 확인한다 — 값만 말한다(잔액은 지갑에서만). */
   function confirmSend() {
     if (!canSend || !quote) return;
     Alert.alert(
       '편지 보내기',
-      [
-        quote.discount === 'REPLY'
-          ? `답장은 절반값이라 잉크 ${quote.price}으로 보내요.`
-          : quote.discount === 'MUTUAL'
-            ? `서로 호감을 주고받은 사이라 잉크 ${quote.price}으로 보내요.`
-            : `잉크 ${quote.price}을 사용해요.`,
-        ink != null ? `(남은 잉크 ${ink})` : null,
-      ]
-        .filter(Boolean)
-        .join(' '),
+      quote.discount === 'REPLY'
+        ? `답장은 절반값이라 잉크 ${quote.price}으로 보내요.`
+        : quote.discount === 'MUTUAL'
+          ? `서로 호감을 주고받은 사이라 잉크 ${quote.price}으로 보내요.`
+          : `잉크 ${quote.price}을 사용해요.`,
       [
         { text: '취소', style: 'cancel' },
         { text: '보내기', onPress: () => void send() },

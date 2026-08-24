@@ -23,7 +23,6 @@ import { track } from '@/lib/analytics';
 import { isSessionExpired } from '@/lib/api';
 import { answerToday, getPastPeers, getPeers, getToday, type PastPeer, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
-import { getInkBalance } from '@/lib/ink';
 import { useTheme } from '@/hooks/use-theme';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
@@ -77,7 +76,6 @@ export default function DiscoverScreen() {
   const [peersLoading, setPeersLoading] = useState(false);
   const [answerExpanded, setAnswerExpanded] = useState(false);
   const [pastPeers, setPastPeers] = useState<PastPeer[]>([]);
-  const [ink, setInk] = useState<number | null>(null);
   // 이번 세션에 답변으로 고인 잉크 — 저장 직후 "✓ 오늘 답변했어요" 옆에 잠시 붙여 보여준다.
   const [inkEarnedNote, setInkEarnedNote] = useState(0);
 
@@ -132,13 +130,6 @@ export default function DiscoverScreen() {
     }, [router]),
   );
 
-  // 잉크 잔액 — 편지를 보내고 돌아와도 맞게, 탭에 들어올 때마다 갱신. 실패하면 칩을 숨긴다.
-  useFocusEffect(
-    useCallback(() => {
-      getInkBalance().then(setInk).catch(() => {});
-    }, []),
-  );
-
   async function submit() {
     if (draft.trim().length < ANSWER_MIN || submitting) return;
     setSubmitting(true);
@@ -150,10 +141,7 @@ export default function DiscoverScreen() {
       setDraft(updated.myAnswer ?? '');
       setEditing(false);
       // 오늘의 답변으로 고인 잉크 — 칩을 그 자리에서 올리고, 어디서 늘었는지 한 줄로 알려준다.
-      if (updated.inkEarned > 0) {
-        setInk((n) => (n == null ? n : n + updated.inkEarned));
-        setInkEarnedNote(updated.inkEarned);
-      }
+      if (updated.inkEarned > 0) setInkEarnedNote(updated.inkEarned);
       if (!wasAnswered && updated.answered) loadPeers();
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -206,26 +194,15 @@ export default function DiscoverScreen() {
           >
             {/*
              * 오늘의 표지 — 질문이 곧 헤더다.
-             * 작은 카드에 가두지 않고 화면 첫 면을 내준다. 날짜는 캡션, 잉크는 구석에 조용히.
+             * 작은 카드에 가두지 않고 화면 첫 면을 내준다. 날짜는 캡션으로.
              */}
             <Animated.View
               entering={FadeIn.duration(320)}
               style={[styles.cover, { backgroundColor: c.primary + '14' }]}
             >
+              {/* 잉크 잔액 칩은 뺐다 — 잔액은 지갑에서만, 모자라면 그 순간 충전으로 보낸다(유저 결정 2026-08-24). */}
               <View style={styles.topRow}>
                 <Text style={[styles.dateCaption, { color: c.primaryStrong }]}>{todayCaption()}</Text>
-                {ink != null && (
-                  <Pressable
-                    onPress={() => router.push('/my/ink')}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={`남은 잉크 ${ink}, 지갑 열기`}
-                    style={({ pressed }) => [styles.inkChip, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.6 : 1 }]}
-                  >
-                    <Ionicons name="water" size={12} color={c.primaryStrong} />
-                    <Text style={[styles.inkChipText, { color: c.text }]}>{ink}</Text>
-                  </Pressable>
-                )}
               </View>
               <Text style={[styles.questionEyebrow, { color: c.textSecondary }]}>오늘의 질문</Text>
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>{today?.content}</Text>
@@ -589,8 +566,6 @@ const styles = StyleSheet.create({
   cover: { marginHorizontal: -20, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 26, borderBottomLeftRadius: Radius.lg + 8, borderBottomRightRadius: Radius.lg + 8 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 },
   dateCaption: { fontSize: 13.5, fontWeight: '700', letterSpacing: 0.3 },
-  inkChip: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 26, paddingHorizontal: 9, borderRadius: Radius.pill },
-  inkChipText: { fontSize: 13.5, fontWeight: '700' },
   questionEyebrow: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
   // 질문이 곧 헤더 — 크게, 왼쪽 정렬, 줄 간격 넉넉히.
   question: { fontSize: 27, fontWeight: '700', lineHeight: 38, letterSpacing: -0.3 },

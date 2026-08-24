@@ -22,7 +22,6 @@ import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep } from '@/lib/profile-form';
-import { getInkBalance } from '@/lib/ink';
 import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -39,7 +38,6 @@ export default function MyScreen() {
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
-  const [ink, setInk] = useState<number | null>(null);
   // null이면 아직 확인 전 — 값이 잠깐 '꺼짐'으로 보였다 바뀌는 깜빡임을 막는다
   const [notifyOn, setNotifyOn] = useState<boolean | null>(null);
   const [job, setJob] = useState<{ verified: boolean; domain: string | null } | null>(null);
@@ -48,9 +46,6 @@ export default function MyScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getInkBalance()
-        .then((n) => active && setInk(n))
-        .catch(() => {}); // 잉크는 보조 정보 — 실패해도 화면은 유지
       getJobStatus()
         .then((j) => active && setJob(j))
         .catch(() => {});
@@ -204,7 +199,6 @@ export default function MyScreen() {
         <Section title="지갑" c={c}>
           <Row
             label="잉크"
-            value={ink != null ? `${ink}장` : undefined}
             onPress={() => router.push('/my/ink')}
             c={c}
           />

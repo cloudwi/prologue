@@ -84,9 +84,18 @@ export default function PeerDetailScreen() {
               if (result.spent) track('profile_unlocked');
               setPeer(result.peer);
               setHearted(result.peer.hearted);
-              if (result.spent) Alert.alert('프로필을 열었어요', `남은 잉크 ${result.balance}이에요.`);
+              if (result.spent) Alert.alert('프로필을 열었어요', '한 번 열린 프로필은 다시 닫히지 않아요.');
             } catch (e) {
-              Alert.alert('열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+              const msg = e instanceof Error ? e.message : '잠시 후 다시 시도해주세요';
+              // 잔액은 평소에 안 보여준다 — 모자란 순간에 충전으로 보낸다(유저 결정 2026-08-24).
+              if (msg.includes('잉크가 부족')) {
+                Alert.alert('잉크가 부족해요', '충전하고 다시 열어볼까요?', [
+                  { text: '다음에', style: 'cancel' },
+                  { text: '충전하러 가기', onPress: () => router.push('/my/ink-topup') },
+                ]);
+              } else {
+                Alert.alert('열지 못했어요', msg);
+              }
             } finally {
               setUnlocking(false);
             }
