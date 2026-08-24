@@ -191,6 +191,7 @@ export default function PeerDetailScreen() {
           nickname={peer.nickname}
           meta={meta}
           lastActive={peer.lastActive}
+          jobVerified={peer.jobVerified}
           photoUrls={peer.photoUrls}
           letters={letters}
           keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}

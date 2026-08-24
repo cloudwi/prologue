@@ -14,6 +14,7 @@ import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
+import com.prologue.backend.member.application.service.JobVerificationService
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.domain.model.Member
 import org.springframework.beans.factory.annotation.Value
@@ -43,6 +44,7 @@ class PeerMatchingService(
     private val profileLetterService: ProfileLetterService,
     private val profileAccessService: ProfileAccessService,
     private val lastSeenService: LastSeenService,
+    private val jobVerificationService: JobVerificationService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
     @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
     /**
@@ -340,6 +342,7 @@ class PeerMatchingService(
             strengths = p?.strengths ?: emptyList(),
             avatarId = p?.avatarId,
             lastActive = LastActiveBucket.of(lastSeenService.lastSeenAt(peer.accountId)),
+            jobVerified = jobVerificationService.verifiedDomain(peer.accountId) != null,
         )
     }
 

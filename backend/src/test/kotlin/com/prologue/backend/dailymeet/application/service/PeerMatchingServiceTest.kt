@@ -51,7 +51,10 @@ class PeerMatchingServiceTest {
         every { lastContactedAtByPeer(any()) } returns emptyMap()
         every { pairedAt(any(), any()) } returns Instant.now()
     }
-    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService)
+    private val jobVerificationService = mockk<com.prologue.backend.member.application.service.JobVerificationService> {
+        every { verifiedDomain(any()) } returns null
+    }
+    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -109,7 +112,7 @@ class PeerMatchingServiceTest {
         // 소개 인원은 설정값이라 테스트에서 2로 고정해 "넘치지 않는지"를 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, revealCount = 2,
         )
 
         val view = twoPerDay.todayPeers(accountId, now = NOON)
@@ -270,7 +273,7 @@ class PeerMatchingServiceTest {
         // 정원이 1이면 부족분이 없어 채울 일이 없다 — 2로 두고 "모자란 만큼만" 채우는지 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, revealCount = 2,
         )
 
         val view = twoPerDay.todayPeers(accountId, now = NOON)
@@ -323,7 +326,7 @@ class PeerMatchingServiceTest {
 
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, revealCount = 2,
         )
         val view = twoPerDay.todayPeers(accountId, now = NOON)
 

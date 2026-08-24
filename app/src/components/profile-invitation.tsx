@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -28,6 +29,7 @@ export function ProfileInvitation({
   nickname,
   meta,
   lastActive,
+  jobVerified,
   photoUrls,
   letters,
   keywords,
@@ -39,6 +41,8 @@ export function ProfileInvitation({
   meta: string;
   /** 최근 접속 버킷 — 상대 프로필에서만 넘긴다(내 미리보기에는 없음). */
   lastActive?: LastActive | null;
+  /** 직장 인증 배지 — 모임 프로필과 같은 신뢰 신호. 미인증이면 아예 그리지 않는다. */
+  jobVerified?: boolean;
   photoUrls: string[];
   letters: InvitationLetter[];
   keywords: string[];
@@ -61,12 +65,22 @@ export function ProfileInvitation({
       <View style={styles.cover}>
         {nickname ? <Text style={[styles.name, { color: c.text, fontFamily: Fonts.serif }]}>{nickname}</Text> : null}
         <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text>
-        {lastActive ? (
-          <View style={[styles.activity, { backgroundColor: c.backgroundElement }]}>
-            {lastActive === 'TODAY' ? <View style={[styles.activityDot, { backgroundColor: c.primary }]} /> : null}
-            <Text style={{ color: c.textSecondary, fontSize: 13 }}>{ACTIVITY_LABEL[lastActive]}</Text>
+        {(jobVerified || lastActive) && (
+          <View style={styles.badgeRow}>
+            {jobVerified ? (
+              <View style={[styles.activity, { backgroundColor: c.primary }]}>
+                <Ionicons name="briefcase" size={12} color={c.primaryText} />
+                <Text style={{ color: c.primaryText, fontSize: 13, fontWeight: '600' }}>직장 인증</Text>
+              </View>
+            ) : null}
+            {lastActive ? (
+              <View style={[styles.activity, { backgroundColor: c.backgroundElement }]}>
+                {lastActive === 'TODAY' ? <View style={[styles.activityDot, { backgroundColor: c.primary }]} /> : null}
+                <Text style={{ color: c.textSecondary, fontSize: 13 }}>{ACTIVITY_LABEL[lastActive]}</Text>
+              </View>
+            ) : null}
           </View>
-        ) : null}
+        )}
       </View>
 
       {keywords.length > 0 && (
@@ -183,7 +197,8 @@ const styles = StyleSheet.create({
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
   name: { fontSize: 30, fontWeight: '700', letterSpacing: 1 },
   meta: { fontSize: 14, letterSpacing: 1, marginTop: 10 },
-  activity: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 28, borderRadius: Radius.pill, marginTop: 14 },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
+  activity: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 28, borderRadius: Radius.pill },
   activityDot: { width: 6, height: 6, borderRadius: 3 },
 
   divider: { alignItems: 'center', marginVertical: 30 },

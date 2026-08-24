@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { ProfileInvitation, type InvitationLetter } from '@/components/profile-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
+import { getJobStatus } from '@/lib/job';
 import { getMyLetters, type ProfileLetter } from '@/lib/letters';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { ageFrom } from '@/lib/profile-form';
@@ -17,15 +18,22 @@ export default function PreviewScreen() {
   const [loading, setLoading] = useState(true);
   const [p, setP] = useState<MemberProfile | null>(null);
   const [myLetters, setMyLetters] = useState<ProfileLetter[]>([]);
+  const [jobVerified, setJobVerified] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const [profile, letters] = await Promise.all([getMyProfile(), getMyLetters()]);
+        const [profile, letters, job] = await Promise.all([
+          getMyProfile(),
+          getMyLetters(),
+          // 배지 하나 때문에 미리보기가 죽으면 안 된다 — 실패하면 미인증으로 그린다.
+          getJobStatus().catch(() => ({ verified: false, domain: null })),
+        ]);
         if (!active) return;
         setP(profile);
         setMyLetters(letters);
+        setJobVerified(job.verified);
       } catch (e) {
         if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       } finally {
@@ -73,6 +81,7 @@ export default function PreviewScreen() {
       <ProfileInvitation
         nickname={p.nickname}
         meta={meta}
+        jobVerified={jobVerified}
         photoUrls={p.photoUrls ?? []}
         letters={letters}
         keywords={[...(p.interests ?? []), ...(p.hobbies ?? []), ...(p.strengths ?? [])]}
