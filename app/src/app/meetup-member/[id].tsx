@@ -61,7 +61,9 @@ export default function MeetupMemberScreen() {
                 {profile.jobVerified && (
                   <View style={[styles.jobBadge, { backgroundColor: c.primary }]}>
                     <Ionicons name="briefcase" size={11} color={c.primaryText} />
-                    <Text style={[styles.jobBadgeText, { color: c.primaryText }]}>직장 인증</Text>
+                    <Text style={[styles.jobBadgeText, { color: c.primaryText }]}>
+                      {profile.jobDomain ? `${profile.jobDomain} 인증` : '직장 인증'}
+                    </Text>
                   </View>
                 )}
               </View>

@@ -192,6 +192,7 @@ export default function PeerDetailScreen() {
           meta={meta}
           lastActive={peer.lastActive}
           jobVerified={peer.jobVerified}
+          jobDomain={peer.jobDomain}
           photoUrls={peer.photoUrls}
           letters={letters}
           keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}

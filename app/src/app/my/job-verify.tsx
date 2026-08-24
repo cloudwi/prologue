@@ -13,7 +13,8 @@ import { getJobStatus, requestJobCode, verifyJobCode } from '@/lib/job';
 /**
  * 직장 인증 — 회사 이메일로 코드를 받아 확인한다.
  * 회사 메일함에 접근할 수 있다는 것이 곧 재직의 증거라, 서류 없이 끝난다.
- * 서버에는 도메인만 남고, 모임 프로필에는 "직장 인증" 배지로만 보인다.
+ * 서버에는 도메인만 남고, 그 도메인이 프로필 배지에 공개된다(유저 결정 2026-08-24) —
+ * 인증 전에 이 화면에서 분명히 말해야 한다. 이메일 주소 자체는 저장하지 않는다.
  */
 export default function JobVerifyScreen() {
   const c = useTheme();
@@ -86,15 +87,17 @@ export default function JobVerifyScreen() {
           <Text style={[styles.doneTitle, { color: c.text }]}>직장 인증 완료</Text>
           <Text style={[styles.doneText, { color: c.textSecondary }]}>
             {domain ? `@${domain} 메일로 인증됐어요.` : '회사 이메일로 인증됐어요.'}{'\n'}
-            모임 프로필에 [직장 인증] 배지가 보여요.{'\n'}회사가 바뀌면 새 회사 메일로 다시 인증하면 돼요.
+            프로필에 {domain ? `[${domain} 인증]` : '[직장 인증]'} 배지가 보여요.{'\n'}회사가 바뀌면 새 회사 메일로 다시
+            인증하면 돼요.
           </Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={[styles.desc, { color: c.textSecondary }]}>
             회사 이메일로 인증코드를 보내드려요.{'\n'}
-            서버에는 <Text style={{ color: c.text, fontWeight: '600' }}>회사 도메인만</Text> 남고, 이메일 주소는 저장되지
-            않아요. 개인 메일(gmail, naver 등)은 쓸 수 없어요.
+            인증하면 <Text style={{ color: c.text, fontWeight: '600' }}>회사 메일 도메인</Text>(예: company.co.kr)이 프로필
+            배지에 표시돼 다른 회원에게 보여요. 이메일 주소 자체는 저장되지 않아요. 개인 메일(gmail, naver 등)은 쓸 수
+            없어요.
           </Text>
 
           <PlaceholderInput

@@ -68,8 +68,10 @@ export type MeetupMemberProfile = {
   region: string | null;
   avatarId: number | null;
   bio: string | null;
-  /** 직장 인증 여부 — 도메인은 공개되지 않는다. */
+  /** 직장 인증 여부. */
   jobVerified: boolean;
+  /** 인증한 회사 이메일 도메인 — 배지에 그대로 보여준다. 미인증·구버전 서버면 없다. */
+  jobDomain?: string | null;
   hostedCount: number;
   hostedRecent: MeetupMemberHistoryRow[];
   participatedCount: number;

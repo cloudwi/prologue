@@ -59,8 +59,10 @@ data class PeerView(
     val hearted: Boolean = false,
     /** 최근 접속 버킷. 접속 기록이 없거나 한 달 넘게 조용하면 null(미표시). */
     val lastActive: LastActiveBucket? = null,
-    /** 직장 인증 여부(도메인은 비공개) — 모임 프로필과 같은 신뢰 신호를 매칭 프로필에도 단다. */
+    /** 직장 인증 여부 — 모임 프로필과 같은 신뢰 신호를 매칭 프로필에도 단다. */
     val jobVerified: Boolean = false,
+    /** 인증한 회사 이메일 도메인 — 배지에 노출(유저 결정 2026-08-24, 약관 고지). 미인증이면 null. */
+    val jobDomain: String? = null,
     /**
      * 이어진 지 사흘이 지나 닫힌 프로필인지(ProfileAccess). true면 사진·답변·상세가 비어 온다 —
      * 화면이 "빈 프로필"과 "잠긴 프로필"을 구별할 수 있어야 잉크를 쓸 자리를 안내할 수 있다.

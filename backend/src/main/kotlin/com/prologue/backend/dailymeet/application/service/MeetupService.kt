@@ -77,8 +77,14 @@ data class MeetupMemberProfileView(
     val region: String?,
     val avatarId: Int?,
     val bio: String?,
-    /** 직장 인증 여부 — 도메인은 공개하지 않는다(소속 노출은 프라이버시). */
+    /** 직장 인증 여부. */
     val jobVerified: Boolean,
+    /**
+     * 인증한 회사 이메일 도메인 — 배지에 그대로 노출한다(유저 결정 2026-08-24).
+     * 인증은 본인이 스스로 하는 것이고, 도메인 없는 "직장 인증"은 신뢰 신호로서 반쪽이라서다.
+     * 약관·개인정보 처리방침에 노출 사실을 고지한다. 이메일 주소 자체는 여전히 저장하지 않는다.
+     */
+    val jobDomain: String?,
     /** 개최 완료 횟수와 최근 개최 목록. */
     val hostedCount: Int,
     val hostedRecent: List<MeetupMemberHistoryRow>,
@@ -233,6 +239,7 @@ class MeetupService(
             .filter { it.status == MeetupStatus.DONE }
             .sortedByDescending { it.meetAt }
         val participatedCounts = applicationRepository.countConfirmedByMeetup(participated.mapNotNull { it.id })
+        val jobDomain = jobVerificationService.verifiedDomain(accountId)
         return MeetupMemberProfileView(
             nickname = profile?.nickname,
             gender = profile?.gender?.name,
@@ -240,7 +247,8 @@ class MeetupService(
             region = profile?.region,
             avatarId = profile?.avatarId,
             bio = profile?.bio,
-            jobVerified = jobVerificationService.verifiedDomain(accountId) != null,
+            jobVerified = jobDomain != null,
+            jobDomain = jobDomain,
             hostedCount = hosted.size,
             hostedRecent = hosted.take(HISTORY_LIMIT).map {
                 MeetupMemberHistoryRow(it.title, it.meetAt, hostedCounts[it.id] ?: 0)

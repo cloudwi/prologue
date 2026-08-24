@@ -42,7 +42,7 @@ export default function MyScreen() {
   const [ink, setInk] = useState<number | null>(null);
   // null이면 아직 확인 전 — 값이 잠깐 '꺼짐'으로 보였다 바뀌는 깜빡임을 막는다
   const [notifyOn, setNotifyOn] = useState<boolean | null>(null);
-  const [jobVerified, setJobVerified] = useState<boolean | null>(null);
+  const [job, setJob] = useState<{ verified: boolean; domain: string | null } | null>(null);
 
   // 하위 편집 화면에서 돌아오면 다시 읽어 최신 상태를 반영한다.
   useFocusEffect(
@@ -52,7 +52,7 @@ export default function MyScreen() {
         .then((n) => active && setInk(n))
         .catch(() => {}); // 잉크는 보조 정보 — 실패해도 화면은 유지
       getJobStatus()
-        .then((j) => active && setJobVerified(j.verified))
+        .then((j) => active && setJob(j))
         .catch(() => {});
       notificationsEnabled()
         .then((on) => active && setNotifyOn(on))
@@ -216,8 +216,8 @@ export default function MyScreen() {
           {/* 미인증이면 혜택을 말로 권한다 — 배지가 곧 모임에서의 신뢰다. */}
           <Row
             label="직장 인증"
-            value={jobVerified == null ? undefined : jobVerified ? '인증 완료' : '인증하면 모임에서 신뢰 배지가 붙어요'}
-            valueHighlight={jobVerified === false}
+            value={job == null ? undefined : job.verified ? (job.domain ? `${job.domain} 인증 완료` : '인증 완료') : '인증하면 프로필에 신뢰 배지가 붙어요'}
+            valueHighlight={job?.verified === false}
             onPress={() => router.push('/my/job-verify')}
             c={c}
           />

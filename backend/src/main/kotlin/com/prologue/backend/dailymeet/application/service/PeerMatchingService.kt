@@ -321,6 +321,7 @@ class PeerMatchingService(
         questions: List<Question>,
     ): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
+        val jobDomain = jobVerificationService.verifiedDomain(peer.accountId)
         return PeerView(
             mailSent = mailRepository.existsBySenderAndRecipient(viewerAccountId, peer.accountId),
             hearted = heartRepository.existsFromTo(viewerAccountId, peer.accountId),
@@ -342,7 +343,8 @@ class PeerMatchingService(
             strengths = p?.strengths ?: emptyList(),
             avatarId = p?.avatarId,
             lastActive = LastActiveBucket.of(lastSeenService.lastSeenAt(peer.accountId)),
-            jobVerified = jobVerificationService.verifiedDomain(peer.accountId) != null,
+            jobVerified = jobDomain != null,
+            jobDomain = jobDomain,
         )
     }
 

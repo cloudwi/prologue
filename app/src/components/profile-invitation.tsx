@@ -30,6 +30,7 @@ export function ProfileInvitation({
   meta,
   lastActive,
   jobVerified,
+  jobDomain,
   photoUrls,
   letters,
   keywords,
@@ -43,6 +44,8 @@ export function ProfileInvitation({
   lastActive?: LastActive | null;
   /** 직장 인증 배지 — 모임 프로필과 같은 신뢰 신호. 미인증이면 아예 그리지 않는다. */
   jobVerified?: boolean;
+  /** 인증한 회사 이메일 도메인 — 있으면 배지에 도메인을 그대로 쓴다("jobplanet.com 인증"). */
+  jobDomain?: string | null;
   photoUrls: string[];
   letters: InvitationLetter[];
   keywords: string[];
@@ -70,7 +73,9 @@ export function ProfileInvitation({
             {jobVerified ? (
               <View style={[styles.activity, { backgroundColor: c.primary }]}>
                 <Ionicons name="briefcase" size={12} color={c.primaryText} />
-                <Text style={{ color: c.primaryText, fontSize: 13, fontWeight: '600' }}>직장 인증</Text>
+                <Text style={{ color: c.primaryText, fontSize: 13, fontWeight: '600' }}>
+                  {jobDomain ? `${jobDomain} 인증` : '직장 인증'}
+                </Text>
               </View>
             ) : null}
             {lastActive ? (
