@@ -545,6 +545,11 @@ export default function MeetupCreateScreen() {
                 <WheelField value={fee} placeholder="금액 고르기" items={FEE_ITEMS} defaultValue="10000" onChange={setFee} c={c} />
               </Field>
             )}
+
+            {/* 결제 로드맵 사전 고지 — 지금은 계좌이체, 향후 앱 결제 전환(2026-08-24 결정). 미리 말해둬야 전환이 배신이 아니다. */}
+            <Text style={[styles.feeNotice, { color: c.textSecondary }]}>
+              지금은 참가비를 오픈채팅에서 직접 받아요. 앱에서 결제받고 자동으로 확정되는 방식을 준비하고 있어요.
+            </Text>
           </>
         )}
 
@@ -768,6 +773,7 @@ const styles = StyleSheet.create({
   field: { marginBottom: 18 },
   label: { fontSize: 14, fontWeight: '700', marginBottom: 8, paddingHorizontal: 2 },
   hint: { fontSize: 13, marginTop: 6, paddingHorizontal: 2, lineHeight: 18 },
+  feeNotice: { fontSize: 13, lineHeight: 19, marginTop: 10, paddingHorizontal: 2 },
   input: {
     minHeight: 48,
     borderRadius: Radius.md,

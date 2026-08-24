@@ -188,6 +188,12 @@ export default function MeetupDetailScreen() {
               </View>
             ) : null}
             <InfoRow icon="cash-outline" text={feeLabel(meetup)} c={c} />
+            {(meetup.fee > 0 || (meetup.feeFemale ?? 0) > 0) && (
+              // 결제 로드맵 사전 고지 — 지금은 이체, 향후 앱 결제 전환(2026-08-24 결정).
+              <Text style={[styles.feeNotice, { color: c.textSecondary }]}>
+                참가비는 오픈채팅에서 모임장에게 직접 보내요 — 앱에서 결제하는 방식을 준비하고 있어요.
+              </Text>
+            )}
             <InfoRow icon="people-outline" text={`확정 ${meetup.confirmedCount}/${meetup.capacity}명`} c={c} />
             {conditionLabel(meetup) && <InfoRow icon="filter-outline" text={`참가 조건 · ${conditionLabel(meetup)}`} c={c} />}
           </View>
@@ -321,6 +327,7 @@ const styles = StyleSheet.create({
 
   card: { borderRadius: Radius.lg, padding: 16, marginBottom: 8 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  feeNotice: { fontSize: 12.5, lineHeight: 18, paddingLeft: 28, paddingBottom: 6 },
   infoText: { fontSize: 15.5, flexShrink: 1 },
   mapRow: { flexDirection: 'row', gap: 8, paddingLeft: 27, paddingVertical: 4 },
   mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 28, paddingHorizontal: 11, borderRadius: Radius.pill, borderWidth: 1 },
