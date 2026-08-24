@@ -14,6 +14,7 @@ export function SubScreen({
   c,
   children,
   onSave,
+  saveLabel = '저장',
   saveDisabled = false,
   saving = false,
 }: {
@@ -21,6 +22,8 @@ export function SubScreen({
   c: ThemeColors;
   children: ReactNode;
   onSave?: () => void;
+  /** 헤더 오른쪽 동작의 이름 — 저장이 아닌 화면(관리 등)도 이 자리를 쓴다. */
+  saveLabel?: string;
   saveDisabled?: boolean;
   saving?: boolean;
 }) {
@@ -42,7 +45,7 @@ export function SubScreen({
                 ) : (
                   <Pressable onPress={onSave} disabled={saveDisabled} hitSlop={12}>
                     <Text style={[styles.save, { color: c.primaryStrong, opacity: saveDisabled ? 0.35 : 1 }]}>
-                      저장
+                      {saveLabel}
                     </Text>
                   </Pressable>
                 )

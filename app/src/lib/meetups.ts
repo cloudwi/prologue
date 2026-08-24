@@ -227,6 +227,11 @@ export async function createMeetup(input: CreateMeetupInput): Promise<string> {
   return res.meetupId;
 }
 
+/** 모임 수정 — 모임장 본인만 (PUT /meetups/{id}). */
+export async function updateMeetup(meetupId: string, input: CreateMeetupInput): Promise<void> {
+  await authedRequest('PUT', `/meetups/${meetupId}`, input);
+}
+
 /** 내가 여는 모임 전부 — 신청자 목록까지 (GET /meetups/mine). */
 export async function getMyMeetups(): Promise<HostMeetup[]> {
   const res = await authedRequest<{ meetups: HostMeetup[] }>('GET', '/meetups/mine');

@@ -159,6 +159,54 @@ class Meetup private constructor(
             )
         }
 
+        /**
+         * 모임 수정 — 내용은 create와 같은 검증을 거치고, 정체성(id·모임장·상태·생성 시각)은 유지한다.
+         * 취소·완료된 모임은 수정할 수 없다.
+         */
+        fun update(
+            existing: Meetup,
+            title: String,
+            description: String?,
+            meetAt: Instant,
+            place: String,
+            placeUrl: String?,
+            placeAddress: String?,
+            capacity: Int,
+            fee: Int,
+            feeFemale: Int?,
+            genderLimit: String?,
+            minAgeMale: Int?,
+            maxAgeMale: Int?,
+            minAgeFemale: Int?,
+            maxAgeFemale: Int?,
+            minHeightMaleCm: Int?,
+            minHeightFemaleCm: Int?,
+            requireJobVerified: Boolean,
+            emoji: String?,
+            color: String?,
+            coverUrls: List<String>,
+            kakaoLink: String,
+        ): Meetup {
+            if (existing.status == MeetupStatus.DONE || existing.status == MeetupStatus.CANCELED) {
+                throw DailyMeetException("끝난 모임은 수정할 수 없어요")
+            }
+            val fresh = create(
+                existing.hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
+                capacity, fee, feeFemale, genderLimit,
+                minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
+                requireJobVerified, emoji, color, coverUrls, kakaoLink,
+            )
+            return Meetup(
+                existing.id, existing.hostAccountId, fresh.title, fresh.description, fresh.meetAt,
+                fresh.place, fresh.placeUrl, fresh.placeAddress, fresh.capacity, fresh.fee,
+                fresh.feeFemale, fresh.genderLimit,
+                fresh.minAgeMale, fresh.maxAgeMale, fresh.minAgeFemale, fresh.maxAgeFemale,
+                fresh.minHeightMaleCm, fresh.minHeightFemaleCm,
+                fresh.requireJobVerified, fresh.emoji, fresh.color, fresh.coverUrls,
+                fresh.kakaoLink, existing.status, existing.createdAt,
+            )
+        }
+
         fun reconstitute(
             id: UUID,
             hostAccountId: UUID,

@@ -157,6 +157,46 @@ class MeetupController(
         return CreateMeetupResponse(id.toString())
     }
 
+    /** 모임 수정 — 모임장 본인만. 생성과 같은 본문을 받는다. */
+    @org.springframework.web.bind.annotation.PutMapping("/{meetupId}")
+    fun update(
+        authentication: Authentication,
+        @PathVariable meetupId: String,
+        @Valid @RequestBody request: CreateMeetupRequest,
+    ) {
+        val meetAt = try {
+            Instant.parse(request.meetAt)
+        } catch (e: java.time.format.DateTimeParseException) {
+            throw DailyMeetException("모임 일시 형식이 올바르지 않아요")
+        }
+        if (meetAt.isBefore(Instant.now())) throw DailyMeetException("지난 시각으로는 모임을 열 수 없어요")
+        meetupService.updateMeetup(
+            hostAccountId = UUID.fromString(authentication.name),
+            meetupId = parseId(meetupId),
+            title = request.title,
+            description = request.description,
+            meetAt = meetAt,
+            place = request.place,
+            placeUrl = request.placeUrl,
+            placeAddress = request.placeAddress,
+            capacity = request.capacity,
+            fee = request.fee,
+            feeFemale = request.feeFemale,
+            genderLimit = request.genderLimit,
+            minAgeMale = request.minAgeMale,
+            maxAgeMale = request.maxAgeMale,
+            minAgeFemale = request.minAgeFemale,
+            maxAgeFemale = request.maxAgeFemale,
+            minHeightMaleCm = request.minHeightMaleCm,
+            minHeightFemaleCm = request.minHeightFemaleCm,
+            requireJobVerified = request.requireJobVerified,
+            emoji = request.emoji,
+            color = request.color,
+            coverUrls = request.coverUrls,
+            kakaoLink = request.kakaoLink,
+        )
+    }
+
     /** 내가 여는 모임 전부 — 신청자 목록까지 한 번에. */
     @GetMapping("/mine")
     fun mine(authentication: Authentication): MyMeetupsResponse =

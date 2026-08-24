@@ -337,6 +337,44 @@ class MeetupService(
         return requireNotNull(saved.id)
     }
 
+    /** 모임 수정 — 모임장 본인만. 내용 검증은 도메인이 create와 동일하게 한다. */
+    @Transactional
+    fun updateMeetup(
+        hostAccountId: UUID,
+        meetupId: UUID,
+        title: String,
+        description: String?,
+        meetAt: Instant,
+        place: String,
+        placeUrl: String?,
+        placeAddress: String?,
+        capacity: Int,
+        fee: Int,
+        feeFemale: Int?,
+        genderLimit: String?,
+        minAgeMale: Int?,
+        maxAgeMale: Int?,
+        minAgeFemale: Int?,
+        maxAgeFemale: Int?,
+        minHeightMaleCm: Int?,
+        minHeightFemaleCm: Int?,
+        requireJobVerified: Boolean,
+        emoji: String?,
+        color: String?,
+        coverUrls: List<String>,
+        kakaoLink: String,
+    ) {
+        val existing = owned(hostAccountId, meetupId)
+        meetupRepository.save(
+            Meetup.update(
+                existing, title, description, meetAt, place, placeUrl, placeAddress,
+                capacity, fee, feeFemale, genderLimit,
+                minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
+                requireJobVerified, emoji, color, coverUrls, kakaoLink,
+            ),
+        )
+    }
+
     /** 참가 조건 검사 — 프로필의 성별·나이·키로 문 앞에서 거른다. 내 성별의 기준만 본다. */
     private fun checkConditions(meetup: Meetup, accountId: UUID) {
         val hasCondition = meetup.genderLimit != null ||

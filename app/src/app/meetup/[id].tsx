@@ -113,7 +113,12 @@ export default function MeetupDetailScreen() {
   }
 
   return (
-    <SubScreen title="모임" c={c}>
+    <SubScreen
+      title="모임"
+      c={c}
+      onSave={meetup?.isMine ? () => router.push('/my-meetups') : undefined}
+      saveLabel="관리"
+    >
       {loading ? (
         <View style={[styles.flex, styles.center]}>
           <ActivityIndicator color={c.primary} />
@@ -231,14 +236,7 @@ export default function MeetupDetailScreen() {
 
           {/* 다음 할 일 하나 — 내 상태에 따라. */}
           <View style={styles.actions}>
-            {meetup.isMine ? (
-              <Pressable
-                onPress={() => router.push('/my-meetups')}
-                style={({ pressed }) => [styles.bigBtn, { borderWidth: 1, borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Text style={[styles.bigBtnText, { color: c.text }]}>내 모임 — 신청자 관리</Text>
-              </Pressable>
-            ) : meetup.myStatus === 'CONFIRMED' ? (
+            {meetup.isMine ? null : meetup.myStatus === 'CONFIRMED' ? (
               <>
                 <View style={[styles.confirmedChip, { backgroundColor: c.primary }]}>
                   <Ionicons name="checkmark" size={15} color={c.primaryText} />

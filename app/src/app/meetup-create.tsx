@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Image } from 'expo-image';
@@ -16,7 +16,7 @@ import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { AddressSearchModal } from '@/components/address-search-modal';
 import { track } from '@/lib/analytics';
-import { createMeetup } from '@/lib/meetups';
+import { createMeetup, getMyMeetups, updateMeetup } from '@/lib/meetups';
 import { uploadMeetupCover } from '@/lib/photo';
 
 /**
@@ -121,6 +121,9 @@ function WheelField({
 export default function MeetupCreateScreen() {
   const c = useTheme();
   const router = useRouter();
+  // 수정 모드 — ?edit={meetupId}로 들어오면 기존 값을 채워 넣고 저장이 곧 수정이 된다.
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const editId = edit ? String(edit) : null;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -151,6 +154,53 @@ export default function MeetupCreateScreen() {
   const [maxAgeFemale, setMaxAgeFemale] = useState('');
   const [minHeightFemale, setMinHeightFemale] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // 수정 모드 — 내 모임에서 기존 값을 불러와 폼을 채운다.
+  useEffect(() => {
+    if (!editId) return;
+    let active = true;
+    getMyMeetups()
+      .then((mine) => {
+        const m = mine.find((x) => x.meetupId === editId);
+        if (!active || !m) return;
+        setTitle(m.title);
+        setDescription(m.description ?? '');
+        setMeetAt(new Date(m.meetAt));
+        if (m.placeAddress) {
+          setAddress(m.placeAddress);
+          const detail = m.place.startsWith(m.placeAddress) ? m.place.slice(m.placeAddress.length).replace(/^ · /, '') : '';
+          setPlaceDetail(detail);
+        } else {
+          // 주소 검색 도입 전 데이터 — 장소 전문을 주소 칸에 보여 다시 고르게 한다.
+          setAddress(m.place);
+        }
+        setCapacity(String(m.capacity));
+        const paid = m.fee > 0 || (m.feeFemale ?? 0) > 0;
+        setIsPaid(paid);
+        if (paid) {
+          setFee(String(m.fee));
+          if (m.feeFemale != null && m.feeFemale !== m.fee) {
+            setFeeByGender(true);
+            setFeeFemaleInput(String(m.feeFemale));
+          }
+        }
+        setGenderLimit(m.genderLimit);
+        setMinAgeMale(m.minAgeMale != null ? String(m.minAgeMale) : '');
+        setMaxAgeMale(m.maxAgeMale != null ? String(m.maxAgeMale) : '');
+        setMinHeightMale(m.minHeightMaleCm != null ? String(m.minHeightMaleCm) : '');
+        setMinAgeFemale(m.minAgeFemale != null ? String(m.minAgeFemale) : '');
+        setMaxAgeFemale(m.maxAgeFemale != null ? String(m.maxAgeFemale) : '');
+        setMinHeightFemale(m.minHeightFemaleCm != null ? String(m.minHeightFemaleCm) : '');
+        setRequireJobVerified(m.requireJobVerified);
+        setCoverUrls(m.coverUrls);
+        setKakaoLink(m.kakaoLink);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+     
+  }, [editId]);
 
   // iOS 날짜 바텀시트 휠용
   const [pickerOpen, setPickerOpen] = useState<'date' | 'time' | null>(null);
@@ -260,43 +310,49 @@ export default function MeetupCreateScreen() {
       return;
     }
     setSaving(true);
+    const input = {
+      title: title.trim(),
+      description: description.trim() || undefined,
+      meetAt: meetAt.toISOString(),
+      place: placeDetail.trim() ? `${address.trim()} · ${placeDetail.trim()}` : address.trim(),
+      placeUrl: null,
+      placeAddress: address.trim(),
+      capacity: Number(capacity),
+      fee: isPaid ? Number(fee) : 0,
+      feeFemale: isPaid && feeByGender && femaleAllowed ? Number(feeFemaleInput) : null,
+      genderLimit,
+      minAgeMale: maleAllowed ? num(minAgeMale) : null,
+      maxAgeMale: maleAllowed ? num(maxAgeMale) : null,
+      minAgeFemale: femaleAllowed ? num(minAgeFemale) : null,
+      maxAgeFemale: femaleAllowed ? num(maxAgeFemale) : null,
+      minHeightMaleCm: maleAllowed ? num(minHeightMale) : null,
+      minHeightFemaleCm: femaleAllowed ? num(minHeightFemale) : null,
+      requireJobVerified,
+      emoji: null,
+      color: null,
+      coverUrls,
+      kakaoLink: normalizedLink()!,
+    };
     try {
-      await createMeetup({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        meetAt: meetAt.toISOString(),
-        place: placeDetail.trim() ? `${address.trim()} · ${placeDetail.trim()}` : address.trim(),
-        placeUrl: null,
-        placeAddress: address.trim(),
-        capacity: Number(capacity),
-        fee: isPaid ? Number(fee) : 0,
-        feeFemale: isPaid && feeByGender && femaleAllowed ? Number(feeFemaleInput) : null,
-        genderLimit,
-        minAgeMale: maleAllowed ? num(minAgeMale) : null,
-        maxAgeMale: maleAllowed ? num(maxAgeMale) : null,
-        minAgeFemale: femaleAllowed ? num(minAgeFemale) : null,
-        maxAgeFemale: femaleAllowed ? num(maxAgeFemale) : null,
-        minHeightMaleCm: maleAllowed ? num(minHeightMale) : null,
-        minHeightFemaleCm: femaleAllowed ? num(minHeightFemale) : null,
-        requireJobVerified,
-        emoji: null,
-        color: null,
-        coverUrls,
-        kakaoLink: normalizedLink()!,
-      });
-      track('meetup_created');
-      Alert.alert('모임을 열었어요', '신청이 들어오면 알림으로 알려드릴게요.\n입금 확인과 확정은 [모임 관리]에서 해요.', [
-        { text: '확인', onPress: () => router.back() },
-      ]);
+      if (editId) {
+        await updateMeetup(editId, input);
+        Alert.alert('모임을 수정했어요', undefined, [{ text: '확인', onPress: () => router.back() }]);
+      } else {
+        await createMeetup(input);
+        track('meetup_created');
+        Alert.alert('모임을 열었어요', '신청이 들어오면 알림으로 알려드릴게요.\n입금 확인과 확정은 [모임 관리]에서 해요.', [
+          { text: '확인', onPress: () => router.back() },
+        ]);
+      }
     } catch (e) {
-      Alert.alert('모임을 열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+      Alert.alert(editId ? '수정하지 못했어요' : '모임을 열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <SubScreen title="모임 열기" c={c} onSave={save} saving={saving}>
+    <SubScreen title={editId ? '모임 수정' : '모임 열기'} c={c} onSave={save} saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 미리보기는 상세와 같은 페이저다. */}
         {coverUrls.length > 0 ? (

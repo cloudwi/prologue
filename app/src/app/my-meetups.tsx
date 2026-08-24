@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -30,6 +30,7 @@ export default function MyMeetupsScreen() {
   const [meetups, setMeetups] = useState<HostMeetup[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -84,7 +85,24 @@ export default function MyMeetupsScreen() {
           <ActivityIndicator color={c.primary} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {meetups.length > 0 && (
+            <View style={[styles.searchBox, { backgroundColor: c.backgroundElement }]}>
+              <Ionicons name="search" size={15} color={c.textSecondary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="신청자 닉네임 검색"
+                placeholderTextColor={c.textSecondary}
+                style={[styles.searchInput, { color: c.text }]}
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={15} color={c.textSecondary} />
+                </Pressable>
+              )}
+            </View>
+          )}
           {meetups.length === 0 && (
             <View style={[styles.emptyCard, { backgroundColor: c.backgroundElement }]}>
               <Text style={[styles.emptyTitle, { color: c.text }]}>아직 연 모임이 없어요</Text>
@@ -120,13 +138,13 @@ export default function MyMeetupsScreen() {
               {/* 신청자 — 확정은 입금 확인의 표시. */}
               {(m.status === 'OPEN' || m.status === 'CLOSED') && (
                 <View style={[styles.applicants, { borderTopColor: c.border }]}>
-                  {m.applications.filter((a) => a.status !== 'CANCELED').length === 0 ? (
+                  {m.applications.filter((a) => a.status !== 'CANCELED' && (query.trim() === '' || (a.nickname ?? '').includes(query.trim()))).length === 0 ? (
                     <Text style={[styles.noApplicants, { color: c.textSecondary }]}>
-                      아직 신청이 없어요 — 신청이 오면 알려드릴게요.
+                      {query.trim() !== '' ? '검색과 일치하는 신청자가 없어요.' : '아직 신청이 없어요 — 신청이 오면 알려드릴게요.'}
                     </Text>
                   ) : (
                     m.applications
-                      .filter((a) => a.status !== 'CANCELED')
+                      .filter((a) => a.status !== 'CANCELED' && (query.trim() === '' || (a.nickname ?? '').includes(query.trim())))
                       .map((a) => (
                         <ApplicantRow
                           key={a.applicationId}
@@ -153,6 +171,7 @@ export default function MyMeetupsScreen() {
               {/* 모임 상태 동작 — 지금 할 수 있는 것만. */}
               {(m.status === 'OPEN' || m.status === 'CLOSED') && (
                 <View style={styles.actions}>
+                  <ActionBtn label="수정" c={c} onPress={() => router.push(`/meetup-create?edit=${m.meetupId}`)} />
                   {m.status === 'OPEN' ? (
                     <ActionBtn label="모집 마감" c={c} onPress={() => void run(m.meetupId, () => closeHosting(m.meetupId))} />
                   ) : (
@@ -257,6 +276,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, borderRadius: Radius.pill, paddingHorizontal: 13, marginBottom: 12 },
+  searchInput: { flex: 1, fontSize: 14.5, paddingVertical: 0 },
 
   emptyCard: { borderRadius: Radius.lg, alignItems: 'center', paddingVertical: 36, paddingHorizontal: 28 },
   emptyTitle: { fontSize: 18, fontWeight: '700' },
