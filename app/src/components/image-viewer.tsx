@@ -18,11 +18,14 @@ function ZoomableImage({
   uri,
   width,
   height,
+  zoomed,
   onZoomChange,
 }: {
   uri: string;
   width: number;
   height: number;
+  /** 확대 상태 — 확대 중일 때만 팬을 켠다(아니면 페이저 스와이프를 가로챈다). */
+  zoomed: boolean;
   onZoomChange: (zoomed: boolean) => void;
 }) {
   const zoom = useSharedValue(1);
@@ -57,14 +60,15 @@ function ZoomableImage({
       runOnJS(onZoomChange)(zoom.value > 1.05);
     });
 
+  // 확대 상태에서만 활성 — 항상 켜두면 제스처가 드래그를 가로채 페이저가 넘어가지 않는다.
   const pan = Gesture.Pan()
+    .enabled(zoomed)
     .minPointers(1)
     .onStart(() => {
       startX.value = tx.value;
       startY.value = ty.value;
     })
     .onUpdate((e) => {
-      if (zoom.value <= 1.05) return; // 원본 배율에서는 페이저 스와이프에 양보한다
       tx.value = startX.value + e.translationX;
       ty.value = startY.value + e.translationY;
       clampOffsets();
@@ -138,7 +142,7 @@ export function ImageViewerModal({
           onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / width))}
         >
           {photos.map((url) => (
-            <ZoomableImage key={url} uri={url} width={width} height={height} onZoomChange={setZoomed} />
+            <ZoomableImage key={url} uri={url} width={width} height={height} zoomed={zoomed} onZoomChange={setZoomed} />
           ))}
         </ScrollView>
 
