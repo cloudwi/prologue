@@ -59,9 +59,9 @@ export default function MeetupMemberScreen() {
               <View style={styles.nameRow}>
                 <Text style={[styles.nickname, { color: c.text }]}>{profile.nickname ?? '(알 수 없음)'}</Text>
                 {profile.jobVerified && (
-                  <View style={[styles.jobBadge, { backgroundColor: c.primary + '22' }]}>
-                    <Ionicons name="briefcase" size={11} color={c.primaryStrong} />
-                    <Text style={[styles.jobBadgeText, { color: c.primaryStrong }]}>직장 인증</Text>
+                  <View style={[styles.jobBadge, { backgroundColor: c.primary }]}>
+                    <Ionicons name="briefcase" size={11} color={c.primaryText} />
+                    <Text style={[styles.jobBadgeText, { color: c.primaryText }]}>직장 인증</Text>
                   </View>
                 )}
               </View>
