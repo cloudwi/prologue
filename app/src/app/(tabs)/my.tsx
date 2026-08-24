@@ -23,6 +23,7 @@ import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep } from '@/lib/profile-form';
 import { getInkBalance } from '@/lib/ink';
+import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -41,6 +42,7 @@ export default function MyScreen() {
   const [ink, setInk] = useState<number | null>(null);
   // null이면 아직 확인 전 — 값이 잠깐 '꺼짐'으로 보였다 바뀌는 깜빡임을 막는다
   const [notifyOn, setNotifyOn] = useState<boolean | null>(null);
+  const [jobVerified, setJobVerified] = useState<boolean | null>(null);
 
   // 하위 편집 화면에서 돌아오면 다시 읽어 최신 상태를 반영한다.
   useFocusEffect(
@@ -49,6 +51,9 @@ export default function MyScreen() {
       getInkBalance()
         .then((n) => active && setInk(n))
         .catch(() => {}); // 잉크는 보조 정보 — 실패해도 화면은 유지
+      getJobStatus()
+        .then((j) => active && setJobVerified(j.verified))
+        .catch(() => {});
       notificationsEnabled()
         .then((on) => active && setNotifyOn(on))
         .catch(() => {});
@@ -208,7 +213,14 @@ export default function MyScreen() {
 
         <Section title="매칭" c={c}>
           <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
-          <Row label="직장 인증" onPress={() => router.push('/my/job-verify')} c={c} />
+          {/* 미인증이면 혜택을 말로 권한다 — 배지가 곧 모임에서의 신뢰다. */}
+          <Row
+            label="직장 인증"
+            value={jobVerified == null ? undefined : jobVerified ? '인증 완료' : '인증하면 모임에서 신뢰 배지가 붙어요'}
+            valueHighlight={jobVerified === false}
+            onPress={() => router.push('/my/job-verify')}
+            c={c}
+          />
           <Row label="지인 차단" onPress={() => router.push('/my/blocked')} c={c} last />
         </Section>
 
@@ -260,6 +272,7 @@ function Row({
   c,
   last = false,
   danger = false,
+  valueHighlight = false,
 }: {
   label: string;
   /** 오른쪽에 조용히 붙는 현재 값. 설명이 아니라 상태를 보여줄 때만 쓴다. */
@@ -268,6 +281,8 @@ function Row({
   c: ThemeColors;
   last?: boolean;
   danger?: boolean;
+  /** 값을 포인트 색으로 — 하면 좋은 일을 넛지할 때. */
+  valueHighlight?: boolean;
 }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
@@ -279,7 +294,7 @@ function Row({
         ]}
       >
         <Text style={[styles.rowLabel, { color: danger ? c.primaryStrong : c.text }]}>{label}</Text>
-        {value ? <Text style={[styles.rowValue, { color: c.textSecondary }]}>{value}</Text> : null}
+        {value ? <Text style={[styles.rowValue, { color: valueHighlight ? c.primaryStrong : c.textSecondary }]}>{value}</Text> : null}
         <Text style={[styles.chevron, { color: c.textSecondary }]}>›</Text>
       </View>
     </Pressable>
