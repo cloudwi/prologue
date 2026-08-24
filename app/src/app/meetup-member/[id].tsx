@@ -14,10 +14,14 @@ import { getMeetupMemberProfile, type MeetupMemberHistoryRow, type MeetupMemberP
  *
  * 프로필(닉네임·성별·나이·지역·아바타·소개)과 모임 이력(개최·참여)까지만 보인다.
  * 문답 답변과 편지는 여기 없다 — 매칭의 사적인 기록은 모임으로 새어 나가지 않는다.
+ *
+ * 개최 이력은 모임장으로 들어왔을 때(role=host)만 보인다 — 참여자 프로필에서
+ * "개최한 모임 0"은 판단에 쓸모없는 소음이다(유저 결정 2026-08-24).
  */
 export default function MeetupMemberScreen() {
   const c = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, role } = useLocalSearchParams<{ id: string; role?: string }>();
+  const asHost = role === 'host';
 
   const [profile, setProfile] = useState<MeetupMemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,17 +82,21 @@ export default function MeetupMemberScreen() {
 
           {/* 모임 이력 — 숫자가 곧 평판이다. */}
           <View style={styles.statRow}>
-            <View style={[styles.statCard, { backgroundColor: c.backgroundElement }]}>
-              <Text style={[styles.statNum, { color: c.primaryStrong }]}>{profile.hostedCount}</Text>
-              <Text style={[styles.statLabel, { color: c.textSecondary }]}>개최한 모임</Text>
-            </View>
+            {asHost && (
+              <View style={[styles.statCard, { backgroundColor: c.backgroundElement }]}>
+                <Text style={[styles.statNum, { color: c.primaryStrong }]}>{profile.hostedCount}</Text>
+                <Text style={[styles.statLabel, { color: c.textSecondary }]}>개최한 모임</Text>
+              </View>
+            )}
             <View style={[styles.statCard, { backgroundColor: c.backgroundElement }]}>
               <Text style={[styles.statNum, { color: c.primaryStrong }]}>{profile.participatedCount}</Text>
               <Text style={[styles.statLabel, { color: c.textSecondary }]}>참여한 모임</Text>
             </View>
           </View>
 
-          <HistorySection title="개최한 모임" rows={profile.hostedRecent} emptyText="아직 개최한 모임이 없어요." withCount c={c} />
+          {asHost && (
+            <HistorySection title="개최한 모임" rows={profile.hostedRecent} emptyText="아직 개최한 모임이 없어요." withCount c={c} />
+          )}
           <HistorySection title="참여한 모임" rows={profile.participatedRecent} emptyText="아직 참여한 모임이 없어요." c={c} />
 
           <Text style={[styles.note, { color: c.textSecondary }]}>

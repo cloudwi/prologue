@@ -201,7 +201,7 @@ export default function MeetupDetailScreen() {
           {/* 모임장 — 이름과 함께 개최 기록을 숫자로. 탭하면 모임 프로필로. */}
           <Text style={[styles.sectionTitle, { color: c.text }]}>모임장</Text>
           <Pressable
-            onPress={() => router.push(`/meetup-member/${meetup.hostAccountId}`)}
+            onPress={() => router.push(`/meetup-member/${meetup.hostAccountId}?role=host`)}
             style={({ pressed }) => [styles.card, styles.hostCard, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.85 : 1 }]}
           >
             <View style={styles.flex}>
