@@ -14,6 +14,7 @@ import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
+import com.prologue.backend.member.application.service.BlockService
 import com.prologue.backend.member.application.service.JobVerificationService
 import com.prologue.backend.member.application.service.MemberQueryService
 import com.prologue.backend.member.domain.model.Member
@@ -45,6 +46,7 @@ class PeerMatchingService(
     private val profileAccessService: ProfileAccessService,
     private val lastSeenService: LastSeenService,
     private val jobVerificationService: JobVerificationService,
+    private val blockService: BlockService,
     /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
     @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
     /**
@@ -135,6 +137,8 @@ class PeerMatchingService(
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
         val seen = revealed.mapNotNull { it.id }.toSet()
         val alreadyMet = dailyRevealRepository.findEverPairedAccountIds(accountId)
+        // 차단(번호·같은 회사)은 자격 이전의 문제다 — 어느 풀에서 왔든, 재소개 예외로도 뚫리면 안 된다.
+        val exclusion = blockService.exclusionFor(accountId, me.phone)
         val now = Instant.now()
 
         // 후보 풀은 가까운 범위부터, 비어 있으면 다음 범위로. 각 풀은 필요할 때만 읽는다.
@@ -147,7 +151,7 @@ class PeerMatchingService(
         var candidates = mutableListOf<Candidate>()
         for (pool in pools) {
             candidates = toCandidates(pool(), me, question, seen) { peer, _ ->
-                PeerEligibility.isEligible(me, peer, alreadyMet)
+                !exclusion.excludes(peer) && PeerEligibility.isEligible(me, peer, alreadyMet)
             }
             if (candidates.isNotEmpty()) break
         }
@@ -157,7 +161,8 @@ class PeerMatchingService(
             val widest = fallbackDays().maxOrNull() ?: candidateDays
             val pool = answerRepository.findOthersAnsweredSince(now.minus(Duration.ofDays(widest.toLong())), accountId)
             candidates = toCandidates(pool, me, question, seen) { peer, answer ->
-                PeerEligibility.isEligible(me, peer, alreadyMet = emptySet()) &&
+                !exclusion.excludes(peer) &&
+                    PeerEligibility.isEligible(me, peer, alreadyMet = emptySet()) &&
                     PeerEligibility.canReintroduce(
                         lastRevealedAt = dailyRevealRepository.findLastRevealedAtBetween(accountId, peer.accountId),
                         answerWrittenAt = answer.createdAt,

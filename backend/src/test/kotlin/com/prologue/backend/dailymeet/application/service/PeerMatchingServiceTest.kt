@@ -54,7 +54,10 @@ class PeerMatchingServiceTest {
     private val jobVerificationService = mockk<com.prologue.backend.member.application.service.JobVerificationService> {
         every { verifiedDomain(any()) } returns null
     }
-    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService)
+    private val blockService = mockk<com.prologue.backend.member.application.service.BlockService> {
+        every { exclusionFor(any(), any()) } returns com.prologue.backend.member.application.service.BlockService.Exclusion.NONE
+    }
+    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -112,7 +115,7 @@ class PeerMatchingServiceTest {
         // 소개 인원은 설정값이라 테스트에서 2로 고정해 "넘치지 않는지"를 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, revealCount = 2,
         )
 
         val view = twoPerDay.todayPeers(accountId, now = NOON)
@@ -142,6 +145,27 @@ class PeerMatchingServiceTest {
         val view = service.todayPeers(accountId, now = NOON)
 
         assertEquals(1, view.peers.size)
+    }
+
+    @Test
+    fun `오늘의 상대 - 차단된 상대는 후보가 되지 않는다`() {
+        // 유일한 후보가 차단 대상이면 오늘은 아무도 없어야 한다 — 점수 이전에 걸러진다.
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val blocked = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "차단된 상대 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(blocked)
+        every { memberQueryService.findProfile(blocked.accountId) } returns member(blocked.accountId, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, blocked.id!!) } returns 0
+        every { blockService.exclusionFor(accountId, any()) } returns
+            com.prologue.backend.member.application.service.BlockService.Exclusion(emptySet(), setOf(blocked.accountId)) { it }
+
+        val view = service.todayPeers(accountId, now = NOON)
+
+        assertTrue(view.peers.isEmpty())
+        verify(exactly = 0) { dailyRevealRepository.save(any()) }
     }
 
     @Test
@@ -273,7 +297,7 @@ class PeerMatchingServiceTest {
         // 정원이 1이면 부족분이 없어 채울 일이 없다 — 2로 두고 "모자란 만큼만" 채우는지 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, revealCount = 2,
         )
 
         val view = twoPerDay.todayPeers(accountId, now = NOON)
@@ -326,7 +350,7 @@ class PeerMatchingServiceTest {
 
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, revealCount = 2,
         )
         val view = twoPerDay.todayPeers(accountId, now = NOON)
 
