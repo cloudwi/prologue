@@ -48,6 +48,11 @@ class WithdrawService(
         exec("delete from ink_ledger where account_id = :id", accountId)
         exec("delete from ink_event_submissions where account_id = :id", accountId)
         exec("delete from ink_wallets where account_id = :id", accountId)
+        // 직장 인증은 지워야 이메일이 풀린다 — 한 이메일 = 한 계정이라, 남겨두면 탈퇴자의
+        // 회사 메일이 영영 잠긴다. 차단 목록·설정도 개인정보라 함께 지운다.
+        exec("delete from job_verifications where account_id = :id", accountId)
+        exec("delete from phone_blocks where account_id = :id", accountId)
+        exec("delete from block_settings where account_id = :id", accountId)
         exec("delete from members where account_id = :id", accountId)
         exec("delete from email_verification_codes where email = (select email from accounts where id = :id)", accountId)
         exec("delete from account_roles where account_id = :id", accountId)

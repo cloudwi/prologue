@@ -96,8 +96,8 @@ export default function JobVerifyScreen() {
           <Text style={[styles.desc, { color: c.textSecondary }]}>
             회사 이메일로 인증코드를 보내드려요.{'\n'}
             인증하면 <Text style={{ color: c.text, fontWeight: '600' }}>회사 메일 도메인</Text>(예: company.co.kr)이 프로필
-            배지에 표시돼 다른 회원에게 보여요. 이메일 주소 자체는 저장되지 않아요. 개인 메일(gmail, naver 등)은 쓸 수
-            없어요.
+            배지에 표시돼 다른 회원에게 보여요. 이메일 주소 자체는 저장되지 않고, 한 이메일로는 한 계정만 인증할 수
+            있어요. 개인 메일(gmail, naver 등)은 쓸 수 없어요.
           </Text>
 
           <PlaceholderInput
