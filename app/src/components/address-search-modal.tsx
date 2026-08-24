@@ -11,7 +11,12 @@ import type { ThemeColors } from '@/constants/theme';
  * postMessage로 받아 앱에 돌려준다. 외부 브라우저 왕복이 없다.
  */
 
-export type PickedAddress = { road: string; building: string };
+export type PickedAddress = {
+  road: string;
+  building: string;
+  /** 법정동(예: 양재동) — 도로명 주소에는 동이 없어, 동 검색이 되려면 따로 실어야 한다. */
+  bname: string;
+};
 
 /** 위젯을 심은 최소 HTML — 페이지를 따로 호스팅하지 않고 앱이 직접 그린다. */
 const POSTCODE_HTML = `<!doctype html>
@@ -27,7 +32,8 @@ new daum.Postcode({
   oncomplete: function (data) {
     window.ReactNativeWebView.postMessage(JSON.stringify({
       road: data.roadAddress || data.jibunAddress || '',
-      building: data.buildingName || ''
+      building: data.buildingName || '',
+      bname: data.bname || ''
     }));
   },
   width: '100%',

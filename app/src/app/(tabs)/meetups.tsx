@@ -82,6 +82,14 @@ function inDateRange(meetAt: string, range: DateRange): boolean {
 }
 
 /** 조건(성별·나이·키·직장인증)을 내 프로필로 미리 대조 — 모집 중이고 내가 연 게 아닌 것만. */
+/** 주소의 앞 두 토큰("서울 서초구") — 구 단위 지역 필터의 열쇠. 주소 없으면 null. */
+function regionOf(address?: string | null): string | null {
+  if (!address) return null;
+  const parts = address.split(' ').filter(Boolean);
+  if (parts.length === 0) return null;
+  return parts.slice(0, 2).join(' ');
+}
+
 function isEligible(m: Meetup, my: MyEligibility): boolean {
   if (m.status !== 'OPEN' || m.isMine) return false;
   if (m.genderLimit != null && m.genderLimit !== my.gender) return false;
@@ -109,6 +117,7 @@ export default function MeetupsScreen() {
   const [filter, setFilter] = useState<'ALL' | 'APPLIED' | 'MINE'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
   const [feeFilter, setFeeFilter] = useState<FeeFilter>('ALL');
+  const [region, setRegion] = useState<string | null>(null);
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [my, setMy] = useState<MyEligibility | null>(null);
@@ -162,9 +171,20 @@ export default function MeetupsScreen() {
     .filter((m) => (filter === 'APPLIED' ? m.myStatus != null : filter === 'MINE' ? m.isMine : true))
     .filter((m) => inDateRange(m.meetAt, dateRange))
     .filter((m) => (feeFilter === 'FREE' ? m.fee === 0 && (m.feeFemale ?? 0) === 0 : feeFilter === 'PAID' ? m.fee > 0 || (m.feeFemale ?? 0) > 0 : true))
+    .filter((m) => (region == null ? true : regionOf(m.placeAddress) === region))
     .filter((m) => (eligibleOnly && my != null ? isEligible(m, my) : true))
-    .filter((m) => q === '' || m.title.includes(q) || m.place.includes(q) || (m.description ?? '').includes(q));
-  const activeFilterCount = (dateRange.start != null ? 1 : 0) + (feeFilter !== 'ALL' ? 1 : 0) + (eligibleOnly ? 1 : 0);
+    .filter(
+      (m) =>
+        q === '' ||
+        m.title.includes(q) ||
+        m.place.includes(q) ||
+        (m.placeAddress ?? '').includes(q) ||
+        (m.description ?? '').includes(q),
+    );
+  const activeFilterCount =
+    (dateRange.start != null ? 1 : 0) + (feeFilter !== 'ALL' ? 1 : 0) + (region != null ? 1 : 0) + (eligibleOnly ? 1 : 0);
+  // 지금 열린 모임들이 실제로 있는 지역만 고르게 한다 — 빈 필터는 선택지가 아니라 함정이다.
+  const regions = [...new Set(meetups.map((m) => regionOf(m.placeAddress)).filter((r): r is string => r != null))].sort();
   const appliedCount = meetups.filter((m) => m.myStatus != null).length;
   const mineCount = meetups.filter((m) => m.isMine).length;
 
@@ -208,7 +228,7 @@ export default function MeetupsScreen() {
                   <TextInput
                     value={query}
                     onChangeText={setQuery}
-                    placeholder="모임 이름·장소 검색"
+                    placeholder="모임 이름·장소·동네 검색"
                     placeholderTextColor={c.textSecondary}
                     returnKeyType="search"
                     style={[styles.searchInput, { color: c.text }]}
@@ -456,6 +476,28 @@ export default function MeetupsScreen() {
             ))}
           </View>
 
+          {regions.length > 0 && (
+            <>
+              <Text style={[styles.sheetLabel, { color: c.textSecondary }]}>지역</Text>
+              <View style={styles.regionWrap}>
+                {[null, ...regions].map((r) => (
+                  <Pressable
+                    key={r ?? 'ALL'}
+                    onPress={() => setRegion(r)}
+                    style={[
+                      styles.filterChip,
+                      region === r ? { backgroundColor: c.text } : { backgroundColor: c.backgroundElement },
+                    ]}
+                  >
+                    <Text style={[styles.filterChipText, { color: region === r ? c.background : c.textSecondary }]}>
+                      {r ?? '전체'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+
           <Pressable onPress={() => setEligibleOnly((v) => !v)} hitSlop={6} style={styles.checkRow}>
             <View style={[styles.checkbox, { borderColor: c.border }, eligibleOnly && { backgroundColor: c.primary, borderColor: c.primary }]}>
               {eligibleOnly && <Text style={[styles.checkboxMark, { color: c.primaryText }]}>✓</Text>}
@@ -471,6 +513,7 @@ export default function MeetupsScreen() {
               onPress={() => {
                 setDateRange({ start: null, end: null });
                 setFeeFilter('ALL');
+                setRegion(null);
                 setEligibleOnly(false);
               }}
               hitSlop={8}
@@ -544,6 +587,7 @@ const styles = StyleSheet.create({
   resetText: { fontSize: 14.5, textDecorationLine: 'underline' },
   applyBtn2: { height: 46, paddingHorizontal: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   filterChip: { height: 32, paddingHorizontal: 13, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  regionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   filterChipText: { fontSize: 13.5, fontWeight: '700' },
   cardFootText: { fontSize: 13.5, fontWeight: '700' },
 

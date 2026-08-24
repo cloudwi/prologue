@@ -165,14 +165,14 @@ export default function MeetupDetailScreen() {
             {meetup.placeAddress != null ? (
               <View style={styles.mapRow}>
                 <Pressable
-                  onPress={() => void Linking.openURL(`https://map.naver.com/p/search/${encodeURIComponent(meetup.placeAddress!)}`)}
+                  onPress={() => void Linking.openURL(`https://map.naver.com/p/search/${encodeURIComponent(mapQuery(meetup.placeAddress!))}`)}
                   style={[styles.mapBtn, { borderColor: c.border }]}
                 >
                   <Ionicons name="map-outline" size={13} color={c.primaryStrong} />
                   <Text style={[styles.mapBtnText, { color: c.primaryStrong }]}>네이버 지도</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => void Linking.openURL(`https://map.kakao.com/link/search/${encodeURIComponent(meetup.placeAddress!)}`)}
+                  onPress={() => void Linking.openURL(`https://map.kakao.com/link/search/${encodeURIComponent(mapQuery(meetup.placeAddress!))}`)}
                   style={[styles.mapBtn, { borderColor: c.border }]}
                 >
                   <Ionicons name="map-outline" size={13} color={c.primaryStrong} />
@@ -301,6 +301,11 @@ export default function MeetupDetailScreen() {
       )}
     </SubScreen>
   );
+}
+
+/** 지도 검색어 — 주소 끝의 "(양재동)" 같은 동 표기는 지도 검색을 흐리므로 떼고 보낸다. */
+function mapQuery(address: string): string {
+  return address.replace(/\s*\([^)]*\)\s*$/, '');
 }
 
 function InfoRow({ icon, text, c }: { icon: keyof typeof Ionicons.glyphMap; text: string; c: ThemeColors }) {

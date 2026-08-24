@@ -707,8 +707,10 @@ export default function MeetupCreateScreen() {
       {/* 주소 검색 — 앱 안의 WebView(다음 우편번호). */}
       <AddressSearchModal
         visible={addressOpen}
-        onPicked={({ road, building }) => {
-          setAddress(building ? `${road} ${building}` : road);
+        onPicked={({ road, building, bname }) => {
+          // 동 이름을 괄호로 붙인다 — 도로명에는 동이 없어서, "양재동" 검색이 되려면 주소에 실려야 한다.
+          const base = building ? `${road} ${building}` : road;
+          setAddress(bname && !base.includes(bname) ? `${base} (${bname})` : base);
           setAddressOpen(false);
         }}
         onClose={() => setAddressOpen(false)}
