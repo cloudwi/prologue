@@ -52,14 +52,28 @@ export function wireAppStateToQueryClient() {
  */
 export function useRefreshOnFocus(refetch: () => void) {
   const firstFocus = useRef(true);
+
+  /*
+   * 넘겨받은 함수는 ref에 담아 두고, 포커스 이펙트는 **빈 의존성**으로 건다.
+   *
+   * 이게 핵심이다: 예전에는 [refetch]를 의존성에 뒀는데, 부르는 쪽이 쿼리 객체를 의존성으로
+   * 잡으면(useCallback(..., [someQuery])) 매 렌더 새 함수가 되고 —
+   * 이펙트가 매 렌더 다시 걸리며 **다시 읽기 → 리렌더 → 다시 읽기**로 무한히 돈다.
+   * 2026-08-25에 편지함이 그렇게 터졌다. 훅이 부르는 쪽의 메모이제이션에 기대지 않게 만든다.
+   */
+  const latest = useRef(refetch);
+  useEffect(() => {
+    latest.current = refetch;
+  });
+
   useFocusEffect(
     useCallback(() => {
       if (firstFocus.current) {
-        firstFocus.current = false;
+        firstFocus.current = false; // 마운트 직후 — 그때는 useQuery가 이미 읽고 있다
         return;
       }
-      refetch();
-    }, [refetch]),
+      latest.current();
+    }, []),
   );
 }
 

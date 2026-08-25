@@ -71,7 +71,8 @@ export default function MyScreen() {
     [queryClient],
   );
 
-  const refresh = useCallback(() => void meQuery.refetch(), [meQuery]);
+  const { refetch: refetchMe } = meQuery;
+  const refresh = useCallback(() => void refetchMe(), [refetchMe]);
   useRefreshOnFocus(refresh);
 
   const toLogin = useCallback(() => router.replace('/'), [router]);

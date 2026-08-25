@@ -152,7 +152,8 @@ export default function MeetupsScreen() {
   const canCreate = boardQuery.data?.canCreate ?? false;
   const my = boardQuery.data?.my ?? null;
 
-  const refresh = useCallback(() => void boardQuery.refetch(), [boardQuery]);
+  const { refetch: refetchBoard } = boardQuery;
+  const refresh = useCallback(() => void refetchBoard(), [refetchBoard]);
   useRefreshOnFocus(refresh);
 
   const toLogin = useCallback(() => router.replace('/'), [router]);

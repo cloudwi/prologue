@@ -76,11 +76,14 @@ export default function MailsScreen() {
   const sentHearts = inboxQuery.data?.sentHearts ?? null;
   const mails = inboxQuery.data?.mails ?? [];
 
+  // refetch는 React Query가 안정적으로 유지한다 — 쿼리 객체를 의존성에 두면 매 렌더 바뀐다.
+  const { refetch: refetchInbox } = inboxQuery;
+
   /** 목록을 다시 읽는다. 기한 셈의 기준 시각도 함께 새로 잡는다. */
   const load = useCallback(async () => {
     setNow(Date.now());
-    await inboxQuery.refetch();
-  }, [inboxQuery]);
+    await refetchInbox();
+  }, [refetchInbox]);
 
   const refresh = useCallback(() => void load(), [load]);
   useRefreshOnFocus(refresh);

@@ -85,11 +85,15 @@ export default function DiscoverScreen() {
   const pastPeers = pastQuery.data ?? [];
   const peersLoading = peersQuery.isPending;
 
+  // refetch는 React Query가 안정적으로 유지한다 — 쿼리 객체를 의존성에 두면 매 렌더 바뀐다.
+  const { refetch: refetchToday } = todayQuery;
+  const { refetch: refetchPeers } = peersQuery;
+  const { refetch: refetchPast } = pastQuery;
   const refreshAll = useCallback(() => {
-    void todayQuery.refetch();
-    void peersQuery.refetch();
-    void pastQuery.refetch();
-  }, [todayQuery, peersQuery, pastQuery]);
+    void refetchToday();
+    void refetchPeers();
+    void refetchPast();
+  }, [refetchToday, refetchPeers, refetchPast]);
   useRefreshOnFocus(refreshAll);
 
   // 세션 만료는 "HTTP 403" 알림이 아니라 로그인 화면으로 답한다.
