@@ -172,7 +172,7 @@ export default function MyMeetupsScreen() {
                 * 개최를 마친 모임은 '다음 회차'를 열 수 있다 — 같은 내용이 그대로 채워지고,
                 * 지난 회차를 따라가던 사람들에게 알림이 간다. 단발 모임에 연속성을 주는 유일한 길.
                 */}
-              {m.status === 'DONE' && (
+              {m.status === 'DONE' && m.seriesId != null && (
                 <View style={styles.actions}>
                   <ActionBtn
                     label="다음 회차 열기"

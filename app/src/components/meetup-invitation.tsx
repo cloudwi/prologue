@@ -209,7 +209,8 @@ export function MeetupInvitation({
         * 따라가기 — 이 자리가 좋았다면 다음에도 부른다.
         * 모임은 단발이지만 '이 모임'은 이어진다: 다음 회차가 열리면 알림이 간다.
         */}
-      {!preview && onToggleFollow != null && !meetup.isMine && (
+      {/* seriesId가 없으면 회차를 모르는 구버전 서버다 — 누르면 404가 나므로 아예 그리지 않는다. */}
+      {!preview && onToggleFollow != null && !meetup.isMine && meetup.seriesId != null && (
         <Pressable
           onPress={() => onToggleFollow(!(meetup.following ?? false))}
           style={({ pressed }) => [
