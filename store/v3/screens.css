@@ -1,0 +1,97 @@
+/*
+ * 화면별 조판 — 값은 전부 앱 코드에서 그대로 가져온다.
+ * (mails.tsx / mail-view / meetup-invitation.tsx의 StyleSheet)
+ * 앱을 고치면 여기도 같이 고쳐야 스토어와 앱이 같은 물건으로 보인다.
+ */
+
+/* ── 공통 줄 ── */
+
+.row { display: flex; align-items: center; }
+
+/* 세로 4:5 라운드 사각형 — 44×55(2026-08-25, 원으로 자르면 얼굴이 토막 난다). */
+.thumb { width: 44px; height: 55px; border-radius: 12px; object-fit: cover; display: block; flex: none; background: var(--selected); }
+
+.row-name { font-size: 17px; font-weight: 700; }
+.row-meta { font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+.row-expiry { font-size: 12.5px; font-weight: 600; color: var(--terracotta-strong); margin-top: 2px; }
+.row-mutual { font-size: 12.5px; font-weight: 600; color: var(--terracotta-strong); margin-top: 2px; }
+
+.row-chip { height: 32px; padding: 0 13px; border-radius: 999px; background: var(--selected); display: flex; align-items: center; font-size: 13.5px; font-weight: 700; flex: none; }
+.row-chip.primary { background: var(--terracotta); color: #fff; }
+
+/* ── 편지함 ── */
+
+.mail-header { padding: 6px 4px 18px; }
+.mail-title { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; }
+.mail-sub { font-size: 14.5px; color: var(--muted); margin-top: 4px; }
+
+/* 봉투 — 발견의 표지와 같은 테라코타 8% 면. 열린 편지와 한눈에 구분된다. */
+.envelope { border-radius: 24px; padding: 18px; margin-bottom: 12px; background: rgba(217, 105, 76, 0.078); }
+.envelope-body { display: flex; flex-direction: column; align-items: center; padding: 22px 0 18px; }
+.env-mark { width: 52px; height: 38px; object-fit: contain; margin-bottom: 12px; }
+.sealed { font-size: 18px; font-weight: 700; text-align: center; }
+.sealed-hint { font-size: 13.5px; line-height: 19px; text-align: center; color: var(--muted); margin-top: 6px; padding: 0 10px; }
+.sealed-actions { display: flex; align-items: center; gap: 12px; }
+.decline { font-size: 14.5px; font-weight: 600; color: var(--muted); padding: 10px 8px; flex: none; }
+.open-btn { flex: 1; height: 46px; border-radius: 999px; background: var(--terracotta); color: #fff; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+.list-card { border-radius: 24px; padding: 0 16px; background: var(--surface); }
+.list-row { padding: 14px 0; }
+.list-row.divider { border-top: 1px solid var(--border); }
+
+/* ── 열린 편지 ── */
+
+.letter { position: relative; border-radius: 24px; padding: 20px 18px 18px; margin-bottom: 12px; background: var(--surface); overflow: hidden; }
+.letter-rule { position: absolute; top: 0; left: 18px; width: 36px; height: 2px; border-radius: 1px; background: var(--terracotta); }
+.letter-body { font-size: 17px; line-height: 27px; margin-top: 16px; }
+.contact-box { display: flex; align-items: center; gap: 8px; border-radius: 18px; padding: 12px 14px; margin-top: 14px; background: var(--selected); }
+.contact-text { font-size: 14px; line-height: 20px; color: var(--muted); }
+.letter-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.reply-btn { flex: 1; height: 44px; border-radius: 999px; background: var(--terracotta); color: var(--paper); font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+/* ── 모임 초대장 ── */
+
+.invite { padding-bottom: 48px; }
+/* 커버 사진이 없는 모임은 이모지 배너로 선다(meetup.color 자리). 팔레트 안의 차가운 면을 쓴다 —
+   큰 테라코타 면을 깔면 포인트 컬러가 판 전체로 번져 '한 곳' 규칙이 깨진다. */
+.invite-banner { height: 200px; display: flex; align-items: center; justify-content: center; font-size: 64px; background: var(--selected); }
+
+/* 네이티브 스택 헤더 — iOS 기본 높이 44pt. */
+.navbar { height: 44px; display: flex; align-items: center; padding: 0 18px; }
+
+/* 전면 사진 — 청첩장의 첫 장. 둥근 카드가 아니라 화면 폭 그대로(PhotoPager, 4:3). */
+.invite-cover { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: center 32%; display: block; background: var(--selected); }
+
+.invite-headline { text-align: center; padding: 36px 32px 0; }
+.invite-eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 4px; color: var(--muted); }
+.invite-occurrence { font-size: 13px; font-weight: 700; letter-spacing: 0.3px; color: var(--terracotta-strong); margin-top: 10px; }
+.invite-title { font-size: 26px; font-weight: 700; line-height: 36px; letter-spacing: -0.3px; margin-top: 14px; }
+/* 숫자 날짜 — 가늘고 넓게. 청첩장에서 제목 다음으로 큰 글자. */
+.invite-numerals { font-size: 22px; font-weight: 300; letter-spacing: 3px; margin-top: 18px; font-variant-numeric: tabular-nums; }
+.invite-words { font-size: 14px; letter-spacing: 0.3px; color: var(--muted); margin-top: 8px; }
+
+.invite-section { text-align: center; padding: 0 24px; margin-top: 56px; }
+.invite-sec-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 3px; color: var(--muted); }
+.invite-sec-title { font-size: 18px; font-weight: 700; margin: 8px 0 20px; }
+.invite-greeting { font-size: 16px; line-height: 29px; padding: 0 8px; }
+
+.invite-host { margin-top: 28px; }
+.host-caption { font-size: 12.5px; letter-spacing: 2px; color: var(--muted); margin-bottom: 8px; }
+.host-name { font-size: 19px; font-weight: 700; }
+.host-meta { font-size: 13px; color: var(--muted); margin-top: 5px; }
+
+.info-card { border-radius: 24px; padding: 4px 20px; background: var(--surface); text-align: left; }
+.info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; }
+.info-row + .info-row { border-top: 1px solid var(--border); }
+.info-label { font-size: 14px; color: var(--muted); flex: none; }
+.info-value { font-size: 15px; font-weight: 600; text-align: right; }
+
+/* 달력 — 그 달을 펼쳐 그 날에 동그라미. 모바일 청첩장에서 가장 먼저 알아보는 장면. */
+.calendar { width: 100%; max-width: 320px; margin: 0 auto; display: flex; flex-direction: column; gap: 4px; }
+.cal-row { display: flex; }
+.cal-cell { flex: 1; height: 38px; display: flex; align-items: center; justify-content: center; }
+.cal-head { font-size: 12px; font-weight: 600; color: var(--muted); }
+.cal-day { font-size: 15px; }
+/* 그 날은 잉크색 동그라미 — 포인트 컬러는 RSVP 버튼 한 곳에만 둔다(design/README.md). */
+.cal-mark { width: 34px; height: 34px; border-radius: 17px; background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.dday { font-size: 15px; font-weight: 600; margin-top: 22px; }

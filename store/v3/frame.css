@@ -1,0 +1,225 @@
+/*
+ * 스토어 스크린샷 판형 — 1320×2868 (6.9"). 안드로이드도 같은 판을 리사이즈해 쓴다.
+ *
+ * 규칙은 앱의 디자인 시스템을 그대로 따른다(design/README.md):
+ * 차가운 종이 바탕 위에 테라코타 포인트 하나. 판을 꾸미는 색은 더하지 않는다 —
+ * 스토어에서 본 화면과 받은 앱이 같은 물건으로 보여야 한다.
+ */
+
+:root {
+  --ink: #1b2126;
+  --paper: #f6f8fa;
+  --surface: #ffffff;
+  --selected: #edf1f5;
+  --muted: #69747e;
+  --border: #e3e8ee;
+  --terracotta: #d9694c;
+  --terracotta-strong: #c25539;
+
+  --kr: 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1320px;
+  height: 2868px;
+  overflow: hidden;
+  position: relative;
+  background: var(--paper);
+  font-family: var(--kr);
+  -webkit-font-smoothing: antialiased;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-rendering: geometricPrecision;
+}
+
+/*
+ * 바탕의 온기 한 겹 — 앱의 '오늘의 표지'가 테라코타 8% 한 겹인 것과 같은 방식이다.
+ * 크림 바탕으로 되돌아가지 않도록 아주 옅게만 둔다(예전 스크린샷이 크림이라 낡아 보였다).
+ */
+body::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -560px;
+  width: 2200px;
+  height: 1600px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(217, 105, 76, 0.055) 0%, rgba(217, 105, 76, 0) 62%);
+}
+
+/* 바닥으로 갈수록 종이가 한 톤 가라앉아 기기가 떠 보인다. */
+body::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(246, 248, 250, 0) 40%, rgba(222, 230, 238, 0.85) 100%);
+}
+
+.panel { position: relative; z-index: 1; width: 100%; height: 100%; }
+
+/* ── 헤드라인 ── */
+
+.head { padding: 178px 96px 0; text-align: center; }
+
+.eyebrow {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 10px;
+  color: var(--terracotta-strong);
+  margin-bottom: 34px;
+}
+
+h1 {
+  font-size: 96px;
+  font-weight: 800;
+  line-height: 1.26;
+  letter-spacing: -3.4px;
+  color: var(--ink);
+}
+
+h1 em { font-style: normal; color: var(--terracotta-strong); }
+
+.sub {
+  max-width: 1000px;
+  margin: 30px auto 0;
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.8px;
+  color: var(--muted);
+}
+
+/* ── 기기 ── */
+
+/*
+ * 화면은 402pt 폭을 2.5배로 키운 1005px. 앱 코드의 pt 값을 그대로 px로 쓰고
+ * 마지막에 한 번만 확대한다 — 그래야 스크린샷의 조판이 실제 앱과 어긋나지 않는다.
+ */
+.device {
+  position: absolute;
+  left: 50%;
+  top: 784px;
+  transform: translateX(-50%);
+  width: 1033px;
+  padding: 14px;
+  border-radius: 104px;
+  background: linear-gradient(160deg, #2c343c 0%, #10151a 46%, #262e36 100%);
+  box-shadow:
+    0 60px 110px rgba(27, 33, 38, 0.22),
+    0 18px 40px rgba(27, 33, 38, 0.12);
+}
+
+.screen {
+  width: 1005px;
+  height: 2185px; /* 874pt × 2.5 — 아래는 판 밖으로 흘려보낸다 */
+  border-radius: 90px;
+  overflow: hidden;
+  background: var(--paper);
+  position: relative;
+}
+
+.app {
+  width: 402px;
+  height: 874px;
+  transform: scale(2.5);
+  transform-origin: top left;
+  background: var(--paper);
+  color: var(--ink);
+  position: relative;
+}
+
+/* ── iOS 상태 바 ── */
+
+.status {
+  height: 59px;
+  padding: 0 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.status .icons { display: flex; align-items: center; gap: 5px; }
+
+.island {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  transform: translateX(-50%);
+  width: 125px;
+  height: 36px;
+  border-radius: 18px;
+  background: #000;
+}
+
+/* ── 앱 공통 ── */
+
+.scroll { padding: 8px 20px 0; }
+
+.cover {
+  margin: 0 -20px;
+  padding: 14px 24px 26px;
+  border-radius: 0 0 32px 32px;
+  background: rgba(217, 105, 76, 0.078);
+}
+
+.date-caption { font-size: 13.5px; font-weight: 700; letter-spacing: 0.3px; color: var(--terracotta-strong); }
+.q-eyebrow { font-size: 13px; font-weight: 600; letter-spacing: 0.6px; color: var(--muted); margin: 22px 0 8px; }
+.question { font-size: 27px; font-weight: 700; line-height: 38px; letter-spacing: -0.3px; }
+
+.answer-block { display: flex; gap: 14px; margin-top: 20px; }
+.rule { width: 2px; border-radius: 1px; background: var(--terracotta); margin: 4px 0; flex: none; }
+.answer-text { font-size: 17.5px; line-height: 27px; }
+.answer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+.answered-tag { font-size: 13.5px; font-weight: 700; color: var(--terracotta-strong); }
+.answer-links { font-size: 14px; font-weight: 600; color: var(--muted); }
+.answer-links span { margin: 0 7px; font-weight: 400; }
+
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; padding: 0 2px; }
+.sec-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.6px; color: var(--terracotta-strong); }
+.sec-sub { font-size: 13.5px; color: var(--muted); }
+
+/* 상대 카드 */
+.peer-card { border-radius: 24px; overflow: hidden; background: var(--surface); }
+.peer-answer-block { padding: 20px 20px 18px; }
+.peer-q { font-size: 13.5px; line-height: 19px; color: var(--muted); margin-bottom: 8px; }
+.peer-answer { font-size: 18px; line-height: 27px; font-weight: 500; }
+.peer-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; background: var(--selected); }
+.peer-body { padding: 16px 18px 18px; }
+.peer-head { display: flex; align-items: center; }
+.peer-name { font-size: 19px; font-weight: 700; }
+.peer-meta { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.peer-cta { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--selected); display: flex; align-items: center; font-size: 14px; font-weight: 700; }
+.peer-bio { font-size: 15px; line-height: 22px; margin-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chip { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; display: flex; align-items: center; font-size: 13px; color: var(--muted); }
+
+.grow { flex: 1; min-width: 0; }
+
+/*
+ * ── Play 스토어 판형 (1080×1920) ──
+ *
+ * 애플 판을 그대로 줄여 쓸 수 없다. Play는 스크린샷의 긴 변이 짧은 변의 2배를 넘으면 거부하는데
+ * 6.9"(1320×2868)는 2.17배다. 그래서 같은 재료로 16:9 판을 따로 짠다 —
+ * 헤드라인을 줄이고 기기를 키워 비율만 바꾼다.
+ */
+body.android { width: 1080px; height: 1920px; }
+body.android::before { top: -420px; width: 1700px; height: 1150px; }
+
+body.android .head { padding: 104px 72px 0; }
+body.android .eyebrow { font-size: 20px; letter-spacing: 6.5px; margin-bottom: 22px; }
+body.android h1 { font-size: 64px; letter-spacing: -2.2px; }
+body.android .sub { max-width: 760px; margin-top: 22px; font-size: 26px; letter-spacing: -0.5px; }
+
+body.android .device { top: 462px; width: 772px; padding: 11px; border-radius: 78px; }
+body.android .screen { width: 750px; height: 1617px; border-radius: 68px; }
+/* 402pt 폭을 1.865배로 — iOS 판(2.5배)과 배율만 다르고 안쪽 조판은 같은 코드다. */
+body.android .app { transform: scale(1.865); }
+
+/* 안드로이드 판에 다이내믹 아일랜드를 그리면 아이폰이 된다 — 펀치홀 카메라로 바꾼다. */
+body.android .island { width: 26px; height: 26px; border-radius: 13px; top: 15px; }
