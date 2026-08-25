@@ -72,11 +72,12 @@ app:
   ios-store-url: ${APP_IOS_STORE_URL:https://apps.apple.com/app/id6792233022}
   android-store-url: ${APP_ANDROID_STORE_URL:https://play.google.com/store/apps/details?id=day.prologue.app}
 
-# 인증코드 메일의 "앱에서 바로 입력하기" 버튼이 가리키는 웹 주소.
-# 휴대폰이면 이 페이지가 앱을 열어 코드를 자동 입력하고, 앱이 없거나 데스크탑이면 복사 버튼을 보여준다.
-# 도메인 구입 후 WEB_BASE_URL 환경변수로 교체.
+# 바깥으로 나가는 링크가 전부 이 주소를 앞에 달고 나간다 — 인증코드 메일(/auth?code=),
+# 추천 공유 링크(/download?ref=), 모임 초대장(/m/{id}).
+# 그래서 이 값이 틀리면 유저 눈에 먼저 보인다. 받는 사람에게 낯선 도메인이 찍힌 인증 메일은
+# 링크가 살아 있어도 피싱으로 읽힌다. 기본값을 대문 도메인으로 두는 이유다.
 web:
-  base-url: ${WEB_BASE_URL:https://prologue-web.onrender.com}
+  base-url: ${WEB_BASE_URL:https://prologue.day}
 
 # 에러 모니터링(Sentry). DSN이 비어 있으면 초기화 자체를 건너뛴다 — 로컬·테스트에서 무해.
 # 초기화는 config/SentryConfig, 이벤트 수집은 logback 어펜더(ERROR 로그)가 맡는다.
