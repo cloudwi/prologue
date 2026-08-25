@@ -11,6 +11,37 @@ services:
     staticPublishPath: dist
     autoDeploy: true
 
+  # ── 스테이징 백엔드 ────────────────────────────────────────────
+  # 배포 전 리허설 자리. **DB는 반드시 별도 Supabase 프로젝트**로 붙인다 —
+  # 운영 DB를 공유하면 마이그레이션 리허설이 곧 운영 사고가 된다(V49 같은 변경을 여기서 먼저 돌린다).
+  # 무료 티어라 잠들지만 스테이징에는 문제없다.
+  #
+  # 앱에서 이 서버를 보려면 eas.json의 preview 프로파일(EXPO_PUBLIC_API_URL)로 한 번 빌드해
+  # 폰에 깔고, 이후에는 `eas update --branch preview`로 재빌드 없이 확인한다.
+  - type: web
+    name: prologue-backend-staging
+    runtime: docker
+    repo: https://github.com/cloudwi/prologue
+    branch: main
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: free
+    healthCheckPath: /actuator/health
+    autoDeploy: true            # 스테이징은 늘 최신 main — 여기서 먼저 깨지라고 있는 자리다
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true
+      # ⚠️ 운영과 **다른** Supabase 프로젝트를 넣을 것. 같은 값을 넣으면 스테이징이 아니다.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
   - type: web
     name: prologue-backend
     runtime: docker

@@ -11,7 +11,10 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://prologue-backend-staging.onrender.com"
+      }
     },
     "production": {
       "autoIncrement": true,
