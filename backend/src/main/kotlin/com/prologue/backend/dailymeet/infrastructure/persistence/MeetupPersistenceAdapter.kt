@@ -169,8 +169,8 @@ class MeetupFollowPersistenceAdapter(
     }
 
     override fun findSeriesIdsByAccount(accountId: UUID): Set<UUID> =
-        jpa.findByAccountId(accountId).map { it.seriesId }.toSet()
+        jpa.findAllByAccount(accountId).map { it.seriesId }.toSet()
 
     override fun findAccountIdsBySeries(seriesId: UUID): List<UUID> =
-        jpa.findBySeriesId(seriesId).map { it.accountId }
+        jpa.findAllBySeries(seriesId).map { it.accountId }
 }

@@ -166,6 +166,8 @@ data class HostMeetupView(
     val status: String,
     val confirmedCount: Int,
     val applications: List<HostApplicationView>,
+    /** 회차 묶음 — 앱의 '다음 회차 열기'가 이 값을 그대로 넘겨 회차를 잇는다. */
+    val seriesId: UUID? = null,
 )
 
 /**
@@ -496,6 +498,7 @@ class MeetupService(
                 coverUrls = m.coverUrls,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
+                seriesId = m.seriesId,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },
                 applications = applications.map { app ->
                     val profile = memberQueryService.findProfile(app.applicantAccountId)
