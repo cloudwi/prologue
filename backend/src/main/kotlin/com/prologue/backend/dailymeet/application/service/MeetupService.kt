@@ -171,6 +171,42 @@ data class HostMeetupView(
 )
 
 /**
+ * 공개 초대장 — 로그인 없이 링크만으로 보이는 모임의 얼굴.
+ *
+ * 앱이 보여주는 [MeetupView]와 **일부러 다른 그릇**이다. 이 값은 주소만 알면 누구나 볼 수 있으므로,
+ * 참가자 명단·오픈채팅 링크·모임장 계정 id처럼 회원에게만 줄 것은 아예 담지 않는다.
+ * 담는 것은 모임장이 퍼뜨리고 싶어 하는 것들뿐 — 제목·회차·날짜·장소·참가비·조건·커버·남은 자리.
+ */
+data class MeetupInvitationView(
+    val meetupId: UUID,
+    val title: String,
+    val description: String?,
+    val meetAt: Instant,
+    /** 장소 상세(주소를 뺀 나머지) — 앱의 venueOf와 같은 규칙으로 가른다. */
+    val placeName: String?,
+    val placeAddress: String?,
+    val capacity: Int,
+    val confirmedCount: Int,
+    val fee: Int,
+    val feeFemale: Int?,
+    val genderLimit: String?,
+    val minAgeMale: Int?,
+    val maxAgeMale: Int?,
+    val minAgeFemale: Int?,
+    val maxAgeFemale: Int?,
+    val minHeightMaleCm: Int?,
+    val minHeightFemaleCm: Int?,
+    val requireJobVerified: Boolean,
+    /** 미리보기 이미지가 될 커버 첫 장. 없으면 페이지가 브랜드 기본 이미지를 쓴다. */
+    val coverUrl: String?,
+    val hostNickname: String?,
+    val occurrence: Int,
+    val occurrenceTotal: Int,
+    /** 아직 신청을 받는지 — 마감·취소·지난 모임이면 false. */
+    val open: Boolean,
+)
+
+/**
  * 오프라인 모임 유스케이스.
  *
  * 회원은 앱에서 모임을 보고 신청한다. 다만 **여는 건 아직 운영자만** 할 수 있다([MeetupHostPolicy]) —
@@ -249,6 +285,48 @@ class MeetupService(
                 following = m.seriesId in followed,
             )
         }
+    }
+
+    /**
+     * 공개 초대장 — 카카오톡에 붙은 링크를 아무나 눌렀을 때 서버가 그려줄 재료.
+     *
+     * 인증이 없다. 대신 **id를 아는 사람만** 볼 수 있다(UUID는 찍어서 맞힐 수 없다) —
+     * 모임장이 링크를 건넨 범위가 곧 공개 범위다. 없는 모임이면 null을 돌려 404를 그리게 한다.
+     */
+    @Transactional(readOnly = true)
+    fun invitation(meetupId: UUID): MeetupInvitationView? {
+        val m = meetupRepository.findById(meetupId) ?: return null
+        val siblings = meetupRepository.findAllBySeries(m.seriesId)
+        val confirmed = applicationRepository.findAllByMeetup(meetupId).count { it.status == MeetupApplicationStatus.CONFIRMED }
+        // 앱의 venueOf와 같은 규칙 — place는 "주소 · 상세" 꼴로 저장된다.
+        val placeName = m.placeAddress
+            ?.let { addr -> m.place.removePrefix(addr).removePrefix(" · ").takeIf { it.isNotBlank() } }
+            ?: m.place.takeIf { m.placeAddress == null }
+        return MeetupInvitationView(
+            meetupId = meetupId,
+            title = m.title,
+            description = m.description,
+            meetAt = m.meetAt,
+            placeName = placeName,
+            placeAddress = m.placeAddress,
+            capacity = m.capacity,
+            confirmedCount = confirmed,
+            fee = m.fee,
+            feeFemale = m.feeFemale,
+            genderLimit = m.genderLimit,
+            minAgeMale = m.minAgeMale,
+            maxAgeMale = m.maxAgeMale,
+            minAgeFemale = m.minAgeFemale,
+            maxAgeFemale = m.maxAgeFemale,
+            minHeightMaleCm = m.minHeightMaleCm,
+            minHeightFemaleCm = m.minHeightFemaleCm,
+            requireJobVerified = m.requireJobVerified,
+            coverUrl = m.coverUrls.firstOrNull(),
+            hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
+            occurrence = siblings.indexOfFirst { it.id == m.id }.let { if (it < 0) siblings.size else it } + 1,
+            occurrenceTotal = maxOf(siblings.size, 1),
+            open = m.status == MeetupStatus.OPEN && m.meetAt.isAfter(Instant.now()),
+        )
     }
 
     /**

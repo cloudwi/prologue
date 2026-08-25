@@ -17,7 +17,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
  * REST API 보안 설정.
  * - 무상태(JWT 기반, 세션 미사용), CSRF/폼로그인/기본인증 비활성
  * - 공개: 이메일 가입/로그인 경로(auth 하위), 헬스체크(actuator health) — Render·UptimeRobot,
- *         앱 부팅 설정(app-config) — 로그인 전에 최소 지원 버전을 확인해야 한다
+ *         앱 부팅 설정(app-config) — 로그인 전에 최소 지원 버전을 확인해야 한다,
+ *         모임 초대장 페이지(/m/{id}) — 카카오톡에 붙은 링크와 미리보기 크롤러가 읽는다(회원이 아니다)
  * - 어드민(admin 하위 경로): ROLE_ADMIN만 — 웹 어드민 페이지가 쓴다
  * - 그 외: 인증 필요
  * - CORS: 웹 어드민(브라우저)의 API 호출을 위해 웹 출처만 허용 — 앱은 네이티브라 해당 없음
@@ -44,6 +45,7 @@ class SecurityConfig(
                 // 앱은 403을 세션 만료로 읽어 토큰을 지우므로, 오타 하나가 "로그아웃"으로 둔갑한다.
                 it.requestMatchers("/error").permitAll()
                 it.requestMatchers("/auth/**", "/actuator/health", "/app-config").permitAll()
+                it.requestMatchers("/m/*").permitAll()
                 it.requestMatchers("/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
             }
