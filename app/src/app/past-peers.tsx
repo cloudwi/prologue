@@ -8,6 +8,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getPastPeers, type PastPeer } from '@/lib/daily';
+import { thumbUrl } from '@/lib/image';
 
 /**
  * 지난 상대 — 최근 한 달 안에 소개된 상대의 그리드.
@@ -113,7 +114,7 @@ function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: Th
     <Pressable onPress={openDetail} style={({ pressed }) => [{ width, opacity: pressed ? 0.7 : 1 }]}>
       <View style={photoSize}>
         {photo ? (
-          <Image source={{ uri: photo }} style={[styles.photo, photoSize, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+          <Image source={{ uri: thumbUrl(photo, 400) }} style={[styles.photo, photoSize, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
         ) : (
           <View style={[styles.photo, photoSize, styles.avatarWrap, { backgroundColor: c.backgroundSelected }]}>
             <Avatar avatarId={item.peer.avatarId} nickname={item.peer.nickname ?? undefined} size={44} c={c} />

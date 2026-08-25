@@ -16,6 +16,7 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { getJobStatus } from '@/lib/job';
 import { getMyProfile } from '@/lib/member';
 import { feeLabel, getMeetupHistory, getMeetups, type Meetup } from '@/lib/meetups';
+import { thumbUrl } from '@/lib/image';
 
 /**
  * 모임 — 모임장이 여는 오프라인 모임에 손을 드는 곳.
@@ -338,7 +339,7 @@ export default function MeetupsScreen() {
                   >
                     {/* 메인 사진 — 첫 장이 카드의 얼굴. 자를 때 보여준 16:9 그대로다. */}
                     {m.coverUrls.length > 0 && (
-                      <Image source={{ uri: m.coverUrls[0] }} style={styles.cardCover} contentFit="cover" transition={150} />
+                      <Image source={{ uri: thumbUrl(m.coverUrls[0], 800) }} style={styles.cardCover} contentFit="cover" transition={150} />
                     )}
                     <View style={styles.cardBody}>
                     <View style={styles.cardHead}>

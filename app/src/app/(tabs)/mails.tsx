@@ -18,6 +18,7 @@ import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/li
 import { INK_PRICE } from '@/lib/ink';
 import { RevealableContact } from '@/components/revealable-contact';
 import { promptReport } from '@/lib/reports';
+import { thumbUrl } from '@/lib/image';
 
 /**
  * 편지함 — 인앱 채팅 없이, 마음이 닿은 흔적이 도착하는 곳.
@@ -193,7 +194,7 @@ export default function MailsScreen() {
       >
         {h.photoUrl ? (
           <Image
-            source={{ uri: h.photoUrl }}
+            source={{ uri: thumbUrl(h.photoUrl, 160) }}
             style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]}
             contentFit="cover"
             transition={150}
@@ -330,7 +331,7 @@ export default function MailsScreen() {
                             style={({ pressed }) => [styles.envelopeHead, { opacity: pressed ? 0.7 : 1 }]}
                           >
                             {m.photoUrl ? (
-                              <Image source={{ uri: m.photoUrl }} style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+                              <Image source={{ uri: thumbUrl(m.photoUrl, 160) }} style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
                             ) : (
                               <Avatar avatarId={m.avatarId} nickname={m.nickname} size={44} c={c} />
                             )}
@@ -387,7 +388,7 @@ export default function MailsScreen() {
                             style={({ pressed }) => [styles.letterHead, { opacity: pressed ? 0.7 : 1 }]}
                           >
                             {m.photoUrl ? (
-                              <Image source={{ uri: m.photoUrl }} style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+                              <Image source={{ uri: thumbUrl(m.photoUrl, 160) }} style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
                             ) : (
                               <Avatar avatarId={m.avatarId} nickname={m.nickname} size={44} c={c} />
                             )}

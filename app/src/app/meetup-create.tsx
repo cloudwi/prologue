@@ -22,6 +22,7 @@ import { track } from '@/lib/analytics';
 import { createMeetup, getMyMeetups, updateMeetup, type CreateMeetupInput, type Meetup } from '@/lib/meetups';
 import { getMyProfile } from '@/lib/member';
 import { uploadMeetupCover } from '@/lib/photo';
+import { thumbUrl } from '@/lib/image';
 
 /**
  * 모임 열기 — 누구나 모임장이 될 수 있다.
@@ -465,7 +466,7 @@ export default function MeetupCreateScreen() {
           <View style={styles.coverThumbRow}>
             {coverUrls.map((url, i) => (
               <View key={url} style={styles.coverThumbWrap}>
-                <Image source={{ uri: url }} style={[styles.coverThumb, i === 0 && { borderWidth: 2, borderColor: c.primary }]} contentFit="cover" />
+                <Image source={{ uri: thumbUrl(url, 200) }} style={[styles.coverThumb, i === 0 && { borderWidth: 2, borderColor: c.primary }]} contentFit="cover" />
                 <Pressable
                   onPress={() => setCoverUrls((urls) => urls.filter((u) => u !== url))}
                   hitSlop={6}

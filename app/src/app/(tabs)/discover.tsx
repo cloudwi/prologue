@@ -28,6 +28,7 @@ import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
+import { thumbUrl } from '@/lib/image';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 15;
@@ -366,7 +367,7 @@ export default function DiscoverScreen() {
                       ]}
                     >
                       {p.peer.photoUrls[0] ? (
-                        <Image source={{ uri: p.peer.photoUrls[0] }} style={styles.pastFaceFill} contentFit="cover" />
+                        <Image source={{ uri: thumbUrl(p.peer.photoUrls[0], 128) }} style={styles.pastFaceFill} contentFit="cover" />
                       ) : (
                         <Avatar avatarId={p.peer.avatarId} nickname={p.peer.nickname ?? undefined} size={22} c={c} />
                       )}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Radius, type ThemeColors } from '@/constants/theme';
+import { thumbUrl } from '@/lib/image';
 
 /** 프로필 사진 그리드 (최대 6장). 첫 번째 사진이 대표. */
 
@@ -56,7 +57,7 @@ export function PhotoGrid({
         <>
           {photos.map((photo, i) => (
             <View key={photo} style={[styles.tile, tileSize, { borderColor: c.border, backgroundColor: c.backgroundElement }]}>
-              <Image source={{ uri: photo }} style={styles.photo} contentFit="cover" />
+              <Image source={{ uri: thumbUrl(photo, 400) }} style={styles.photo} contentFit="cover" />
               {i === 0 && (
                 <View style={[styles.primaryBadge, { backgroundColor: c.primary }]}>
                   <Text style={[styles.primaryBadgeText, { color: c.primaryText }]}>대표</Text>
