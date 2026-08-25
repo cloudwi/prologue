@@ -202,7 +202,7 @@ export default function MeetupsScreen() {
             <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonSearch} />
             <View style={styles.skeletonList}>
               {[0, 1].map((i) => (
-                <Skeleton key={i} c={c} height={280} radius={Radius.lg} />
+                <Skeleton key={i} c={c} height={268} radius={Radius.lg} />
               ))}
             </View>
           </View>
@@ -387,10 +387,11 @@ export default function MeetupsScreen() {
                       {feeLabel(m)} · 확정 {m.confirmedCount}/{m.capacity}명
                     </Text>
 
-                    <View style={styles.cardFoot}>
-                      <Text style={[styles.cardFootText, { color: c.primaryStrong }]}>자세히 보기</Text>
-                      <Ionicons name="chevron-forward" size={14} color={c.primaryStrong} />
-                    </View>
+                    {/*
+                      * '자세히 보기'는 뺐다(2026-08-25) — 카드 전체가 이미 상세로 가는 버튼이라
+                      * 하는 일을 글자로 한 번 더 말하는 셈이었다. 누를 수 있다는 신호는
+                      * 누름 피드백(opacity)이 준다. 덤으로 카드의 포인트 컬러가 상태 칩 하나로 정리된다.
+                      */}
                     </View>
                   </Pressable>
                 </Animated.View>
@@ -583,7 +584,6 @@ const styles = StyleSheet.create({
   statusChip: { height: 24, paddingHorizontal: 10, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   statusChipText: { fontSize: 12.5, fontWeight: '700' },
   cardMeta: { fontSize: 14, marginTop: 5 },
-  cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 12 },
   filterArea: { marginBottom: 14, gap: 10 },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderRadius: Radius.pill, paddingHorizontal: 14 },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
@@ -613,7 +613,6 @@ const styles = StyleSheet.create({
   filterChip: { height: 32, paddingHorizontal: 13, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   regionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   filterChipText: { fontSize: 13.5, fontWeight: '700' },
-  cardFootText: { fontSize: 13.5, fontWeight: '700' },
 
   applyBtnText: { fontSize: 15.5, fontWeight: '700' },
 
