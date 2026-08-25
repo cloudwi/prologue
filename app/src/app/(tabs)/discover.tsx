@@ -27,6 +27,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 15;
+const ANSWER_MAX = 300;
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
@@ -209,23 +210,28 @@ export default function DiscoverScreen() {
 
               {isEditing ? (
                 editorOpen ? (
-                  <View style={styles.editor}>
-                    <TextInput
-                      value={draft}
-                      onChangeText={setDraft}
-                      placeholder="오늘의 마음을 적어보세요"
-                      placeholderTextColor={c.textSecondary}
-                      multiline
-                      autoFocus
-                      maxLength={300}
-                      style={[styles.input, { color: c.text, backgroundColor: c.backgroundElement }]}
-                    />
-                    <View style={styles.editorRow}>
-                      <Text style={[styles.counter, { color: c.textSecondary }]}>
-                        {draft.trim().length > 0 && draft.trim().length < ANSWER_MIN
-                          ? `${ANSWER_MIN}자 이상 · ${draft.length}/300`
-                          : `${draft.length}/300`}
-                      </Text>
+                  /*
+                   * 답변 종이 — 쓰는 모습이 저장 후 읽는 모습과 같다.
+                   * 표지 위에 흰 종이 한 장을 올리고, 그 안에서 왼쪽 테라코타 선 + 인용체로 쓴다.
+                   * 카운터·취소·저장은 종이 아래 한 줄에 모아 "폼"이 아니라 "한 장"으로 읽히게 한다.
+                   */
+                  <View style={[styles.sheet, { backgroundColor: c.backgroundElement }]}>
+                    <View style={styles.sheetBody}>
+                      <View style={[styles.myAnswerRule, { backgroundColor: c.primary }]} />
+                      <TextInput
+                        value={draft}
+                        onChangeText={setDraft}
+                        placeholder="오늘의 마음을 적어보세요"
+                        placeholderTextColor={c.textSecondary}
+                        multiline
+                        autoFocus
+                        maxLength={ANSWER_MAX}
+                        scrollEnabled={false}
+                        style={[styles.input, { color: c.text, fontFamily: Fonts.serif }]}
+                      />
+                    </View>
+                    <View style={[styles.sheetFoot, { borderTopColor: c.border }]}>
+                      <AnswerCounter length={draft.trim().length} c={c} />
                       <View style={styles.editorActions}>
                         <Pressable onPress={cancelEdit} disabled={submitting} style={styles.cancel} hitSlop={6}>
                           <Text style={{ color: c.textSecondary, fontSize: 15, fontWeight: '600' }}>취소</Text>
@@ -233,7 +239,7 @@ export default function DiscoverScreen() {
                         <Pressable
                           onPress={submit}
                           disabled={draft.trim().length < ANSWER_MIN || submitting}
-                          style={[styles.submit, { backgroundColor: c.primary, opacity: draft.trim().length < ANSWER_MIN || submitting ? 0.5 : 1 }]}
+                          style={[styles.submit, { backgroundColor: c.primary, opacity: draft.trim().length < ANSWER_MIN || submitting ? 0.4 : 1 }]}
                         >
                           <Text style={[styles.submitText, { color: c.primaryText }]}>
                             {submitting ? '저장 중...' : today?.answered ? '수정 완료' : '답변 남기기'}
@@ -357,6 +363,25 @@ export default function DiscoverScreen() {
  * 정오 전 — 기다림을 콘텐츠로. 남은 시간을 분 단위로 세며 "도착"이라는 말을 미리 건넨다.
  * 답을 아직 안 썼으면 그 사이 할 일을 같이 알려준다.
  */
+/**
+ * 답변 종이 아래 안내 한 줄.
+ * 비어 있을 땐 규칙을, 모자랄 땐 "앞으로 몇 자"를, 넘겼으면 글자 수만 조용히 보여준다.
+ * "15자 이상 · 3/300"처럼 숫자를 두 개 나란히 두면 폼 검증 메시지처럼 읽힌다.
+ */
+function AnswerCounter({ length, c }: { length: number; c: ThemeColors }) {
+  if (length === 0) {
+    return <Text style={[styles.counter, { color: c.textSecondary }]}>{ANSWER_MIN}자부터 남길 수 있어요</Text>;
+  }
+  if (length < ANSWER_MIN) {
+    return <Text style={[styles.counter, { color: c.primaryStrong, fontWeight: '600' }]}>앞으로 {ANSWER_MIN - length}자</Text>;
+  }
+  return (
+    <Text style={[styles.counter, { color: length >= ANSWER_MAX - 20 ? c.primaryStrong : c.textSecondary }]}>
+      {length}/{ANSWER_MAX}
+    </Text>
+  );
+}
+
 function ArrivalCountdown({ answered, c }: { answered: boolean; c: ThemeColors }) {
   const [remaining, setRemaining] = useState(() => msUntilNoonKst());
   useEffect(() => {
@@ -572,14 +597,16 @@ const styles = StyleSheet.create({
 
   composeEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, height: 52, paddingHorizontal: 18, borderRadius: Radius.md },
   composeEntryText: { fontSize: 16 },
-  editor: { marginTop: 18 },
-  input: { minHeight: 150, borderRadius: Radius.md, padding: 16, fontSize: 17, lineHeight: 25, textAlignVertical: 'top' },
-  editorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  // 답변 종이 — 표지 위 흰 면 한 장. 글줄은 저장 후의 내 답(17.5/27)과 같은 리듬.
+  sheet: { marginTop: 20, borderRadius: Radius.lg, paddingTop: 18, paddingHorizontal: 20, overflow: 'hidden' },
+  sheetBody: { flexDirection: 'row', gap: 14, paddingBottom: 12 },
+  input: { flex: 1, minHeight: 27 * 4, fontSize: 17.5, lineHeight: 27, padding: 0, paddingTop: 0, textAlignVertical: 'top' },
+  sheetFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 12 },
   editorActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  counter: { fontSize: 13 },
+  counter: { fontSize: 13.5 },
   cancel: { padding: 4 },
-  submit: { height: 42, paddingHorizontal: 18, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  submitText: { fontSize: 15.5, fontWeight: '700' },
+  submit: { height: 38, paddingHorizontal: 16, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  submitText: { fontSize: 15, fontWeight: '700' },
 
   // 내 답 — 질문 아래 인용처럼. 왼쪽 테라코타 선 한 줄이 "내 목소리"라는 표시.
   myAnswerBlock: { flexDirection: 'row', marginTop: 20, gap: 14 },
