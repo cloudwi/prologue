@@ -162,7 +162,9 @@ data class HostMeetupView(
 /**
  * 오프라인 모임 유스케이스.
  *
- * 누구나 앱에서 모임을 열 수 있고(모임장 = 만든 사람), 회원은 앱에서 신청한다.
+ * 회원은 앱에서 모임을 보고 신청한다. 다만 **여는 건 아직 운영자만** 할 수 있다([MeetupHostPolicy]) —
+ * 초창기 기능이라 처음 몇 번은 직접 치러 보며 규칙을 배우는 편이 낫다.
+ * 모임장 = 만든 사람이라는 구조는 그대로다: 제한이 풀리면 그날부터 누구나 모임장이 된다.
  * 모임장은 앱(또는 웹 콘솔 /host)에서 입금을 확인해 확정한다.
  * 돈은 카카오에서 오간다 — 여기에는 신청·확정·개최의 기록만 남고,
  * 그 기록이 모임장의 신뢰 신호(개최 횟수·확정 인원)로 공개된다.
@@ -175,7 +177,11 @@ class MeetupService(
     private val jobVerificationService: JobVerificationService,
     private val notificationService: NotificationService,
     private val photoStorage: PhotoStorage,
+    private val hostPolicy: MeetupHostPolicy,
 ) {
+    /** 이 사람이 모임을 열 수 있는지 — 앱이 '모임 열기' 버튼을 그릴지 정할 때 묻는다. */
+    fun canHost(accountId: UUID): Boolean = hostPolicy.canHost(accountId)
+
     // ── 회원(앱) ──
 
     /** 다가오는 모임 — 가까운 날짜순. */
@@ -334,6 +340,10 @@ class MeetupService(
         coverUrls: List<String>,
         kakaoLink: String,
     ): UUID {
+        // 서버가 막아야 실효가 있다 — 앱은 버튼을 숨길 뿐이고, 옛 앱과 직접 호출은 여기서 걸린다.
+        if (!hostPolicy.canHost(hostAccountId)) {
+            throw DailyMeetException("모임은 아직 운영자만 열 수 있어요. 열고 싶은 모임이 있다면 알려주세요.")
+        }
         val saved = meetupRepository.save(
             Meetup.create(
                 hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity,

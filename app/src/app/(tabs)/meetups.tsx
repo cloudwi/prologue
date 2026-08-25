@@ -120,6 +120,8 @@ export default function MeetupsScreen() {
   const [region, setRegion] = useState<string | null>(null);
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  // 모임은 아직 운영자만 연다 — 서버가 판정해 내려주고, 앱은 버튼을 그릴지만 정한다.
+  const [canCreate, setCanCreate] = useState(false);
   const [my, setMy] = useState<MyEligibility | null>(null);
 
   const load = useCallback(async () => {
@@ -130,7 +132,8 @@ export default function MeetupsScreen() {
         getMyProfile().catch(() => null),
         getJobStatus().catch(() => ({ verified: false, domain: null })),
       ]);
-      setMeetups(ups);
+      setMeetups(ups.meetups);
+      setCanCreate(ups.canCreate);
       setHistory(done);
       if (profile) {
         setMy({
@@ -200,13 +203,15 @@ export default function MeetupsScreen() {
             <View style={styles.header}>
               <View style={styles.headerRow}>
                 <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
-                <Pressable
-                  onPress={() => router.push('/meetup-create')}
-                  style={({ pressed }) => [styles.hostBtn, { backgroundColor: c.text, opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Ionicons name="add" size={16} color={c.background} />
-                  <Text style={[styles.hostBtnText, { color: c.background }]}>모임 열기</Text>
-                </Pressable>
+                {canCreate && (
+                  <Pressable
+                    onPress={() => router.push('/meetup-create')}
+                    style={({ pressed }) => [styles.hostBtn, { backgroundColor: c.text, opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <Ionicons name="add" size={16} color={c.background} />
+                    <Text style={[styles.hostBtnText, { color: c.background }]}>모임 열기</Text>
+                  </Pressable>
+                )}
               </View>
               <Text style={[styles.subtitle, { color: c.textSecondary }]}>
                 {meetups.length > 0 ? '가까운 날짜의 모임부터 보여드려요' : '오프라인에서 만나는 작은 모임'}
@@ -288,14 +293,17 @@ export default function MeetupsScreen() {
                 <Image source={require('@/assets/images/brand-mark.png')} style={styles.emptyMark} contentFit="contain" />
                 <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>준비 중인 모임이 없어요</Text>
                 <Text style={[styles.emptyText, { color: c.textSecondary }]}>
-                  새 모임이 열리면 여기에 도착해요.{'\n'}먼저 열어보는 건 어때요?
+                  {canCreate ? `새 모임이 열리면 여기에 도착해요.\n먼저 열어보는 건 어때요?` : '새 모임이 열리면 여기에 도착해요.'}
                 </Text>
-                <Pressable
-                  onPress={() => router.push('/meetup-create')}
-                  style={({ pressed }) => [styles.emptyHostBtn, { backgroundColor: c.primary, opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Text style={[styles.applyBtnText, { color: c.primaryText }]}>첫 모임 열기</Text>
-                </Pressable>
+                {/* 열 수 없는 사람에게 '첫 모임 열기'는 막다른 길이다 — 버튼 자체를 그리지 않는다. */}
+                {canCreate && (
+                  <Pressable
+                    onPress={() => router.push('/meetup-create')}
+                    style={({ pressed }) => [styles.emptyHostBtn, { backgroundColor: c.primary, opacity: pressed ? 0.7 : 1 }]}
+                  >
+                    <Text style={[styles.applyBtnText, { color: c.primaryText }]}>첫 모임 열기</Text>
+                  </Pressable>
+                )}
               </Animated.View>
             ) : visible.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: c.backgroundElement }]}>

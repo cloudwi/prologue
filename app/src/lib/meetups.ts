@@ -91,16 +91,29 @@ export type MeetupHistory = {
   hostNickname: string | null;
 };
 
-/** 다가오는 모임 — 가까운 날짜순 (GET /meetups). */
-export async function getMeetups(): Promise<Meetup[]> {
-  const res = await authedRequest<{ meetups: Meetup[] }>('GET', '/meetups');
+export type MeetupBoard = {
+  meetups: Meetup[];
+  /**
+   * 내가 모임을 열 수 있는지 — 모임은 아직 운영자만 연다(2026-08-25).
+   * 서버가 판정해 내려주므로 앱은 이메일을 알 필요도, 알 방법도 없다.
+   * 구버전 서버는 안 내려주므로 없으면 false — 못 여는 쪽이 안전한 기본값이다.
+   */
+  canCreate: boolean;
+};
+
+/** 다가오는 모임 — 가까운 날짜순 + 내가 열 수 있는지 (GET /meetups). */
+export async function getMeetups(): Promise<MeetupBoard> {
+  const res = await authedRequest<{ meetups: Meetup[]; canCreate?: boolean }>('GET', '/meetups');
   // 서버가 앱보다 구버전일 수 있다(배포 시차) — 새 필드는 기본값으로 메워 화면이 죽지 않게 한다.
-  return res.meetups.map((m) => ({
-    ...m,
-    coverUrls: m.coverUrls ?? [],
-    participants: m.participants ?? [],
-    requireJobVerified: m.requireJobVerified ?? false,
-  }));
+  return {
+    canCreate: res.canCreate ?? false,
+    meetups: res.meetups.map((m) => ({
+      ...m,
+      coverUrls: m.coverUrls ?? [],
+      participants: m.participants ?? [],
+      requireJobVerified: m.requireJobVerified ?? false,
+    })),
+  };
 }
 
 /** 지난 모임 — 개최 완료 기록 (GET /meetups/history). */

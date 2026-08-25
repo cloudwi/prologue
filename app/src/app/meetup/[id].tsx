@@ -25,8 +25,8 @@ export default function MeetupDetailScreen() {
 
   const load = useCallback(async () => {
     try {
-      const all = await getMeetups();
-      setMeetup(all.find((m) => m.meetupId === id) ?? null);
+      const { meetups } = await getMeetups();
+      setMeetup(meetups.find((m) => m.meetupId === id) ?? null);
     } catch {
       // 세션 만료 등 — 빈 상태로 둔다
     } finally {

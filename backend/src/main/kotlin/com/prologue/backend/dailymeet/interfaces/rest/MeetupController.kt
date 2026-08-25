@@ -46,7 +46,11 @@ class MeetupController(
         return CoverUploadResponse(meetupCoverService.upload(UUID.fromString(authentication.name), file.bytes))
     }
 
-    data class MeetupsResponse(val meetups: List<MeetupView>)
+    /**
+     * [canCreate] — 이 사람이 모임을 열 수 있는지. 앱이 '모임 열기' 버튼을 그릴지 정한다.
+     * 옛 앱은 이 필드를 모르고 버튼을 늘 그리지만, 눌러도 서버가 거절한다(가산적 변경).
+     */
+    data class MeetupsResponse(val meetups: List<MeetupView>, val canCreate: Boolean = false)
     data class MeetupHistoryResponse(val meetups: List<MeetupHistoryView>)
     data class MyMeetupsResponse(val meetups: List<HostMeetupView>)
 
@@ -93,8 +97,10 @@ class MeetupController(
 
     /** 다가오는 모임 — 가까운 날짜순. 내 신청 상태와 (신청자에게만) 카카오 링크가 담긴다. */
     @GetMapping
-    fun upcoming(authentication: Authentication): MeetupsResponse =
-        MeetupsResponse(meetupService.upcoming(UUID.fromString(authentication.name)))
+    fun upcoming(authentication: Authentication): MeetupsResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return MeetupsResponse(meetupService.upcoming(accountId), canCreate = meetupService.canHost(accountId))
+    }
 
     /** 지난 모임 — 개최 완료 기록. 모임이 얼마나 잘 굴러가는지의 공개 신호. */
     @GetMapping("/history")
