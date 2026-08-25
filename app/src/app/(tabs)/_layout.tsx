@@ -40,6 +40,11 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      // 비활성 탭을 네이티브 뷰에서 떼어내지 않는다.
+      // 페이드 전환이 켜지면 bottom-tabs가 불투명도와 activityState(분리 여부)를 같은 Animated 값으로 구동하는데,
+      // 전환이 끝나기 전에 다른 탭을 누르면 "떼어내라"와 "다시 붙여라"의 순서가 어긋나 화면이 빈 채로 남는다.
+      // 탭이 넷뿐이라 계속 붙여두는 비용은 없다. (react-navigation #12755, discussions #12721)
+      detachInactiveScreens={false}
       screenOptions={({ route }) => ({
         headerShown: false,
         // 기본값은 'none'이라 화면이 툭 바뀐다. 짧은 페이드 하나만 둔다 —
