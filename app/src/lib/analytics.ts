@@ -49,7 +49,8 @@ type AnalyticsEvent =
   // 오프라인 모임
   | 'meetup_applied'         // 모임 신청
   | 'meetup_followed'        // 모임 따라가기 — 다음 회차 알림 신청(연속 참여 의사)
-  | 'meetup_created';        // 모임 열기 — 유저가 모임장이 된 순간
+  | 'meetup_created'         // 모임 열기 — 유저가 모임장이 된 순간
+  | 'meetup_shared';         // 초대장 전하기 — 자리를 채우는 유일한 손
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {
   client?.capture(event, properties);

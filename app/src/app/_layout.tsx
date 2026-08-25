@@ -14,6 +14,7 @@ import { UpdateRequired } from '@/components/update-required';
 import { requiredUpdateStoreUrl } from '@/lib/app-config';
 import { AppearanceProvider, useAppearance } from '@/lib/appearance';
 import { queryClient, wireAppStateToQueryClient } from '@/lib/query';
+import { APP_CAPTURE_KEY } from '@/lib/screen-capture';
 
 /**
  * 에러 모니터링 — 유저가 겪는 크래시를 제보보다 먼저 알기 위한 장치.
@@ -78,7 +79,7 @@ function useSplashFailsafe() {
 }
 
 /**
- * 화면 캡처 차단 — 앱 전체에 건다.
+ * 화면 캡처 차단 — 앱 전체에 건다(예외는 [useAllowScreenCapture]를 부르는 화면뿐).
  *
  * 상대의 사진과 답변이 늘 떠 있고, 편지에는 전화번호와 카카오톡 ID가 실려 간다.
  * 건넨 사람은 상대 한 명에게만 준 것이라 믿는데 그게 갈무리돼 떠돌면 신뢰가 무너진다.
@@ -87,7 +88,8 @@ function useSplashFailsafe() {
  * iOS는 캡처 차단(13+)은 되지만 앱 스위처 가림은 별도라, 그쪽만 따로 켠다.
  */
 function useScreenPrivacy() {
-  usePreventScreenCapture();
+  // 열쇠에 이름을 준다 — 모임 초대장 화면이 이 열쇠를 잠시 반납해 캡처를 연다.
+  usePreventScreenCapture(APP_CAPTURE_KEY);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') return;

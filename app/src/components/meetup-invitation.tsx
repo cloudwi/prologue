@@ -31,6 +31,8 @@ type Props = {
   onOpenKakao?: (link: string) => void;
   /** 모임 따라가기 토글 — 다음 회차가 열리면 알림을 받는다. 미리보기에는 넘기지 않는다. */
   onToggleFollow?: (on: boolean) => void;
+  /** 초대장 전하기 — 공유 시트를 연다. 미리보기에는 넘기지 않는다(아직 주소가 없는 모임이라). */
+  onShare?: () => void;
   contentContainerStyle?: StyleProp<ViewStyle>;
 };
 
@@ -46,6 +48,7 @@ export function MeetupInvitation({
   onCancel,
   onOpenKakao,
   onToggleFollow,
+  onShare,
   contentContainerStyle,
 }: Props) {
   const meetDate = new Date(meetup.meetAt);
@@ -207,27 +210,28 @@ export function MeetupInvitation({
       </Section>
 
       {/*
-        * 따라가기 — 이 자리가 좋았다면 다음에도 부른다.
-        * 모임은 단발이지만 '이 모임'은 이어진다: 다음 회차가 열리면 알림이 간다.
+        * 초대장 끝의 두 몸짓 — 전하기와 따라가기.
+        *
+        * 전하기: 종이 청첩장이 그렇듯 초대장은 건네라고 있는 것이다. 모임장에게는 자리를 채우는
+        *   유일한 손이고, 참석자에게는 친구를 데려오는 손이다 — 그래서 누구에게나 보인다.
+        * 따라가기: 이 자리가 좋았다면 다음에도 부른다. 모임은 단발이지만 '이 모임'은 이어진다.
+        *   seriesId가 없으면 회차를 모르는 구버전 서버다 — 누르면 404가 나므로 아예 그리지 않는다.
         */}
-      {/* seriesId가 없으면 회차를 모르는 구버전 서버다 — 누르면 404가 나므로 아예 그리지 않는다. */}
-      {!preview && onToggleFollow != null && !meetup.isMine && meetup.seriesId != null && (
-        <Pressable
-          onPress={() => onToggleFollow(!(meetup.following ?? false))}
-          style={({ pressed }) => [
-            styles.followBtn,
-            { borderColor: meetup.following ? c.primary : c.border, opacity: pressed ? 0.6 : 1 },
-          ]}
-        >
-          <Ionicons
-            name={meetup.following ? 'notifications' : 'notifications-outline'}
-            size={15}
-            color={meetup.following ? c.primaryStrong : c.textSecondary}
-          />
-          <Text style={[styles.followText, { color: meetup.following ? c.primaryStrong : c.text }]}>
-            {meetup.following ? '다음 회차 알림 받는 중' : '다음 회차 열리면 알림 받기'}
-          </Text>
-        </Pressable>
+      {!preview && (
+        <View style={styles.pillRow}>
+          {onShare != null && (
+            <Pill icon="share-outline" label="초대장 전하기" onPress={onShare} c={c} />
+          )}
+          {onToggleFollow != null && !meetup.isMine && meetup.seriesId != null && (
+            <Pill
+              icon={meetup.following ? 'notifications' : 'notifications-outline'}
+              label={meetup.following ? '다음 회차 알림 받는 중' : '다음 회차 알림 받기'}
+              onPress={() => onToggleFollow(!(meetup.following ?? false))}
+              c={c}
+              active={meetup.following ?? false}
+            />
+          )}
+        </View>
       )}
 
       <Text style={[styles.closing, { color: c.textSecondary }]}>프롤로그에서 보내는 초대장이에요</Text>
@@ -318,6 +322,36 @@ function MapButton({ label, onPress, c }: { label: string; onPress: () => void; 
   );
 }
 
+/**
+ * 테두리만 있는 알약 — 초대장 끝의 부차적인 동작들.
+ * [active]면 테두리와 글자만 테라코타로 바뀐다(면은 그대로) — 포인트 컬러의 면은 RSVP 하나뿐이다.
+ */
+function Pill({
+  icon,
+  label,
+  onPress,
+  c,
+  active = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  c: ThemeColors;
+  active?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.pill, { borderColor: active ? c.primary : c.border, opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Ionicons name={icon} size={15} color={active ? c.primaryStrong : c.textSecondary} />
+      <Text style={[styles.pillText, { color: active ? c.primaryStrong : c.text }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function BigButton({ label, onPress, c, disabled, primary }: { label: string; onPress: () => void; c: ThemeColors; disabled?: boolean; primary?: boolean }) {
   return (
     <Pressable
@@ -395,11 +429,12 @@ const styles = StyleSheet.create({
   cancelWrap: { marginTop: -4 },
   cancelLink: { fontSize: 14, textDecorationLine: 'underline' },
 
-  // 따라가기 — 테두리 알약. 켜지면 테두리와 글자만 테라코타로 바뀐다(면은 그대로).
-  followBtn: {
+  // 전하기·따라가기 — 테두리 알약. 둘 다 있으면 한 줄에 서고, 좁으면 아래로 접힌다.
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: 24, marginTop: 40 },
+  pill: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    alignSelf: 'center', height: 44, paddingHorizontal: 20, borderRadius: Radius.pill, borderWidth: 1, marginTop: 40,
+    height: 44, paddingHorizontal: 20, borderRadius: Radius.pill, borderWidth: 1,
   },
-  followText: { fontSize: 14.5, fontWeight: '700' },
+  pillText: { fontSize: 14.5, fontWeight: '700' },
   closing: { fontSize: 12, textAlign: 'center', marginTop: 48, letterSpacing: 0.5 },
 });

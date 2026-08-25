@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
 
 import { ImageViewerModal } from '@/components/image-viewer';
 import { MeetupInvitation } from '@/components/meetup-invitation';
@@ -8,11 +8,16 @@ import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
+import { meetupShareText } from '@/lib/meetup-format';
 import { applyMeetup, cancelMeetup, feeLabel, followMeetup, getMeetups, type Meetup } from '@/lib/meetups';
+import { useAllowScreenCapture } from '@/lib/screen-capture';
 
 /**
  * 모임 상세 — 정보 화면이 아니라 초대장이다(유저 결정 2026-08-24).
  * 조판은 MeetupInvitation(모임 열기의 미리보기와 공유). 이 화면은 데이터와 동작만 잇는다.
+ *
+ * 앱에서 유일하게 스크린샷이 열려 있는 화면이다 — 초대장은 퍼뜨리라고 만든 것이라,
+ * 다른 화면을 지키는 캡처 차단이 여기서는 방해만 된다([useAllowScreenCapture]).
  */
 export default function MeetupDetailScreen() {
   const c = useTheme();
@@ -23,6 +28,8 @@ export default function MeetupDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+
+  useAllowScreenCapture();
 
   const load = useCallback(async () => {
     try {
@@ -110,6 +117,17 @@ export default function MeetupDetailScreen() {
     }
   }
 
+  /**
+   * 초대장 전하기 — 공유 시트로 넘긴다.
+   *
+   * 링크는 백엔드가 그 모임의 OG 태그를 붙여 내려주는 초대장 페이지라, 카카오톡에서는
+   * 커버 사진과 제목이 그대로 펼쳐진다. 미리보기가 안 뜨는 곳도 있어 글에 날짜·장소를 함께 싣는다.
+   */
+  async function share(m: Meetup) {
+    track('meetup_shared');
+    await Share.share({ message: meetupShareText(m) });
+  }
+
   function openKakao(link: string) {
     void Linking.openURL(link).catch(() => Alert.alert('링크를 열지 못했어요', link));
   }
@@ -142,6 +160,7 @@ export default function MeetupDetailScreen() {
           onCancel={() => confirmCancel(meetup)}
           onOpenKakao={openKakao}
           onToggleFollow={(on) => void toggleFollow(on)}
+          onShare={() => void share(meetup)}
         />
       )}
 
