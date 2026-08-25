@@ -121,7 +121,7 @@ class NotificationService(
         accountId,
         PushMessage(
             title = "오늘의 상대가 도착했어요",
-            body = "같은 질문에 답한 한 사람이 기다리고 있어요.",
+            body = "질문에 답을 남긴 한 사람이 기다리고 있어요.",
             data = mapOf("screen" to "discover"),
         ),
     )

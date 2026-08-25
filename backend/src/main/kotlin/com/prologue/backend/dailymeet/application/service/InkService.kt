@@ -2,12 +2,11 @@ package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.InkWallet
+import com.prologue.backend.dailymeet.domain.model.ServiceDay
 import com.prologue.backend.dailymeet.domain.repository.InkLedgerRepository
 import com.prologue.backend.dailymeet.domain.repository.InkWalletRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDate
-import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -56,7 +55,10 @@ class InkService(
     }
 
     /**
-     * 오늘의 답변 보상 — 하루(KST) 한 번만 [InkPrice.DAILY_ANSWER]을 지급한다.
+     * 오늘의 답변 보상 — 서비스 하루([ServiceDay], 새벽 5시 경계)에 한 번만 [InkPrice.DAILY_ANSWER]을 지급한다.
+     *
+     * 달력 자정이 아니라 질문이 바뀌는 경계를 쓴다 — 경계가 어긋나면 새벽 4시에 답한 사람이
+     * 같은 질문으로 잉크를 두 번 받거나, 반대로 새 질문에 답하고도 못 받는다.
      *
      * "새 답변을 썼을 때"가 아니라 "오늘 아직 안 받았을 때"를 기준으로 삼는다. 질문은 풀을 한 바퀴 돌면
      * 다시 오고, 그날의 답변은 새로 쓰이는 게 아니라 고쳐 쓰이는데, 그날도 답을 남긴 건 마찬가지라서다.
@@ -66,7 +68,7 @@ class InkService(
      */
     @Transactional
     fun rewardDailyAnswer(accountId: UUID): Int {
-        val todayStart = LocalDate.now(KST).atStartOfDay(KST).toInstant()
+        val todayStart = ServiceDay.startOfToday()
         val last = ledgerRepository.latestAt(accountId, REASON_ANSWER)
         if (last != null && !last.isBefore(todayStart)) return 0
         grantTo(accountId, InkPrice.DAILY_ANSWER, REASON_ANSWER)
@@ -98,7 +100,6 @@ class InkService(
         /** 친구 초대 — 초대한 쪽·초대받은 쪽 모두 이 사유로 받는다. */
         const val REASON_REFERRAL = "REFERRAL"
         private const val HISTORY_LIMIT = 50
-        private val KST = ZoneId.of("Asia/Seoul")
     }
 }
 

@@ -3,12 +3,11 @@ package com.prologue.backend.dailymeet.application.service
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
+import com.prologue.backend.dailymeet.domain.model.ServiceDay
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDate
-import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -19,6 +18,9 @@ import java.util.UUID
  *
  * 답을 남기면 하루 한 번 잉크가 소량 고인다([InkService.rewardDailyAnswer]) —
  * 답변은 이 앱의 공급이라, 꾸준히 쓰는 사람이 돈 없이도 편지 한 통을 모을 수 있게.
+ *
+ * 답을 남기는 순간 오늘의 상대도 도착한다([PeerMatchingService.todayPeers]) — 쓰는 일의 보상은
+ * 잉크가 아니라 사람이다. 그래서 "하루"의 경계도 둘이 같아야 한다([ServiceDay]).
  */
 @Service
 class DailyAnswerService(
@@ -62,11 +64,7 @@ class DailyAnswerService(
     }
 
     private fun todayQuestion(): Question =
-        QuestionRotation.of(questionRepository.findAllOrdered(), LocalDate.now(KST))
-
-    companion object {
-        private val KST = ZoneId.of("Asia/Seoul")
-    }
+        QuestionRotation.of(questionRepository.findAllOrdered(), ServiceDay.now())
 }
 
 /** 답변 저장 결과 — 저장된 답과, 이번에 고인 잉크(오늘 이미 받았으면 0). */

@@ -94,7 +94,16 @@ data class PeerView(
  * 오늘의 상대 목록. 매일 정오(KST) 전에는 [open]=false, 공개 후에는 최대 2명의 [peers].
  */
 data class TodayPeersView(
+    /**
+     * 공개 시각이 사라진 뒤로는 언제나 true(2026-08-25).
+     * 정오 카운트다운을 그리던 옛 앱이 이 값을 보고 있어 필드는 남긴다 — 가산적 변경 원칙.
+     */
     val open: Boolean,
     val answerUnlocked: Boolean,
+    /**
+     * [peers]가 오늘 도착한 사람이 아니라 지난번에 만난 사람이라는 표시.
+     * 아직 오늘 답하지 않았다는 뜻이고, 앱은 "답을 남기면 새로운 사람이 도착해요"로 안내한다.
+     */
+    val carriedOver: Boolean = false,
     val peers: List<PeerView>,
 )

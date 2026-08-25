@@ -3,6 +3,7 @@ package com.prologue.backend.dailymeet.interfaces.rest
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
+import com.prologue.backend.dailymeet.domain.model.ServiceDay
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -11,8 +12,6 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.time.LocalDate
-import java.time.ZoneId
 
 data class QuestionItem(val id: Long, val content: String, val isToday: Boolean)
 
@@ -34,7 +33,7 @@ class AdminQuestionController(
     fun list(): QuestionsResponse {
         val questions = questionRepository.findAllOrdered()
         // 오늘의 질문 판정은 앱과 같은 규칙을 쓴다 — 공식을 베끼면 언젠가 두 화면이 다른 날을 가리킨다.
-        val todayId = if (questions.isEmpty()) null else QuestionRotation.of(questions, LocalDate.now(KST)).id
+        val todayId = if (questions.isEmpty()) null else QuestionRotation.of(questions, ServiceDay.now()).id
         return QuestionsResponse(
             questions.map { QuestionItem(it.id, it.content, it.id == todayId) },
         )
@@ -65,7 +64,4 @@ class AdminQuestionController(
         return trimmed
     }
 
-    companion object {
-        private val KST = ZoneId.of("Asia/Seoul")
-    }
 }

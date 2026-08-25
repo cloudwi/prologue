@@ -9,6 +9,7 @@ import com.prologue.backend.dailymeet.domain.model.PeerScore
 import com.prologue.backend.dailymeet.domain.model.ProfileAccess
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
+import com.prologue.backend.dailymeet.domain.model.ServiceDay
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
@@ -23,9 +24,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -47,14 +45,13 @@ class PeerMatchingService(
     private val lastSeenService: LastSeenService,
     private val jobVerificationService: JobVerificationService,
     private val blockService: BlockService,
-    /** 오늘의 상대 공개 시각. 기본 정오(KST), 개발 환경에서는 DAILY_REVEAL_TIME으로 앞당긴다. */
-    @param:Value("\${daily.reveal-time:12:00}") private val revealTime: LocalTime = LocalTime.NOON,
     /**
      * 후보를 찾을 질문의 범위(일). 1이면 오늘 질문에 답한 사람만 후보다.
      *
      * 질문 풀이 100개라 같은 날 같은 질문에 두 사람이 겹칠 확률이 낮다 — 유저가 적을 때
      * 오늘 하루로 묶으면 아무도 만나지 못한다. 사람이 많아지면 1에 가깝게 좁혀
      * "같은 질문에 답한 사람"이라는 원래 결을 되찾는다.
+     * (그때는 앱·웹 문구도 "질문에 답한 사람" → "같은 질문에 답한 사람"으로 함께 되돌릴 것.)
      */
     @param:Value("\${daily.candidate-days:7}") private val candidateDays: Int = 7,
     /**
@@ -91,32 +88,65 @@ class PeerMatchingService(
     @param:Value("\${daily.reintroduce-after-days:14}") private val reintroduceAfterDays: Long = 14,
 ) {
     /**
-     * 오늘의 상대 — 매일 정오(KST)에 [revealCount]명이 공개된다.
-     * 내가 오늘 질문에 답해야 상대가 보인다(Give&Take) — 받기만 하는 사람은 없게 한다.
-     * 공개된 상대는 그날 동안 고정(비독점: 같은 상대가 여러 명에게 노출 가능) + 공평 분배.
-     * 정오에 부족했으면 이후 조회 때마다 후보가 생기는 대로 채운다 — 먼저 답한 사람도 결국 소개받는다.
+     * 오늘의 상대 — 답을 남기는 순간 [revealCount]명이 도착한다.
+     *
+     * 시계가 아니라 **행동**이 소개를 연다(유저 결정 2026-08-25). 예전에는 정오에 일제히 공개했는데,
+     * 아침에 답한 사람은 보상까지 세 시간을 기다려야 해서 쓰는 일과 만나는 일이 끊겼다.
+     * 답이 곧 열쇠가 되면 "쓰면 만난다"가 한 동작으로 붙고, 하루 한 명이라는 리듬은
+     * 시계가 아니라 질문이 지킨다 — 하루에 질문이 하나니 하루에 한 명이다.
+     *
+     * 아직 답하기 전이면 자리를 비우지 않고 [carriedOver]로 지난번에 만난 사람을 남겨둔다.
      */
     @Transactional
-    fun todayPeers(accountId: UUID, now: LocalTime = LocalTime.now(KST)): TodayPeersView {
+    fun todayPeers(accountId: UUID): TodayPeersView {
         val questions = questionRepository.findAllOrdered()
-        val question = QuestionRotation.of(questions, LocalDate.now(KST))
+        val question = QuestionRotation.of(questions, ServiceDay.now())
         val answered = answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null
 
-        // 정오 전에는 아직 공개 전
-        if (now.isBefore(revealTime)) return TodayPeersView(open = false, answerUnlocked = answered, peers = emptyList())
-
-        // 내가 답하기 전에는 상대를 만들지도 보여주지도 않는다.
+        // 내가 답하기 전에는 오늘의 상대를 만들지도 보여주지도 않는다.
         // 여기서 일찍 빠져나가야 공개 기록(DailyReveal)도 남지 않는다 — 답하지 않은 사람 때문에
         // 후보의 노출 횟수가 올라가면, 정작 답한 사람들에게 돌아갈 몫이 줄어든다.
-        if (!answered) return TodayPeersView(open = true, answerUnlocked = false, peers = emptyList())
+        if (!answered) {
+            val carried = carriedOverReveals(accountId, question)
+            return TodayPeersView(
+                // open은 옛 앱을 위해 남는다 — 공개 시각이 사라졌으니 언제나 열려 있다.
+                open = true,
+                answerUnlocked = false,
+                carriedOver = carried.isNotEmpty(),
+                peers = carried.map { (_, answer) -> peerView(accountId, answer, answered = true, questions) },
+            )
+        }
 
         val revealed = fillRevealed(accountId, question, questions)
         return TodayPeersView(
             open = true,
             answerUnlocked = true,
+            carriedOver = false,
             // 오늘 공개된 상대는 방금 이어진 사람이라 잠길 수 없다 — 창을 물어볼 것도 없다.
             peers = revealed.map { peerView(accountId, it, answered = true, questions) },
         )
+    }
+
+    /**
+     * 답을 남기기 전에 오늘의 자리를 지키는 사람 — 지난번에 만난 상대.
+     *
+     * 자리를 비워두면 "아직 아무도 없어요"라는 빈 화면이 되고, 빈 화면을 본 사람은 다시 열지 않는다.
+     * 창이 닫힌(잠긴) 상대는 데려오지 않는다 — 잠긴 카드를 오늘의 자리에 놓는 건 소개가 아니라 광고다.
+     * 그 사람의 답은 이미 열려 있다(그날 내가 답했으니 소개됐다) — 그래서 answered=true로 본다.
+     */
+    private fun carriedOverReveals(accountId: UUID, today: Question): List<Pair<DailyReveal, Answer>> {
+        val unlockedPeers = profileAccessService.unlockedPeers(accountId)
+        val contactedAt = profileAccessService.lastContactedAtByPeer(accountId)
+        return dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_HISTORY))
+            .filter { it.questionId != today.id }
+            .mapNotNull { reveal -> answerRepository.findById(reveal.peerAnswerId)?.let { reveal to it } }
+            .distinctBy { (_, answer) -> answer.accountId }
+            .filter { (reveal, answer) ->
+                // 창은 마지막으로 마음이 오간 때부터 흐른다 — 소개와 하트·편지 중 더 최근 쪽.
+                val pairedAt = maxOf(reveal.createdAt, contactedAt[answer.accountId] ?: reveal.createdAt)
+                ProfileAccess.isOpen(pairedAt, unlocked = answer.accountId in unlockedPeers)
+            }
+            .take(revealCount)
     }
 
     /**
@@ -143,7 +173,7 @@ class PeerMatchingService(
 
         // 후보 풀은 가까운 범위부터, 비어 있으면 다음 범위로. 각 풀은 필요할 때만 읽는다.
         val pools: List<() -> List<Answer>> = listOf(
-            { answerRepository.findOthersByQuestionIds(QuestionRotation.recentIds(questions, LocalDate.now(KST), candidateDays), accountId) },
+            { answerRepository.findOthersByQuestionIds(QuestionRotation.recentIds(questions, ServiceDay.now(), candidateDays), accountId) },
         ) + fallbackDays().map { days ->
             { answerRepository.findOthersAnsweredSince(now.minus(Duration.ofDays(days.toLong())), accountId) }
         }
@@ -215,15 +245,17 @@ class PeerMatchingService(
         candidateFallbackDays.split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it > candidateDays }.sorted()
 
     /**
-     * 정오 이후 늦게 생긴 후보로 빈자리를 채운다 — 스케줄러가 오늘 답한 사람마다 부른다.
-     * 새로 채워졌으면 true. 조회 때마다 채우는 [todayPeers]와 같은 규칙을 쓰되, 화면을 열지 않은
-     * 사람에게도 도착을 만들어 줘야 "도착했어요" 알림을 보낼 수 있다.
+     * 답할 때 후보가 없어 비어 있던 자리를 나중에 채운다 — 스케줄러가 오늘 답한 사람마다 부른다.
+     *
+     * 답변이 곧 소개가 된 뒤에도 이 자리는 남는다. 아침에 답했는데 그 시각에 자격을 갖춘 후보가
+     * 하나도 없었다면(노출 상한·성비) 자리가 빈 채로 하루가 간다 — 저녁에 누가 답을 남겨도
+     * 앱을 다시 열어야만 만나고, 빈 화면을 본 사람은 다시 열지 않는다.
+     * 새로 채워졌으면 true. 채워진 사람에게만 "도착했어요"를 보낸다.
      */
     @Transactional
-    fun fillLateArrival(accountId: UUID, now: LocalTime = LocalTime.now(KST)): Boolean {
-        if (now.isBefore(revealTime)) return false
+    fun fillLateArrival(accountId: UUID): Boolean {
         val questions = questionRepository.findAllOrdered()
-        val question = QuestionRotation.of(questions, LocalDate.now(KST))
+        val question = QuestionRotation.of(questions, ServiceDay.now())
         if (answerRepository.findByAccountIdAndQuestionId(accountId, question.id) == null) return false
         val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
         if (before >= revealCount) return false
@@ -234,7 +266,7 @@ class PeerMatchingService(
     private data class Candidate(val answer: Answer, val peer: Member, val exposure: Long)
 
     /**
-     * 지난 상대 — 최근 3일 동안 공개됐던 상대(오늘 공개분 제외), 최신 공개 순.
+     * 지난 상대 — 최근 30일 안에 공개됐던 상대(오늘 공개분 제외), 최신 공개 순.
      * 하루가 지났다고 인연이 증발하지 않게, 소개는 짧은 여운을 남긴다.
      * 같은 상대가 여러 날 공개됐으면 한 사람으로 묶고 그동안의 문답을 목록으로 잇는다.
      * 답변 열람은 각 질문의 Give&Take 그대로: 그날 내가 답했으면 열려 있다.
@@ -242,11 +274,20 @@ class PeerMatchingService(
     @Transactional(readOnly = true)
     fun pastPeers(accountId: UUID): List<PastPeerView> {
         val questions = questionRepository.findAllOrdered()
-        val today = QuestionRotation.of(questions, LocalDate.now(KST))
+        val today = QuestionRotation.of(questions, ServiceDay.now())
         val questionById = questions.associateBy { it.id }
+
+        // 아직 오늘 답하지 않았다면 지난번 상대가 "오늘의 상대" 자리를 지키고 있다 — 여기서 또 보이면 같은 사람이 두 번이다.
+        val carriedOver = if (answerRepository.findByAccountIdAndQuestionId(accountId, today.id) != null) {
+            emptySet()
+        } else {
+            carriedOverReveals(accountId, today).map { (_, answer) -> answer.accountId }.toSet()
+        }
+
         val reveals = dailyRevealRepository.findRecentByViewer(accountId, Instant.now().minus(PAST_PEER_HISTORY))
             .filter { it.questionId != today.id }
             .mapNotNull { reveal -> answerRepository.findById(reveal.peerAnswerId)?.let { reveal to it } }
+            .filter { (_, answer) -> answer.accountId !in carriedOver }
 
         // 같은 질문이 여러 공개에 걸릴 수 있으니 열람 여부는 질문별로 한 번만 판정한다
         val answeredByQuestion = reveals.map { (reveal, _) -> reveal.questionId }.distinct()
@@ -354,8 +395,6 @@ class PeerMatchingService(
     }
 
     companion object {
-        private val KST = ZoneId.of("Asia/Seoul")
-
         /**
          * 지난 상대 목록에 남기는 기간.
          *
