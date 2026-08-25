@@ -22,7 +22,10 @@ import kotlin.test.assertTrue
 
 class HeartServiceTest {
 
-    private val answerRepository = mockk<AnswerRepository>()
+    private val answerRepository = mockk<AnswerRepository> {
+        // 하트 카드의 답변 id 폴백(가장 최근 답)은 기본적으로 비어 있다 — 폴백을 보는 테스트에서만 채운다
+        every { findAllByAccountId(any()) } returns emptyList()
+    }
     private val heartRepository = mockk<HeartRepository>(relaxed = true)
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
     private val memberQueryService = mockk<MemberQueryService>()
@@ -164,6 +167,20 @@ class HeartServiceTest {
         assertEquals(1, service.receivedHearts(me).size)
     }
 
+
+    @Test
+    fun `받은 하트 - 상대가 그 질문에 답한 적 없으면 가장 최근 답으로 카드를 연다`() {
+        // 후보 범위를 며칠치로 넓힌 뒤로는 상대가 '내가 답한 그 질문'에 답한 적이 없을 수 있다.
+        // 그때 답변 id가 null이면 카드가 열리지 않아 받은 호감이 막다른 길이 된다.
+        val recent = Answer.reconstitute(UUID.randomUUID(), peer, 77L, "다른 질문에 남긴 답", Instant.now())
+        every { heartRepository.findAllTo(me) } returns listOf(Heart.send(peer, me, 1L))
+        every { heartRepository.existsFromTo(me, peer) } returns false
+        every { memberQueryService.findProfile(peer) } returns memberOf(peer, "고요한아침")
+        every { answerRepository.findByAccountIdAndQuestionId(peer, 1L) } returns null // 그 질문엔 답한 적 없음
+        every { answerRepository.findAllByAccountId(peer) } returns listOf(recent)
+
+        assertEquals(recent.id, service.receivedHearts(me).single().peerAnswerId)
+    }
 
     @Test
     fun `받은 하트 - 사흘이 지나도록 아무 움직임이 없으면 목록에서 사라진다`() {

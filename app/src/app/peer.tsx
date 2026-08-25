@@ -134,6 +134,16 @@ export default function PeerDetailScreen() {
     const todayQuestion = typeof question === 'string' && question.length > 0 ? question : '오늘의 답변';
     letters.push({ key: 'today', question: todayQuestion, content: peer.peerAnswer });
   }
+  // 그날그날 남긴 답 — 다듬은 자기소개(프로필 문답) 뒤에 그 사람의 평소 목소리를 잇는다.
+  // 하트를 받았을 때 "이 사람은 무슨 생각을 하는 사람인가"를 알 수 있어야 답할지 정할 수 있다.
+  //
+  // 이미 올라간 질문은 건너뛴다 — '프로필에 올리기'로 올린 답은 프로필 문답과 최근 답변에 같이 잡힌다.
+  const shownQuestions = new Set(letters.map((l) => l.question).filter(Boolean));
+  for (const a of peer.recentAnswers ?? []) {
+    if (shownQuestions.has(a.question)) continue;
+    shownQuestions.add(a.question);
+    letters.push({ key: `recent-${a.questionId}`, question: a.question, content: a.content });
+  }
 
   /** 편지 쓰기 화면으로 — 이미 보낸 상대면 쓰기 대신 보낸 편지 확인으로. */
   function openCompose() {

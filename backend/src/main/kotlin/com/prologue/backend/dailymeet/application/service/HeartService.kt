@@ -111,8 +111,13 @@ class HeartService(
                     // 사진은 창이 열려 있을 때만. 목록에 얼굴이 남으면 잠근 의미가 없다.
                     photoUrl = if (open) peer.photoUrls.firstOrNull() else null,
                     locked = !open,
-                    // 하트가 오간 질문의 상대 답변 — 답이 없는 경우는 옛 데이터뿐.
-                    peerAnswerId = answerRepository.findByAccountIdAndQuestionId(peerId, heart.questionId)?.id,
+                    // 하트가 오간 질문의 상대 답변. 없으면 그 사람의 가장 최근 답으로 대신한다 —
+                    // 후보 범위를 며칠치로 넓힌 뒤로는 상대가 '내가 답한 그 질문'에 답한 적이 없을 수 있고,
+                    // 그때 null을 주면 카드가 아예 열리지 않아 호감이 막다른 길이 된다(2026-08-25).
+                    peerAnswerId = (
+                        answerRepository.findByAccountIdAndQuestionId(peerId, heart.questionId)
+                            ?: answerRepository.findAllByAccountId(peerId).maxByOrNull { it.createdAt }
+                        )?.id,
                     mutual = mutual,
                     mailSent = mailSent,
                     createdAt = heart.createdAt,

@@ -113,7 +113,7 @@ class PeerMatchingService(
                 open = true,
                 answerUnlocked = false,
                 carriedOver = carried.isNotEmpty(),
-                peers = carried.map { (_, answer) -> peerView(accountId, answer, answered = true, questions) },
+                peers = carried.map { (_, answer) -> peerView(accountId, answer, answered = true, questions, withRecentAnswers = true) },
             )
         }
 
@@ -123,7 +123,7 @@ class PeerMatchingService(
             answerUnlocked = true,
             carriedOver = false,
             // 오늘 공개된 상대는 방금 이어진 사람이라 잠길 수 없다 — 창을 물어볼 것도 없다.
-            peers = revealed.map { peerView(accountId, it, answered = true, questions) },
+            peers = revealed.map { peerView(accountId, it, answered = true, questions, withRecentAnswers = true) },
         )
     }
 
@@ -349,7 +349,7 @@ class PeerMatchingService(
             profileAccessService.pairedAt(accountId, answer.accountId),
             unlocked = answer.accountId in profileAccessService.unlockedPeers(accountId),
         )
-        val peer = peerView(accountId, answer, answered, questions)
+        val peer = peerView(accountId, answer, answered, questions, withRecentAnswers = true)
         return PeerProfileView(
             question = questions.firstOrNull { it.id == answer.questionId }?.content ?: "",
             peer = if (open) peer else peer.locked(),
@@ -365,6 +365,7 @@ class PeerMatchingService(
         peer: Answer,
         answered: Boolean,
         questions: List<Question>,
+        withRecentAnswers: Boolean = false,
     ): PeerView {
         val p = memberQueryService.findProfile(peer.accountId)
         val jobDomain = jobVerificationService.verifiedDomain(peer.accountId)
@@ -391,7 +392,28 @@ class PeerMatchingService(
             lastActive = LastActiveBucket.of(lastSeenService.lastSeenAt(peer.accountId)),
             jobVerified = jobDomain != null,
             jobDomain = jobDomain,
+            recentAnswers = if (withRecentAnswers) recentAnswersOf(peer, questions) else emptyList(),
         )
+    }
+
+    /**
+     * 그 사람이 최근에 남긴 답 [RECENT_ANSWER_COUNT]편 — 카드에 이미 올린 답 하나는 뺀다.
+     *
+     * 목록 화면에서는 부르지 않는다. 사람마다 답변 테이블을 한 번씩 더 읽는 일이라,
+     * 한 사람을 자세히 보는 자리(오늘의 상대·프로필 상세)에서만 값을 치른다.
+     */
+    private fun recentAnswersOf(shown: Answer, questions: List<Question>): List<PeerAnswerView> {
+        val questionById = questions.associateBy { it.id }
+        return answerRepository.findAllByAccountId(shown.accountId)
+            .asSequence()
+            .filter { it.id != shown.id }
+            .sortedByDescending { it.createdAt }
+            .take(RECENT_ANSWER_COUNT)
+            .mapNotNull { answer ->
+                val question = questionById[answer.questionId] ?: return@mapNotNull null
+                PeerAnswerView(answer.questionId, question.content, answer.content, answer.createdAt)
+            }
+            .toList()
     }
 
     companion object {
@@ -403,6 +425,14 @@ class PeerMatchingService(
          * 이 기간까지 지나면 그때는 정말 지워진다. 무한히 쌓이는 목록은 서랍이지 인연이 아니다.
          */
         private val PAST_PEER_HISTORY: Duration = Duration.ofDays(30)
+
+        /**
+         * 프로필에 함께 싣는 최근 답변 수.
+         *
+         * 셋이면 그 사람의 결이 보이고, 그 이상은 프로필이 답변 목록이 된다 —
+         * 프로필은 읽히라고 있는 것이지 훑으라고 있는 게 아니다.
+         */
+        private const val RECENT_ANSWER_COUNT = 3
     }
 }
 

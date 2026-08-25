@@ -42,6 +42,14 @@ data class PeerView(
     val nickname: String?,
     /** 미리 써둔 프로필 편지(질문+답). 자기소개를 대신한다. */
     val letters: List<ProfileLetterView>,
+    /**
+     * 이 사람이 최근에 남긴 답 몇 개(최신순, [peerAnswer]로 이미 보여준 답은 뺀다).
+     *
+     * 하트를 받았을 때 "이 사람은 무슨 생각을 하는 사람인가"를 알 방법이 한 편밖에 없었다(2026-08-25).
+     * 미리 써둔 프로필 문답은 잘 다듬은 자기소개라면, 이건 그날그날의 목소리다 — 둘이 함께 있어야 사람이 보인다.
+     * 프로필이 열려 있을 때만 담긴다(잠기면 [locked]가 비운다) — 창을 여는 값은 이미 치른 뒤다.
+     */
+    val recentAnswers: List<PeerAnswerView> = emptyList(),
     val gender: Gender?,
     /** 만 나이(서버 계산). 생년월일 원본은 상대에게 노출하지 않는다. */
     val age: Int?,
@@ -81,6 +89,7 @@ data class PeerView(
         peerAnswer = null,
         answerUnlocked = false,
         letters = emptyList(),
+        recentAnswers = emptyList(),
         bio = null,
         heightCm = null,
         bodyType = null,
@@ -89,6 +98,14 @@ data class PeerView(
         strengths = emptyList(),
     )
 }
+
+/** 상대가 그날그날 남긴 답 하나 — 그 답의 질문과 함께. */
+data class PeerAnswerView(
+    val questionId: Long,
+    val question: String,
+    val content: String,
+    val answeredAt: Instant,
+)
 
 /**
  * 오늘의 상대 목록. 매일 정오(KST) 전에는 [open]=false, 공개 후에는 최대 2명의 [peers].

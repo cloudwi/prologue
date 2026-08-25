@@ -34,6 +34,8 @@ class PeerMatchingServiceTest {
     // 넓힌 범위(30·90일)는 기본적으로 비어 있다 — 넓히는 동작을 보는 테스트에서만 채운다
     private val answerRepository = mockk<AnswerRepository> {
         every { findOthersAnsweredSince(any(), any()) } returns emptyList()
+        // 프로필에 함께 싣는 "최근 답변"은 기본적으로 없다 — 그걸 보는 테스트에서만 채운다
+        every { findAllByAccountId(any()) } returns emptyList()
     }
     private val dailyRevealRepository = mockk<DailyRevealRepository>(relaxed = true)
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
@@ -96,6 +98,33 @@ class PeerMatchingServiceTest {
         assertEquals("지난번 답", view.peers[0].peerAnswer)
         // 이월은 보여주기만 할 뿐 새 소개가 아니다 — 공개 기록을 남기면 상대의 노출 몫이 깎인다
         verify(exactly = 0) { dailyRevealRepository.save(any()) }
+    }
+
+    @Test
+    fun `오늘의 상대 - 프로필에 그 사람의 최근 답 셋을 함께 싣는다`() {
+        // 하트를 받았을 때 "이 사람은 무슨 생각을 하는 사람인가"를 알 방법이 한 편밖에 없었다.
+        val peerAccount = UUID.randomUUID()
+        val shown = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "오늘 답", Instant.now())
+        val others = (2L..5L).map { qid ->
+            Answer.reconstitute(UUID.randomUUID(), peerAccount, qid, "답 $qid", Instant.now().minusSeconds(qid * 3600))
+        }
+        every { questionRepository.findAllOrdered() } returns
+            listOf(question) + (2L..5L).map { Question(it, "질문 $it") }
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns
+            Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답", Instant.now())
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns
+            listOf(DailyReveal.create(accountId, 1L, shown.id!!))
+        every { answerRepository.findById(shown.id!!) } returns shown
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+        every { answerRepository.findAllByAccountId(peerAccount) } returns listOf(shown) + others
+
+        val recent = service.todayPeers(accountId).peers.single().recentAnswers
+
+        assertEquals(3, recent.size) // 셋까지만
+        assertTrue(recent.none { it.content == "오늘 답" }) // 카드에 이미 올린 답은 빼고
+        assertEquals(listOf("답 2", "답 3", "답 4"), recent.map { it.content }) // 최신순
+        assertEquals("질문 2", recent[0].question) // 그 답의 질문과 함께
     }
 
     @Test

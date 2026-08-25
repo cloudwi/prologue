@@ -30,6 +30,12 @@ export type Peer = {
   nickname: string | null;
   /** 미리 써둔 프로필 문답(질문+답). 자기소개를 대신한다. */
   letters: { questionId: number; question: string; content: string }[];
+  /**
+   * 그 사람이 최근에 남긴 답 3개(최신순, 카드에 이미 보여준 답은 빠져 있다).
+   * 미리 써둔 프로필 문답이 다듬은 자기소개라면 이건 그날그날의 목소리다.
+   * 프로필이 잠기면 비어 온다. 구버전 서버는 안 내려주므로 옵셔널.
+   */
+  recentAnswers?: { questionId: number; question: string; content: string; answeredAt: string }[];
   gender: 'MALE' | 'FEMALE' | null;
   /** 만 나이(서버 계산). */
   age: number | null;
