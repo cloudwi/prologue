@@ -27,7 +27,12 @@ class ProfileLetter private constructor(
     }
 
     companion object {
-        const val MAX_PER_MEMBER = 3
+        /**
+         * 계정당 프로필 문답 수. 3 → 5로 늘렸다(2026-08-25).
+         * 3개는 사진 사이를 채우기엔 모자라서 프로필이 사진 위주로 읽혔다.
+         * 늘리되 무한은 아니다 — 다 읽을 수 있는 분량이라야 청첩장이지 이력서가 아니다.
+         */
+        const val MAX_PER_MEMBER = 5
         const val MAX_LENGTH = 400 // 자기소개를 대신하는 글 — 한 문답 답변(300자)보다 여유 있게
         /** 최소 분량 — 프로필에 걸어두는 글이 한 마디로 끝나지 않도록. 답변과 같은 하한. */
         const val MIN_LENGTH = 15

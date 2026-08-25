@@ -21,7 +21,10 @@ class ProfileLetterServiceTest {
     private val service = ProfileLetterService(profileLetterRepository, questionRepository)
 
     private val accountId = UUID.randomUUID()
-    private val questions = listOf(Question(1, "질문 하나"), Question(2, "질문 둘"), Question(3, "질문 셋"), Question(4, "질문 넷"))
+    private val questions = (1L..(ProfileLetter.MAX_PER_MEMBER + 1L)).map { Question(it, "질문 $it") }
+
+    /** 상한을 꽉 채운 편지들 — 개수가 바뀌어도 테스트가 따라간다. */
+    private fun fullInbox() = (1L..ProfileLetter.MAX_PER_MEMBER.toLong()).map { letter(it) }
 
     private fun letter(questionId: Long, content: String = "내용") =
         ProfileLetter.reconstitute(UUID.randomUUID(), accountId, questionId, content, java.time.Instant.now(), java.time.Instant.now())
@@ -45,7 +48,7 @@ class ProfileLetterServiceTest {
         every { questionRepository.findAllOrdered() } returns questions
         val existing = letter(1, "옛 내용")
         every { profileLetterRepository.findByAccountIdAndQuestionId(accountId, 1) } returns existing
-        every { profileLetterRepository.findAllByAccountId(accountId) } returns listOf(existing, letter(2), letter(3))
+        every { profileLetterRepository.findAllByAccountId(accountId) } returns listOf(existing) + fullInbox().drop(1)
         every { profileLetterRepository.save(any()) } answers { firstArg() }
 
         service.write(accountId, 1, "새로 고쳐 쓴 내용은 이만큼 길다")
@@ -54,13 +57,14 @@ class ProfileLetterServiceTest {
     }
 
     @Test
-    fun `이미 3통이면 새 질문 편지는 거절한다`() {
+    fun `상한을 채웠으면 새 질문 편지는 거절한다`() {
+        val overflowQid = ProfileLetter.MAX_PER_MEMBER + 1L
         every { questionRepository.findAllOrdered() } returns questions
-        every { profileLetterRepository.findByAccountIdAndQuestionId(accountId, 4) } returns null
-        every { profileLetterRepository.findAllByAccountId(accountId) } returns listOf(letter(1), letter(2), letter(3))
+        every { profileLetterRepository.findByAccountIdAndQuestionId(accountId, overflowQid) } returns null
+        every { profileLetterRepository.findAllByAccountId(accountId) } returns fullInbox()
 
-        val e = assertFailsWith<DailyMeetException> { service.write(accountId, 4, "네 번째") }
-        assertEquals("편지는 최대 3통까지 쓸 수 있어요", e.message)
+        val e = assertFailsWith<DailyMeetException> { service.write(accountId, overflowQid, "한 통 더") }
+        assertEquals("편지는 최대 ${ProfileLetter.MAX_PER_MEMBER}통까지 쓸 수 있어요", e.message)
     }
 
     @Test
@@ -86,6 +90,6 @@ class ProfileLetterServiceTest {
 
         val views = service.myLetters(accountId)
 
-        assertEquals(listOf(ProfileLetterView(2, "질문 둘", "답변")), views)
+        assertEquals(listOf(ProfileLetterView(2, "질문 2", "답변")), views)
     }
 }

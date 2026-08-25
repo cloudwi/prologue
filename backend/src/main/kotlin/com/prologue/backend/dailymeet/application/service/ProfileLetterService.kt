@@ -12,7 +12,7 @@ import java.util.UUID
 data class ProfileLetterView(val questionId: Long, val question: String, val content: String)
 
 /**
- * 프로필 편지 유스케이스 — 질문을 골라 미리 써두는 자기소개(계정당 최대 3통, 400자).
+ * 프로필 편지 유스케이스 — 질문을 골라 미리 써두는 자기소개(계정당 최대 [ProfileLetter.MAX_PER_MEMBER]통, 400자).
  * 오늘의 문답 답변을 "프로필에 올리기"도 같은 upsert로 처리한다.
  */
 @Service

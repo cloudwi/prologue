@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -43,23 +43,6 @@ function peerMetaLabel(peer: Peer): string {
 /** 오늘 날짜 캡션 — "8월 19일 수요일". 질문 위에 작게 놓여 '오늘의 표지'라는 걸 말한다. */
 function todayCaption(): string {
   return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
-}
-
-/** 다음 정오(KST)까지 남은 ms. 이미 정오가 지났으면 0 — 공개 여부는 서버(open)가 판단한다. */
-function msUntilNoonKst(now = new Date()): number {
-  const kstOffset = 9 * 60 * 60 * 1000;
-  const kst = new Date(now.getTime() + kstOffset);
-  const noon = Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate(), 12, 0, 0) - kstOffset;
-  return Math.max(0, noon - now.getTime());
-}
-
-function countdownLabel(ms: number): string {
-  const totalMin = Math.ceil(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h === 0) return `${Math.max(m, 1)}분 뒤`;
-  if (m === 0) return `${h}시간 뒤`;
-  return `${h}시간 ${m}분 뒤`;
 }
 
 export default function DiscoverScreen() {
@@ -153,7 +136,7 @@ export default function DiscoverScreen() {
     }
   }
 
-  /** 오늘 쓴 답변을 그대로 프로필 문답으로. 같은 질문이면 덮어쓰고, 3개가 넘으면 서버가 안내한다. */
+  /** 오늘 쓴 답변을 그대로 프로필 문답으로. 같은 질문이면 덮어쓰고, 상한을 넘으면 서버가 안내한다. */
   async function promoteToProfile() {
     if (!today?.questionId || !today.myAnswer) return;
     try {
@@ -174,6 +157,9 @@ export default function DiscoverScreen() {
     setEditing(false);
     setComposing(false);
   }
+
+  // 아직 오늘 답하지 않아 지난번 상대가 그 자리를 지키고 있는 상태. 서버가 판정해 내려준다.
+  const carriedOver = (peersData?.carriedOver ?? false) && (peersData?.peers.length ?? 0) > 0;
 
   const isEditing = !today?.answered || editing;
   const editorOpen = isEditing && (today?.answered ? true : composing);
@@ -311,20 +297,33 @@ export default function DiscoverScreen() {
             {/* 쓰는 동안은 아래를 흐린다 — 입력칸을 꾸미는 대신 주변을 가라앉혀 "지금은 쓰는 시간"을 만든다. */}
             <View style={[styles.peerSection, editorOpen && styles.dimmed]} pointerEvents={editorOpen ? 'none' : 'auto'}>
               <View style={styles.peerHeader}>
-                <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>오늘의 상대</Text>
-                <Text style={[styles.peerSub, { color: c.textSecondary }]}>매일 정오, 한 사람</Text>
+                <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>
+                  {carriedOver ? '지난번에 만난 사람' : '오늘의 상대'}
+                </Text>
+                <Text style={[styles.peerSub, { color: c.textSecondary }]}>
+                  {carriedOver ? '답을 남기면 새로 도착해요' : '답을 남기면, 한 사람'}
+                </Text>
               </View>
 
               {peersLoading && !peersData ? (
                 <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
-              ) : !peersData || !peersData.open ? (
-                <ArrivalCountdown answered={today?.answered ?? false} c={c} />
-              ) : !peersData.answerUnlocked ? (
-                // 답을 남겨야 상대가 보인다 — "후보가 없다"와 다른 상황이라 문구를 나눈다
+              ) : carriedOver ? (
+                // 답하기 전 — 자리를 비우지 않고 지난번에 만난 사람이 지킨다.
+                // 카드 위 한 줄이 "이건 어제 것"임을 알리고, 아래 한 줄이 다음 행동을 준다.
+                <>
+                  <PeerCarousel peers={peersData!.peers} question={null} c={c} />
+                  <Pressable onPress={() => setComposing(true)} hitSlop={8} style={styles.carryPrompt}>
+                    <Text style={[styles.carryPromptText, { color: c.primaryStrong }]}>
+                      오늘의 질문에 답하고 새로운 사람 만나기 →
+                    </Text>
+                  </Pressable>
+                </>
+              ) : !peersData || !peersData.answerUnlocked ? (
+                // 답을 남겨야 상대가 온다 — "후보가 없다"와 다른 상황이라 문구를 나눈다
                 <EmptyPeer
                   c={c}
-                  title="오늘의 답변을 먼저 남겨주세요"
-                  body="답을 남기면 오늘의 상대를 만날 수 있어요."
+                  title="답을 남기면 오늘의 한 사람이 도착해요"
+                  body="오늘의 질문에 답을 쓰는 순간, 질문에 답한 한 사람이 여기에 도착해요."
                   action="답 쓰러 가기"
                   onAction={() => setComposing(true)}
                 />
@@ -373,7 +372,7 @@ export default function DiscoverScreen() {
 }
 
 /**
- * 정오 전 — 기다림을 콘텐츠로. 남은 시간을 분 단위로 세며 "도착"이라는 말을 미리 건넨다.
+ * 소개할 사람이 없을 때 — 빈 화면 대신 다음 행동 하나를 건넨다.
  * 답을 아직 안 썼으면 그 사이 할 일을 같이 알려준다.
  */
 /**
@@ -395,26 +394,6 @@ function AnswerCounter({ length, c }: { length: number; c: ThemeColors }) {
   );
 }
 
-function ArrivalCountdown({ answered, c }: { answered: boolean; c: ThemeColors }) {
-  const [remaining, setRemaining] = useState(() => msUntilNoonKst());
-  useEffect(() => {
-    const id = setInterval(() => setRemaining(msUntilNoonKst()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <Animated.View entering={FadeInDown.duration(380)} style={[styles.peerCard, styles.countdown, { backgroundColor: c.backgroundElement }]}>
-      <Image source={require('@/assets/images/brand-mark.png')} style={styles.countdownMark} contentFit="contain" />
-      <Text style={[styles.countdownTitle, { color: c.text, fontFamily: Fonts.serif }]}>
-        {remaining > 0 ? `오늘의 상대가 ${countdownLabel(remaining)} 도착해요` : '오늘의 상대가 곧 도착해요'}
-      </Text>
-      <Text style={[styles.countdownBody, { color: c.textSecondary }]}>
-        {answered ? '정오가 되면 질문에 답한 한 사람이 여기에 도착해요.' : '그동안 오늘의 질문에 답을 남겨두세요.\n답을 남겨야 상대의 답도 열려요.'}
-      </Text>
-    </Animated.View>
-  );
-}
-
 function EmptyPeer({
   c,
   title,
@@ -429,13 +408,13 @@ function EmptyPeer({
   onAction?: () => void;
 }) {
   return (
-    <View style={[styles.peerCard, styles.countdown, { backgroundColor: c.backgroundElement }]}>
-      <Image source={require('@/assets/images/brand-mark.png')} style={styles.countdownMark} contentFit="contain" />
-      <Text style={[styles.countdownTitle, { color: c.text, fontFamily: Fonts.serif }]}>{title}</Text>
-      <Text style={[styles.countdownBody, { color: c.textSecondary }]}>{body}</Text>
+    <View style={[styles.peerCard, styles.emptyCard, { backgroundColor: c.backgroundElement }]}>
+      <Image source={require('@/assets/images/brand-mark.png')} style={styles.emptyMark} contentFit="contain" />
+      <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>{title}</Text>
+      <Text style={[styles.emptyBody, { color: c.textSecondary }]}>{body}</Text>
       {action && onAction ? (
-        <Pressable onPress={onAction} hitSlop={8} style={styles.countdownAction}>
-          <Text style={[styles.countdownActionText, { color: c.primaryStrong }]}>{action} →</Text>
+        <Pressable onPress={onAction} hitSlop={8} style={styles.emptyAction}>
+          <Text style={[styles.emptyActionText, { color: c.primaryStrong }]}>{action} →</Text>
         </Pressable>
       ) : null}
     </View>
@@ -672,12 +651,16 @@ const styles = StyleSheet.create({
   peerChip: { paddingHorizontal: 10, height: 26, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
   // 기다림·빈 상태 — 박스 대신 마크 한 점과 문장.
-  countdown: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 28 },
-  countdownMark: { width: 54, height: 40, marginBottom: 16 },
-  countdownTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center', lineHeight: 26 },
-  countdownBody: { fontSize: 14.5, textAlign: 'center', lineHeight: 22, marginTop: 8 },
-  countdownAction: { marginTop: 14, padding: 4 },
-  countdownActionText: { fontSize: 15, fontWeight: '700' },
+  // 빈 상태 카드 — 상대 카드와 같은 면 위에 마크 하나와 두 줄.
+  emptyCard: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 28 },
+  emptyMark: { width: 54, height: 40, marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center', lineHeight: 26 },
+  emptyBody: { fontSize: 14.5, textAlign: 'center', lineHeight: 22, marginTop: 8 },
+  emptyAction: { marginTop: 14, padding: 4 },
+  emptyActionText: { fontSize: 15, fontWeight: '700' },
+  // 이월된 카드 아래 한 줄 — 다음 행동 하나.
+  carryPrompt: { alignSelf: 'center', marginTop: 14, padding: 4 },
+  carryPromptText: { fontSize: 15, fontWeight: '700' },
 
   // 지난 상대 — 한 줄 링크.
   pastEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 26, paddingVertical: 8 },

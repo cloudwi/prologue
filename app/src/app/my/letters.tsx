@@ -28,7 +28,7 @@ import {
 } from '@/lib/letters';
 
 /**
- * 프로필 문답 — 질문을 골라 미리 써두는 자기소개(최대 3개, 400자).
+ * 프로필 문답 — 질문을 골라 미리 써두는 자기소개(최대 LETTER_MAX개, 400자).
  * 한 번에 하나씩 쓴다: 질문 고르기 → 쓰기 → 저장. 저장 즉시 반영이라 별도 저장 버튼이 없다.
  */
 export default function LettersScreen() {

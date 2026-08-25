@@ -60,14 +60,23 @@ export type Peer = {
 export type LastActive = 'TODAY' | 'THIS_WEEK' | 'WEEKS_AGO';
 
 export type TodayPeers = {
-  /** 정오(KST) 전에는 false — 아직 공개 전. */
+  /**
+   * 공개 시각이 사라진 뒤로는 언제나 true(2026-08-25).
+   * 정오 카운트다운을 그리던 시절의 필드라 서버가 아직 내려주지만, 앱은 더 보지 않는다.
+   */
   open: boolean;
   answerUnlocked: boolean;
-  /** 공개된 상대, 최대 2명. */
+  /**
+   * peers가 오늘 도착한 사람이 아니라 지난번에 만난 사람이라는 표시 —
+   * 아직 오늘 답하지 않았다는 뜻. 답을 남기면 새 사람으로 바뀐다.
+   * 구버전 서버는 안 내려주므로 없으면 false로 본다.
+   */
+  carriedOver?: boolean;
+  /** 소개된 상대, 최대 2명. */
   peers: Peer[];
 };
 
-/** 오늘의 상대 목록 (매일 정오 공개, 최대 2명, GET /daily/today/peers). */
+/** 오늘의 상대 목록 (답을 남기면 도착, 최대 2명, GET /daily/today/peers). */
 export async function getPeers(): Promise<TodayPeers> {
   return authedRequest<TodayPeers>('GET', '/daily/today/peers');
 }
