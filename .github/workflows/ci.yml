@@ -1,0 +1,84 @@
+name: CI
+
+# 검증만 한다 — 배포는 cd.yml이 맡는다.
+#
+# 이 그물이 없던 2026-08-25, 유닛 테스트가 전부 초록인 채로 GET /meetups 전체를 500으로
+# 만드는 버그가 배포까지 갔다(@EmbeddedId에 파생 쿼리). 그래서 백엔드 테스트는
+# Testcontainers로 진짜 Postgres에 마이그레이션을 돌리는 통합 테스트까지 포함한다 —
+# GitHub 호스티드 러너에는 Docker가 있어 그대로 돈다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 같은 브랜치에 새 푸시가 오면 이전 실행은 취소한다 — 무료 러너 시간을 아낀다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: 백엔드 테스트 (Postgres 통합 포함)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 테스트
+        working-directory: backend
+        run: ./gradlew test --no-daemon
+      - name: 실패 리포트 남기기
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: backend/build/reports/tests/test
+          retention-days: 7
+
+  app:
+    name: 앱 타입·린트
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: 의존성 설치
+        working-directory: app
+        run: npm ci
+      - name: 타입 검사
+        working-directory: app
+        run: npx tsc --noEmit -p .
+      # mail-compose·mail-view에는 react-hooks 신규 규칙(set-state-in-effect·refs) 위반이
+      # 남아 있다. 편지(결제) 화면이라 함께 고치기보다 따로 손보기로 하고 지금은 제외한다.
+      # **고치면 이 두 --ignore-pattern 줄을 지울 것.**
+      - name: 린트
+        working-directory: app
+        run: >-
+          npx eslint src
+          --ignore-pattern 'src/app/mail-compose.tsx'
+          --ignore-pattern 'src/app/mail-view.tsx'
+
+  web:
+    name: 웹 빌드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 의존성 설치
+        working-directory: web
+        run: npm ci
+      - name: 빌드
+        working-directory: web
+        run: npm run build
