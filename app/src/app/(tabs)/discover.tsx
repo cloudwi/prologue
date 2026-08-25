@@ -27,6 +27,7 @@ import { haptics } from '@/lib/haptics';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
+import { showToast } from '@/components/toast';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 15;
@@ -127,7 +128,8 @@ export default function DiscoverScreen() {
     if (!today?.questionId || !today.myAnswer) return;
     try {
       await writeLetter(today.questionId, today.myAnswer);
-      Alert.alert('프로필에 올렸어요', '상대가 내 프로필 상세에서 이 답변을 볼 수 있어요.');
+      haptics.success();
+      showToast('프로필에 올렸어요 · 상대가 볼 수 있어요');
     } catch (e) {
       Alert.alert('올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     }

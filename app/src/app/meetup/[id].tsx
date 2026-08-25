@@ -7,6 +7,7 @@ import { MeetupInvitation } from '@/components/meetup-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
+import { haptics } from '@/lib/haptics';
 import { applyMeetup, cancelMeetup, feeLabel, followMeetup, getMeetups, type Meetup } from '@/lib/meetups';
 
 /**
@@ -58,6 +59,7 @@ export default function MeetupDetailScreen() {
             try {
               await applyMeetup(m.meetupId);
               track('meetup_applied');
+              haptics.success();
               await load();
             } catch (e) {
               Alert.alert('신청하지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
@@ -98,6 +100,7 @@ export default function MeetupDetailScreen() {
   async function toggleFollow(on: boolean) {
     if (meetup == null) return;
     setMeetup({ ...meetup, following: on });
+    haptics.select(); // 토글은 가볍게
     try {
       await followMeetup(meetup.meetupId, on);
       if (on) track('meetup_followed');

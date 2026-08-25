@@ -17,6 +17,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
+import { haptics } from '@/lib/haptics';
 import { clearMailDraft, loadMailDraft, saveMailDraft } from '@/lib/mail-drafts';
 import { getMyProfile } from '@/lib/member';
 import { formatPhoneDigits } from '@/lib/phone';
@@ -162,6 +163,7 @@ export default function MailComposeScreen() {
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
       track('mail_sent', { discount: quote?.discount ?? 'NONE' });
+      haptics.success(); // 연락처를 건넨 순간 — 이 앱에서 가장 무거운 행동
       Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [
         {
           text: '확인',

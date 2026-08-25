@@ -11,9 +11,11 @@ import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
+import { haptics } from '@/lib/haptics';
 import { sendHeart, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
 import { INK_PRICE } from '@/lib/ink';
 import { promptReport } from '@/lib/reports';
+import { showToast } from '@/components/toast';
 
 /**
  * 오늘의 상대 프로필 상세 — 청첩장 조판(ProfileInvitation).
@@ -84,7 +86,10 @@ export default function PeerDetailScreen() {
               if (result.spent) track('profile_unlocked');
               setPeer(result.peer);
               setHearted(result.peer.hearted);
-              if (result.spent) Alert.alert('프로필을 열었어요', '한 번 열린 프로필은 다시 닫히지 않아요.');
+              if (result.spent) {
+                haptics.success();
+                showToast('프로필을 열었어요 · 다시 닫히지 않아요');
+              }
             } catch (e) {
               const msg = e instanceof Error ? e.message : '잠시 후 다시 시도해주세요';
               // 잔액은 평소에 안 보여준다 — 모자란 순간에 충전으로 보낸다(유저 결정 2026-08-24).
@@ -161,6 +166,7 @@ export default function PeerDetailScreen() {
     try {
       const result = await sendHeart(peer.peerAnswerId);
       track('heart_sent');
+      haptics.success(); // 마음을 건넨 순간
       setHearted(true);
       if (result.matched) {
         Alert.alert('서로 호감이에요!', '두 사람 모두 호감을 보냈어요. 편지로 연락처를 건네보세요.', [
@@ -168,7 +174,8 @@ export default function PeerDetailScreen() {
           { text: '편지 쓰기', onPress: openCompose },
         ]);
       } else {
-        Alert.alert('호감을 보냈어요', '상대도 호감을 보내면 서로의 마음을 알 수 있어요.');
+        // 성공은 흐름을 끊지 않는다 — 모달로 멈춰 세울 일이 아니다.
+        showToast('호감을 보냈어요');
       }
     } catch (e) {
       Alert.alert('전송 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');

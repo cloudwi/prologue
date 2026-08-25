@@ -16,6 +16,7 @@ import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getInkEvents, submitInkEvent, type InkEventSubmission } from '@/lib/ink';
+import { showToast } from '@/components/toast';
 
 /**
  * 이벤트 — 잉크를 받을 수 있는 참여 목록.
@@ -49,7 +50,7 @@ export default function EventsScreen() {
     try {
       setEvents(await submitInkEvent(trimmed));
       setUrl('');
-      Alert.alert('접수했어요', '확인 후 잉크를 보내드려요. 결과는 이 화면에서 볼 수 있어요.');
+      showToast('접수했어요 · 확인 후 잉크를 보내드려요');
     } catch (e) {
       Alert.alert('접수 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
