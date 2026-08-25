@@ -126,10 +126,15 @@
 | --- | --- | --- |
 | `app/assets/images/brand-mark.png` (@2x, @3x) | 89×64 / 178×128 / 267×192 | 진입 화면 로고 |
 | `app/assets/images/icon.png` | 1024×1024 | 크림 배경, 마크 폭 62% |
-| `app/assets/images/android-icon-foreground.png` | 1024×1024 | 투명, 마크 폭 55% (안전영역 안쪽) |
-| `app/assets/images/android-icon-monochrome.png` | 1024×1024 | 크림 면을 뺀 잉크 선·하트만 남긴 라인아트 |
+| `app/assets/images/android-icon-foreground.png` | 1024×1024 | 투명, 마크 폭 **48%** (Material 키라인, 아래 참고) |
+| `app/assets/images/android-icon-monochrome.png` | 1024×1024 | 크림 면을 뺀 잉크 선·하트만 남긴 라인아트, 마크 폭 48% |
 | `app/assets/images/splash.png` / `splash-dark.png` | 600×392 (3x) | 마크 + 워드마크. 아래 '스플래시' 절의 스크립트로 생성 |
 | `web/public/brand-mark.png` | 213×152 | 헤더 39×28, 히어로 106×76으로 표시 |
+
+> **안드로이드 어댑티브 아이콘은 캔버스 108dp 중 가운데 72dp(66%)만 보입니다.** 마크 폭을 iOS처럼 캔버스 기준으로 생각하면
+> 실제로는 훨씬 크게 보입니다 — 55%로 두었을 때 보이는 영역 대비 83%라 iOS(61%)보다 눈에 띄게 컸습니다.
+> 2026-08-25부터 Material 키라인(가로 직사각형 52dp = 캔버스 48%, 보이는 영역의 72%)을 따릅니다.
+> iOS와 똑같은 비율(40%)로 맞추지 않는 이유: 안드로이드 아이콘은 물리적으로 더 작게 표시되고 원형 마스크로 모서리가 깎여, 같은 비율이면 오히려 작아 보입니다.
 
 > ⚠️ 마크는 가로형(1.4:1)입니다. 정사각형으로 넣으면 위아래 여백이 생겨 작아 보입니다.
 > 표시 크기를 바꿀 때 `app/src/app/index.tsx`의 `styles.logo`와
