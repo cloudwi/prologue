@@ -31,9 +31,12 @@ export default function MyMeetupsScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // 목록을 읽은 시각 — '모임 시각이 지났는지'를 렌더 중 Date.now()로 묻지 않기 위해 stamp를 둔다.
+  const [now, setNow] = useState(0);
 
   const load = useCallback(async () => {
     try {
+      setNow(Date.now());
       setMeetups(await getMyMeetups());
     } catch {
       // 세션 만료 등 — 빈 상태로 둔다
@@ -192,22 +195,38 @@ export default function MyMeetupsScreen() {
                   ) : (
                     <ActionBtn label="다시 열기" c={c} onPress={() => void run(m.meetupId, () => reopenHosting(m.meetupId))} />
                   )}
-                  <ActionBtn
-                    label="개최 완료"
-                    c={c}
-                    primary
-                    onPress={() =>
-                      Alert.alert('개최 완료로 표시할까요?', '모임이 잘 끝났다면 완료로 남겨요. 개최 기록이 돼요.', [
-                        { text: '취소', style: 'cancel' },
-                        { text: '개최 완료', onPress: () => void run(m.meetupId, () => completeHosting(m.meetupId)) },
-                      ])
-                    }
-                  />
+                  {/*
+                    * 개최 완료는 조건이 맞을 때만 그린다 — 개최 횟수는 모임장의 공개 신뢰 신호라,
+                    * 모임 시각이 지나고 확정 참가자가 있어야 남길 수 있다(서버도 같은 규칙으로 막는다).
+                    * 못 누르는 버튼을 두고 에러로 알리는 것보다, 왜 아직인지 한 줄로 말하는 편이 낫다.
+                    */}
+                  {new Date(m.meetAt).getTime() <= now && m.confirmedCount > 0 && (
+                    <ActionBtn
+                      label="개최 완료"
+                      c={c}
+                      primary
+                      onPress={() =>
+                        Alert.alert('개최 완료로 표시할까요?', '모임이 잘 끝났다면 완료로 남겨요. 개최 기록이 돼요.', [
+                          { text: '취소', style: 'cancel' },
+                          { text: '개최 완료', onPress: () => void run(m.meetupId, () => completeHosting(m.meetupId)) },
+                        ])
+                      }
+                    />
+                  )}
                   <Pressable onPress={() => confirmCancelMeetup(m)} hitSlop={8} style={styles.cancelWrap}>
                     <Text style={[styles.cancelLink, { color: c.textSecondary }]}>모임 취소</Text>
                   </Pressable>
                 </View>
               )}
+
+              {/* 모임은 지났는데 확정한 사람이 없으면, 개최로 남기기 전에 할 일을 알려준다. */}
+              {(m.status === 'OPEN' || m.status === 'CLOSED') &&
+                new Date(m.meetAt).getTime() <= now &&
+                m.confirmedCount === 0 && (
+                  <Text style={[styles.completeHint, { color: c.textSecondary }]}>
+                    참가자를 확정해야 개최 기록으로 남길 수 있어요.
+                  </Text>
+                )}
             </View>
           ))}
         </ScrollView>
@@ -323,6 +342,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
   actionBtn: { height: 38, paddingHorizontal: 16, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { fontSize: 14, fontWeight: '700' },
+  completeHint: { fontSize: 12.5, lineHeight: 18, marginTop: 10 },
   cancelWrap: { marginLeft: 'auto' },
   cancelLink: { fontSize: 13.5, textDecorationLine: 'underline' },
 });

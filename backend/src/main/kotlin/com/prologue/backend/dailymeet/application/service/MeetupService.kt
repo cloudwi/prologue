@@ -535,7 +535,14 @@ class MeetupService(
     fun reopen(hostAccountId: UUID, meetupId: UUID) = withOwned(hostAccountId, meetupId) { it.reopen() }
 
     @Transactional
-    fun complete(hostAccountId: UUID, meetupId: UUID) = withOwned(hostAccountId, meetupId) { it.complete() }
+    fun complete(hostAccountId: UUID, meetupId: UUID) {
+        val meetup = owned(hostAccountId, meetupId)
+        // 확정 인원은 도메인이 알 수 없다 — 신청은 별개 애그리거트라 세어서 넘긴다.
+        val confirmed = applicationRepository.findAllByMeetup(meetupId)
+            .count { it.status == MeetupApplicationStatus.CONFIRMED }
+        meetup.complete(confirmed)
+        meetupRepository.save(meetup)
+    }
 
     /** 모임 취소 — 기다리던 신청자(신청·확정)에게 푸시로 알린다. */
     @Transactional

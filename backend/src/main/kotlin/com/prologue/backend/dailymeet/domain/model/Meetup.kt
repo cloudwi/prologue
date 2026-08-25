@@ -72,9 +72,23 @@ class Meetup private constructor(
     }
 
     /** 개최 완료 — 이 기록이 모임장의 히스토리(신뢰 신호)가 된다. */
-    fun complete() {
+    /**
+     * 개최 완료로 남긴다 — 모임장의 공개 기록(개최 횟수)이 되는 순간.
+     *
+     * 그 숫자는 초대장 표지와 모임장 프로필에 **신뢰 신호**로 걸린다. 그래서 아무 때나 눌러서는 안 된다:
+     * 빈 모임을 만들어 바로 완료를 누르면 평판이 공짜로 쌓인다. 지금은 운영자만 모임을 열어 무해하지만,
+     * 개설을 모두에게 여는 순간 조작 가능한 숫자가 되고, 그때는 이미 쌓인 기록에서 진짜를 가려내야 한다(2026-08-25).
+     *
+     * 두 조건: **모임 시각이 지났고**, **확정된 참가자가 하나라도 있어야** 한다.
+     * 아무도 오지 않은 자리는 열린 적 없는 것과 같다.
+     */
+    fun complete(confirmedCount: Int, now: Instant = Instant.now()) {
         if (status == MeetupStatus.DONE) return // 멱등
         if (status == MeetupStatus.CANCELED) throw DailyMeetException("취소된 모임이에요")
+        if (now.isBefore(meetAt)) throw DailyMeetException("아직 열리지 않은 모임이에요. 모임 시각이 지난 뒤에 완료로 남겨주세요.")
+        if (confirmedCount < 1) {
+            throw DailyMeetException("확정된 참가자가 있어야 개최 기록으로 남길 수 있어요. 참가자를 먼저 확정해주세요.")
+        }
         status = MeetupStatus.DONE
     }
 
