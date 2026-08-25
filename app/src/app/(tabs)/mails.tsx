@@ -1,6 +1,7 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +10,8 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { Skeleton } from '@/components/skeleton';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, getSentHearts, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
@@ -23,51 +26,67 @@ import { promptReport } from '@/lib/reports';
  * 사람을 먼저 보고(프로필 상세), 그 자리에서 보낸다.
  * 편지를 받았다면 다음 대화는 앱 밖(전화·카카오톡)에서 이어진다.
  */
+/** 편지함 한 화면이 쓰는 데이터 묶음 — 셋이 함께 그려지고 함께 갱신된다. */
+type Inbox = { hearts: ReceivedHeart[]; sentHearts: ReceivedHeart[] | null; mails: ReceivedMail[] };
+
+const INBOX_KEY = ['mails', 'inbox'] as const;
+
 export default function MailsScreen() {
   const c = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [hearts, setHearts] = useState<ReceivedHeart[]>([]);
-  // 내가 보낸 하트 — 기본은 접어 둔다. 답 없는 목록을 매일 마주하게 두면 기다림이 무거워진다.
-  // null이면 서버가 이 목록을 모른다(구버전) — 섹션 자체를 숨긴다. 빈 배열이면 '0'으로 자리를 지킨다.
-  const [sentHearts, setSentHearts] = useState<ReceivedHeart[] | null>(null);
   const [sentOpen, setSentOpen] = useState(false);
-  const [mails, setMails] = useState<ReceivedMail[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   // 남은 기한 셈의 기준 시각 — 렌더 중 Date.now()는 순수성 규칙에 걸려, 목록을 읽는 순간 한 번 고정한다.
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
-  const load = useCallback(async () => {
-    try {
-      setNow(Date.now());
-      const [h, sh, m] = await Promise.all([
+  const queryClient = useQueryClient();
+
+  /*
+   * 편지함의 세 갈래를 한 쿼리로 묶는다 — 셋이 늘 함께 그려지고 함께 갱신돼야 하는 한 화면이라,
+   * 따로 두면 셋 중 하나만 바뀌며 화면이 어긋나 보인다.
+   * 보낸 하트는 구버전 서버엔 없다 — 못 받아도 나머지는 그린다(null이면 섹션을 숨긴다).
+   */
+  const inboxQuery = useQuery({
+    queryKey: INBOX_KEY,
+    queryFn: async (): Promise<Inbox> => {
+      const [hearts, sentHearts, mails] = await Promise.all([
         getReceivedHearts(),
-        // 보낸 하트는 구버전 서버엔 없다 — 못 받아도 나머지는 그린다.
         getSentHearts().catch(() => null),
         getReceivedMails(),
       ]);
-      setHearts(h);
-      setSentHearts(sh);
-      setMails(m);
-    } catch (e) {
-      // 세션 만료를 조용히 삼키면 화면이 멈춘 것처럼 보인다 — 로그인으로 보낸다.
-      if (isSessionExpired(e)) {
-        router.replace('/');
-        return;
-      }
-      // 그 외 실패는 무시 — 빈 상태로 둠
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
+      return { hearts, sentHearts, mails };
+    },
+  });
 
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
+  /**
+   * 목록 하나만 그 자리에서 바꾼다 — 봉투를 열거나 거절했을 때 전체를 다시 읽지 않는다.
+   * 캐시를 직접 고치므로 화면이 깜빡이지 않고, 다음 갱신 때 서버 값으로 맞춰진다.
+   */
+  const patchMails = useCallback(
+    (fn: (prev: ReceivedMail[]) => ReceivedMail[]) => {
+      queryClient.setQueryData(INBOX_KEY, (old?: Inbox) => (old ? { ...old, mails: fn(old.mails) } : old));
+    },
+    [queryClient],
   );
+
+  const hearts = inboxQuery.data?.hearts ?? [];
+  const sentHearts = inboxQuery.data?.sentHearts ?? null;
+  const mails = inboxQuery.data?.mails ?? [];
+
+  /** 목록을 다시 읽는다. 기한 셈의 기준 시각도 함께 새로 잡는다. */
+  const load = useCallback(async () => {
+    setNow(Date.now());
+    await inboxQuery.refetch();
+  }, [inboxQuery]);
+
+  const refresh = useCallback(() => void load(), [load]);
+  useRefreshOnFocus(refresh);
+
+  // 세션 만료를 조용히 삼키면 화면이 멈춘 것처럼 보인다 — 로그인으로 보낸다.
+  const toLogin = useCallback(() => router.replace('/'), [router]);
+  useSessionGuard(inboxQuery.error, toLogin);
 
   /** 편지 쓰기로 — 이미 보낸 상대면 쓰기 대신 보낸 편지 확인으로. */
   function openCompose(h: ReceivedHeart) {
@@ -102,7 +121,7 @@ export default function MailsScreen() {
     setBusy(`open-${m.mailId}`);
     try {
       const opened = await openMail(m.mailId);
-      setMails((prev) => prev.map((x) => (x.mailId === m.mailId ? opened : x)));
+      patchMails((prev) => prev.map((x) => (x.mailId === m.mailId ? opened : x)));
     } catch (e) {
       Alert.alert('열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
     } finally {
@@ -121,7 +140,7 @@ export default function MailsScreen() {
           setBusy(`decline-${m.mailId}`);
           try {
             await declineMail(m.mailId);
-            setMails((prev) => prev.filter((x) => x.mailId !== m.mailId));
+            patchMails((prev) => prev.filter((x) => x.mailId !== m.mailId));
           } catch (e) {
             Alert.alert('거절하지 못했어요', e instanceof Error ? e.message : '잠시 후 다시');
           } finally {
@@ -239,12 +258,26 @@ export default function MailsScreen() {
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        {loading ? (
-          <View style={[styles.flex, styles.center]}>
-            <ActivityIndicator color={c.primary} />
+        {inboxQuery.isPending && !inboxQuery.data ? (
+          // 생애 첫 로딩 — 제목 아래 카드 세 장이 들어올 자리를 그대로 비워 둔다.
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Skeleton c={c} width={96} height={30} />
+              <Skeleton c={c} width={200} height={14} style={styles.skeletonSub} />
+            </View>
+            <View style={styles.skeletonList}>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} c={c} height={92} radius={Radius.lg} />
+              ))}
+            </View>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}>
+          <ScrollView
+            contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}
+            refreshControl={
+              <RefreshControl refreshing={inboxQuery.isRefetching} onRefresh={refresh} tintColor={c.textSecondary} />
+            }
+          >
             {/* 머리 — 발견의 표지와 같은 문법. 제목 하나, 그 아래 오늘의 상태 한 줄. */}
             <View style={styles.header}>
               <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>편지함</Text>
@@ -471,6 +504,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
+  skeletonSub: { marginTop: 10 },
+  skeletonList: { gap: 12, marginTop: 20 },
   content: { paddingHorizontal: 20, paddingTop: 8 },
 
   header: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 18 },

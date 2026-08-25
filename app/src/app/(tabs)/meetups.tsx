@@ -1,19 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { isSessionExpired } from '@/lib/api';
+import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { Skeleton } from '@/components/skeleton';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
 import { getJobStatus } from '@/lib/job';
 import { getMyProfile } from '@/lib/member';
-import { feeLabel, getMeetupHistory, getMeetups, type Meetup, type MeetupHistory } from '@/lib/meetups';
+import { feeLabel, getMeetupHistory, getMeetups, type Meetup } from '@/lib/meetups';
 
 /**
  * 모임 — 모임장이 여는 오프라인 모임에 손을 드는 곳.
@@ -109,10 +111,7 @@ export default function MeetupsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [meetups, setMeetups] = useState<Meetup[]>([]);
-  const [history, setHistory] = useState<MeetupHistory[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'APPLIED' | 'MINE'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
@@ -120,45 +119,44 @@ export default function MeetupsScreen() {
   const [region, setRegion] = useState<string | null>(null);
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  // 모임은 아직 운영자만 연다 — 서버가 판정해 내려주고, 앱은 버튼을 그릴지만 정한다.
-  const [canCreate, setCanCreate] = useState(false);
-  const [my, setMy] = useState<MyEligibility | null>(null);
 
-  const load = useCallback(async () => {
-    try {
+  /*
+   * 한 화면에 필요한 것 넷을 한 쿼리로 묶는다 — 목록·지난 기록·내 조건이 함께 그려져야
+   * '내가 갈 수 있는 모임'이 판정되기 때문이다. 보조 정보는 실패해도 나머지를 그린다.
+   */
+  const boardQuery = useQuery({
+    queryKey: ['meetups', 'board'],
+    queryFn: async () => {
       const [ups, done, profile, job] = await Promise.all([
         getMeetups(),
         getMeetupHistory().catch(() => []),
         getMyProfile().catch(() => null),
         getJobStatus().catch(() => ({ verified: false, domain: null })),
       ]);
-      setMeetups(ups.meetups);
-      setCanCreate(ups.canCreate);
-      setHistory(done);
-      if (profile) {
-        setMy({
-          gender: profile.gender,
-          age: ageFrom(profile.birthDate),
-          heightCm: profile.heightCm ?? null,
-          jobVerified: job.verified,
-        });
-      }
-    } catch (e) {
-      if (isSessionExpired(e)) {
-        router.replace('/');
-        return;
-      }
-      // 구버전 서버 등 — 빈 상태로 둔다
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
+      const my: MyEligibility | null = profile
+        ? {
+            gender: profile.gender,
+            age: ageFrom(profile.birthDate),
+            heightCm: profile.heightCm ?? null,
+            jobVerified: job.verified,
+          }
+        : null;
+      // 모임은 아직 운영자만 연다 — 서버가 판정해 내려주고, 앱은 버튼을 그릴지만 정한다.
+      return { meetups: ups.meetups, canCreate: ups.canCreate, history: done, my };
+    },
+  });
 
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  const meetups = boardQuery.data?.meetups ?? [];
+  const history = boardQuery.data?.history ?? [];
+  const canCreate = boardQuery.data?.canCreate ?? false;
+  const my = boardQuery.data?.my ?? null;
+
+  const refresh = useCallback(() => void boardQuery.refetch(), [boardQuery]);
+  useRefreshOnFocus(refresh);
+
+  const toLogin = useCallback(() => router.replace('/'), [router]);
+  useSessionGuard(boardQuery.error, toLogin);
+
 
   const dateFmt = new Intl.DateTimeFormat('ko-KR', {
     month: 'long',
@@ -194,12 +192,27 @@ export default function MeetupsScreen() {
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        {loading ? (
-          <View style={[styles.flex, styles.center]}>
-            <ActivityIndicator color={c.primary} />
+        {boardQuery.isPending && !boardQuery.data ? (
+          // 생애 첫 로딩 — 제목·검색줄·카드 두 장이 들어올 자리.
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Skeleton c={c} width={72} height={30} />
+              <Skeleton c={c} width={220} height={14} style={styles.skeletonSub} />
+            </View>
+            <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonSearch} />
+            <View style={styles.skeletonList}>
+              {[0, 1].map((i) => (
+                <Skeleton key={i} c={c} height={280} radius={Radius.lg} />
+              ))}
+            </View>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}>
+          <ScrollView
+            contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}
+            refreshControl={
+              <RefreshControl refreshing={boardQuery.isRefetching} onRefresh={refresh} tintColor={c.textSecondary} />
+            }
+          >
             <View style={styles.header}>
               <View style={styles.headerRow}>
                 <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
@@ -544,6 +557,9 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
+  skeletonSub: { marginTop: 10 },
+  skeletonSearch: { marginTop: 18 },
+  skeletonList: { gap: 14, marginTop: 18 },
   content: { paddingHorizontal: 20, paddingTop: 8 },
 
   header: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 18 },

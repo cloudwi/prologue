@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -16,14 +16,15 @@ import { PhotoPager } from '@/components/photo-pager';
 import { avatarSource } from '@/constants/avatars';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { resetAnalytics } from '@/lib/analytics';
-import { isSessionExpired } from '@/lib/api';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
-import { getMyProfile, type MemberProfile } from '@/lib/member';
+import { getMyProfile } from '@/lib/member';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
+import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { Skeleton } from '@/components/skeleton';
 
 /**
  * MY 허브 — 조회 전용.
@@ -36,42 +37,45 @@ export default function MyScreen() {
   const insets = useSafeAreaInsets();
   const { mode } = useAppearance();
 
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<MemberProfile | null>(null);
-  // null이면 아직 확인 전 — 값이 잠깐 '꺼짐'으로 보였다 바뀌는 깜빡임을 막는다
-  const [notifyOn, setNotifyOn] = useState<boolean | null>(null);
-  const [job, setJob] = useState<{ verified: boolean; domain: string | null } | null>(null);
+  const queryClient = useQueryClient();
 
-  // 하위 편집 화면에서 돌아오면 다시 읽어 최신 상태를 반영한다.
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      getJobStatus()
-        .then((j) => active && setJob(j))
-        .catch(() => {});
-      notificationsEnabled()
-        .then((on) => active && setNotifyOn(on))
-        .catch(() => {});
-      (async () => {
-        try {
-          const p = await getMyProfile();
-          if (active) setProfile(p);
-        } catch (e) {
-          if (!active) return;
-          if (isSessionExpired(e)) {
-            router.replace('/'); // 세션 만료 — "HTTP 403" 알림 대신 로그인으로
-            return;
-          }
-          Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-        } finally {
-          if (active) setLoading(false);
-        }
-      })();
-      return () => {
-        active = false;
-      };
-    }, []),
+  /*
+   * 내 화면이 쓰는 것 셋 — 프로필·직장 인증·알림 스위치.
+   * 하위 편집 화면에서 돌아오면 다시 읽어 최신 상태를 반영한다(useRefreshOnFocus).
+   * 캐시가 있으면 그동안 이전 값이 그대로 보여, 편집 후 돌아올 때 화면이 비지 않는다.
+   */
+  const meQuery = useQuery({
+    queryKey: ['me', 'profile'],
+    queryFn: async () => {
+      const [profile, job, notifyOn] = await Promise.all([
+        getMyProfile(),
+        getJobStatus().catch(() => ({ verified: false, domain: null })),
+        // null이면 아직 확인 전 — 값이 잠깐 '꺼짐'으로 보였다 바뀌는 깜빡임을 막는다.
+        notificationsEnabled().catch(() => null),
+      ]);
+      return { profile, job, notifyOn };
+    },
+  });
+
+  const profile = meQuery.data?.profile ?? null;
+  const job = meQuery.data?.job ?? null;
+  const notifyOn = meQuery.data?.notifyOn ?? null;
+
+  /** 알림 스위치를 그 자리에서 바꾼다 — 서버에 다시 묻지 않는다. */
+  const setNotifyOn = useCallback(
+    (on: boolean | null) => {
+      queryClient.setQueryData(['me', 'profile'], (old?: { notifyOn: boolean | null }) =>
+        old ? { ...old, notifyOn: on } : old,
+      );
+    },
+    [queryClient],
   );
+
+  const refresh = useCallback(() => void meQuery.refetch(), [meQuery]);
+  useRefreshOnFocus(refresh);
+
+  const toLogin = useCallback(() => router.replace('/'), [router]);
+  useSessionGuard(meQuery.error, toLogin);
 
   async function toggleNotifications() {
     if (notifyOn === null) return;
@@ -101,10 +105,20 @@ export default function MyScreen() {
     ]);
   }
 
-  if (loading) {
+  if (meQuery.isPending && !meQuery.data) {
+    // 생애 첫 로딩 — 프로필 카드와 메뉴 줄들이 들어올 자리.
     return (
-      <View style={[styles.root, styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator color={c.primary} />
+      <View style={[styles.root, { backgroundColor: c.background }]}>
+        <SafeAreaView style={styles.flex} edges={['top']}>
+          <View style={styles.content}>
+            <Skeleton c={c} height={168} radius={Radius.lg} />
+            <View style={styles.skeletonMenu}>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} height={52} c={c} radius={Radius.md} />
+              ))}
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
@@ -299,6 +313,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
+  skeletonMenu: { gap: 10, marginTop: 22, marginHorizontal: 20 },
   content: { paddingBottom: 40 }, // 실제 값은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
 
   hero: {
