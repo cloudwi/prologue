@@ -28,6 +28,8 @@ type Props = {
   onApply?: () => void;
   onCancel?: () => void;
   onOpenKakao?: (link: string) => void;
+  /** 모임 따라가기 토글 — 다음 회차가 열리면 알림을 받는다. 미리보기에는 넘기지 않는다. */
+  onToggleFollow?: (on: boolean) => void;
   contentContainerStyle?: StyleProp<ViewStyle>;
 };
 
@@ -42,6 +44,7 @@ export function MeetupInvitation({
   onApply,
   onCancel,
   onOpenKakao,
+  onToggleFollow,
   contentContainerStyle,
 }: Props) {
   const meetDate = new Date(meetup.meetAt);
@@ -68,6 +71,10 @@ export function MeetupInvitation({
       {/* 2) 표지 — 영문 눈썹, 제목, 숫자 날짜. 숫자는 가늘고 자간 넓게 — 청첩장의 서명 같은 줄. */}
       <View style={styles.headline}>
         <Text style={[styles.eyebrow, { color: c.textSecondary }]}>INVITATION</Text>
+        {/* 회차 — 이어져 온 모임이면 "몇 번째 만남"이 초대장의 첫 신뢰 신호다. */}
+        {(meetup.occurrenceTotal ?? 1) > 1 && (
+          <Text style={[styles.occurrence, { color: c.primaryStrong }]}>{meetup.occurrence ?? 1}번째 만남</Text>
+        )}
         <Text style={[styles.title, { color: c.text }]}>{meetup.title}</Text>
         <Text style={[styles.dateNumerals, { color: c.text }]}>{numeralDate(meetDate)}</Text>
         <Text style={[styles.dateWords, { color: c.textSecondary }]}>
@@ -197,6 +204,29 @@ export function MeetupInvitation({
           )}
         </View>
       </Section>
+
+      {/*
+        * 따라가기 — 이 자리가 좋았다면 다음에도 부른다.
+        * 모임은 단발이지만 '이 모임'은 이어진다: 다음 회차가 열리면 알림이 간다.
+        */}
+      {!preview && onToggleFollow != null && !meetup.isMine && (
+        <Pressable
+          onPress={() => onToggleFollow(!(meetup.following ?? false))}
+          style={({ pressed }) => [
+            styles.followBtn,
+            { borderColor: meetup.following ? c.primary : c.border, opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <Ionicons
+            name={meetup.following ? 'notifications' : 'notifications-outline'}
+            size={15}
+            color={meetup.following ? c.primaryStrong : c.textSecondary}
+          />
+          <Text style={[styles.followText, { color: meetup.following ? c.primaryStrong : c.text }]}>
+            {meetup.following ? '다음 회차 알림 받는 중' : '다음 회차 열리면 알림 받기'}
+          </Text>
+        </Pressable>
+      )}
 
       <Text style={[styles.closing, { color: c.textSecondary }]}>프롤로그에서 보내는 초대장이에요</Text>
     </ScrollView>
@@ -350,6 +380,7 @@ const styles = StyleSheet.create({
   // ── 표지 ──
   headline: { alignItems: 'center', paddingTop: 36, paddingHorizontal: 32 },
   eyebrow: { fontSize: 11.5, fontWeight: '600', letterSpacing: 4 },
+  occurrence: { fontSize: 13, fontWeight: '700', marginTop: 10, letterSpacing: 0.3 },
   title: { fontSize: 26, fontWeight: '700', textAlign: 'center', lineHeight: 36, marginTop: 14, letterSpacing: -0.3 },
   // 숫자 날짜 — 가늘고 넓게. 청첩장에서 제목 다음으로 큰 글자.
   dateNumerals: { fontSize: 22, fontWeight: '300', letterSpacing: 3, marginTop: 18, fontVariant: ['tabular-nums'] },
@@ -402,5 +433,11 @@ const styles = StyleSheet.create({
   cancelWrap: { marginTop: -4 },
   cancelLink: { fontSize: 14, textDecorationLine: 'underline' },
 
+  // 따라가기 — 테두리 알약. 켜지면 테두리와 글자만 테라코타로 바뀐다(면은 그대로).
+  followBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    alignSelf: 'center', height: 44, paddingHorizontal: 20, borderRadius: Radius.pill, borderWidth: 1, marginTop: 40,
+  },
+  followText: { fontSize: 14.5, fontWeight: '700' },
   closing: { fontSize: 12, textAlign: 'center', marginTop: 48, letterSpacing: 0.5 },
 });

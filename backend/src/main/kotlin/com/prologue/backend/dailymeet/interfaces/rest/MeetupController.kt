@@ -91,6 +91,11 @@ class MeetupController(
         val coverUrls: List<String> = emptyList(),
         @field:NotBlank(message = "카카오 오픈채팅 링크를 넣어주세요")
         val kakaoLink: String,
+        /**
+         * 이어 여는 회차면 그 모임의 seriesId('이 모임 다시 열기').
+         * 없으면 새 모임 — 자기 혼자짜리 회차로 시작한다.
+         */
+        val seriesId: String? = null,
     )
 
     data class CreateMeetupResponse(val meetupId: String)
@@ -117,6 +122,21 @@ class MeetupController(
     @PostMapping("/{meetupId}/apply")
     fun apply(authentication: Authentication, @PathVariable meetupId: String) {
         meetupService.apply(UUID.fromString(authentication.name), parseId(meetupId))
+    }
+
+    /**
+     * 모임 따라가기 — 다음 회차가 열리면 알림을 받는다.
+     * 따라가는 대상은 이 회차가 아니라 모임 자체라, 오늘 모임이 끝나도 구독은 남는다.
+     */
+    @PostMapping("/{meetupId}/follow")
+    fun follow(authentication: Authentication, @PathVariable meetupId: String) {
+        meetupService.follow(UUID.fromString(authentication.name), parseId(meetupId), on = true)
+    }
+
+    /** 따라가기 끄기. */
+    @PostMapping("/{meetupId}/unfollow")
+    fun unfollow(authentication: Authentication, @PathVariable meetupId: String) {
+        meetupService.follow(UUID.fromString(authentication.name), parseId(meetupId), on = false)
     }
 
     /** 신청 취소. */
@@ -159,6 +179,7 @@ class MeetupController(
             color = request.color,
             coverUrls = request.coverUrls,
             kakaoLink = request.kakaoLink,
+            seriesId = request.seriesId?.let { parseId(it) },
         )
         return CreateMeetupResponse(id.toString())
     }

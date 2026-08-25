@@ -50,6 +50,17 @@ export type Meetup = {
   hostAccountId: string;
   /** 내가 여는 모임인지. */
   isMine: boolean;
+  /**
+   * 회차 묶음 — 같은 모임이 다시 열리면 같은 값('밑줄 모임 3번째 만남').
+   * '다음 회차 열기'가 이 값을 그대로 돌려보내 회차를 잇는다. 구버전 서버는 안 내려준다.
+   */
+  seriesId?: string | null;
+  /** 이 모임이 몇 번째 만남인지(1부터). */
+  occurrence?: number;
+  /** 이 회차 묶음의 전체 만남 수 — 2 이상일 때만 "N번째 만남"을 그린다. */
+  occurrenceTotal?: number;
+  /** 내가 이 모임을 따라가는지 — 다음 회차가 열리면 알림을 받는다. */
+  following?: boolean;
 };
 
 export type MeetupParticipant = { accountId: string; nickname: string | null };
@@ -128,6 +139,14 @@ export async function applyMeetup(meetupId: string): Promise<void> {
 }
 
 /** 신청 취소 (POST /meetups/{id}/cancel). */
+/**
+ * 모임 따라가기 — 다음 회차가 열리면 알림을 받는다.
+ * 따라가는 건 이 회차가 아니라 모임 자체라, 오늘 모임이 끝나도 구독은 남는다.
+ */
+export async function followMeetup(meetupId: string, on: boolean): Promise<void> {
+  await authedRequest('POST', `/meetups/${meetupId}/${on ? 'follow' : 'unfollow'}`);
+}
+
 export async function cancelMeetup(meetupId: string): Promise<void> {
   await authedRequest('POST', `/meetups/${meetupId}/cancel`);
 }
@@ -209,6 +228,8 @@ export type HostMeetup = {
   status: 'OPEN' | 'CLOSED' | 'DONE' | 'CANCELED' | string;
   confirmedCount: number;
   applications: HostApplication[];
+  /** 회차 묶음 — '다음 회차 열기'가 이 값을 넘겨 회차를 잇는다. */
+  seriesId?: string | null;
 };
 
 export type CreateMeetupInput = {
@@ -234,6 +255,8 @@ export type CreateMeetupInput = {
   color: string | null;
   coverUrls: string[];
   kakaoLink: string;
+  /** 이어 여는 회차면 그 모임의 seriesId. 없으면 새 모임. */
+  seriesId?: string | null;
 };
 
 /** 모임 열기 — 누구나 (POST /meetups). */

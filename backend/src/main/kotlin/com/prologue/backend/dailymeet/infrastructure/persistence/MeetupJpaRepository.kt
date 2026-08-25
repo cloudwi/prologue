@@ -15,6 +15,14 @@ interface MeetupJpaRepository : JpaRepository<MeetupJpaEntity, UUID> {
     fun findByHostAccountIdOrderByCreatedAtDesc(hostAccountId: UUID): List<MeetupJpaEntity>
 
     fun countByHostAccountIdAndStatus(hostAccountId: UUID, status: String): Long
+
+    fun findBySeriesIdOrderByMeetAtAsc(seriesId: UUID): List<MeetupJpaEntity>
+}
+
+interface MeetupFollowJpaRepository : JpaRepository<MeetupFollowJpaEntity, MeetupFollowId> {
+    fun findByAccountId(accountId: UUID): List<MeetupFollowJpaEntity>
+
+    fun findBySeriesId(seriesId: UUID): List<MeetupFollowJpaEntity>
 }
 
 interface MeetupApplicationJpaRepository : JpaRepository<MeetupApplicationJpaEntity, UUID> {

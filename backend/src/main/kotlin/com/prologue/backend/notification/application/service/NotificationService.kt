@@ -126,6 +126,21 @@ class NotificationService(
         ),
     )
 
+    /**
+     * 따라가던 모임의 다음 회차가 열렸다.
+     * 지난번에 좋았던 자리가 다시 열렸다는 소식이라, 모임 알림 중 가장 반가운 축이다.
+     */
+    @Async
+    @Transactional(readOnly = true)
+    fun meetupSeriesOpened(accountId: UUID, meetupTitle: String) = notify(
+        accountId,
+        PushMessage(
+            title = "다음 모임이 열렸어요",
+            body = "'$meetupTitle' — 따라가던 모임의 다음 자리예요.",
+            data = mapOf("screen" to "meetups"),
+        ),
+    )
+
     /** 내 초대 코드로 친구가 들어왔다 — 보상이 들어왔다는 것도 함께. */
     @Async
     @Transactional(readOnly = true)

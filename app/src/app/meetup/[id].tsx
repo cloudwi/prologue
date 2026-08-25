@@ -7,7 +7,7 @@ import { MeetupInvitation } from '@/components/meetup-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
-import { applyMeetup, cancelMeetup, feeLabel, getMeetups, type Meetup } from '@/lib/meetups';
+import { applyMeetup, cancelMeetup, feeLabel, followMeetup, getMeetups, type Meetup } from '@/lib/meetups';
 
 /**
  * 모임 상세 — 정보 화면이 아니라 초대장이다(유저 결정 2026-08-24).
@@ -91,6 +91,22 @@ export default function MeetupDetailScreen() {
     ]);
   }
 
+  /**
+   * 모임 따라가기 — 다음 회차가 열리면 알림을 받는다.
+   * 화면을 먼저 바꾸고 서버에 알린다(낙관적) — 실패하면 되돌린다.
+   */
+  async function toggleFollow(on: boolean) {
+    if (meetup == null) return;
+    setMeetup({ ...meetup, following: on });
+    try {
+      await followMeetup(meetup.meetupId, on);
+      if (on) track('meetup_followed');
+    } catch (e) {
+      setMeetup({ ...meetup, following: !on });
+      Alert.alert('바꾸지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    }
+  }
+
   function openKakao(link: string) {
     void Linking.openURL(link).catch(() => Alert.alert('링크를 열지 못했어요', link));
   }
@@ -122,6 +138,7 @@ export default function MeetupDetailScreen() {
           onApply={() => confirmApply(meetup)}
           onCancel={() => confirmCancel(meetup)}
           onOpenKakao={openKakao}
+          onToggleFollow={(on) => void toggleFollow(on)}
         />
       )}
 

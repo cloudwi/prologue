@@ -48,6 +48,7 @@ type AnalyticsEvent =
   | 'referral_redeemed'      // 친구 코드 쓰기 성공
   // 오프라인 모임
   | 'meetup_applied'         // 모임 신청
+  | 'meetup_followed'        // 모임 따라가기 — 다음 회차 알림 신청(연속 참여 의사)
   | 'meetup_created';        // 모임 열기 — 유저가 모임장이 된 순간
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {

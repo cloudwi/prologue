@@ -16,6 +16,14 @@ enum class MeetupStatus { OPEN, CLOSED, DONE, CANCELED }
  */
 class Meetup private constructor(
     val id: UUID?, // 영속 전 null, JPA가 부여(UUIDv7)
+    /**
+     * 회차 묶음. 같은 모임이 다시 열리면 같은 값을 단다("밑줄 모임 3번째 만남").
+     *
+     * 행 id와 따로 두는 이유: 회차를 잇는 주체는 "첫 모임 행"이 아니라 모임 그 자체다.
+     * 첫 회차를 지워도 나머지 회차가 서로를 잃지 않아야 한다.
+     * 단발 모임은 자기 혼자짜리 회차다 — 값이 없는 모임은 없다.
+     */
+    val seriesId: UUID,
     val hostAccountId: UUID,
     val title: String,
     val description: String?,
@@ -111,6 +119,8 @@ class Meetup private constructor(
             color: String?,
             coverUrls: List<String>,
             kakaoLink: String,
+            /** 이어 여는 회차면 그 모임의 seriesId. null이면 새 모임(자기 혼자짜리 회차). */
+            seriesId: UUID? = null,
             now: Instant = Instant.now(),
         ): Meetup {
             val cleanTitle = title.trim()
@@ -152,7 +162,7 @@ class Meetup private constructor(
             if (!cleanLink.startsWith("https://")) throw DailyMeetException("카카오 오픈채팅 링크(https://)를 넣어주세요")
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
-                null, hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl, cleanPlaceAddress,
+                null, seriesId ?: UUID.randomUUID(), hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl, cleanPlaceAddress,
                 capacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanLink, MeetupStatus.OPEN, now,
@@ -197,7 +207,8 @@ class Meetup private constructor(
                 requireJobVerified, emoji, color, coverUrls, kakaoLink,
             )
             return Meetup(
-                existing.id, existing.hostAccountId, fresh.title, fresh.description, fresh.meetAt,
+                // 수정은 회차를 옮기지 않는다 — 회차를 잇는 건 '다시 열기'뿐이다.
+                existing.id, existing.seriesId, existing.hostAccountId, fresh.title, fresh.description, fresh.meetAt,
                 fresh.place, fresh.placeUrl, fresh.placeAddress, fresh.capacity, fresh.fee,
                 fresh.feeFemale, fresh.genderLimit,
                 fresh.minAgeMale, fresh.maxAgeMale, fresh.minAgeFemale, fresh.maxAgeFemale,
@@ -209,6 +220,7 @@ class Meetup private constructor(
 
         fun reconstitute(
             id: UUID,
+            seriesId: UUID,
             hostAccountId: UUID,
             title: String,
             description: String?,
@@ -234,7 +246,7 @@ class Meetup private constructor(
             status: MeetupStatus,
             createdAt: Instant,
         ): Meetup = Meetup(
-            id, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity, fee,
+            id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity, fee,
             feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
             requireJobVerified, emoji, color, coverUrls, kakaoLink, status, createdAt,

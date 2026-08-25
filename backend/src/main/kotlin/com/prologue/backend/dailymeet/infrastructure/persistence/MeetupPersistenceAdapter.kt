@@ -5,6 +5,7 @@ import com.prologue.backend.dailymeet.domain.model.MeetupApplication
 import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
 import com.prologue.backend.dailymeet.domain.model.MeetupStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
+import com.prologue.backend.dailymeet.domain.repository.MeetupFollowRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Repository
@@ -39,9 +40,13 @@ class MeetupPersistenceAdapter(
 
     override fun delete(id: UUID) = jpa.deleteById(id)
 
+    override fun findAllBySeries(seriesId: UUID): List<Meetup> =
+        jpa.findBySeriesIdOrderByMeetAtAsc(seriesId).map { it.toDomain() }
+
     private fun Meetup.toEntity(): MeetupJpaEntity =
         MeetupJpaEntity(
             id = id,
+            seriesId = seriesId,
             hostAccountId = hostAccountId,
             title = title,
             description = description,
@@ -71,6 +76,7 @@ class MeetupPersistenceAdapter(
     private fun MeetupJpaEntity.toDomain(): Meetup =
         Meetup.reconstitute(
             id = requireNotNull(id) { "영속된 모임은 id를 가진다" },
+            seriesId = seriesId,
             hostAccountId = hostAccountId,
             title = title,
             description = description,
@@ -143,4 +149,28 @@ class MeetupApplicationPersistenceAdapter(
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
+}
+
+/**
+ * 모임 따라가기 저장소. 멱등하게 만든다 — 버튼이 두 번 눌려도 같은 상태여야 한다.
+ */
+@Repository
+class MeetupFollowPersistenceAdapter(
+    private val jpa: MeetupFollowJpaRepository,
+) : MeetupFollowRepository {
+    override fun follow(accountId: UUID, seriesId: UUID) {
+        val id = MeetupFollowId(accountId, seriesId)
+        if (jpa.existsById(id)) return
+        jpa.save(MeetupFollowJpaEntity(id))
+    }
+
+    override fun unfollow(accountId: UUID, seriesId: UUID) {
+        jpa.deleteById(MeetupFollowId(accountId, seriesId))
+    }
+
+    override fun findSeriesIdsByAccount(accountId: UUID): Set<UUID> =
+        jpa.findByAccountId(accountId).map { it.seriesId }.toSet()
+
+    override fun findAccountIdsBySeries(seriesId: UUID): List<UUID> =
+        jpa.findBySeriesId(seriesId).map { it.accountId }
 }

@@ -27,6 +27,25 @@ interface MeetupRepository {
 
     /** 완전 삭제 — 어드민 전용. 신청은 FK cascade로 함께 지워진다. */
     fun delete(id: UUID)
+
+    /** 같은 회차 묶음의 모임 전부, 이른 날짜순 — "몇 번째 만남"을 세고 지난 회차를 보여줄 때. */
+    fun findAllBySeries(seriesId: UUID): List<Meetup>
+}
+
+/**
+ * 모임 따라가기 — 회차가 아니라 모임(series)을 따라간다.
+ * 회차 하나가 끝나도 구독은 남아야 다음 회차를 알릴 수 있다.
+ */
+interface MeetupFollowRepository {
+    fun follow(accountId: UUID, seriesId: UUID)
+
+    fun unfollow(accountId: UUID, seriesId: UUID)
+
+    /** 내가 따라가는 모임들 — 목록이 사람 수만큼 묻지 않도록 한 번에 준다. */
+    fun findSeriesIdsByAccount(accountId: UUID): Set<UUID>
+
+    /** 이 모임을 따라가는 사람들 — 새 회차가 열렸을 때 알릴 대상. */
+    fun findAccountIdsBySeries(seriesId: UUID): List<UUID>
 }
 
 interface MeetupApplicationRepository {

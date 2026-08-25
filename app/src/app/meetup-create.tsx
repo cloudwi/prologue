@@ -134,8 +134,12 @@ export default function MeetupCreateScreen() {
   const c = useTheme();
   const router = useRouter();
   // 수정 모드 — ?edit={meetupId}로 들어오면 기존 값을 채워 넣고 저장이 곧 수정이 된다.
-  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  // 다음 회차 — ?repeat={meetupId}는 같은 값을 채우되 **새 모임**을 만든다(회차만 잇는다).
+  const { edit, repeat } = useLocalSearchParams<{ edit?: string; repeat?: string }>();
   const editId = edit ? String(edit) : null;
+  const repeatId = repeat ? String(repeat) : null;
+  // 이어 여는 회차의 묶음 id — 지난 회차에서 받아 그대로 서버로 돌려보낸다.
+  const [seriesId, setSeriesId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -173,15 +177,18 @@ export default function MeetupCreateScreen() {
 
   // 수정 모드 — 내 모임에서 기존 값을 불러와 폼을 채운다.
   useEffect(() => {
-    if (!editId) return;
+    const sourceId = editId ?? repeatId;
+    if (!sourceId) return;
     let active = true;
     getMyMeetups()
       .then((mine) => {
-        const m = mine.find((x) => x.meetupId === editId);
+        const m = mine.find((x) => x.meetupId === sourceId);
         if (!active || !m) return;
         setTitle(m.title);
         setDescription(m.description ?? '');
-        setMeetAt(new Date(m.meetAt));
+        // 다음 회차는 날짜만 비운다 — 같은 자리, 같은 조건, 새로운 날.
+        if (repeatId) setSeriesId(m.seriesId ?? null);
+        else setMeetAt(new Date(m.meetAt));
         if (m.placeAddress) {
           setAddress(m.placeAddress);
           const detail = m.place.startsWith(m.placeAddress) ? m.place.slice(m.placeAddress.length).replace(/^ · /, '') : '';
@@ -216,7 +223,7 @@ export default function MeetupCreateScreen() {
       active = false;
     };
      
-  }, [editId]);
+  }, [editId, repeatId]);
 
   // iOS 날짜 바텀시트 휠용
   const [pickerOpen, setPickerOpen] = useState<'date' | 'time' | null>(null);
@@ -352,6 +359,8 @@ export default function MeetupCreateScreen() {
       color: null,
       coverUrls,
       kakaoLink: normalizedLink()!,
+      // 이어 여는 회차만 값이 실린다 — 새 모임은 서버가 자기 혼자짜리 회차를 만든다.
+      seriesId,
     };
   }
 
@@ -393,9 +402,13 @@ export default function MeetupCreateScreen() {
       } else {
         await createMeetup(input);
         track('meetup_created');
-        Alert.alert('모임을 열었어요', '신청이 들어오면 알림으로 알려드릴게요.\n입금 확인과 확정은 [모임 관리]에서 해요.', [
-          { text: '확인', onPress: () => router.back() },
-        ]);
+        Alert.alert(
+          repeatId ? '다음 회차를 열었어요' : '모임을 열었어요',
+          repeatId
+            ? '이 모임을 따라가던 분들에게 알림이 갔어요.\n입금 확인과 확정은 [모임 관리]에서 해요.'
+            : '신청이 들어오면 알림으로 알려드릴게요.\n입금 확인과 확정은 [모임 관리]에서 해요.',
+          [{ text: '확인', onPress: () => router.back() }],
+        );
       }
     } catch (e) {
       Alert.alert(editId ? '수정하지 못했어요' : '모임을 열지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
@@ -405,7 +418,7 @@ export default function MeetupCreateScreen() {
   }
 
   return (
-    <SubScreen title={editId ? '모임 수정' : '모임 열기'} c={c} onSave={() => void openPreview()} saveLabel="미리보기" saving={saving}>
+    <SubScreen title={editId ? '모임 수정' : repeatId ? '다음 회차 열기' : '모임 열기'} c={c} onSave={() => void openPreview()} saveLabel="미리보기" saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 미리보기는 상세와 같은 페이저다. */}
         {coverUrls.length > 0 ? (

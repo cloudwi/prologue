@@ -1,6 +1,8 @@
 package com.prologue.backend.dailymeet.infrastructure.persistence
 
 import jakarta.persistence.Column
+import jakarta.persistence.Embeddable
+import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
@@ -18,6 +20,10 @@ class MeetupJpaEntity(
     @UuidGenerator(style = UuidGenerator.Style.TIME)
     @Column(name = "id", nullable = false, updatable = false)
     var id: UUID? = null,
+
+    /** 회차 묶음 — 같은 모임이 다시 열리면 같은 값. 단발 모임은 자기 혼자짜리 회차다. */
+    @Column(name = "series_id", nullable = false)
+    val seriesId: UUID,
 
     @Column(name = "host_account_id", nullable = false)
     val hostAccountId: UUID,
@@ -119,3 +125,29 @@ class MeetupApplicationJpaEntity(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant,
 )
+
+/**
+ * 모임 따라가기 — (계정, 회차)가 곧 키다.
+ * 같은 모임을 두 번 따라갈 수 없고, 따로 id를 둘 이유도 없다.
+ */
+@Embeddable
+data class MeetupFollowId(
+    @Column(name = "account_id", nullable = false)
+    val accountId: UUID = UUID(0, 0),
+
+    @Column(name = "series_id", nullable = false)
+    val seriesId: UUID = UUID(0, 0),
+) : java.io.Serializable
+
+@Entity
+@Table(name = "meetup_follows")
+class MeetupFollowJpaEntity(
+    @EmbeddedId
+    val id: MeetupFollowId,
+
+    @Column(name = "created_at", nullable = false)
+    val createdAt: Instant = Instant.now(),
+) {
+    val accountId: UUID get() = id.accountId
+    val seriesId: UUID get() = id.seriesId
+}

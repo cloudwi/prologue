@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.domain.model.MeetupApplication
 import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
 import com.prologue.backend.dailymeet.domain.model.MeetupStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
+import com.prologue.backend.dailymeet.domain.repository.MeetupFollowRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
 import com.prologue.backend.member.application.port.PhotoStorage
 import com.prologue.backend.member.application.service.JobVerificationService
@@ -57,6 +58,14 @@ data class MeetupView(
     val hostAccountId: UUID,
     /** 내가 여는 모임인지 — 앱이 '관리' 동선을 보여줄 때. */
     val isMine: Boolean,
+    /** 회차 묶음 id — '이 모임 다시 열기'가 회차를 이을 때 그대로 돌려보낸다. */
+    val seriesId: UUID? = null,
+    /** 이 모임이 몇 번째 만남인지(1부터). 단발이면 1. */
+    val occurrence: Int = 1,
+    /** 이 회차 묶음의 전체 만남 수 — 2 이상이면 앱이 "3번째 만남"을 그린다. */
+    val occurrenceTotal: Int = 1,
+    /** 내가 이 모임을 따라가는지 — 다음 회차가 열리면 알림을 받는다. */
+    val following: Boolean = false,
 )
 
 /** 확정 참가자 한 명 — 모임 프로필로 이어진다. */
@@ -178,6 +187,7 @@ class MeetupService(
     private val notificationService: NotificationService,
     private val photoStorage: PhotoStorage,
     private val hostPolicy: MeetupHostPolicy,
+    private val followRepository: MeetupFollowRepository,
 ) {
     /** 이 사람이 모임을 열 수 있는지 — 앱이 '모임 열기' 버튼을 그릴지 정할 때 묻는다. */
     fun canHost(accountId: UUID): Boolean = hostPolicy.canHost(accountId)
@@ -189,7 +199,11 @@ class MeetupService(
     fun upcoming(accountId: UUID): List<MeetupView> {
         val meetups = meetupRepository.findUpcoming(Instant.now())
         val mine = applicationRepository.findAllByApplicant(accountId).associateBy { it.meetupId }
+        // 목록이 모임 수만큼 되묻지 않도록 한 번에 읽는다.
+        val followed = followRepository.findSeriesIdsByAccount(accountId)
+        val seriesCounts = mutableMapOf<UUID, List<Meetup>>()
         return meetups.map { m ->
+            val siblings = seriesCounts.getOrPut(m.seriesId) { meetupRepository.findAllBySeries(m.seriesId) }
             val my = mine[m.id]?.takeIf { it.status != MeetupApplicationStatus.CANCELED }
             val confirmedApps = applicationRepository.findAllByMeetup(requireNotNull(m.id))
                 .filter { it.status == MeetupApplicationStatus.CONFIRMED }
@@ -227,8 +241,24 @@ class MeetupService(
                 },
                 hostAccountId = m.hostAccountId,
                 isMine = m.hostAccountId == accountId,
+                seriesId = m.seriesId,
+                occurrence = siblings.indexOfFirst { it.id == m.id }.let { if (it < 0) siblings.size else it } + 1,
+                occurrenceTotal = maxOf(siblings.size, 1),
+                following = m.seriesId in followed,
             )
         }
+    }
+
+    /**
+     * 이 모임을 따라간다 — 다음 회차가 열리면 알림을 받는다.
+     *
+     * 따라가는 대상은 회차가 아니라 모임(series)이다. 오늘 모임이 끝나도 구독은 남아야
+     * 다음 달 모임을 알릴 수 있다. 멱등 — 버튼이 두 번 눌려도 같은 상태다.
+     */
+    @Transactional
+    fun follow(accountId: UUID, meetupId: UUID, on: Boolean) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        if (on) followRepository.follow(accountId, meetup.seriesId) else followRepository.unfollow(accountId, meetup.seriesId)
     }
 
     /** 모임 멤버 프로필 — 프로필과 모임 이력까지만. 문답·편지는 응답에 싣지 않는다. */
@@ -339,19 +369,31 @@ class MeetupService(
         color: String?,
         coverUrls: List<String>,
         kakaoLink: String,
+        /** 이어 여는 회차면 그 모임의 seriesId. 내가 연 모임의 회차만 이을 수 있다. */
+        seriesId: UUID? = null,
     ): UUID {
         // 서버가 막아야 실효가 있다 — 앱은 버튼을 숨길 뿐이고, 옛 앱과 직접 호출은 여기서 걸린다.
         if (!hostPolicy.canHost(hostAccountId)) {
             throw DailyMeetException("모임은 아직 운영자만 열 수 있어요. 열고 싶은 모임이 있다면 알려주세요.")
+        }
+        // 남의 모임 회차에 끼어들 수 없다 — 회차는 그 모임을 열어온 사람의 것이다.
+        if (seriesId != null && meetupRepository.findAllBySeries(seriesId).none { it.hostAccountId == hostAccountId }) {
+            throw DailyMeetException("이어 열 수 있는 모임이 아니에요")
         }
         val saved = meetupRepository.save(
             Meetup.create(
                 hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity,
                 fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, emoji, color, coverUrls, kakaoLink,
+                requireJobVerified, emoji, color, coverUrls, kakaoLink, seriesId,
             ),
         )
+        // 이어 여는 회차면 따라가던 사람들에게 알린다 — 이게 '다시 참여하고 싶다'는 마음이 돌아오는 길이다.
+        if (seriesId != null) {
+            followRepository.findAccountIdsBySeries(seriesId)
+                .filter { it != hostAccountId }
+                .forEach { notificationService.meetupSeriesOpened(it, saved.title) }
+        }
         return requireNotNull(saved.id)
     }
 
