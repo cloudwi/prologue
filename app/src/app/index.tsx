@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,6 +20,9 @@ export default function LoginScreen() {
   const router = useRouter();
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
 
+  /** 갈 곳이 정해졌으니 스플래시를 내린다. 실패해도 앱은 그대로 간다(루트에 안전장치가 있다). */
+  const hideSplash = () => void SplashScreen.hideAsync().catch(() => {});
+
   // 앱 시작 시: 저장된 토큰이 있으면 프로필 확인 후 자동 진입
   useEffect(() => {
     let active = true;
@@ -31,7 +35,10 @@ export default function LoginScreen() {
       try {
         const profile = await getMyProfile();
         if (profile?.accountId) identify(profile.accountId);
-        if (active) router.replace(profile ? '/discover' : '/onboarding');
+        if (active) {
+          router.replace(profile ? '/discover' : '/onboarding');
+          hideSplash(); // 목적지가 그려지는 프레임에 맞춰 내린다
+        }
       } catch (e) {
         // 재발급까지 실패한 만료(401/403) — authedFetch가 토큰을 지웠으니 로그인 화면으로 남는다
         if (e instanceof ApiError && (e.status === 401 || e.status === 403)) await clearTokens();
@@ -43,16 +50,26 @@ export default function LoginScreen() {
     };
   }, [router]);
 
+  /*
+   * 확인이 끝나기 전 — 그 자리는 스플래시가 덮고 있다.
+   * 스피너를 띄우면 브랜드 화면이 사라진 자리에 점 세 개만 남는다.
+   *
+   * 그런데 확인이 길어져(무료 티어 콜드스타트) 루트의 안전장치가 스플래시를 내리면
+   * 빈 배경만 남는다. 그래서 스플래시와 **같은 그림**을 그려 둔다 —
+   * 무엇이 먼저 걷히든 화면은 이어진 것처럼 보인다. 애니메이션은 넣지 않는다(스플래시는 정지 화면이다).
+   */
   if (checking) {
     return (
       <View style={[styles.root, styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator color={c.primary} />
+        <Image source={require('@/assets/images/brand-mark.png')} style={styles.logo} contentFit="contain" />
+        <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
+        <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: c.background }]}>
+    <View style={[styles.root, { backgroundColor: c.background }]} onLayout={hideSplash}>
 
       <SafeAreaView style={styles.safe}>
         {/* 브랜드 */}

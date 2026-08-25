@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { enableAppSwitcherProtectionAsync, usePreventScreenCapture } from 'expo-screen-capture';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
@@ -23,10 +24,30 @@ Sentry.init({
   sendDefaultPii: false, // 소개팅 앱 — 에러 리포트에 개인정보를 싣지 않는다
 });
 
+/**
+ * 스플래시를 우리가 내린다 — 자동으로 사라지게 두지 않는다(2026-08-25).
+ *
+ * 예전에는 번들이 로드되는 순간 스플래시가 사라지고, 그 자리에 맨 스피너가 떴다.
+ * 그런데 첫 화면은 저장된 토큰을 읽고 프로필을 **네트워크로** 확인한다 —
+ * 서버가 잠들어 있으면(무료 티어 콜드스타트) 그 빈 화면이 한참 간다.
+ * 스플래시는 로그인 화면과 같은 조판으로 구운 브랜드 화면이라, 떠 있는 동안은
+ * '로딩'이 아니라 '시작'으로 읽힌다.
+ *
+ * 내리는 건 index.tsx가 갈 곳을 정한 뒤. 다만 어디서도 못 내리는 경우를 대비해
+ * 아래 SPLASH_MAX_MS 안전장치를 둔다 — 스플래시에 갇힌 앱은 죽은 앱이다.
+ */
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // 이미 사라졌거나 지원하지 않는 환경 — 붙잡지 못했을 뿐이라 앱은 그대로 간다.
+});
+
+/** 무슨 일이 있어도 이 시간이 지나면 스플래시를 내린다. */
+const SPLASH_MAX_MS = 4000;
+
 export default Sentry.wrap(RootLayout);
 
 function RootLayout() {
   useScreenPrivacy();
+  useSplashFailsafe();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -38,6 +59,14 @@ function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/** 스플래시 안전장치 — 첫 화면이 어떤 이유로든 내리지 못해도 앱이 갇히지 않게. */
+function useSplashFailsafe() {
+  useEffect(() => {
+    const timer = setTimeout(() => void SplashScreen.hideAsync().catch(() => {}), SPLASH_MAX_MS);
+    return () => clearTimeout(timer);
+  }, []);
 }
 
 /**
