@@ -1,0 +1,20 @@
+# 통합 테스트 프로파일 — 진짜 Postgres(Testcontainers)에 실제 마이그레이션을 돌린다.
+#
+# 'test' 프로파일(H2 + ddl-auto: create-drop)은 "애플리케이션이 뜨는가"만 본다.
+# 여기서 보는 건 그보다 아래다 — **쿼리가 실제로 실행되는가**, 그리고 **마이그레이션이 도는가**.
+#
+# 2026-08-25: meetup_follows가 @EmbeddedId인데 파생 쿼리(findByAccountId)를 써서
+# GET /meetups 전체가 500이 됐다. 유닛 테스트 228건이 전부 초록이었는데도 배포까지 갔다 —
+# 그 종류의 버그는 진짜 DB에 쿼리를 던져 봐야만 드러난다.
+#
+# ddl-auto는 validate: 엔티티와 마이그레이션이 어긋나면 여기서 먼저 터진다
+# (운영 application.yaml의 "추후 Testcontainers로 validate 강화" 메모가 이것).
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+jwt:
+  secret: integration-test-secret-not-a-real-key

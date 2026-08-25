@@ -52,6 +52,14 @@ dependencies {
     // 컨텍스트가 실제로 뜨는지 보려면 DataSource가 있어야 한다. 운영은 Postgres지만
     // 기동 검증에는 인메모리로 충분하다 — 여기서 잡으려는 건 쿼리가 아니라 빈 배선이다.
     testRuntimeOnly("com.h2database:h2")
+    // 진짜 Postgres에 마이그레이션을 돌려 리포지토리를 검증한다.
+    // H2 + ddl-auto로는 못 잡는 것들이 있다 — JPA 매핑(@EmbeddedId 파생 쿼리)과 마이그레이션 자체가 그렇다.
+    // 2026-08-25에 그 틈으로 GET /meetups 전체가 500이 되는 버그가 배포까지 갔다.
+    // Boot 4의 의존성 관리에는 Testcontainers BOM이 없어 버전을 직접 고정한다.
+    testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
