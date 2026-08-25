@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -20,10 +20,12 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
-import { isSessionExpired } from '@/lib/api';
-import { answerToday, getPastPeers, getPeers, getToday, type PastPeer, type Peer, type Today, type TodayPeers } from '@/lib/daily';
+import { answerToday, getPastPeers, getPeers, getToday, type Peer } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
+import { haptics } from '@/lib/haptics';
+import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
@@ -51,70 +53,48 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [today, setToday] = useState<Today | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState('');
+  /*
+   * 입력 중인 글. null이면 **아직 손대지 않은 상태**라 서버에 저장된 답을 그대로 비춘다.
+   * 예전에는 첫 로드 때 ref로 한 번만 채워 넣었는데, 렌더 중 ref를 건드리는 방식이라
+   * 갱신이 입력 중인 글을 지울 위험도, 규칙 위반도 함께 있었다. 파생값으로 두면 둘 다 사라진다.
+   */
+  const [typed, setTyped] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(false);
   // 답 쓰기 전에는 한 줄짜리 입구만 보인다 — 누르면 그 자리에서 에디터가 펼쳐진다.
   const [composing, setComposing] = useState(false);
-  const [peersData, setPeersData] = useState<TodayPeers | null>(null);
-  const [peersLoading, setPeersLoading] = useState(false);
   const [answerExpanded, setAnswerExpanded] = useState(false);
-  const [pastPeers, setPastPeers] = useState<PastPeer[]>([]);
   // 이번 세션에 답변으로 고인 잉크 — 저장 직후 "✓ 오늘 답변했어요" 옆에 잠시 붙여 보여준다.
   const [inkEarnedNote, setInkEarnedNote] = useState(0);
 
-  async function loadPeers() {
-    setPeersLoading(true);
-    try {
-      setPeersData(await getPeers());
-    } catch {
-      // 상대 답변은 보조 정보 — 실패해도 화면은 유지
-    } finally {
-      setPeersLoading(false);
-    }
-  }
+  const queryClient = useQueryClient();
 
-  // 첫 로드에만 작성칸을 서버 답변으로 채운다 — 이후 새로고침이 입력 중인 글을 지우면 안 된다.
-  const seeded = useRef(false);
-
-  /**
-   * 탭으로 돌아올 때마다 다시 읽는다.
-   *
-   * 탭 화면은 한 번 뜨면 계속 살아 있어서, 마운트 때만 읽으면 앱을 켜둔 동안 화면이 그대로 굳는다.
-   * 자정을 넘겨 질문이 바뀌어도, 하트나 편지로 지난 상대의 남은 기간이 달라져도 알 수 없다.
+  /*
+   * 서버 데이터 셋 — 캐시에 남아 있으면 탭을 다시 열 때 **비지 않고 그대로 그려진다**.
+   * 갱신은 그 뒤에 조용히 일어난다(useRefreshOnFocus).
    */
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      (async () => {
-        try {
-          const t = await getToday();
-          if (!active) return;
-          setToday(t);
-          if (!seeded.current) {
-            setDraft(t.myAnswer ?? '');
-            seeded.current = true;
-          }
-          loadPeers(); // 답변 전에도 상대 프로필은 미리보기
-          getPastPeers().then((p) => active && setPastPeers(p)).catch(() => {}); // 지난 상대는 보조 정보
-        } catch (e) {
-          if (!active) return;
-          if (isSessionExpired(e)) {
-            router.replace('/'); // 세션 만료 — 에러 알림 대신 로그인으로
-            return;
-          }
-          Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
-        } finally {
-          if (active) setLoading(false);
-        }
-      })();
-      return () => {
-        active = false;
-      };
-    }, [router]),
-  );
+  const todayQuery = useQuery({ queryKey: ['daily', 'today'], queryFn: getToday });
+  const peersQuery = useQuery({ queryKey: ['daily', 'peers'], queryFn: getPeers });
+  // 지난 상대는 보조 정보 — 실패해도 화면은 유지된다.
+  const pastQuery = useQuery({ queryKey: ['daily', 'pastPeers'], queryFn: getPastPeers });
+
+  const today = todayQuery.data ?? null;
+  const peersData = peersQuery.data ?? null;
+  const pastPeers = pastQuery.data ?? [];
+  const peersLoading = peersQuery.isPending;
+
+  const refreshAll = useCallback(() => {
+    void todayQuery.refetch();
+    void peersQuery.refetch();
+    void pastQuery.refetch();
+  }, [todayQuery, peersQuery, pastQuery]);
+  useRefreshOnFocus(refreshAll);
+
+  // 세션 만료는 "HTTP 403" 알림이 아니라 로그인 화면으로 답한다.
+  const toLogin = useCallback(() => router.replace('/'), [router]);
+  useSessionGuard(todayQuery.error, toLogin);
+
+  const draft = typed ?? today?.myAnswer ?? '';
 
   async function submit() {
     if (draft.trim().length < ANSWER_MIN || submitting) return;
@@ -123,12 +103,18 @@ export default function DiscoverScreen() {
       const wasAnswered = today?.answered ?? false;
       const updated = await answerToday(draft.trim());
       track('answer_submitted', { inkEarned: updated.inkEarned });
-      setToday(updated);
-      setDraft(updated.myAnswer ?? '');
+      haptics.success(); // 오늘의 한 편을 남긴 순간 — 손에도 남게
+      // 서버가 준 최신값을 캐시에 그대로 얹는다. 다시 물을 필요가 없다.
+      queryClient.setQueryData(['daily', 'today'], updated);
+      setTyped(null); // 저장했으니 다시 서버 값을 비춘다
       setEditing(false);
       // 오늘의 답변으로 고인 잉크 — 칩을 그 자리에서 올리고, 어디서 늘었는지 한 줄로 알려준다.
       if (updated.inkEarned > 0) setInkEarnedNote(updated.inkEarned);
-      if (!wasAnswered && updated.answered) loadPeers();
+      // 답을 남기면 그 자리에서 상대가 도착한다 — 이월 카드가 새 사람으로 바뀌는 순간.
+      if (!wasAnswered && updated.answered) {
+        void queryClient.invalidateQueries({ queryKey: ['daily', 'peers'] });
+        void queryClient.invalidateQueries({ queryKey: ['daily', 'pastPeers'] });
+      }
     } catch (e) {
       Alert.alert('저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -148,12 +134,12 @@ export default function DiscoverScreen() {
   }
 
   function startEdit() {
-    setDraft(today?.myAnswer ?? '');
+    setTyped(null);
     setEditing(true);
   }
 
   function cancelEdit() {
-    setDraft(today?.myAnswer ?? '');
+    setTyped(null);
     setEditing(false);
     setComposing(false);
   }
@@ -164,10 +150,33 @@ export default function DiscoverScreen() {
   const isEditing = !today?.answered || editing;
   const editorOpen = isEditing && (today?.answered ? true : composing);
 
-  if (loading) {
+  /*
+   * 생애 첫 로딩에만 보이는 자리 표시 — 캐시가 있으면 여기까지 오지 않는다.
+   * 스피너 대신 **들어올 내용과 같은 모양**을 그린다: 표지(눈썹·질문 두 줄·입구)와 상대 카드.
+   * 채워질 때 화면이 튀지 않고, 무엇을 기다리는지도 읽힌다.
+   */
+  if (todayQuery.isPending && !today) {
     return (
-      <View style={[styles.root, styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator color={c.primary} />
+      <View style={[styles.root, { backgroundColor: c.background }]}>
+        <SafeAreaView style={styles.flex} edges={['top']}>
+          <View style={styles.content}>
+            <View style={[styles.cover, { backgroundColor: c.primary + '14' }]}>
+              <View style={styles.topRow}>
+                <Skeleton c={c} width={92} height={14} />
+              </View>
+              <Skeleton c={c} width={64} height={12} />
+              <SkeletonLines c={c} lines={2} lineHeight={26} gap={12} style={styles.skeletonQuestion} />
+              <Skeleton c={c} height={52} radius={Radius.md} style={styles.skeletonEntry} />
+            </View>
+            <View style={styles.peerSection}>
+              <View style={styles.peerHeader}>
+                <Skeleton c={c} width={72} height={13} />
+                <Skeleton c={c} width={104} height={13} />
+              </View>
+              <Skeleton c={c} height={260} radius={Radius.lg} />
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
@@ -216,7 +225,7 @@ export default function DiscoverScreen() {
                       <View style={[styles.myAnswerRule, { backgroundColor: c.primary }]} />
                       <TextInput
                         value={draft}
-                        onChangeText={setDraft}
+                        onChangeText={setTyped}
                         placeholder="오늘의 마음을 적어보세요"
                         placeholderTextColor={c.textSecondary}
                         multiline
@@ -306,7 +315,8 @@ export default function DiscoverScreen() {
               </View>
 
               {peersLoading && !peersData ? (
-                <ActivityIndicator color={c.primary} style={{ marginTop: 16 }} />
+                // 상대 카드가 들어올 자리 — 사진 한 장 크기의 면 하나로 둔다.
+                <Skeleton c={c} height={260} radius={Radius.lg} />
               ) : carriedOver ? (
                 // 답하기 전 — 자리를 비우지 않고 지난번에 만난 사람이 지킨다.
                 // 카드 위 한 줄이 "이건 어제 것"임을 알리고, 아래 한 줄이 다음 행동을 준다.
@@ -577,6 +587,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingTop: 8 }, // 아래 여백은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
+  // 첫 로딩 자리 표시 — 실제 조판(질문 27/38, 입구 52)과 같은 자리에 놓는다.
+  skeletonQuestion: { marginTop: 8 },
+  skeletonEntry: { marginTop: 22 },
 
   // ── 오늘의 표지 ──
   // 화면 가장자리까지 면을 내어 "카드"가 아니라 "표지"로 읽히게 한다. 색은 테라코타 8% 한 겹뿐.

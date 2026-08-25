@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { enableAppSwitcherProtectionAsync, usePreventScreenCapture } from 'expo-screen-capture';
+import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -12,6 +13,7 @@ import { ToastHost } from '@/components/toast';
 import { UpdateRequired } from '@/components/update-required';
 import { requiredUpdateStoreUrl } from '@/lib/app-config';
 import { AppearanceProvider, useAppearance } from '@/lib/appearance';
+import { queryClient, wireAppStateToQueryClient } from '@/lib/query';
 
 /**
  * 에러 모니터링 — 유저가 겪는 크래시를 제보보다 먼저 알기 위한 장치.
@@ -49,14 +51,20 @@ function RootLayout() {
   useScreenPrivacy();
   useSplashFailsafe();
 
+  // 배경에서 돌아오면 화면이 스스로 최신으로 맞춘다 — RN에는 window 포커스 이벤트가 없어 직접 잇는다.
+  useEffect(wireAppStateToQueryClient, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        {/* 화면 테마 취향을 먼저 읽어야 첫 화면부터 올바른 색으로 그려진다. */}
-        <AppearanceProvider>
-          <Navigation />
-        </AppearanceProvider>
-      </SafeAreaProvider>
+      {/* 서버 데이터는 한 곳에 캐시한다 — 탭을 옮길 때 화면이 비지 않는 이유가 이것이다. */}
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          {/* 화면 테마 취향을 먼저 읽어야 첫 화면부터 올바른 색으로 그려진다. */}
+          <AppearanceProvider>
+            <Navigation />
+          </AppearanceProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }
