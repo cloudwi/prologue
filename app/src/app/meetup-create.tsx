@@ -795,7 +795,7 @@ export default function MeetupCreateScreen() {
               meetup={previewMeetup()}
               c={c}
               preview
-              onPressImage={(i) => setViewerIndex(i)}
+              // 사진 뷰어는 이 모달 밖에 있어 위로 안 뜬다 — 미리보기에서는 사진을 누르지 않게 둔다.
               contentContainerStyle={{ paddingBottom: 24 }}
             />
           )}
