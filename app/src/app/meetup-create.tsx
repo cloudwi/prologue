@@ -3,11 +3,13 @@ import { Picker } from '@react-native-picker/picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 
 import { PhotoCropModal } from '@/components/photo-crop';
 import { ImageViewerModal } from '@/components/image-viewer';
+import { MeetupInvitation } from '@/components/meetup-invitation';
 import { PhotoPager } from '@/components/photo-pager';
 import { pickPhotos } from '@/components/photo-grid';
 import { PlaceholderInput } from '@/components/placeholder-input';
@@ -16,7 +18,8 @@ import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { AddressSearchModal } from '@/components/address-search-modal';
 import { track } from '@/lib/analytics';
-import { createMeetup, getMyMeetups, updateMeetup } from '@/lib/meetups';
+import { createMeetup, getMyMeetups, updateMeetup, type CreateMeetupInput, type Meetup } from '@/lib/meetups';
+import { getMyProfile } from '@/lib/member';
 import { uploadMeetupCover } from '@/lib/photo';
 
 /**
@@ -25,9 +28,17 @@ import { uploadMeetupCover } from '@/lib/photo';
  * 숫자는 전부 휠로 고른다(타이핑보다 실수 없고, 값의 범위가 곧 가이드가 된다).
  * 참가비·나이·키 조건은 남/녀 기준이 다른 모임이 보통이라 성별별로 받는다.
  * 입금 확인과 자리 배분은 카카오에서 모임장이 직접 한다 — 우리는 돈을 만지지 않는다.
+ *
+ * 다 채우면 바로 저장하지 않고 초대장 미리보기를 먼저 보여준다(유저 결정 2026-08-25).
+ * 신청자가 받을 초대장을 그대로 보고 나서 "이대로 열기"를 누르는 게 마지막 단계다.
  */
 
 type WheelItem = { value: string; label: string };
+
+/** 컴포넌트 밖에 둔다 — 렌더 중 호출로 오해받지 않게(react-hooks/purity). 이벤트에서만 부른다. */
+function isPast(d: Date): boolean {
+  return d.getTime() < Date.now();
+}
 
 const NONE: WheelItem = { value: '', label: '제한 없음' };
 
@@ -154,6 +165,10 @@ export default function MeetupCreateScreen() {
   const [maxAgeFemale, setMaxAgeFemale] = useState('');
   const [minHeightFemale, setMinHeightFemale] = useState('');
   const [saving, setSaving] = useState(false);
+  // 미리보기 — 신청자에게 보일 초대장 그대로. 여는 사람 자리에 내 닉네임을 넣기 위해 프로필을 한 번 읽는다.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [hostNickname, setHostNickname] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   // 수정 모드 — 내 모임에서 기존 값을 불러와 폼을 채운다.
   useEffect(() => {
@@ -298,22 +313,26 @@ export default function MeetupCreateScreen() {
     }
   }
 
-  async function save() {
+  /** 빠진 칸·지난 시각을 알리고 false. 미리보기와 저장이 같은 검사를 쓴다. */
+  function validate(): boolean {
     const missing = firstMissing();
     if (missing) {
       Alert.alert('조금만 더 채워주세요', missing);
-      return;
+      return false;
     }
-    if (meetAt == null) return;
-    if (meetAt.getTime() < Date.now()) {
+    if (meetAt == null) return false;
+    if (isPast(meetAt)) {
       Alert.alert('지난 시각이에요', '모임 일시를 다시 골라주세요.');
-      return;
+      return false;
     }
-    setSaving(true);
-    const input = {
+    return true;
+  }
+
+  function buildInput(): CreateMeetupInput {
+    return {
       title: title.trim(),
       description: description.trim() || undefined,
-      meetAt: meetAt.toISOString(),
+      meetAt: meetAt!.toISOString(),
       place: placeDetail.trim() ? `${address.trim()} · ${placeDetail.trim()}` : address.trim(),
       placeUrl: null,
       placeAddress: address.trim(),
@@ -333,6 +352,39 @@ export default function MeetupCreateScreen() {
       coverUrls,
       kakaoLink: normalizedLink()!,
     };
+  }
+
+  /** 미리보기용 모임 — 서버가 채우는 값(확정 인원·상태·모임장)은 새 모임의 첫 순간처럼 둔다. */
+  function previewMeetup(): Meetup {
+    return {
+      ...buildInput(),
+      meetupId: editId ?? 'preview',
+      description: description.trim() || null,
+      status: 'OPEN',
+      hostNickname,
+      hostDoneCount: 0,
+      confirmedCount: 0,
+      myStatus: null,
+      participants: [],
+      hostAccountId: '',
+      isMine: false,
+    };
+  }
+
+  /** 마지막 단계 — 초대장을 먼저 보여주고, 거기서 "이대로 열기"를 눌러야 저장한다. */
+  async function openPreview() {
+    if (!validate()) return;
+    if (hostNickname == null) {
+      const me = await getMyProfile().catch(() => null);
+      setHostNickname(me?.nickname ?? null);
+    }
+    setPreviewOpen(true);
+  }
+
+  async function save() {
+    if (!validate()) return;
+    setSaving(true);
+    const input = buildInput();
     try {
       if (editId) {
         await updateMeetup(editId, input);
@@ -352,7 +404,7 @@ export default function MeetupCreateScreen() {
   }
 
   return (
-    <SubScreen title={editId ? '모임 수정' : '모임 열기'} c={c} onSave={save} saving={saving}>
+    <SubScreen title={editId ? '모임 수정' : '모임 열기'} c={c} onSave={() => void openPreview()} saveLabel="미리보기" saving={saving}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* 커버 사진(선택, 최대 5장) — 첫 장이 목록에 보이는 메인. 미리보기는 상세와 같은 페이저다. */}
         {coverUrls.length > 0 ? (
@@ -731,6 +783,44 @@ export default function MeetupCreateScreen() {
         />
       )}
 
+      {/* 초대장 미리보기 — 신청자에게 보이는 그대로. 아래 막대에서 고치러 돌아가거나 그대로 연다. */}
+      <Modal visible={previewOpen} animationType="slide" onRequestClose={() => setPreviewOpen(false)}>
+        <View style={[styles.previewRoot, { backgroundColor: c.background, paddingTop: insets.top }]}>
+          <View style={[styles.previewHead, { borderBottomColor: c.border }]}>
+            <Text style={[styles.previewTitle, { color: c.text }]}>미리보기</Text>
+            <Text style={[styles.previewSub, { color: c.textSecondary }]}>신청하는 사람에게 이렇게 보여요</Text>
+          </View>
+          {previewOpen && (
+            <MeetupInvitation
+              meetup={previewMeetup()}
+              c={c}
+              preview
+              onPressImage={(i) => setViewerIndex(i)}
+              contentContainerStyle={{ paddingBottom: 24 }}
+            />
+          )}
+          <View style={[styles.previewBar, { backgroundColor: c.backgroundElement, borderTopColor: c.border, paddingBottom: insets.bottom + 12 }]}>
+            <Pressable
+              onPress={() => setPreviewOpen(false)}
+              disabled={saving}
+              style={({ pressed }) => [styles.previewBtn, { backgroundColor: c.backgroundSelected, opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Text style={[styles.previewBtnText, { color: c.text }]}>고치기</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setPreviewOpen(false);
+                void save();
+              }}
+              disabled={saving}
+              style={({ pressed }) => [styles.previewBtn, styles.previewBtnPrimary, { backgroundColor: c.primary, opacity: pressed || saving ? 0.7 : 1 }]}
+            >
+              <Text style={[styles.previewBtnText, { color: c.primaryText }]}>{editId ? '이대로 수정하기' : '이대로 열기'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* iOS 날짜/시간 바텀시트 휠 */}
       {Platform.OS === 'ios' && (
         <Modal visible={pickerOpen != null} transparent animationType="fade" onRequestClose={() => setPickerOpen(null)}>
@@ -771,6 +861,16 @@ function Field({ label, hint, c, children }: { label: string; hint?: string; c: 
 }
 
 const styles = StyleSheet.create({
+  // ── 초대장 미리보기 ──
+  previewRoot: { flex: 1 },
+  previewHead: { alignItems: 'center', paddingTop: 14, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  previewTitle: { fontSize: 16, fontWeight: '700' },
+  previewSub: { fontSize: 12.5, marginTop: 3 },
+  previewBar: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  previewBtn: { flex: 1, height: 50, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  previewBtnPrimary: { flex: 1.6 },
+  previewBtnText: { fontSize: 15.5, fontWeight: '700' },
+
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48 },
   field: { marginBottom: 18 },
   label: { fontSize: 14, fontWeight: '700', marginBottom: 8, paddingHorizontal: 2 },
