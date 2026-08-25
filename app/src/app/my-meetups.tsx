@@ -118,7 +118,19 @@ export default function MyMeetupsScreen() {
             </View>
           )}
 
-          {[...active, ...past].map((m) => (
+          {[...active, ...past].map((m) => {
+            /*
+             * 개최 완료를 막는 이유 — 없으면 null(누를 수 있음).
+             * 버튼을 숨기는 대신 흐리게 두고, 누르면 이유를 말한다:
+             * 할 수 있는 일의 목록이 상태에 따라 들쭉날쭉하면 무엇을 할 수 있는 화면인지 배우기 어렵다.
+             */
+            const completeBlocked =
+              new Date(m.meetAt).getTime() > now
+                ? '개최 시간이 아직 지나지 않았어요.\n모임 시각이 지난 뒤에 완료로 남겨주세요.'
+                : m.confirmedCount === 0
+                  ? '확정된 참가자가 한 명 이상 있어야 해요.\n신청자를 먼저 확정해주세요.'
+                  : null;
+            return (
             <View key={m.meetupId} style={[styles.card, { backgroundColor: c.backgroundElement }]}>
               <View style={styles.cardHead}>
                 <Text style={[styles.cardTitle, { color: c.text }]} numberOfLines={1}>
@@ -196,39 +208,32 @@ export default function MyMeetupsScreen() {
                     <ActionBtn label="다시 열기" c={c} onPress={() => void run(m.meetupId, () => reopenHosting(m.meetupId))} />
                   )}
                   {/*
-                    * 개최 완료는 조건이 맞을 때만 그린다 — 개최 횟수는 모임장의 공개 신뢰 신호라,
-                    * 모임 시각이 지나고 확정 참가자가 있어야 남길 수 있다(서버도 같은 규칙으로 막는다).
-                    * 못 누르는 버튼을 두고 에러로 알리는 것보다, 왜 아직인지 한 줄로 말하는 편이 낫다.
+                    * 개최 횟수는 모임장의 공개 신뢰 신호라, 모임 시각이 지나고 확정 참가자가 있어야 남길 수 있다
+                    * (서버도 같은 규칙으로 막는다). 조건이 안 맞으면 버튼을 흐리게 두고 누르면 이유를 말한다.
                     */}
-                  {new Date(m.meetAt).getTime() <= now && m.confirmedCount > 0 && (
-                    <ActionBtn
-                      label="개최 완료"
-                      c={c}
-                      primary
-                      onPress={() =>
-                        Alert.alert('개최 완료로 표시할까요?', '모임이 잘 끝났다면 완료로 남겨요. 개최 기록이 돼요.', [
-                          { text: '취소', style: 'cancel' },
-                          { text: '개최 완료', onPress: () => void run(m.meetupId, () => completeHosting(m.meetupId)) },
-                        ])
-                      }
-                    />
-                  )}
+                  <ActionBtn
+                    label="개최 완료"
+                    c={c}
+                    primary
+                    dimmed={completeBlocked != null}
+                    onPress={() =>
+                      completeBlocked != null
+                        ? Alert.alert('아직 개최 완료를 할 수 없어요', completeBlocked)
+                        : Alert.alert('개최 완료로 표시할까요?', '모임이 잘 끝났다면 완료로 남겨요. 개최 기록이 돼요.', [
+                            { text: '취소', style: 'cancel' },
+                            { text: '개최 완료', onPress: () => void run(m.meetupId, () => completeHosting(m.meetupId)) },
+                          ])
+                    }
+                  />
                   <Pressable onPress={() => confirmCancelMeetup(m)} hitSlop={8} style={styles.cancelWrap}>
                     <Text style={[styles.cancelLink, { color: c.textSecondary }]}>모임 취소</Text>
                   </Pressable>
                 </View>
               )}
 
-              {/* 모임은 지났는데 확정한 사람이 없으면, 개최로 남기기 전에 할 일을 알려준다. */}
-              {(m.status === 'OPEN' || m.status === 'CLOSED') &&
-                new Date(m.meetAt).getTime() <= now &&
-                m.confirmedCount === 0 && (
-                  <Text style={[styles.completeHint, { color: c.textSecondary }]}>
-                    참가자를 확정해야 개최 기록으로 남길 수 있어요.
-                  </Text>
-                )}
             </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
     </SubScreen>
@@ -291,14 +296,30 @@ function ApplicantRow({
   );
 }
 
-function ActionBtn({ label, c, primary, onPress }: { label: string; c: ThemeColors; primary?: boolean; onPress: () => void }) {
+/**
+ * 카드 안의 작은 동작 버튼.
+ * [dimmed]는 '지금은 못 누른다'는 표시일 뿐 실제로 막지는 않는다 — 눌러야 이유를 들을 수 있어서다.
+ */
+function ActionBtn({
+  label,
+  c,
+  primary,
+  onPress,
+  dimmed,
+}: {
+  label: string;
+  c: ThemeColors;
+  primary?: boolean;
+  onPress: () => void;
+  dimmed?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionBtn,
         primary ? { backgroundColor: c.primary } : { borderWidth: 1, borderColor: c.border },
-        { opacity: pressed ? 0.7 : 1 },
+        { opacity: dimmed ? 0.4 : pressed ? 0.7 : 1 },
       ]}
     >
       <Text style={[styles.actionBtnText, { color: primary ? c.primaryText : c.text }]}>{label}</Text>
@@ -342,7 +363,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
   actionBtn: { height: 38, paddingHorizontal: 16, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { fontSize: 14, fontWeight: '700' },
-  completeHint: { fontSize: 12.5, lineHeight: 18, marginTop: 10 },
   cancelWrap: { marginLeft: 'auto' },
   cancelLink: { fontSize: 13.5, textDecorationLine: 'underline' },
 });
