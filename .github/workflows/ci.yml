@@ -56,15 +56,10 @@ jobs:
       - name: 타입 검사
         working-directory: app
         run: npx tsc --noEmit -p .
-      # mail-compose·mail-view에는 react-hooks 신규 규칙(set-state-in-effect·refs) 위반이
-      # 남아 있다. 편지(결제) 화면이라 함께 고치기보다 따로 손보기로 하고 지금은 제외한다.
-      # **고치면 이 두 --ignore-pattern 줄을 지울 것.**
+      # 예외 없이 전부 본다(2026-08-25에 남아 있던 react-hooks 위반 6건을 정리했다).
       - name: 린트
         working-directory: app
-        run: >-
-          npx eslint src
-          --ignore-pattern 'src/app/mail-compose.tsx'
-          --ignore-pattern 'src/app/mail-view.tsx'
+        run: npx eslint src
 
   web:
     name: 웹 빌드

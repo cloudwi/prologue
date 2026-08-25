@@ -21,15 +21,14 @@ export default function MailViewScreen() {
   const { peerAnswerId, nickname } = useLocalSearchParams<{ peerAnswerId?: string; nickname?: string }>();
 
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  // 열쇠가 없으면 읽을 것도 없다 — 처음부터 '로딩 아님'으로 둔다.
+  // (effect 안에서 setLoading(false)로 되돌리면 한 프레임 헛돌고, 규칙에도 걸린다.)
+  const [loading, setLoading] = useState(!!peerAnswerId);
   const [mail, setMail] = useState<SentMail | null>(null);
   const [recalling, setRecalling] = useState(false);
 
   useEffect(() => {
-    if (!peerAnswerId) {
-      setLoading(false);
-      return;
-    }
+    if (!peerAnswerId) return;
     let active = true;
     getSentMailTo(peerAnswerId)
       .then((m) => active && setMail(m))

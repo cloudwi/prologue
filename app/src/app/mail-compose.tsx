@@ -66,32 +66,42 @@ export default function MailComposeScreen() {
   const [includePhone, setIncludePhone] = useState(true);
   const [kakaoId, setKakaoId] = useState('');
   const [myPhone, setMyPhone] = useState<string | null>(null);
-  // 편지값 견적 — 답장이면 절반, 서로 하트면 30% 할인. 올 때까지 null이라 화면은 스피너를 보여준다.
-  // 견적을 못 받으면(구버전 서버 등) 아는 값으로 그린다 — 실제 차감은 서버가 정하므로 화면이 틀려도 돈은 안 샌다.
-  const [quote, setQuote] = useState<MailQuote | null>(null);
+  /*
+   * 편지값 견적 — 답장이면 절반, 서로 하트면 30% 할인.
+   *
+   * 서버에서 받은 값이 있으면 그것을 쓰고, 없으면 **아는 값**으로 그린다.
+   * 예전에는 effect 안에서 setQuote(fallback)로 되돌렸는데, 그러면 한 프레임 헛돌고
+   * "effect에서 상태를 동기적으로 바꾸지 말라"는 규칙에도 걸린다. 파생값이면 둘 다 사라진다.
+   * 실제 차감은 서버가 정하므로 화면이 틀려도 돈은 안 샌다.
+   */
+  const [serverQuote, setServerQuote] = useState<MailQuote | null>(null);
+  const quoteTarget = peerAnswerId ? { peerAnswerId } : replyMailId ? { replyMailId } : null;
+  const knownQuote: MailQuote = replyMailId
+    ? { price: INK_PRICE.MAIL_REPLY, discount: 'REPLY' }
+    : { price: INK_PRICE.MAIL, discount: null };
+  // 물어볼 곳이 없으면 아는 값이 곧 견적이다. 물어볼 곳이 있으면 답이 올 때까지 null(화면은 기다린다).
+  const quote = serverQuote ?? (quoteTarget ? null : knownQuote);
 
   useEffect(() => track('mail_compose_started'), []);
 
   useEffect(() => {
-    const target = peerAnswerId ? { peerAnswerId } : replyMailId ? { replyMailId } : null;
+    if (!peerAnswerId && !replyMailId) return;
+    const target = peerAnswerId ? { peerAnswerId } : { replyMailId: replyMailId! };
     const fallback: MailQuote = replyMailId
       ? { price: INK_PRICE.MAIL_REPLY, discount: 'REPLY' }
       : { price: INK_PRICE.MAIL, discount: null };
-    if (!target) {
-      setQuote(fallback);
-      return;
-    }
     let active = true;
     getMailQuote(target)
-      .then((q) => active && setQuote(q))
-      .catch(() => active && setQuote(fallback));
+      .then((q) => active && setServerQuote(q))
+      .catch(() => active && setServerQuote(fallback));
     return () => {
       active = false;
     };
   }, [peerAnswerId, replyMailId]);
   const [sending, setSending] = useState(false);
   // 초안을 읽기 전에는 자동 저장을 멈춰둔다 — 빈 값이 초안을 덮어쓰지 않게.
-  const [draftLoaded, setDraftLoaded] = useState(false);
+  // 저장할 키가 아예 없으면 읽을 것도 없으니 처음부터 '읽기 끝'으로 둔다.
+  const [draftLoaded, setDraftLoaded] = useState(!draftKey);
 
   useEffect(() => {
     let active = true;
@@ -111,10 +121,7 @@ export default function MailComposeScreen() {
 
   // 쓰다 만 초안이 있으면 이어 쓴다.
   useEffect(() => {
-    if (!draftKey) {
-      setDraftLoaded(true);
-      return;
-    }
+    if (!draftKey) return;
     let active = true;
     loadMailDraft(draftKey)
       .then((draft) => {
@@ -137,7 +144,10 @@ export default function MailComposeScreen() {
   // 화면을 나갈 때 마지막 입력을 놓치지 않게 한 번 더 저장한다(디바운스 꼬리 유실 방지).
   // 이미 부친 편지는 초안을 되살리면 안 되므로 건너뛴다.
   const flushRef = useRef({ draftKey, content, draftLoaded, sent: false });
-  flushRef.current = { ...flushRef.current, draftKey, content, draftLoaded };
+  // 최신 값을 ref에 옮기는 일은 렌더가 끝난 뒤에 한다 — 렌더 중 ref 변경은 값이 언제 반영될지 보장되지 않는다.
+  useEffect(() => {
+    flushRef.current = { ...flushRef.current, draftKey, content, draftLoaded };
+  });
   useEffect(
     () => () => {
       const f = flushRef.current;
