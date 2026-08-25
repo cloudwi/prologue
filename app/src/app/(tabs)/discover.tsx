@@ -409,7 +409,7 @@ function ArrivalCountdown({ answered, c }: { answered: boolean; c: ThemeColors }
         {remaining > 0 ? `오늘의 상대가 ${countdownLabel(remaining)} 도착해요` : '오늘의 상대가 곧 도착해요'}
       </Text>
       <Text style={[styles.countdownBody, { color: c.textSecondary }]}>
-        {answered ? '정오가 되면 같은 질문에 답한 한 사람이 여기에 도착해요.' : '그동안 오늘의 질문에 답을 남겨두세요.\n답을 남겨야 상대의 답도 열려요.'}
+        {answered ? '정오가 되면 질문에 답한 한 사람이 여기에 도착해요.' : '그동안 오늘의 질문에 답을 남겨두세요.\n답을 남겨야 상대의 답도 열려요.'}
       </Text>
     </Animated.View>
   );
@@ -489,7 +489,7 @@ function MaskedAnswer({ icon, hint, tint, c }: { icon: keyof typeof Ionicons.gly
 
 /**
  * 상대 1명 카드 — "사진보다 생각이 먼저".
- * 같은 질문에 대한 상대의 답이 카드의 첫 줄이고, 사진은 그 뒤에 온다. 하트는 상세(청첩장)의 플로팅 버튼에서만.
+ * 상대의 답(그 답의 질문과 함께)이 카드의 첫 줄이고, 사진은 그 뒤에 온다. 하트는 상세(청첩장)의 플로팅 버튼에서만.
  */
 function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; c: ThemeColors }) {
   const router = useRouter();
@@ -509,7 +509,7 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
       {/* 1) 답변 — 카드의 첫인상. 열리기 전에는 흐리게, 탭하면 선명해진다. */}
       <View style={styles.peerAnswerBlock}>
         <Text style={[styles.peerAnswerQuestion, { color: c.textSecondary }]} numberOfLines={2}>
-          {peer.question ?? question ?? '같은 질문에 남긴 답'}
+          {peer.question ?? question ?? '질문에 남긴 답'}
         </Text>
         {peer.answerUnlocked && peer.peerAnswer ? (
           <>
