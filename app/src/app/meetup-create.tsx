@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -412,17 +413,37 @@ export default function MeetupCreateScreen() {
             <PhotoPager photos={coverUrls} aspectRatio={16 / 9} backgroundColor={c.backgroundElement} onPressImage={setViewerIndex} />
           </View>
         ) : (
+          /*
+           * 빈 커버 자리 — 눌러서 사진을 고르는 곳임이 한눈에 보여야 한다(2026-08-25).
+           * 전에는 다른 카드와 같은 회색 면에 흐린 글자 두 줄이라 '입력 불가'처럼 읽혔다.
+           * 점선 테두리(＋ 썸네일과 같은 문법) + 아이콘 + 또렷한 라벨 + 알약 버튼으로 셋을 겹쳐 둔다.
+           */
           <Pressable
             onPress={pickCover}
             disabled={coverUploading}
-            style={[styles.coverPreview, styles.coverEmpty, { backgroundColor: c.backgroundElement }]}
+            accessibilityRole="button"
+            accessibilityLabel="커버 사진 올리기"
+            style={({ pressed }) => [
+              styles.coverPreview,
+              styles.coverEmpty,
+              { backgroundColor: c.backgroundElement, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+            ]}
           >
             {coverUploading ? (
               <ActivityIndicator color={c.text} />
             ) : (
               <View style={styles.coverEmptyInner}>
-                <Text style={[styles.coverEmptyText, { color: c.textSecondary }]}>커버 사진 올리기 (선택)</Text>
-                <Text style={[styles.coverEmptyHint, { color: c.textSecondary }]}>목록에 보이는 그대로 잘라서 올려요</Text>
+                <View style={[styles.coverEmptyIcon, { backgroundColor: c.backgroundSelected }]}>
+                  <Ionicons name="image-outline" size={22} color={c.text} />
+                </View>
+                <Text style={[styles.coverEmptyText, { color: c.text }]}>커버 사진 올리기</Text>
+                <Text style={[styles.coverEmptyHint, { color: c.textSecondary }]}>
+                  선택이에요 · 목록에 보이는 그대로 잘라서 올려요
+                </Text>
+                {/* 눌리는 곳은 카드 전체다 — 이 알약은 '누를 수 있다'를 한 번 더 말해주는 표시라 View다. */}
+                <View style={[styles.coverEmptyBtn, { backgroundColor: c.backgroundSelected }]}>
+                  <Text style={[styles.coverEmptyBtnText, { color: c.text }]}>사진 고르기</Text>
+                </View>
               </View>
             )}
           </Pressable>
@@ -885,12 +906,16 @@ const styles = StyleSheet.create({
   },
   centerText: { justifyContent: 'center' },
   coverPreview: { borderRadius: Radius.lg, marginBottom: 10, overflow: 'hidden' },
-  coverEmpty: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center' },
+  // 점선 테두리 — 채워진 면과 '아직 비어 있고 채울 수 있는 자리'를 가르는 표시(＋ 썸네일과 같은 문법).
+  coverEmpty: { aspectRatio: 16 / 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed' },
   coverBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
   coverBtnText: { fontSize: 13.5, fontWeight: '600' },
-  coverEmptyInner: { alignItems: 'center', gap: 4 },
-  coverEmptyText: { fontSize: 14.5, fontWeight: '600' },
-  coverEmptyHint: { fontSize: 12.5 },
+  coverEmptyInner: { alignItems: 'center', gap: 6, paddingHorizontal: 20 },
+  coverEmptyIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  coverEmptyText: { fontSize: 15.5, fontWeight: '700' },
+  coverEmptyHint: { fontSize: 12.5, textAlign: 'center' },
+  coverEmptyBtn: { height: 34, paddingHorizontal: 16, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  coverEmptyBtnText: { fontSize: 13.5, fontWeight: '700' },
   coverThumbRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' },
   coverThumbWrap: { position: 'relative' },
   coverThumb: { width: 64, height: 40, borderRadius: 8 },
