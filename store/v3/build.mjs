@@ -295,9 +295,10 @@ const html = (p, cls) => `<!doctype html>
   <div class="device"><div class="screen"><div class="app">${status}${p.screen}</div></div></div>
 </div></body></html>`;
 
-/** 애플 6.9"와 Play 폰 — 같은 패널을 두 판형으로 굽는다. */
+/** 애플 6.9"·6.5"와 Play 폰 — 같은 패널을 세 판형으로 굽는다. */
 const FORMATS = [
   { dir: 'ios', cls: 'ios', size: '1320,2868' },
+  { dir: 'ios65', cls: 'ios65', size: '1284,2778' },
   { dir: 'android', cls: 'android', size: '1080,1920' },
 ];
 

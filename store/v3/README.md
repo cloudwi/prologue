@@ -1,6 +1,6 @@
 # 스토어 스크린샷 (v3)
 
-`node store/v3/build.mjs` → `out/ios/*.png` (1320×2868), `out/android/*.png` (1080×1920)
+`node store/v3/build.mjs` → `out/ios` (1320×2868) · `out/ios65` (1284×2778) · `out/android` (1080×1920)
 
 ## 왜 다시 만들었나
 
@@ -33,8 +33,9 @@
 
 | | 크기 | 비고 |
 |---|---|---|
-| iOS | 1320×2868 | 6.9″. 6.5″(1284×2778)가 필요하면 리사이즈해서 씁니다 |
-| Play | 1080×1920 | 애플 판을 줄여 쓸 수 없습니다 — Play는 긴 변이 짧은 변의 2배를 넘으면 거부하는데 6.9″는 2.17배입니다 |
+| `ios` | 1320×2868 | 6.9″ |
+| `ios65` | 1284×2778 | 6.5″. 지금 리스팅에 올라가 있는 세트가 이쪽(`APP_IPHONE_65`)입니다. 6.9″와 비율이 2.164 대 2.173이라 리사이즈하면 찌그러지므로, 6.9″ 판을 짜고 폭에 맞춰 한 번 축소해 비례를 지킵니다 |
+| `android` | 1080×1920 | 애플 판을 줄여 쓸 수 없습니다 — Play는 긴 변이 짧은 변의 2배를 넘으면 거부하는데 6.9″는 2.17배입니다 |
 
 기기 틀도 판마다 다릅니다. Play 판에 다이내믹 아일랜드를 그리면 아이폰이 되므로
 펀치홀 카메라로 바꿉니다.
@@ -54,3 +55,18 @@
 `store/personas/`의 페르소나 사진을 씁니다(앱 시드 계정과 같은 인물).
 사람 사진이 들어가면 애플 심사에서 실제 인물로 오인될 소지가 없도록
 생성 이미지임을 유지하고, 실제 유저 사진은 절대 쓰지 않습니다.
+
+## 올리기
+
+**Play** — Android Publisher API로 올립니다(콘솔 업로드 창을 우회).
+`edits.insert` → `listings/{lang}/phoneScreenshots` DELETE(전체 삭제) → 파일 5장 순서대로 업로드
+→ `edits:commit`. 서비스 계정 키는 `release/secrets/fcm-service-account.json`.
+파일명 앞 숫자가 곧 스토어 노출 순서입니다.
+
+**App Store** — 버전이 `WAITING_FOR_REVIEW`·`IN_REVIEW`인 동안은 **스크린샷이 잠깁니다.**
+콘솔 화면에서 바꿔도 저장되지 않습니다. 바꾸려면 심사에서 빼거나 다음 버전을 기다려야 합니다.
+바뀌었는지 확인할 때는 화면을 믿지 말고 ASC API로 조회하세요:
+
+    appStoreVersions → appStoreVersionLocalizations → appScreenshotSets → appScreenshots
+
+키는 `release/secrets/AuthKey_G3HZSD7KQY.p8`(kid `G3HZSD7KQY`), 앱 `6803755105`.

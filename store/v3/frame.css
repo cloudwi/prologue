@@ -223,3 +223,19 @@ body.android .app { transform: scale(1.865); }
 
 /* 안드로이드 판에 다이내믹 아일랜드를 그리면 아이폰이 된다 — 펀치홀 카메라로 바꾼다. */
 body.android .island { width: 26px; height: 26px; border-radius: 13px; top: 15px; }
+
+/*
+ * ── App Store 6.5" 판형 (1284×2778) ──
+ *
+ * 지금 리스팅에 올라가 있는 세트가 APP_IPHONE_65다. 6.9"(1320×2868)와 비율이
+ * 2.164 대 2.173으로 미세하게 달라 리사이즈하면 찌그러진다.
+ * 그래서 6.9" 판을 그대로 짜고 폭에 맞춰 한 번 축소한다 — 조판 비례가 보존된다.
+ * 세로로 12px 넘치는 만큼은 잘리는데, 어차피 기기가 판 밖으로 흘러나가는 자리다.
+ */
+body.ios65 { width: 1284px; height: 2778px; }
+body.ios65 .panel {
+  width: 1320px;
+  height: 2868px;
+  transform: scale(0.9727272);
+  transform-origin: top left;
+}
