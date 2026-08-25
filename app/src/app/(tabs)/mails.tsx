@@ -203,7 +203,7 @@ export default function MailsScreen() {
             transition={150}
           />
         ) : (
-          <Avatar avatarId={h.avatarId} nickname={h.nickname} size={44} c={c} />
+          <Avatar avatarId={h.avatarId} nickname={h.nickname} size={44} height={55} radius={Radius.sm} c={c} />
         )}
         <View style={styles.rowBody}>
           <Text style={[styles.rowName, { color: c.text }]}>{h.nickname}</Text>
@@ -336,7 +336,7 @@ export default function MailsScreen() {
                             {m.photoUrl ? (
                               <Image source={{ uri: thumbUrl(m.photoUrl, 160) }} style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
                             ) : (
-                              <Avatar avatarId={m.avatarId} nickname={m.nickname} size={44} c={c} />
+                              <Avatar avatarId={m.avatarId} nickname={m.nickname} size={44} height={55} radius={Radius.sm} c={c} />
                             )}
                             <View style={styles.rowBody}>
                               <Text style={[styles.rowName, { color: c.text }]}>{m.nickname}</Text>
@@ -393,7 +393,7 @@ export default function MailsScreen() {
                             {m.photoUrl ? (
                               <Image source={{ uri: thumbUrl(m.photoUrl, 160) }} style={[styles.profilePhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
                             ) : (
-                              <Avatar avatarId={m.avatarId} nickname={m.nickname} size={44} c={c} />
+                              <Avatar avatarId={m.avatarId} nickname={m.nickname} size={44} height={55} radius={Radius.sm} c={c} />
                             )}
                             <View style={styles.rowBody}>
                               <Text style={[styles.rowName, { color: c.text }]}>{m.nickname}</Text>
@@ -526,7 +526,12 @@ const styles = StyleSheet.create({
   // 사람 목록 — 한 카드 안에 줄로. 카드마다 테두리를 두르면 목록이 시끄럽다.
   listCard: { borderRadius: Radius.lg, paddingHorizontal: 16 },
   heartRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  profilePhoto: { width: 44, height: 44, borderRadius: 22 },
+  /*
+   * 프로필 사진 — 원이 아니라 세로 4:5 라운드 사각형(2026-08-25).
+   * 세로 사진을 44pt 원에 'cover'로 넣으면 가운데만 남아 얼굴이 토막 난다.
+   * 비율을 사진과 맞춰두면 아무것도 잘리지 않고, 작아질 뿐이다.
+   */
+  profilePhoto: { width: 44, height: 55, borderRadius: Radius.sm },
   rowBody: { marginLeft: 12, flex: 1 },
   rowName: { fontSize: 17, fontWeight: '700' },
   rowMeta: { fontSize: 13.5, marginTop: 2 },

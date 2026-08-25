@@ -28,7 +28,6 @@ import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
-import { thumbUrl } from '@/lib/image';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 15;
@@ -370,11 +369,12 @@ export default function DiscoverScreen() {
                         i > 0 && styles.pastFaceOverlap,
                       ]}
                     >
-                      {p.peer.photoUrls[0] ? (
-                        <Image source={{ uri: thumbUrl(p.peer.photoUrls[0], 128) }} style={styles.pastFaceFill} contentFit="cover" />
-                      ) : (
-                        <Avatar avatarId={p.peer.avatarId} nickname={p.peer.nickname ?? undefined} size={22} c={c} />
-                      )}
+                      {/*
+                        * 26pt 동그라미에는 사진을 넣지 않는다(2026-08-25).
+                        * 세로 사진을 원으로 자르면 얼굴 한 조각만 남아 누구인지 알아볼 수도 없고,
+                        * 그 정도로 잘린 얼굴은 보기에 섬뜩하다. 여기는 '몇 명 있었다'는 표시일 뿐이다.
+                        */}
+                      <Avatar avatarId={p.peer.avatarId} nickname={p.peer.nickname ?? undefined} size={22} c={c} />
                     </View>
                   ))}
                 </View>
@@ -687,6 +687,5 @@ const styles = StyleSheet.create({
   pastFaces: { flexDirection: 'row' },
   pastFace: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   pastFaceOverlap: { marginLeft: -8 },
-  pastFaceFill: { width: '100%', height: '100%' },
   pastEntryLabel: { fontSize: 14.5, fontWeight: '600' },
 });
