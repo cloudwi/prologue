@@ -24,6 +24,7 @@ import { isSessionExpired } from '@/lib/api';
 import { answerToday, getPastPeers, getPeers, getToday, type PastPeer, type Peer, type Today, type TodayPeers } from '@/lib/daily';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
+import { useAppearance } from '@/lib/appearance';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 15;
@@ -63,6 +64,7 @@ function countdownLabel(ms: number): string {
 
 export default function DiscoverScreen() {
   const c = useTheme();
+  const isDark = useAppearance().scheme === 'dark';
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -199,7 +201,8 @@ export default function DiscoverScreen() {
              */}
             <Animated.View
               entering={FadeIn.duration(320)}
-              style={[styles.cover, { backgroundColor: c.primary + '14' }]}
+              // 쓰는 동안 표지를 한 톤 가라앉힌다(8% → 16%) — 색을 늘리지 않고 명도 차로 종이를 띄운다.
+              style={[styles.cover, { backgroundColor: c.primary + (editorOpen ? '29' : '14') }]}
             >
               {/* 잉크 잔액 칩은 뺐다 — 잔액은 지갑에서만, 모자라면 그 순간 충전으로 보낸다(유저 결정 2026-08-24). */}
               <View style={styles.topRow}>
@@ -215,7 +218,14 @@ export default function DiscoverScreen() {
                    * 표지 위에 흰 종이 한 장을 올리고, 그 안에서 왼쪽 테라코타 선 + 인용체로 쓴다.
                    * 카운터·취소·저장은 종이 아래 한 줄에 모아 "폼"이 아니라 "한 장"으로 읽히게 한다.
                    */
-                  <View style={[styles.sheet, { backgroundColor: c.backgroundElement }]}>
+                  <View
+                    style={[
+                      styles.sheet,
+                      { backgroundColor: c.backgroundElement },
+                      // 종이가 표지 위에 떠 있다 — 라이트는 그림자로, 그림자가 안 보이는 다크는 경계선 하나로.
+                      isDark ? { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border } : styles.sheetShadow,
+                    ]}
+                  >
                     <View style={styles.sheetBody}>
                       <View style={[styles.myAnswerRule, { backgroundColor: c.primary }]} />
                       <TextInput
@@ -227,6 +237,8 @@ export default function DiscoverScreen() {
                         autoFocus
                         maxLength={ANSWER_MAX}
                         scrollEnabled={false}
+                        cursorColor={c.primary}
+                        selectionColor={c.primary}
                         style={[styles.input, { color: c.text, fontFamily: Fonts.serif }]}
                       />
                     </View>
@@ -296,7 +308,8 @@ export default function DiscoverScreen() {
             </Animated.View>
 
             {/* 오늘의 상대 — 하루 한 사람. 도착한 편지처럼, 크게 한 장. */}
-            <View style={styles.peerSection}>
+            {/* 쓰는 동안은 아래를 흐린다 — 입력칸을 꾸미는 대신 주변을 가라앉혀 "지금은 쓰는 시간"을 만든다. */}
+            <View style={[styles.peerSection, editorOpen && styles.dimmed]} pointerEvents={editorOpen ? 'none' : 'auto'}>
               <View style={styles.peerHeader}>
                 <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>오늘의 상대</Text>
                 <Text style={[styles.peerSub, { color: c.textSecondary }]}>매일 정오, 한 사람</Text>
@@ -598,7 +611,8 @@ const styles = StyleSheet.create({
   composeEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, height: 52, paddingHorizontal: 18, borderRadius: Radius.md },
   composeEntryText: { fontSize: 16 },
   // 답변 종이 — 표지 위 흰 면 한 장. 글줄은 저장 후의 내 답(17.5/27)과 같은 리듬.
-  sheet: { marginTop: 20, borderRadius: Radius.lg, paddingTop: 18, paddingHorizontal: 20, overflow: 'hidden' },
+  sheet: { marginTop: 20, borderRadius: Radius.lg, paddingTop: 18, paddingHorizontal: 20 }, // overflow hidden 금지 — iOS에서 그림자가 잘린다
+  sheetShadow: { shadowColor: '#1B2126', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
   sheetBody: { flexDirection: 'row', gap: 14, paddingBottom: 12 },
   input: { flex: 1, minHeight: 27 * 4, fontSize: 17.5, lineHeight: 27, padding: 0, paddingTop: 0, textAlignVertical: 'top' },
   sheetFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 12 },
@@ -621,6 +635,7 @@ const styles = StyleSheet.create({
 
   // ── 오늘의 상대 ──
   peerSection: { marginTop: 30 },
+  dimmed: { opacity: 0.35 },
   peerHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14, paddingHorizontal: 2 },
   peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
   peerSub: { fontSize: 13.5 },
