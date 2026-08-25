@@ -60,6 +60,11 @@ jobs:
       - name: 린트
         working-directory: app
         run: npx eslint src
+      # 순수 로직만 — 화면 렌더는 다루지 않는다(느리고 깨지기 쉽다).
+      # 참가비·조건 문구, 날짜 경계, 주소 꼴처럼 경우의 수가 많아 눈으로는 못 미더운 것들.
+      - name: 유닛 테스트
+        working-directory: app
+        run: npm test -- --ci
 
   web:
     name: 웹 빌드

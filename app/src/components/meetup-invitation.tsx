@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { PhotoPager } from '@/components/photo-pager';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { conditionLabel, feeLabel, type Meetup } from '@/lib/meetups';
+import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
 
 /**
  * 모임 초대장 — 상세 화면과 모임 열기의 미리보기가 같은 것을 그린다.
@@ -232,46 +233,6 @@ export function MeetupInvitation({
       <Text style={[styles.closing, { color: c.textSecondary }]}>프롤로그에서 보내는 초대장이에요</Text>
     </ScrollView>
   );
-}
-
-/** 장소 이름과 주소를 가른다 — place는 "주소 · 상세" 꼴로 저장된다. */
-export function venueOf(m: Pick<Meetup, 'place' | 'placeAddress'>): { name: string | null; address: string | null } {
-  if (!m.placeAddress) return { name: m.place, address: null };
-  const detail = m.place.startsWith(m.placeAddress) ? m.place.slice(m.placeAddress.length).replace(/^ · /, '') : '';
-  return { name: detail || null, address: m.placeAddress };
-}
-
-/** 지도 검색어 — 주소 끝의 "(양재동)" 같은 동 표기는 지도 검색을 흐리므로 떼고 보낸다. */
-function mapQuery(address: string): string {
-  return address.replace(/\s*\([^)]*\)\s*$/, '');
-}
-
-/** "2026. 09. 26" — 청첩장의 날짜는 글보다 숫자가 먼저다. 두 자리로 맞춰 자간이 고르게. */
-function numeralDate(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}. ${mm}. ${dd}`;
-}
-
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-
-function weekdayLabel(d: Date): string {
-  return `${WEEKDAYS[d.getDay()]}요일`;
-}
-
-function timeLabel(d: Date): string {
-  return new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' }).format(d);
-}
-
-/** 오늘 자정 기준 며칠 남았는지 — 청첩장의 "결혼식이 N일 남았습니다" 줄. */
-function ddayLabel(d: Date): string {
-  const today = new Date();
-  const a = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const b = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const diff = Math.round((b - a) / 86_400_000);
-  if (diff === 0) return '오늘 열리는 모임이에요';
-  if (diff > 0) return `모임까지 ${diff}일 남았어요`;
-  return `${-diff}일 전에 열린 모임이에요`;
 }
 
 function rsvpTitle(m: Meetup): string {
