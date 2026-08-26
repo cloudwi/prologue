@@ -102,6 +102,12 @@ management:
 #   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=<Play Console에 초대된 서비스 계정 키 JSON 전체(한 줄)>
 #   서비스 계정에는 Play Console "재무 데이터 보기" 권한이 있어야 purchases.products.get이 열린다.
 store:
+  # iOS 결제 확인 — 앱이 보낸 StoreKit 2 서명 거래(JWS)를 서버가 직접 검증한다. 애플 키는 필요 없다.
+  # allow-sandbox: 심사관은 샌드박스로 결제하므로 기본은 허용. 샌드박스 테스터 계정이 있으면
+  #                누구나 공짜 잉크를 만들 수 있다는 뜻이라, 매출이 의미를 가지면 false로 닫는다.
+  apple:
+    bundle-id: ${APPLE_BUNDLE_ID:day.prologue.app}
+    allow-sandbox: ${APPLE_ALLOW_SANDBOX:true}
   google-play:
     package-name: ${GOOGLE_PLAY_PACKAGE_NAME:day.prologue.app}
     service-account-json: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:}

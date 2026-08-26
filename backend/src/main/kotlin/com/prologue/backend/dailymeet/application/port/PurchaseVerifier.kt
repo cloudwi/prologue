@@ -10,7 +10,7 @@ import com.prologue.backend.dailymeet.domain.model.StorePlatform
  */
 interface PurchaseVerifier {
     /**
-     * @param token 안드로이드는 purchase token, iOS는 transaction id
+     * @param token 안드로이드는 purchase token, iOS는 StoreKit 2가 서명한 거래(JWS)
      * @return 스토어가 확인해 준 거래. 확인되지 않으면 [PurchaseVerificationException]을 던진다.
      */
     fun verify(platform: StorePlatform, productId: String, token: String): VerifiedPurchase
