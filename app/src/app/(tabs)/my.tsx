@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -170,6 +171,34 @@ export default function MyScreen() {
           </View>
         </SafeAreaView>
 
+        {/*
+         * 직장 인증 — '다음 한 가지'에 섞지 않고 자기 자리를 준다.
+         *
+         * 그 줄은 프로필을 다 채운 사람에게만 차례가 돌아오는데, 인증은 프로필 완성과
+         * 다른 축이다. 사진이 두 장이든 여섯 장이든 인증한 사람과 안 한 사람은 갈린다.
+         * 그래서 인증할 때까지 계속 서 있고, 받는 것(배지)을 말이 아니라 모양으로 먼저 보여준다 —
+         * 상대 카드에서 보던 그 칩이 내 것이 된다는 게 한 문장 설명보다 빠르다.
+         */}
+        {job?.verified === false && (
+          <Pressable
+            onPress={() => router.push('/my/job-verify')}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.jobCard, { backgroundColor: c.primary + '1F', opacity: pressed ? 0.8 : 1 }]}
+          >
+            <View style={styles.flex}>
+              <View style={[styles.jobBadgePreview, { backgroundColor: c.primary }]}>
+                <Ionicons name="briefcase" size={12} color={c.primaryText} />
+                <Text style={{ color: c.primaryText, fontSize: 12.5, fontWeight: '700' }}>직장 인증</Text>
+              </View>
+              <Text style={[styles.jobTitle, { color: c.text }]}>회사 메일로 인증하고 배지 받기</Text>
+              <Text style={[styles.jobHint, { color: c.textSecondary }]}>
+                1분이면 끝나요. 회사 이름은 공개되지 않고, 같은 회사 사람과는 서로 소개되지 않아요.
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: c.primaryStrong }]}>›</Text>
+          </Pressable>
+        )}
+
         {/* 다음 한 가지 — 완성도 퍼센트 대신 지금 할 행동 하나만 제안한다. */}
         {todo && (
           <Pressable
@@ -341,6 +370,20 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: Radius.md,
   },
+  jobCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 14,
+    marginHorizontal: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderRadius: Radius.md,
+  },
+  jobBadgePreview: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', height: 23, paddingHorizontal: 9, borderRadius: Radius.pill, marginBottom: 9 },
+  jobTitle: { fontSize: 16, fontWeight: '700' },
+  jobHint: { fontSize: 13.5, lineHeight: 19, marginTop: 4 },
+
   todoLabel: { fontSize: 16, fontWeight: '700' },
   todoHint: { fontSize: 14, marginTop: 3 },
 

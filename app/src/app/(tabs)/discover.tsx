@@ -594,6 +594,18 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
               <Text style={[styles.peerName, { color: c.text, fontFamily: Fonts.serif }]}>{peer.nickname}</Text>
             ) : null}
             <Text style={[styles.peerMeta, { color: c.textSecondary }]}>{peerMetaLabel(peer)}</Text>
+            {/*
+             * 직장 인증 배지 — 상세로 들어가야만 보이던 것을 카드로 올린다.
+             * 인증의 값어치는 내 배지가 아니라 **남의 배지를 볼 때** 생긴다.
+             * 하루에 한 사람을 소개받는 앱에서 그 한 사람의 신뢰 신호가 카드에 없으면,
+             * 인증하고 싶어질 자리가 없다. 도메인까지 쓰면 이름 줄이 길어지므로 카드에서는 '직장 인증'만.
+             */}
+            {peer.jobVerified ? (
+              <View style={[styles.peerJobBadge, { backgroundColor: c.primary }]}>
+                <Ionicons name="briefcase" size={11} color={c.primaryText} />
+                <Text style={{ color: c.primaryText, fontSize: 12, fontWeight: '700' }}>직장 인증</Text>
+              </View>
+            ) : null}
           </View>
           <View style={[styles.detailCta, { backgroundColor: c.backgroundSelected }]}>
             <Text style={[styles.detailCtaText, { color: c.text }]}>프로필 보기</Text>
@@ -674,6 +686,7 @@ const styles = StyleSheet.create({
   carouselScroll: { marginHorizontal: -20, overflow: 'visible' },
   carouselContent: { paddingHorizontal: 20, gap: 12 },
   peerCard: { borderRadius: Radius.lg, overflow: 'hidden' },
+  peerJobBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, height: 22, paddingHorizontal: 8, borderRadius: Radius.pill },
   peerAnswerBlock: { padding: 20, paddingBottom: 18 },
   peerAnswerQuestion: { fontSize: 13.5, lineHeight: 19, marginBottom: 8 },
   peerAnswer: { fontSize: 18, lineHeight: 27, fontWeight: '500' },
