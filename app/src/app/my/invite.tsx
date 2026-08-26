@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, Skeleton, SkeletonRow } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -57,7 +57,10 @@ export default function InviteScreen() {
   return (
     <SubScreen title="친구 초대" c={c}>
       {loading || !referral ? (
-        <SkeletonCards c={c} count={2} height={120} />
+        <SkeletonList c={c}>
+          <Skeleton c={c} height={120} radius={Radius.lg} />
+          <SkeletonRow c={c} />
+        </SkeletonList>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>

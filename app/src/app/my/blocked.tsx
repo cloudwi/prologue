@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, SkeletonRow } from '@/components/skeleton';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
@@ -86,7 +86,11 @@ export default function BlockedScreen() {
   return (
     <SubScreen title="지인 차단" c={c}>
       {blocks == null ? (
-        <SkeletonCards c={c} count={3} height={72} />
+        <SkeletonList c={c}>
+          <SkeletonRow c={c} trailing />
+          <SkeletonRow c={c} trailing />
+          <SkeletonRow c={c} trailing />
+        </SkeletonList>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={[styles.desc, { color: c.textSecondary }]}>

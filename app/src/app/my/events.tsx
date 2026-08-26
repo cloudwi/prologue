@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, SkeletonRow } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -61,7 +61,10 @@ export default function EventsScreen() {
   return (
     <SubScreen title="이벤트" c={c}>
       {loading ? (
-        <SkeletonCards c={c} count={3} height={84} />
+        <SkeletonList c={c}>
+          <SkeletonRow c={c} />
+          <SkeletonRow c={c} />
+        </SkeletonList>
       ) : (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

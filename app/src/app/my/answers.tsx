@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, Skeleton, SkeletonTextCard } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -45,7 +45,11 @@ export default function MyAnswersScreen() {
   return (
     <SubScreen title="내가 남긴 답" c={c}>
       {loading ? (
-        <SkeletonCards c={c} count={3} height={128} />
+        <SkeletonList c={c}>
+          <Skeleton c={c} width={78} height={13} />
+          <SkeletonTextCard c={c} bodyLines={3} />
+          <SkeletonTextCard c={c} bodyLines={2} />
+        </SkeletonList>
       ) : answers.length === 0 ? (
         <View style={[styles.flex, styles.center, styles.emptyPad]}>
           <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>아직 남긴 답이 없어요</Text>

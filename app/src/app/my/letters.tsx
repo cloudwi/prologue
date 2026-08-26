@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, SkeletonTextCard } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -100,7 +100,10 @@ export default function LettersScreen() {
   if (loading) {
     return (
       <SubScreen title="프로필 문답" c={c}>
-        <SkeletonCards c={c} count={3} height={112} />
+        <SkeletonList c={c}>
+          <SkeletonTextCard c={c} bodyLines={3} />
+          <SkeletonTextCard c={c} bodyLines={2} />
+        </SkeletonList>
       </SubScreen>
     );
   }

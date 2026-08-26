@@ -2,7 +2,8 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { Radius } from '@/constants/theme';
+import { SkeletonList, Skeleton, SkeletonTextCard } from '@/components/skeleton';
 import { ImageViewerModal } from '@/components/image-viewer';
 import { MeetupInvitation } from '@/components/meetup-invitation';
 import { SubScreen } from '@/components/sub-screen';
@@ -142,7 +143,10 @@ export default function MeetupDetailScreen() {
       saveLabel="관리"
     >
       {loading ? (
-        <SkeletonCards c={c} count={2} height={220} />
+        <SkeletonList c={c}>
+          <Skeleton c={c} height={200} radius={Radius.lg} />
+          <SkeletonTextCard c={c} bodyLines={3} />
+        </SkeletonList>
       ) : meetup == null ? (
         <View style={[styles.flex, styles.center]}>
           <Text style={{ color: c.textSecondary, fontSize: 15 }}>모임을 찾을 수 없어요 — 마감됐거나 취소됐을 수 있어요.</Text>

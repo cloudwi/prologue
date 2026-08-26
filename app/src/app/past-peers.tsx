@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, SkeletonRow } from '@/components/skeleton';
 import { Avatar } from '@/components/avatar';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -37,7 +37,11 @@ export default function PastPeersScreen() {
   return (
     <SubScreen title="지난 상대" c={c}>
       {loading ? (
-        <SkeletonCards c={c} count={3} height={96} />
+        <SkeletonList c={c}>
+          <SkeletonRow c={c} avatar />
+          <SkeletonRow c={c} avatar />
+          <SkeletonRow c={c} avatar />
+        </SkeletonList>
       ) : peers.length === 0 ? (
         <View style={[styles.flex, styles.center, styles.emptyPad]}>
           <Text style={[styles.emptyText, { color: c.textSecondary }]}>

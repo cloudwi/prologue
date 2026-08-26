@@ -68,33 +68,72 @@ export const skeletonStyles = StyleSheet.create({
   card: { borderRadius: Radius.lg, padding: 20, gap: 14 },
 });
 
+const styles = StyleSheet.create({
+  list: { padding: 20, gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  rowBody: { flex: 1, gap: 0 },
+  rowSub: { marginTop: 8 },
+  card: { borderRadius: Radius.lg, padding: 18 },
+  cardTitle: { marginTop: 10 },
+  cardBody: { marginTop: 12 },
+});
+
+
 /**
- * 카드가 줄지어 들어올 자리 — 목록 화면의 첫 로딩.
+ * 목록 한 줄이 들어올 자리 — 왼쪽 동그라미(아바타), 제목 줄, 부제 줄, 오른쪽 조각.
  *
- * 스피너 하나를 가운데 띄우면 화면이 비어 보이고, 내용이 들어오는 순간 위에서 아래로 밀려
- * 눈이 다시 자리를 잡아야 한다. 같은 높이의 면을 미리 깔아두면 그 밀림이 없다.
- *
- * [count]는 화면을 넘기지 않을 만큼만 — 실제보다 많이 그리면 채워질 때 목록이 줄어드는
- * 인상을 준다. 셋이면 대개 첫 화면을 채우고도 남는다.
+ * 통짜 회색 막대를 여러 개 까는 것과 다르다. 실제 줄에는 굵기가 다른 글줄 둘과 여백이 있어서,
+ * 같은 자리에 같은 결의 조각을 두어야 채워질 때 눈이 다시 자리를 찾지 않는다.
  */
-export function SkeletonCards({
+export function SkeletonRow({
   c,
-  count = 3,
-  height = 92,
-  gap = 12,
-  style,
+  avatar = false,
+  subtitle = true,
+  trailing = false,
 }: {
   c: ThemeColors;
-  count?: number;
-  height?: number;
-  gap?: number;
-  style?: StyleProp<ViewStyle>;
+  avatar?: boolean;
+  subtitle?: boolean;
+  trailing?: boolean;
 }) {
   return (
-    <View style={[{ gap, padding: 20 }, style]}>
-      {Array.from({ length: count }, (_, i) => (
-        <Skeleton key={i} c={c} height={height} radius={Radius.lg} />
-      ))}
+    <View style={styles.row}>
+      {avatar && <Skeleton c={c} width={44} height={44} radius={22} />}
+      <View style={styles.rowBody}>
+        <Skeleton c={c} width="46%" height={15} />
+        {subtitle && <Skeleton c={c} width="72%" height={12} style={styles.rowSub} />}
+      </View>
+      {trailing && <Skeleton c={c} width={44} height={20} radius={Radius.pill} />}
     </View>
   );
 }
+
+/**
+ * 글이 담긴 카드 자리 — 작은 머리글, 제목 한 줄, 본문 몇 줄.
+ *
+ * 카드 면을 먼저 깔고 그 위에 글줄을 얹는다. 실제 화면이 밝은 카드 위의 글이라, 통짜 회색을
+ * 두면 색부터 다르게 보인다. 채워질 때 바뀌는 것이 글자뿐이어야 화면이 조용하다.
+ */
+export function SkeletonTextCard({
+  c,
+  bodyLines = 3,
+  eyebrow = true,
+}: {
+  c: ThemeColors;
+  bodyLines?: number;
+  eyebrow?: boolean;
+}) {
+  return (
+    <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
+      {eyebrow && <Skeleton c={c} width={62} height={11} />}
+      <Skeleton c={c} width="82%" height={16} style={eyebrow ? styles.cardTitle : undefined} />
+      <SkeletonLines c={c} lines={bodyLines} lineHeight={12} gap={9} style={styles.cardBody} />
+    </View>
+  );
+}
+
+/** 여러 조각을 목록처럼 세울 때의 바깥 여백 — 화면마다 padding을 다시 쓰지 않도록. */
+export function SkeletonList({ c, children }: { c: ThemeColors; children: React.ReactNode }) {
+  return <View style={styles.list}>{children}</View>;
+}
+

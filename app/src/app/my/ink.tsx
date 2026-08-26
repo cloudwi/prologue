@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, Skeleton, SkeletonRow } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -38,7 +38,12 @@ export default function InkScreen() {
   return (
     <SubScreen title="잉크" c={c}>
       {loading ? (
-        <SkeletonCards c={c} count={4} height={64} />
+        <SkeletonList c={c}>
+          <Skeleton c={c} height={188} radius={Radius.lg} />
+          <Skeleton c={c} height={52} radius={Radius.md} />
+          <SkeletonRow c={c} />
+          <SkeletonRow c={c} />
+        </SkeletonList>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           {/* 잔액 — 이 화면의 주인공. 숫자 하나를 크게. */}

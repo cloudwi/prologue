@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { SkeletonCards } from '@/components/skeleton';
+import { SkeletonList, Skeleton, SkeletonTextCard } from '@/components/skeleton';
 import { JobBadge } from '@/components/job-badge';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -86,7 +86,10 @@ export default function MyMeetupsScreen() {
   return (
     <SubScreen title="모임 관리" c={c}>
       {loading ? (
-        <SkeletonCards c={c} count={2} height={180} />
+        <SkeletonList c={c}>
+          <Skeleton c={c} height={150} radius={Radius.lg} />
+          <SkeletonTextCard c={c} bodyLines={2} />
+        </SkeletonList>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {meetups.length > 0 && (
