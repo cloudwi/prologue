@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
-import { ProfileInvitation, type InvitationLetter } from '@/components/profile-invitation';
+import { ProfileInvitation, ProfileInvitationSkeleton, type InvitationLetter } from '@/components/profile-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { getJobStatus } from '@/lib/job';
@@ -48,9 +48,7 @@ export default function PreviewScreen() {
   if (loading) {
     return (
       <SubScreen title="" c={c}>
-        <View style={[styles.flex, styles.center]}>
-          <ActivityIndicator color={c.primary} />
-        </View>
+        <ProfileInvitationSkeleton c={c} />
       </SubScreen>
     );
   }

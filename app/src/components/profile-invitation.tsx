@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
+import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import type { LastActive } from '@/lib/daily';
 
@@ -213,6 +214,7 @@ const styles = StyleSheet.create({
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
+  skeletonLines: { width: '100%', marginTop: 14 },
 
   signature: { alignItems: 'center', marginTop: 44 },
   signatureLead: { fontSize: 13.5, letterSpacing: 0.5 },
@@ -221,3 +223,37 @@ const styles = StyleSheet.create({
   report: { alignItems: 'center', marginTop: 36 },
   reportText: { fontSize: 13.5, textDecorationLine: 'underline' },
 });
+
+/**
+ * 초대장이 도착하기 전의 자리 표시 — [ProfileInvitation]과 같은 조판을 회색 면으로 먼저 세운다.
+ *
+ * 스피너는 "기다리라"고만 말하고, 내용이 들어오는 순간 화면이 통째로 바뀌어 눈이 다시 자리를
+ * 찾는다. 이 화면은 사진 한 장·이름·한 줄 정보·키워드·문답이라는 **정해진 모양**이 있으므로
+ * 그 모양을 미리 그려두면 무엇이 올지 읽히고, 채워질 때 화면이 튀지 않는다.
+ *
+ * 치수는 진짜 조판에서 그대로 가져온다 — 자리가 어긋나면 스켈레톤이 오히려 화면을 흔든다.
+ */
+export function ProfileInvitationSkeleton({ c }: { c: ThemeColors }) {
+  return (
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <Skeleton c={c} width="100%" height={undefined} radius={0} style={styles.photo} />
+      <View style={styles.cover}>
+        <Skeleton c={c} width={132} height={30} />
+        <Skeleton c={c} width={96} height={14} style={{ marginTop: 12 }} />
+        <Skeleton c={c} width={104} height={23} radius={999} style={{ marginTop: 14 }} />
+      </View>
+      <View style={styles.chipWrap}>
+        {[74, 58, 88, 66].map((w) => (
+          <Skeleton key={w} c={c} width={w} height={30} radius={999} />
+        ))}
+      </View>
+      {/* 문답 두 장 — 셋 이상 그리면 실제보다 길어 보여 화면이 줄어드는 인상을 준다. */}
+      {[0, 1].map((i) => (
+        <View key={i} style={[styles.letter, { marginTop: i === 0 ? 34 : 0, alignItems: 'center' }]}>
+          <Skeleton c={c} width="72%" height={14} />
+          <SkeletonLines c={c} lines={3} lineHeight={18} gap={12} style={styles.skeletonLines} />
+        </View>
+      ))}
+    </ScrollView>
+  );
+}

@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
+import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { Avatar } from '@/components/avatar';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -47,8 +48,18 @@ export default function MeetupMemberScreen() {
   return (
     <SubScreen title="모임 프로필" c={c}>
       {loading ? (
-        <View style={[styles.flex, styles.center]}>
-          <ActivityIndicator color={c.primary} />
+        /* 이 화면은 카드 조판이라 초대장 스켈레톤을 쓰지 않는다 — 자리가 어긋나면 채워질 때 화면이 튄다. */
+        <View style={styles.content}>
+          <View style={[styles.card, styles.profileCard, { backgroundColor: c.backgroundElement }]}>
+            <Skeleton c={c} width={64} height={64} radius={32} />
+            <View style={styles.flex}>
+              <Skeleton c={c} width={108} height={19} />
+              <Skeleton c={c} width={140} height={14} style={{ marginTop: 9 }} />
+            </View>
+          </View>
+          <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
+            <SkeletonLines c={c} lines={3} lineHeight={15} />
+          </View>
         </View>
       ) : profile == null ? (
         <View style={[styles.flex, styles.center]}>
