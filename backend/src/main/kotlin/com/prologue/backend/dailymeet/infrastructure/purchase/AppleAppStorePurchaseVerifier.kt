@@ -48,7 +48,19 @@ class AppleAppStorePurchaseVerifier(
         }
     }
 
-    fun verify(productId: String, jws: String): VerifiedPurchase {
+    fun verify(productId: String, jws: String): VerifiedPurchase =
+        try {
+            check(productId, jws)
+        } catch (e: PurchaseVerificationException) {
+            // 유저에게는 "결제를 확인하지 못했어요" 한 줄만 간다(InkPurchaseService). 그건 맞다 —
+            // 인증서 사슬 얘기를 해봐야 할 수 있는 일이 없다. 대신 운영은 이유를 알아야 한다.
+            // 이 줄이 없으면 거절이 로그에 흔적을 남기지 않아, 돈은 나가고 잉크가 안 들어오는데
+            // 왜인지 아무도 모르는 상태가 된다.
+            log.warn("애플 결제 검증 거절 — productId={}, 이유={}", productId, e.message)
+            throw e
+        }
+
+    private fun check(productId: String, jws: String): VerifiedPurchase {
         val parts = jws.split('.')
         if (parts.size != 3) throw PurchaseVerificationException("애플 거래 증표의 형식이 아닙니다")
         val (encodedHeader, encodedPayload, encodedSignature) = parts
@@ -107,6 +119,12 @@ class AppleAppStorePurchaseVerifier(
             log.info("샌드박스 결제를 지급합니다 — transactionId={}, productId={}", transactionId, payloadProductId)
         }
 
+        log.info(
+            "애플 결제 검증 통과 — transactionId={}, productId={}, environment={}",
+            transactionId,
+            payloadProductId,
+            environment ?: "(없음)",
+        )
         return VerifiedPurchase(transactionId = transactionId, productId = payloadProductId)
     }
 
