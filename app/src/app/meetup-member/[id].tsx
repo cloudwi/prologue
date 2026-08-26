@@ -4,10 +4,13 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
+import { Image } from 'expo-image';
+
 import { Avatar } from '@/components/avatar';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { thumbUrl } from '@/lib/image';
 import { getMeetupMemberProfile, type MeetupMemberHistoryRow } from '@/lib/meetups';
 
 /**
@@ -53,7 +56,7 @@ export default function MeetupMemberScreen() {
          */
         <View style={styles.content}>
           <View style={[styles.card, styles.profileCard, { backgroundColor: c.backgroundElement }]}>
-            <Avatar avatarId={null} nickname={knownNickname || undefined} size={64} c={c} />
+            <Skeleton c={c} width={64} height={80} radius={Radius.sm} />
             <View style={styles.flex}>
               {knownNickname ? (
                 <Text style={[styles.nickname, { color: c.text }]}>{knownNickname}</Text>
@@ -75,7 +78,21 @@ export default function MeetupMemberScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           {/* 프로필 — 여기까지만 공개. */}
           <View style={[styles.card, styles.profileCard, { backgroundColor: c.backgroundElement }]}>
-            <Avatar avatarId={profile.avatarId} nickname={profile.nickname ?? undefined} size={64} c={c} />
+            {/*
+             * 편지함의 봉투와 같은 4:5 조각. 아바타 일러스트보다 실제 얼굴이 낫다 —
+             * 모임은 진짜로 만나러 가는 자리라, 누구를 만나는지 아는 편이 안전하다.
+             * 사진이 없는 사람은 그대로 아바타로 그린다.
+             */}
+            {profile.photoUrl ? (
+              <Image
+                source={{ uri: thumbUrl(profile.photoUrl, 200) }}
+                style={[styles.photo, { backgroundColor: c.backgroundSelected }]}
+                contentFit="cover"
+                transition={150}
+              />
+            ) : (
+              <Avatar avatarId={profile.avatarId} nickname={profile.nickname ?? undefined} size={64} c={c} />
+            )}
             <View style={styles.flex}>
               <View style={styles.nameRow}>
                 <Text style={[styles.nickname, { color: c.text }]}>{profile.nickname ?? '(알 수 없음)'}</Text>
@@ -165,6 +182,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48 },
 
   card: { borderRadius: Radius.lg, padding: 16, marginBottom: 8 },
+  photo: { width: 64, height: 80, borderRadius: Radius.sm },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nickname: { fontSize: 19, fontWeight: '700' },

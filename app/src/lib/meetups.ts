@@ -78,6 +78,8 @@ export type MeetupMemberProfile = {
   age: number | null;
   region: string | null;
   avatarId: number | null;
+  /** 대표 사진 한 장. 구버전 서버면 없다 — 그때는 아바타로 그린다. */
+  photoUrl?: string | null;
   bio: string | null;
   /** 직장 인증 여부. */
   jobVerified: boolean;

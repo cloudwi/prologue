@@ -91,6 +91,14 @@ data class MeetupMemberProfileView(
     val age: Int?,
     val region: String?,
     val avatarId: Int?,
+    /**
+     * 대표 사진 한 장. 여러 장은 내려보내지 않는다.
+     *
+     * 모임은 실제로 만나는 자리라 얼굴을 아는 편이 안전하다 — 누구를 만나러 가는지 모르는 채
+     * 나가는 것보다 낫다. 다만 여기는 매칭 프로필이 아니므로 훑어볼 사진첩까지 열지는 않는다.
+     * 한 장이면 "이 사람이구나"에 충분하고, 나머지는 매칭에서 만났을 때의 몫이다.
+     */
+    val photoUrl: String?,
     val bio: String?,
     /** 직장 인증 여부. */
     val jobVerified: Boolean,
@@ -374,6 +382,7 @@ class MeetupService(
             age = profile?.age(),
             region = profile?.region,
             avatarId = profile?.avatarId,
+            photoUrl = profile?.photoUrls?.firstOrNull(),
             bio = profile?.bio,
             jobVerified = jobDomain != null,
             jobDomain = jobDomain,
