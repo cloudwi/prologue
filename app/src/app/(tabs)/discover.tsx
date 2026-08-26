@@ -32,8 +32,8 @@ import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
-const ANSWER_MIN = 15;
-const ANSWER_MAX = 300;
+const ANSWER_MIN = 10;
+const ANSWER_MAX = 500;
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];

@@ -35,7 +35,7 @@ class ProfileLetter private constructor(
         const val MAX_PER_MEMBER = 5
         const val MAX_LENGTH = 400 // 자기소개를 대신하는 글 — 한 문답 답변(300자)보다 여유 있게
         /** 최소 분량 — 프로필에 걸어두는 글이 한 마디로 끝나지 않도록. 답변과 같은 하한. */
-        const val MIN_LENGTH = 15
+        const val MIN_LENGTH = 10
 
         fun write(accountId: UUID, questionId: Long, content: String, now: Instant = Instant.now()): ProfileLetter =
             ProfileLetter(null, accountId, questionId, validate(content), now, now)

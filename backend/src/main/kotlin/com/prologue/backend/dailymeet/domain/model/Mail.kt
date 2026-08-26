@@ -91,7 +91,7 @@ class Mail private constructor(
 
     companion object {
         private const val MAX_LENGTH = 300 // 편지 한 통의 분량 — 대화가 아니라 건네는 인사
-        private const val MIN_LENGTH = 50 // 잉크를 낸 한 통이 인사 한 줄로 끝나지 않도록
+        private const val MIN_LENGTH = 30 // 인사 한 줄로 끝나지 않을 만큼만. 잉크를 낸 사람에게 분량까지 요구하지는 않는다
 
         /** 회수까지 기다리는 기간 — 상대에게 읽을 시간을 주는 사흘. */
         val RECALL_AFTER: java.time.Duration = java.time.Duration.ofDays(3)

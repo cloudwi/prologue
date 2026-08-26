@@ -22,14 +22,14 @@ class Answer private constructor(
     }
 
     companion object {
-        private const val MAX_LENGTH = 300 // 한 문답에 맞는 분량 (짧은 글)
+        private const val MAX_LENGTH = 500 // 한 문답에 맞는 분량. 하고 싶은 말이 있는데 잘리면 이 앱의 취지와 어긋난다
 
         /**
          * 최소 분량 — "ㅇㅇ", "비밀이에요" 같은 한 마디를 거른다.
          * 답변은 상대에게 나를 소개하는 글이자 매칭의 재료라, 아무 말이나 적고 넘어가면
          * 그 답을 받아 든 상대의 하루가 빈다. 성의의 하한이지 글솜씨의 문턱이 아니다 — 낮게 둔다.
          */
-        private const val MIN_LENGTH = 15
+        private const val MIN_LENGTH = 10
 
         fun write(accountId: UUID, questionId: Long, content: String, now: Instant = Instant.now()): Answer =
             Answer(null, accountId, questionId, validate(content), now)

@@ -8,7 +8,7 @@ import { authedRequest } from './api';
 export const LETTER_MAX = 5; // 서버 ProfileLetter.MAX_PER_MEMBER와 같은 값 — 함께 고칠 것
 export const LETTER_MAX_LENGTH = 400;
 /** 최소 분량 — 프로필에 걸어두는 글이 한 마디로 끝나지 않도록. 서버와 같은 값. */
-export const LETTER_MIN_LENGTH = 15;
+export const LETTER_MIN_LENGTH = 10;
 
 export type LetterQuestion = {
   questionId: number;

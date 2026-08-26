@@ -27,7 +27,7 @@ import { INK_PRICE } from '@/lib/ink';
 
 const CONTENT_MAX = 300;
 // 잉크를 낸 한 통이 "연락주세요" 한 줄로 끝나지 않도록 — 서버도 같은 값으로 막는다.
-const CONTENT_MIN = 50;
+const CONTENT_MIN = 30;
 
 /**
  * 편지 쓰기 — 인앱 채팅 대신 연락처를 건네는 한 통.

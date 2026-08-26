@@ -37,9 +37,9 @@ import { uploadPhoto } from '@/lib/photo';
 import { useTheme } from '@/hooks/use-theme';
 
 const EMPTY_EXTRA: ProfileExtra = { bio: '', avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
-const BIO_MAX = 300;
+const BIO_MAX = 500;
 // 쓰기로 했다면 인사 한 문단은 되도록 — 서버와 같은 값. 비워두고 넘어가는 것은 자유다.
-const BIO_MIN = 30;
+const BIO_MIN = 20;
 
 /** 가입 가능한 최소 만 나이 — 한국 성년. 서버(Member.validate)와 같은 기준. */
 const ADULT_AGE = 19;

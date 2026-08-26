@@ -153,7 +153,7 @@ class Member private constructor(
         private const val MIN_BIRTH_YEAR = 1920
         /** 가입 가능한 최소 만 나이 — 한국 성년(만 19세). */
         private const val ADULT_AGE = 19
-        private const val BIO_MAX = 300
+        private const val BIO_MAX = 500
 
         /**
          * 자기소개의 최소 분량 — 쓰기로 했다면 인사 한 문단은 되도록.
@@ -161,7 +161,7 @@ class Member private constructor(
          * 프로필을 연 상대가 가장 먼저 읽는 글이라, "안녕하세요" 한 마디가 걸려 있으면
          * 프로필 전체가 성의 없어 보인다.
          */
-        private const val BIO_MIN = 30
+        private const val BIO_MIN = 20
         private const val KEYWORD_MAX = 15
         private const val KAKAO_ID_MAX = 30
         private val KST = ZoneId.of("Asia/Seoul")
