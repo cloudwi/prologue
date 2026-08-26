@@ -34,8 +34,19 @@ export function weekdayLabel(d: Date): string {
   return `${WEEKDAYS[d.getDay()]}요일`;
 }
 
+/**
+ * "오후 7:00" — 12시간제에 오전/오후.
+ *
+ * Intl에 맡기지 않는다. 같은 'ko-KR'을 줘도 실행 환경의 ICU에 따라 "오후 7:00"이 되기도
+ * "PM 7:00"이 되기도 한다 — CI의 Node가 그랬다. 이 문자열은 초대 문구로 그대로 나가는데,
+ * 한국어 문장 한가운데 PM이 끼면 만든 사람이 성의 없어 보인다.
+ *
+ * 이 파일의 날짜·요일이 이미 손으로 조판돼 있는 이유와 같다. 시각만 예외였다.
+ */
 export function timeLabel(d: Date): string {
-  return new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' }).format(d);
+  const hours = d.getHours();
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${hours < 12 ? '오전' : '오후'} ${hour12}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 /**

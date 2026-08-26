@@ -1,4 +1,4 @@
-import { ddayLabel, mapQuery, meetupShareText, meetupShareUrl, numeralDate, venueOf, weekdayLabel } from './meetup-format';
+import { ddayLabel, mapQuery, meetupShareText, meetupShareUrl, numeralDate, timeLabel, venueOf, weekdayLabel } from './meetup-format';
 import type { Meetup } from './meetups';
 
 /**
@@ -17,6 +17,20 @@ describe('요일', () => {
   it('일요일이 0 — Date.getDay()의 순서를 그대로 따른다', () => {
     expect(weekdayLabel(new Date(2026, 8, 27))).toBe('일요일'); // 2026-09-27은 일요일
     expect(weekdayLabel(new Date(2026, 8, 26))).toBe('토요일');
+  });
+});
+
+describe('시각', () => {
+  // Intl에 맡겼을 때 CI의 Node가 "PM 7:00"을 내놓았다. 실행 환경이 달라도 같은 글자가 나와야 한다.
+  it('오전·오후를 한국어로 쓴다', () => {
+    expect(timeLabel(new Date(2026, 8, 26, 19, 0))).toBe('오후 7:00');
+    expect(timeLabel(new Date(2026, 8, 26, 9, 5))).toBe('오전 9:05');
+  });
+
+  it('자정과 정오 — 0시는 오전 12시, 12시는 오후 12시', () => {
+    expect(timeLabel(new Date(2026, 8, 26, 0, 0))).toBe('오전 12:00');
+    expect(timeLabel(new Date(2026, 8, 26, 12, 0))).toBe('오후 12:00');
+    expect(timeLabel(new Date(2026, 8, 26, 12, 30))).toBe('오후 12:30');
   });
 });
 
