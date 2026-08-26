@@ -5,6 +5,14 @@ export const SITE_NAME = '프롤로그';
 export const SITE_URL = 'https://prologue.day';
 export const CONTACT_EMAIL = 'prologue.kr.team@gmail.com';
 
+/**
+ * API 주소 — 모임장 콘솔(/host)이 부른다.
+ *
+ * 랜딩은 정적이라 서버를 부를 일이 없었지만, 콘솔은 로그인하고 모임을 만든다.
+ * 서버의 cors.allowed-origins에 prologue.day가 들어 있어야 브라우저가 허락한다.
+ */
+export const API_BASE = 'https://api.prologue.day';
+
 /** App Store 앱 ID — App Store Connect의 앱 번호. */
 export const APPLE_APP_ID = '6803755105';
 export const APP_STORE_URL = `https://apps.apple.com/kr/app/id${APPLE_APP_ID}`;

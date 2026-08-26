@@ -141,6 +141,13 @@ const baseJsonLd = [
           <nav aria-label="바닥글 메뉴">
             <a href="/download">다운로드</a>
             <a href="/story">스토리</a>
+            {/*
+              모임장 콘솔 — 머리글이 아니라 바닥글에 둔다.
+              머리글은 앱을 받게 하는 길이고, 이건 모임을 여는 소수가 쓰는 문이다.
+              찾는 사람은 바닥글까지 내려오고, 그렇지 않은 사람에게는 쓸 수 없는 로그인이 하나 더
+              보일 뿐이다. 좁은 화면의 머리글은 이미 자리가 빠듯하기도 하다.
+            */}
+            <a href="/host">모임장 콘솔</a>
             <a href="/terms">이용약관</a>
             <a href="/privacy">개인정보처리방침</a>
             <a href="/account-deletion">계정 삭제</a>

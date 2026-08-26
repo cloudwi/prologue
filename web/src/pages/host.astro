@@ -1,0 +1,380 @@
+---
+import Base from '../layouts/Base.astro';
+import { API_BASE } from '../lib/site';
+
+/*
+ * 모임장 콘솔 — 모임을 열고 신청자를 확정하는 자리.
+ *
+ * 앱이 아니라 웹인 이유는 V37 마이그레이션 첫 줄에 이미 적혀 있다 —
+ * "모임장이 웹(/host)에서 만들고, 회원이 앱에서 신청한다".
+ *
+ * 그 설계가 옳았다. 모임장은 소개받으러 온 사람이 아니라 자리를 여는 사람이라
+ * 소개팅 프로필(사진 2장·선호 성별·문답)을 요구할 이유가 없고, 개설은 커버 사진과 긴 소개와
+ * 주소와 조건을 다루는 폼 작업이라 큰 화면이 맞다. 신청자 확정도 오픈채팅과 번갈아 보는 일이다.
+ *
+ * 화면 하나에 네 장면을 둔다(로그인 → 목록 → 개설 → 신청자). 페이지를 넘기면 토큰과 입력이
+ * 날아가고, 모임장이 하는 일은 대개 한 자리에서 끝나기 때문이다.
+ */
+---
+
+<Base title="모임장 콘솔 — 프롤로그" description="프롤로그 모임을 열고 신청자를 확정합니다." noindex>
+  <section class="console">
+    <div class="container">
+      <h1 id="head">모임장 콘솔</h1>
+      <p class="lead" id="lead">모임을 열고 신청자를 확정하는 자리예요.</p>
+
+      <!-- 1) 로그인 — 앱과 같은 이메일 인증코드를 쓴다. 비밀번호는 이 서비스에 없다. -->
+      <div class="panel" id="v-login">
+        <label class="field">
+          <span>이메일</span>
+          <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="host@example.com" />
+        </label>
+        <div id="codeField" class="field" hidden>
+          <span>인증코드</span>
+          <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="6자리" />
+        </div>
+        <button class="btn" id="loginBtn">인증코드 받기</button>
+        <p class="hint" id="loginHint">모임을 열 수 있는 계정만 들어올 수 있어요.</p>
+      </div>
+
+      <!-- 2) 내 모임 -->
+      <div class="panel" id="v-list" hidden>
+        <div class="row-between">
+          <h2>내 모임</h2>
+          <button class="btn small" id="newBtn">새 모임 열기</button>
+        </div>
+        <div id="list"></div>
+      </div>
+
+      <!-- 3) 개설 -->
+      <div class="panel" id="v-new" hidden>
+        <h2>새 모임</h2>
+        <label class="field"><span>이름 *</span><input id="f-title" maxlength="80" placeholder="밑줄 모임 · 서로서가" /></label>
+        <label class="field"><span>소개</span><textarea id="f-desc" rows="4" maxlength="1000" placeholder="어떤 자리인지 적어주세요."></textarea></label>
+        <div class="grid2">
+          <label class="field"><span>날짜 *</span><input id="f-date" type="date" /></label>
+          <label class="field"><span>시간 *</span><input id="f-time" type="time" step="900" /></label>
+        </div>
+        <label class="field"><span>주소</span><input id="f-address" placeholder="서울 서초구 언남길 49" /></label>
+        <label class="field"><span>장소 * <em>건물·층·가게 이름까지</em></span><input id="f-place" maxlength="120" placeholder="1층 파란지붕 서로서가" /></label>
+        <div class="grid2">
+          <label class="field"><span>정원 * <em>2~100</em></span><input id="f-capacity" type="number" min="2" max="100" value="8" /></label>
+          <label class="field"><span>참가비 <em>원</em></span><input id="f-fee" type="number" min="0" step="1000" value="0" /></label>
+        </div>
+        <label class="field"><span>여성 참가비 <em>비우면 위 참가비와 같음</em></span><input id="f-feeFemale" type="number" min="0" step="1000" placeholder="" /></label>
+        <label class="field"><span>오픈채팅 링크 * <em>신청한 사람에게만 보여요</em></span><input id="f-kakao" placeholder="https://open.kakao.com/o/..." /></label>
+        <label class="field"><span>커버 사진 <em>첫 장이 초대장의 얼굴</em></span><input id="f-cover" type="file" accept="image/*" multiple /></label>
+        <div id="coverPreview" class="covers"></div>
+        <label class="check"><input id="f-jobVerified" type="checkbox" /> <span>직장 인증한 사람만 신청 가능</span></label>
+        <div class="row-between">
+          <button class="btn ghost small" id="cancelNew">취소</button>
+          <button class="btn" id="createBtn">모임 열기</button>
+        </div>
+      </div>
+
+      <!-- 4) 신청자 -->
+      <div class="panel" id="v-apps" hidden>
+        <div class="row-between">
+          <h2 id="appsTitle">신청자</h2>
+          <button class="btn ghost small" id="backToList">← 목록</button>
+        </div>
+        <div id="apps"></div>
+      </div>
+
+      <p class="msg" id="msg" hidden></p>
+    </div>
+  </section>
+</Base>
+
+<script is:inline define:vars={{ API_BASE }}>
+  const $ = (id) => document.getElementById(id);
+  const TOKEN_KEY = 'prologue.host.token';
+  let token = localStorage.getItem(TOKEN_KEY) || '';
+  let covers = [];
+  let meetups = [];
+
+  const show = (name) => {
+    for (const v of ['login', 'list', 'new', 'apps']) $(`v-${v}`).hidden = v !== name;
+  };
+  const say = (text, bad = false) => {
+    const el = $('msg');
+    el.hidden = !text;
+    el.textContent = text || '';
+    el.className = bad ? 'msg bad' : 'msg';
+  };
+
+  /** 서버 호출 한 곳 — 401이면 토큰이 죽은 것이라 로그인으로 되돌린다. */
+  async function api(path, { method = 'GET', body, raw } = {}) {
+    const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    if (body && !raw) headers['Content-Type'] = 'application/json';
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: raw ? body : body ? JSON.stringify(body) : undefined,
+    });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : null;
+    if (res.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      token = '';
+      show('login');
+      throw new Error('로그인이 필요해요');
+    }
+    if (!res.ok) throw new Error(data?.message || `요청이 실패했어요 (${res.status})`);
+    return data;
+  }
+
+  // ── 로그인 ───────────────────────────────────────────────
+  let codeSent = false;
+  $('loginBtn').onclick = async () => {
+    const email = $('email').value.trim();
+    if (!email) return say('이메일을 적어주세요', true);
+    try {
+      say('');
+      if (!codeSent) {
+        await api('/auth/email/request-code', { method: 'POST', body: { email } });
+        codeSent = true;
+        $('codeField').hidden = false;
+        $('loginBtn').textContent = '로그인';
+        $('loginHint').textContent = '메일로 보낸 6자리를 넣어주세요.';
+        $('code').focus();
+        return;
+      }
+      const code = $('code').value.trim();
+      if (!code) return say('인증코드를 넣어주세요', true);
+      const r = await api('/auth/email/verify', { method: 'POST', body: { email, code } });
+      token = r.accessToken;
+      localStorage.setItem(TOKEN_KEY, token);
+      await loadList();
+    } catch (e) {
+      say(e.message, true);
+    }
+  };
+
+  // ── 목록 ─────────────────────────────────────────────────
+  const fmtDate = (iso) =>
+    new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' })
+      .format(new Date(iso));
+
+  const STATUS = { OPEN: '모집 중', CLOSED: '모집 마감', DONE: '개최 완료', CANCELED: '취소됨' };
+
+  async function loadList() {
+    try {
+      const r = await api('/meetups/mine');
+      meetups = r.meetups || [];
+      $('list').innerHTML = meetups.length === 0
+        ? '<p class="hint">아직 연 모임이 없어요.</p>'
+        : meetups.map((m) => {
+            const waiting = (m.applications || []).filter((a) => a.status === 'APPLIED').length;
+            return `<div class="item">
+              <div class="item-main">
+                <strong>${esc(m.title)}</strong>
+                <span class="meta">${fmtDate(m.meetAt)} · ${esc(m.place)}</span>
+                <span class="meta">${STATUS[m.status] || m.status} · 확정 ${m.confirmedCount}/${m.capacity}${waiting ? ` · 대기 ${waiting}` : ''}</span>
+              </div>
+              <button class="btn ghost small" data-apps="${m.meetupId}">신청자</button>
+            </div>`;
+          }).join('');
+      for (const b of $('list').querySelectorAll('[data-apps]')) {
+        b.onclick = () => openApps(b.dataset.apps);
+      }
+      show('list');
+      say('');
+    } catch (e) {
+      say(e.message, true);
+    }
+  }
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  // ── 신청자 ───────────────────────────────────────────────
+  let currentMeetup = null;
+  function openApps(id) {
+    currentMeetup = meetups.find((m) => m.meetupId === id);
+    if (!currentMeetup) return;
+    $('appsTitle').textContent = `${currentMeetup.title} · 신청자`;
+    renderApps();
+    show('apps');
+  }
+
+  function renderApps() {
+    const apps = (currentMeetup.applications || []).filter((a) => a.status !== 'CANCELED');
+    $('apps').innerHTML = apps.length === 0
+      ? '<p class="hint">아직 신청자가 없어요.</p>'
+      : apps.map((a) => {
+          const meta = [a.gender === 'MALE' ? '남' : a.gender === 'FEMALE' ? '여' : null, a.age ? `${a.age}세` : null, a.region]
+            .filter(Boolean).join(' · ');
+          const badge = a.jobVerified ? '<span class="badge">인증</span>' : '';
+          const actions = a.status === 'CONFIRMED'
+            ? '<span class="done">확정됨</span>'
+            : a.status === 'DECLINED'
+              ? '<span class="hint">거절함</span>'
+              : `<button class="btn small" data-confirm="${a.applicationId}">확정</button>
+                 <button class="btn ghost small" data-decline="${a.applicationId}">거절</button>`;
+          return `<div class="item">
+            <div class="item-main"><strong>${esc(a.nickname || '(알 수 없음)')}${badge}</strong><span class="meta">${esc(meta)}</span></div>
+            <div class="actions">${actions}</div>
+          </div>`;
+        }).join('');
+    for (const b of $('apps').querySelectorAll('[data-confirm]')) b.onclick = () => act(b.dataset.confirm, 'confirm');
+    for (const b of $('apps').querySelectorAll('[data-decline]')) b.onclick = () => act(b.dataset.decline, 'decline');
+  }
+
+  async function act(applicationId, what) {
+    if (what === 'decline' && !confirm('이 신청을 거절할까요?')) return;
+    try {
+      await api(`/meetups/applications/${applicationId}/${what}`, { method: 'POST' });
+      await loadList();
+      currentMeetup = meetups.find((m) => m.meetupId === currentMeetup.meetupId);
+      renderApps();
+      say(what === 'confirm' ? '확정했어요.' : '거절했어요.');
+    } catch (e) {
+      say(e.message, true);
+    }
+  }
+
+  $('backToList').onclick = () => { show('list'); say(''); };
+
+  // ── 개설 ─────────────────────────────────────────────────
+  $('newBtn').onclick = () => { covers = []; $('coverPreview').innerHTML = ''; show('new'); say(''); };
+  $('cancelNew').onclick = () => { show('list'); say(''); };
+
+  // 사진은 만들기 전에 올리고 URL만 요청에 싣는다 — 서버가 그렇게 받는다.
+  $('f-cover').onchange = async (e) => {
+    const files = [...e.target.files];
+    if (!files.length) return;
+    say('사진을 올리는 중…');
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
+        covers.push(r.url);
+      }
+      $('coverPreview').innerHTML = covers.map((u) => `<img src="${esc(u)}" alt="" />`).join('');
+      say(`사진 ${covers.length}장 올렸어요.`);
+    } catch (err) {
+      say(err.message, true);
+    }
+    e.target.value = '';
+  };
+
+  $('createBtn').onclick = async () => {
+    const title = $('f-title').value.trim();
+    const date = $('f-date').value;
+    const time = $('f-time').value;
+    const place = $('f-place').value.trim();
+    const kakao = $('f-kakao').value.trim();
+    if (!title || !date || !time || !place || !kakao) return say('별표 친 칸을 채워주세요', true);
+    // 서버는 ISO-8601을 받는다. 한국 시간으로 적은 값이므로 +09:00을 붙여 보낸다.
+    const meetAt = `${date}T${time}:00+09:00`;
+    const feeFemaleRaw = $('f-feeFemale').value.trim();
+    try {
+      say('여는 중…');
+      await api('/meetups', {
+        method: 'POST',
+        body: {
+          title,
+          description: $('f-desc').value.trim() || null,
+          meetAt,
+          place,
+          placeAddress: $('f-address').value.trim() || null,
+          capacity: Number($('f-capacity').value),
+          fee: Number($('f-fee').value) || 0,
+          feeFemale: feeFemaleRaw === '' ? null : Number(feeFemaleRaw),
+          requireJobVerified: $('f-jobVerified').checked,
+          coverUrls: covers,
+        },
+      });
+      for (const id of ['f-title', 'f-desc', 'f-address', 'f-place', 'f-kakao']) $(id).value = '';
+      covers = [];
+      $('coverPreview').innerHTML = '';
+      await loadList();
+      say('모임을 열었어요.');
+    } catch (e) {
+      say(e.message, true);
+    }
+  };
+
+  // 토큰이 남아 있으면 바로 목록으로 — 모임장은 하루에도 여러 번 들어온다.
+  if (token) loadList().catch(() => show('login'));
+  else show('login');
+</script>
+
+<style>
+  .console { padding: 56px 0 96px; }
+  .console h1 { font-size: 2rem; }
+  .lead { color: var(--muted); margin-top: 8px; }
+  .panel {
+    margin-top: 28px;
+    padding: 24px;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    display: grid;
+    gap: 16px;
+  }
+  /* display를 준 요소는 [hidden]의 기본 규칙(display:none)을 이긴다 — 다시 눌러줘야 감춰진다. */
+  .panel[hidden],
+  .field[hidden] { display: none; }
+  .panel h2 { font-size: 1.15rem; }
+  .row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: grid; gap: 6px; font-size: 0.95rem; }
+  .field span { font-weight: 600; }
+  .field em { font-style: normal; font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+  input, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font: inherit;
+    background: var(--surface);
+    color: inherit;
+  }
+  input[type='file'] { padding: 10px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+  .check input { width: auto; }
+  .btn {
+    padding: 13px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn.small { padding: 9px 16px; font-size: 0.9rem; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--border); }
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+  }
+  .item:first-child { border-top: 0; }
+  .item-main { display: grid; gap: 5px; }
+  .meta { color: var(--muted); font-size: 0.9rem; }
+  .actions { display: flex; gap: 8px; }
+  .badge {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--terracotta);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .done { color: var(--terracotta-strong); font-weight: 700; font-size: 0.9rem; }
+  .hint { color: var(--muted); font-size: 0.9rem; }
+  .covers { display: flex; flex-wrap: wrap; gap: 8px; }
+  .covers img { width: 92px; height: 52px; object-fit: cover; border-radius: 8px; }
+  .msg { margin-top: 18px; font-weight: 600; }
+  .msg.bad { color: var(--terracotta-strong); }
+  @media (max-width: 560px) {
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
