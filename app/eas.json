@@ -41,6 +41,13 @@
         "track": "internal",
         "releaseStatus": "draft"
       }
+    },
+    "alpha": {
+      "android": {
+        "serviceAccountKeyPath": "../release/secrets/fcm-service-account.json",
+        "track": "alpha",
+        "releaseStatus": "completed"
+      }
     }
   }
 }
