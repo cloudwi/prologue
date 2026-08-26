@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 
+import { JobBadge } from '@/components/job-badge';
 import { PhotoPager } from '@/components/photo-pager';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { conditionLabel, feeLabel, type Meetup } from '@/lib/meetups';
@@ -164,7 +165,7 @@ export function MeetupInvitation({
               >
                 <Text style={[styles.participantName, { color: c.text }]}>{p.nickname ?? '(알 수 없음)'}</Text>
                 {/* 인증 표시는 아이콘 하나로 — 이름이 늘어선 자리라 글자를 더하면 줄이 무너진다. 회사는 상세에서만. */}
-                {p.jobVerified ? <Ionicons name="briefcase" size={11} color={c.primaryStrong} /> : null}
+                {p.jobVerified ? <JobBadge c={c} mark /> : null}
               </Pressable>
             ))}
           </View>

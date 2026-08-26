@@ -82,7 +82,7 @@ export default function JobVerifyScreen() {
       ) : verified ? (
         <View style={[styles.flex, styles.center]}>
           <View style={[styles.doneBadge, { backgroundColor: c.primary }]}>
-            <Ionicons name="briefcase" size={26} color={c.primaryText} />
+            <Ionicons name="shield-checkmark" size={26} color={c.primaryText} />
           </View>
           <Text style={[styles.doneTitle, { color: c.text }]}>직장 인증 완료</Text>
           <Text style={[styles.doneText, { color: c.textSecondary }]}>

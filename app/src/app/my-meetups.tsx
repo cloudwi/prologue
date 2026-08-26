@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { JobBadge } from '@/components/job-badge';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -273,12 +274,7 @@ function ApplicantRow({
         <View style={styles.applicantNameRow}>
           <Text style={[styles.applicantName, { color: c.text }]}>{a.nickname ?? '(알 수 없음)'}</Text>
           {/* 확정할지 말지 정하는 자리 — 신뢰 신호가 가장 값진 곳이다. 회사가 어디인지는 프로필에서. */}
-          {a.jobVerified ? (
-            <View style={[styles.applicantJob, { backgroundColor: c.primary }]}>
-              <Ionicons name="briefcase" size={10} color={c.primaryText} />
-              <Text style={{ color: c.primaryText, fontSize: 11, fontWeight: '700' }}>인증</Text>
-            </View>
-          ) : null}
+          {a.jobVerified ? <JobBadge c={c} label="인증" /> : null}
         </View>
         {meta ? <Text style={[styles.applicantMeta, { color: c.textSecondary }]}>{meta}</Text> : null}
       </View>
@@ -360,7 +356,6 @@ const styles = StyleSheet.create({
   noApplicants: { fontSize: 14, paddingVertical: 8 },
   applicantRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   applicantNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  applicantJob: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 19, paddingHorizontal: 6, borderRadius: Radius.pill },
   applicantName: { fontSize: 15, fontWeight: '600' },
   applicantMeta: { fontSize: 13, marginTop: 1 },
   applicantBtns: { flexDirection: 'row', gap: 8 },

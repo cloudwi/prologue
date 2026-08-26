@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Image } from 'expo-image';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
+import { JobBadge } from '@/components/job-badge';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
@@ -601,9 +602,8 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
              * 인증하고 싶어질 자리가 없다. 도메인까지 쓰면 이름 줄이 길어지므로 카드에서는 '직장 인증'만.
              */}
             {peer.jobVerified ? (
-              <View style={[styles.peerJobBadge, { backgroundColor: c.primary }]}>
-                <Ionicons name="briefcase" size={11} color={c.primaryText} />
-                <Text style={{ color: c.primaryText, fontSize: 12, fontWeight: '700' }}>직장 인증</Text>
+              <View style={styles.peerJobBadge}>
+                <JobBadge c={c} />
               </View>
             ) : null}
           </View>
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   carouselScroll: { marginHorizontal: -20, overflow: 'visible' },
   carouselContent: { paddingHorizontal: 20, gap: 12 },
   peerCard: { borderRadius: Radius.lg, overflow: 'hidden' },
-  peerJobBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, height: 22, paddingHorizontal: 8, borderRadius: Radius.pill },
+  peerJobBadge: { marginTop: 6 },
   peerAnswerBlock: { padding: 20, paddingBottom: 18 },
   peerAnswerQuestion: { fontSize: 13.5, lineHeight: 19, marginBottom: 8 },
   peerAnswer: { fontSize: 18, lineHeight: 27, fontWeight: '500' },

@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { JobBadge } from '@/components/job-badge';
 import { Avatar } from '@/components/avatar';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -62,14 +62,7 @@ export default function MeetupMemberScreen() {
             <View style={styles.flex}>
               <View style={styles.nameRow}>
                 <Text style={[styles.nickname, { color: c.text }]}>{profile.nickname ?? '(알 수 없음)'}</Text>
-                {profile.jobVerified && (
-                  <View style={[styles.jobBadge, { backgroundColor: c.primary }]}>
-                    <Ionicons name="briefcase" size={11} color={c.primaryText} />
-                    <Text style={[styles.jobBadgeText, { color: c.primaryText }]}>
-                      {profile.jobDomain ? `${profile.jobDomain} 인증` : '직장 인증'}
-                    </Text>
-                  </View>
-                )}
+                {profile.jobVerified && <JobBadge c={c} domain={profile.jobDomain} />}
               </View>
               {meta ? <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text> : null}
             </View>
@@ -158,8 +151,6 @@ const styles = StyleSheet.create({
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nickname: { fontSize: 19, fontWeight: '700' },
-  jobBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 22, paddingHorizontal: 8, borderRadius: 11 },
-  jobBadgeText: { fontSize: 11.5, fontWeight: '700' },
   meta: { fontSize: 14, marginTop: 3 },
   bio: { fontSize: 15.5, lineHeight: 23 },
 

@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { JobBadge } from '@/components/job-badge';
 import { PhotoPager } from '@/components/photo-pager';
 import { avatarSource } from '@/constants/avatars';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
@@ -186,9 +186,8 @@ export default function MyScreen() {
             style={({ pressed }) => [styles.jobCard, { backgroundColor: c.primary + '1F', opacity: pressed ? 0.8 : 1 }]}
           >
             <View style={styles.flex}>
-              <View style={[styles.jobBadgePreview, { backgroundColor: c.primary }]}>
-                <Ionicons name="briefcase" size={12} color={c.primaryText} />
-                <Text style={{ color: c.primaryText, fontSize: 12.5, fontWeight: '700' }}>직장 인증</Text>
+              <View style={styles.jobBadgePreview}>
+                <JobBadge c={c} />
               </View>
               <Text style={[styles.jobTitle, { color: c.text }]}>회사 메일로 인증하고 배지 받기</Text>
               <Text style={[styles.jobHint, { color: c.textSecondary }]}>
@@ -380,7 +379,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: Radius.md,
   },
-  jobBadgePreview: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', height: 23, paddingHorizontal: 9, borderRadius: Radius.pill, marginBottom: 9 },
+  jobBadgePreview: { marginBottom: 9 },
   jobTitle: { fontSize: 16, fontWeight: '700' },
   jobHint: { fontSize: 13.5, lineHeight: 19, marginTop: 4 },
 

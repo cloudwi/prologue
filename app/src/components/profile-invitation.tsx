@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { JobBadge } from '@/components/job-badge';
 import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import type { LastActive } from '@/lib/daily';
 
@@ -71,12 +71,7 @@ export function ProfileInvitation({
         {(jobVerified || lastActive) && (
           <View style={styles.badgeRow}>
             {jobVerified ? (
-              <View style={[styles.activity, { backgroundColor: c.primary }]}>
-                <Ionicons name="briefcase" size={12} color={c.primaryText} />
-                <Text style={{ color: c.primaryText, fontSize: 13, fontWeight: '600' }}>
-                  {jobDomain ? `${jobDomain} 인증` : '직장 인증'}
-                </Text>
-              </View>
+              <JobBadge c={c} domain={jobDomain} />
             ) : null}
             {lastActive ? (
               <View style={[styles.activity, { backgroundColor: c.backgroundElement }]}>
