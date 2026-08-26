@@ -81,8 +81,10 @@ export default function JobVerifyScreen() {
         </View>
       ) : verified ? (
         <View style={[styles.flex, styles.center]}>
+          {/* 프로필에 붙을 그 인장을 크게 한 번 보여준다 — 받은 것이 무엇인지 글보다 빠르다. */}
           <View style={[styles.doneBadge, { backgroundColor: c.primary }]}>
-            <Ionicons name="shield-checkmark" size={26} color={c.primaryText} />
+            <View style={[styles.doneBadgeRim, { borderColor: c.primaryText }]} />
+            <Ionicons name="checkmark" size={26} color={c.primaryText} />
           </View>
           <Text style={[styles.doneTitle, { color: c.text }]}>직장 인증 완료</Text>
           <Text style={[styles.doneText, { color: c.textSecondary }]}>
@@ -164,6 +166,7 @@ const styles = StyleSheet.create({
   backLink: { alignItems: 'center', paddingVertical: 10 },
   backLinkText: { fontSize: 14, textDecorationLine: 'underline' },
   doneBadge: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  doneBadgeRim: { position: 'absolute', top: 7, left: 7, right: 7, bottom: 7, borderRadius: 999, borderWidth: 1.6, opacity: 0.5 },
   doneTitle: { fontSize: 21, fontWeight: '700' },
   doneText: { fontSize: 14.5, lineHeight: 22, textAlign: 'center', marginTop: 10 },
 });
