@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -53,6 +54,7 @@ async function requestStoreReview() {
 export default function MailComposeScreen() {
   const c = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { peerAnswerId, replyMailId, nickname } = useLocalSearchParams<{
     peerAnswerId?: string;
     replyMailId?: string;
@@ -172,6 +174,22 @@ export default function MailComposeScreen() {
         : await sendMail(peerAnswerId!, body, withPhone, kakao);
       flushRef.current.sent = true;
       if (draftKey) void clearMailDraft(draftKey).catch(() => {}); // 부친 편지의 초안은 지운다
+
+      /*
+       * 부쳤다는 사실을 캐시에 남긴다.
+       *
+       * 프로필 상세는 목록에서 넘겨받은 JSON 스냅샷으로 그려진다. 그 안의 mailSent는 목록을
+       * 읽던 시점의 값이라, 편지를 부치고 돌아와도 false 그대로다 — 버튼은 여전히 "편지 보내기"고,
+       * 누르면 다시 쓰기 화면이 열리고, 다 쓴 뒤에야 서버가 "이미 편지를 보낸 상대예요"라고 답한다.
+       * 300자를 쓰고 나서 듣기에는 늦은 말이다.
+       *
+       * 답장(replyMailId)에는 남기지 않는다 — 답장은 원래 여러 번 오갈 수 있다.
+       */
+      if (peerAnswerId && !replyMailId) queryClient.setQueryData(['mail', 'sent', peerAnswerId], true);
+      // 목록·편지함·잔액도 낡았다. 발견 탭 카드의 버튼과 편지함의 새 봉투, 그리고 쓴 잉크.
+      void queryClient.invalidateQueries({ queryKey: ['daily', 'peers'] });
+      void queryClient.invalidateQueries({ queryKey: ['mails'] });
+      void queryClient.invalidateQueries({ queryKey: ['ink', 'balance'] });
       track('mail_sent', { discount: quote?.discount ?? 'NONE' });
       haptics.success(); // 연락처를 건넨 순간 — 이 앱에서 가장 무거운 행동
       Alert.alert('편지를 보냈어요', `잉크 ${result.inkSpent}을 사용했어요.`, [

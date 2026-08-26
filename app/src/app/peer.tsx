@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -44,6 +45,20 @@ export default function PeerDetailScreen() {
 
   // 누구를 봤는지는 싣지 않는다 — 열람이 일어났다는 사실만.
   useEffect(() => track('peer_profile_viewed'), []);
+
+  /*
+   * 편지를 이미 부쳤는가.
+   *
+   * 넘겨받은 스냅샷의 mailSent로 시작하되, 이 화면에서 편지를 부치고 돌아오면 그 사실이
+   * 캐시에 남아 여기가 그 자리에서 바뀐다(mail-compose). 스냅샷만 믿으면 버튼이 거짓말을 한다.
+   */
+  const mailSentQuery = useQuery({
+    queryKey: ['mail', 'sent', initialPeer?.peerAnswerId ?? 'none'],
+    queryFn: () => initialPeer?.mailSent ?? false,
+    initialData: initialPeer?.mailSent ?? false,
+    staleTime: Infinity,
+  });
+  const mailSent = mailSentQuery.data;
 
   // 하트는 한 사람에게 한 번뿐 — 서버가 알려준 상태로 시작해야 다시 들어왔을 때 버튼이 거짓말하지 않는다
   const [hearted, setHearted] = useState(initialPeer?.hearted ?? false);
@@ -154,7 +169,7 @@ export default function PeerDetailScreen() {
   function openCompose() {
     if (!peer?.peerAnswerId) return;
     router.push({
-      pathname: peer.mailSent ? '/mail-view' : '/mail-compose',
+      pathname: mailSent ? '/mail-view' : '/mail-compose',
       params: { peerAnswerId: peer.peerAnswerId, nickname: peer.nickname ?? '' },
     });
   }
@@ -247,7 +262,7 @@ export default function PeerDetailScreen() {
               tintColor={peer.mailSent ? c.textSecondary : c.primaryStrong}
             />
             <Text style={[styles.requestPillText, { color: peer.mailSent ? c.textSecondary : c.primaryStrong }]}>
-              {peer.mailSent ? '편지 확인' : '편지 보내기'}
+              {mailSent ? '편지 확인' : '편지 보내기'}
             </Text>
           </Pressable>
         )}
