@@ -163,6 +163,8 @@ export function MeetupInvitation({
                 style={({ pressed }) => [styles.participantChip, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 }]}
               >
                 <Text style={[styles.participantName, { color: c.text }]}>{p.nickname ?? '(알 수 없음)'}</Text>
+                {/* 인증 표시는 아이콘 하나로 — 이름이 늘어선 자리라 글자를 더하면 줄이 무너진다. 회사는 상세에서만. */}
+                {p.jobVerified ? <Ionicons name="briefcase" size={11} color={c.primaryStrong} /> : null}
               </Pressable>
             ))}
           </View>
@@ -418,7 +420,7 @@ const styles = StyleSheet.create({
 
   // ── 함께하는 사람들 ──
   participantWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
-  participantChip: { height: 34, paddingHorizontal: 14, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  participantChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, height: 34, paddingHorizontal: 14, borderRadius: Radius.pill },
   participantName: { fontSize: 14, fontWeight: '600' },
 
   // ── RSVP ──

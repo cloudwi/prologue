@@ -69,7 +69,13 @@ data class MeetupView(
 )
 
 /** 확정 참가자 한 명 — 모임 프로필로 이어진다. */
-data class MeetupParticipantView(val accountId: UUID, val nickname: String?)
+/**
+ * 모임 참여자 한 줄.
+ *
+ * 도메인은 싣지 않는다 — 목록에서 훑기만 해도 여러 사람의 직장이 수집되는 자리이기 때문이다.
+ * 어느 회사인지는 그 사람을 들여다보기로 마음먹고 들어간 상세에서만 열린다.
+ */
+data class MeetupParticipantView(val accountId: UUID, val nickname: String?, val jobVerified: Boolean)
 
 /** 모임 멤버의 모임 이력 한 줄. */
 data class MeetupMemberHistoryRow(val title: String, val meetAt: Instant, val confirmedCount: Int)
@@ -137,6 +143,8 @@ data class HostApplicationView(
     val region: String?,
     val status: String,
     val appliedAt: Instant,
+    /** 직장 인증 여부. 도메인은 싣지 않는다 — 확정 판단에 필요한 건 인증했다는 사실이다. */
+    val jobVerified: Boolean,
 )
 
 /** 모임장 콘솔의 모임 한 장 — 신청자 목록까지. */
@@ -275,7 +283,11 @@ class MeetupService(
                 // 링크는 손든 사람에게만 — 입금 안내가 오픈채팅에서 이뤄지므로 신청이 곧 입장권이다.
                 kakaoLink = if (my != null && my.status != MeetupApplicationStatus.DECLINED) m.kakaoLink else null,
                 participants = confirmedApps.map {
-                    MeetupParticipantView(it.applicantAccountId, memberQueryService.findProfile(it.applicantAccountId)?.nickname)
+                    MeetupParticipantView(
+                        accountId = it.applicantAccountId,
+                        nickname = memberQueryService.findProfile(it.applicantAccountId)?.nickname,
+                        jobVerified = jobVerificationService.verifiedDomain(it.applicantAccountId) != null,
+                    )
                 },
                 hostAccountId = m.hostAccountId,
                 isMine = m.hostAccountId == accountId,
@@ -588,6 +600,7 @@ class MeetupService(
                         region = profile?.region,
                         status = app.status.name,
                         appliedAt = app.createdAt,
+                        jobVerified = jobVerificationService.verifiedDomain(app.applicantAccountId) != null,
                     )
                 },
             )

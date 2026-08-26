@@ -270,7 +270,16 @@ function ApplicantRow({
   return (
     <View style={styles.applicantRow}>
       <View style={styles.flex}>
-        <Text style={[styles.applicantName, { color: c.text }]}>{a.nickname ?? '(알 수 없음)'}</Text>
+        <View style={styles.applicantNameRow}>
+          <Text style={[styles.applicantName, { color: c.text }]}>{a.nickname ?? '(알 수 없음)'}</Text>
+          {/* 확정할지 말지 정하는 자리 — 신뢰 신호가 가장 값진 곳이다. 회사가 어디인지는 프로필에서. */}
+          {a.jobVerified ? (
+            <View style={[styles.applicantJob, { backgroundColor: c.primary }]}>
+              <Ionicons name="briefcase" size={10} color={c.primaryText} />
+              <Text style={{ color: c.primaryText, fontSize: 11, fontWeight: '700' }}>인증</Text>
+            </View>
+          ) : null}
+        </View>
         {meta ? <Text style={[styles.applicantMeta, { color: c.textSecondary }]}>{meta}</Text> : null}
       </View>
       {a.status === 'CONFIRMED' ? (
@@ -350,6 +359,8 @@ const styles = StyleSheet.create({
   applicants: { marginTop: 14, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 6 },
   noApplicants: { fontSize: 14, paddingVertical: 8 },
   applicantRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  applicantNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  applicantJob: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 19, paddingHorizontal: 6, borderRadius: Radius.pill },
   applicantName: { fontSize: 15, fontWeight: '600' },
   applicantMeta: { fontSize: 13, marginTop: 1 },
   applicantBtns: { flexDirection: 'row', gap: 8 },

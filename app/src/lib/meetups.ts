@@ -63,7 +63,7 @@ export type Meetup = {
   following?: boolean;
 };
 
-export type MeetupParticipant = { accountId: string; nickname: string | null };
+export type MeetupParticipant = { accountId: string; nickname: string | null; jobVerified?: boolean };
 
 /** 모임 멤버의 모임 이력 한 줄. */
 export type MeetupMemberHistoryRow = { title: string; meetAt: string; confirmedCount: number };
@@ -200,6 +200,8 @@ export type HostApplication = {
   region: string | null;
   status: 'APPLIED' | 'CONFIRMED' | 'DECLINED' | 'CANCELED' | string;
   appliedAt: string;
+  /** 직장 인증 여부. 회사 도메인은 내려오지 않는다 — 확정 판단에 필요한 건 인증했다는 사실이다. */
+  jobVerified?: boolean;
 };
 
 export type HostMeetup = {
