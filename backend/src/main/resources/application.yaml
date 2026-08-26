@@ -22,10 +22,7 @@ supabase:
     service-key: ${SUPABASE_SERVICE_KEY:}
     bucket: ${SUPABASE_STORAGE_BUCKET:profile-photos}
 
-# 오늘의 상대 공개 시각(KST, HH:mm). 운영 기본은 정오.
-# 개발 중에는 DAILY_REVEAL_TIME=00:00 으로 앞당겨 바로 확인할 수 있다.
 daily:
-  reveal-time: ${DAILY_REVEAL_TIME:12:00}
   # 하루에 소개하는 상대 수. 유저가 적을 땐 1 — 후보 풀이 얕은데 둘씩 태우면 금방 마른다.
   reveal-count: ${DAILY_REVEAL_COUNT:1}
   # 후보를 찾을 질문의 범위(일). 사람이 늘면 1에 가깝게 좁힌다.
