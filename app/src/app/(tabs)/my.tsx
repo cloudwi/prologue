@@ -192,7 +192,7 @@ export default function MyScreen() {
               </View>
               <Text style={[styles.jobTitle, { color: c.text }]}>회사 메일로 인증하고 배지 받기</Text>
               <Text style={[styles.jobHint, { color: c.textSecondary }]}>
-                1분이면 끝나요. 회사 이름은 공개되지 않고, 같은 회사 사람과는 서로 소개되지 않아요.
+                1분이면 끝나요. 회사 이름은 프로필을 연 사람에게만 보이고, 인증하면 같은 회사 사람 숨기기도 켤 수 있어요.
               </Text>
             </View>
             <Text style={[styles.chevron, { color: c.primaryStrong }]}>›</Text>
