@@ -103,17 +103,25 @@ class PeerMatchingServiceTest {
     @Test
     fun `오늘의 상대 - 프로필에 그 사람의 최근 답 셋을 함께 싣는다`() {
         // 하트를 받았을 때 "이 사람은 무슨 생각을 하는 사람인가"를 알 방법이 한 편밖에 없었다.
+        //
+        // 오늘의 질문은 날짜가 고른다(epochDay % 질문수). 그래서 "1번이 오늘"이라고 못 박으면
+        // 5일에 하루만 통과하는 테스트가 된다 — 풀에 직접 물어 어느 날 돌려도 같은 결과를 본다.
         val peerAccount = UUID.randomUUID()
-        val shown = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "오늘 답", Instant.now())
-        val others = (2L..5L).map { qid ->
-            Answer.reconstitute(UUID.randomUUID(), peerAccount, qid, "답 $qid", Instant.now().minusSeconds(qid * 3600))
+        val pool = (1L..5L).map { Question(it, "질문 $it") }
+        val today = QuestionRotation.of(pool, ServiceDay.now())
+        val rest = pool.filter { it.id != today.id }
+
+        val shown = Answer.reconstitute(UUID.randomUUID(), peerAccount, today.id, "오늘 답", Instant.now())
+        // 최신순이 뒤섞이지 않도록 rest 순서대로 한 시간씩 과거로 민다
+        val others = rest.mapIndexed { i, q ->
+            Answer.reconstitute(UUID.randomUUID(), peerAccount, q.id, "답 ${q.id}", Instant.now().minusSeconds((i + 1) * 3600L))
         }
-        every { questionRepository.findAllOrdered() } returns
-            listOf(question) + (2L..5L).map { Question(it, "질문 $it") }
-        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns
-            Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답", Instant.now())
-        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns
-            listOf(DailyReveal.create(accountId, 1L, shown.id!!))
+
+        every { questionRepository.findAllOrdered() } returns pool
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, today.id) } returns
+            Answer.reconstitute(UUID.randomUUID(), accountId, today.id, "내 답", Instant.now())
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, today.id) } returns
+            listOf(DailyReveal.create(accountId, today.id, shown.id!!))
         every { answerRepository.findById(shown.id!!) } returns shown
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
         every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
@@ -123,8 +131,8 @@ class PeerMatchingServiceTest {
 
         assertEquals(3, recent.size) // 셋까지만
         assertTrue(recent.none { it.content == "오늘 답" }) // 카드에 이미 올린 답은 빼고
-        assertEquals(listOf("답 2", "답 3", "답 4"), recent.map { it.content }) // 최신순
-        assertEquals("질문 2", recent[0].question) // 그 답의 질문과 함께
+        assertEquals(others.take(3).map { it.content }, recent.map { it.content }) // 최신순
+        assertEquals("질문 ${rest[0].id}", recent[0].question) // 그 답의 질문과 함께
     }
 
     @Test
