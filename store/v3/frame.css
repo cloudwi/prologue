@@ -239,3 +239,16 @@ body.ios65 .panel {
   transform: scale(0.9727272);
   transform-origin: top left;
 }
+
+/*
+ * 웹 판형 — 랜딩(prologue.day)이 쓰는 화면.
+ *
+ * 스토어 판과 달리 기기 틀과 헤드라인이 없다. 웹은 기기 그림을 CSS로 직접 그리고(.phone)
+ * 그 안에 화면만 끼워 넣기 때문이다. 여기서 틀까지 그리면 틀이 두 겹이 된다.
+ *
+ * 460×1000은 랜딩이 쓰던 규격 그대로다. 402pt 폭을 1.14428배 하면 460px이 되고,
+ * 비율(0.46)이 6.9" 판(1320×2868)과 같아 같은 조판이 잘리지 않고 들어간다.
+ */
+body.web { width: 460px; height: 1000px; overflow: hidden; background: #F6F8FA; }
+body.web::before { display: none; }
+body.web .app { transform: scale(1.14428); }

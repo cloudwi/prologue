@@ -295,18 +295,26 @@ const html = (p, cls) => `<!doctype html>
   <div class="device"><div class="screen"><div class="app">${status}${p.screen}</div></div></div>
 </div></body></html>`;
 
-/** 애플 6.9"·6.5"와 Play 폰 — 같은 패널을 세 판형으로 굽는다. */
+/** 웹 랜딩용 — 헤드라인도 기기 틀도 없이 화면만. 틀은 웹이 CSS로 그린다. */
+const webHtml = (p) => `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="frame.css"><link rel="stylesheet" href="screens.css">
+<title>${p.file}</title></head>
+<body class="web"><div class="app">${status}${p.screen}</div></body></html>`;
+
+/** 애플 6.9"·6.5"·Play 폰·웹 — 같은 패널을 네 판형으로 굽는다. */
 const FORMATS = [
   { dir: 'ios', cls: 'ios', size: '1320,2868' },
   { dir: 'ios65', cls: 'ios65', size: '1284,2778' },
   { dir: 'android', cls: 'android', size: '1080,1920' },
+  { dir: 'web', cls: 'web', size: '460,1000', bare: true },
 ];
 
 for (const f of FORMATS) {
   mkdirSync(resolve(OUT, f.dir), { recursive: true });
   for (const p of panels) {
     const page = resolve(DIR, `.${f.dir}-${p.file}.html`);
-    writeFileSync(page, html(p, f.cls));
+    writeFileSync(page, f.bare ? webHtml(p) : html(p, f.cls));
     execFileSync(CHROME, [
       '--headless=new',
       '--disable-gpu',
@@ -321,4 +329,27 @@ for (const f of FORMATS) {
     rmSync(page);
     console.log(`\u2713 ${f.dir}/${p.file}.png`);
   }
+}
+
+/*
+ * 웹은 여기서 바로 랜딩에 꽂아 넣는다.
+ *
+ * out/에 두고 손으로 옮기면 언젠가 한쪽만 갱신된다 — 오늘 스토어를 새 판으로 바꾸고도
+ * 웹이 옛 그림을 쓰고 있던 것이 정확히 그 일이었다. 한 번 굽는 것으로 양쪽이 같아야 한다.
+ *
+ * 이름은 랜딩이 쓰던 것을 따른다(웹의 단계 번호와 화면 번호가 다르다). webp로 줄이는 건
+ * 랜딩이 첫 화면에서 바로 불러오는 그림이라, 품질보다 무게가 먼저인 자리이기 때문이다.
+ */
+const WEB_MAP = [
+  ['2-peer', '1-discover'],
+  ['3-mails', '2-mails'],
+  ['4-letter', '3-letter'],
+  ['1-question', '4-answers'],
+  ['5-meetup', '5-meetup'],
+];
+const WEB_DEST = resolve(DIR, '..', '..', 'web', 'public', 'screens');
+mkdirSync(WEB_DEST, { recursive: true });
+for (const [from, to] of WEB_MAP) {
+  execFileSync('cwebp', ['-quiet', '-q', '82', resolve(OUT, 'web', `${from}.png`), '-o', resolve(WEB_DEST, `${to}.webp`)]);
+  console.log(`\u2713 web/public/screens/${to}.webp \u2190 ${from}`);
 }
