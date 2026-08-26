@@ -139,8 +139,6 @@ export default function MeetupDetailScreen() {
     <SubScreen
       title=""
       c={c}
-      onSave={meetup?.isMine ? () => router.push('/my-meetups') : undefined}
-      saveLabel="관리"
     >
       {loading ? (
         <SkeletonList c={c}>
