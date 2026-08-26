@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,16 +7,23 @@ import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { clearTokens } from '@/lib/auth-storage';
+import { getInkBalance } from '@/lib/ink';
 import { deleteAccount } from '@/lib/member';
 
 /**
  * 회원 탈퇴 — 계정과 모든 흔적을 되돌릴 수 없게 지운다(앱스토어 5.1.1).
- * 무엇이 사라지는지 먼저 보여주고, 파괴적 확인을 거친 뒤에만 실행한다.
+ *
+ * 무엇이 사라지는지 먼저 보여주고, 확인을 **두 번** 거친 뒤에만 실행한다.
+ * 한 번은 손이 미끄러지면 그대로 지나간다. 실수로 누른 사람과 정말 떠나려는 사람을
+ * 가르는 건 두 번째 창이고, 거기서는 "되돌릴 수 없다"는 말 대신 잃는 것을 숫자로 말한다 —
+ * 남은 잉크가 몇인지, 내가 보낸 편지가 상대의 편지함에서도 사라진다는 것.
  */
 export default function WithdrawScreen() {
   const c = useTheme();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // 잔액은 두 번째 확인창에서 "무엇을 잃는지"를 숫자로 말하기 위해 읽는다. 실패해도 탈퇴는 막지 않는다.
+  const inkQuery = useQuery({ queryKey: ['ink', 'balance'], queryFn: getInkBalance });
 
   async function withdraw() {
     setBusy(true);
@@ -32,11 +40,26 @@ export default function WithdrawScreen() {
     }
   }
 
+  /** 두 번째 창 — 여기서는 되돌릴 수 없다는 말 대신 잃는 것을 구체적으로 말한다. */
+  function confirmFinal() {
+    const ink = inkQuery.data;
+    const inkLine = ink != null && ink > 0 ? `\n· 남은 잉크 ${ink}은 환불되지 않고 사라져요` : '';
+    Alert.alert(
+      '마지막 확인이에요',
+      `지금 탈퇴하면\n· 내가 보낸 편지가 상대의 편지함에서도 사라져요\n· 같은 이메일로 다시 가입해도 기록은 돌아오지 않아요${inkLine}`,
+      [
+        { text: '그만둘게요', style: 'cancel' },
+        { text: '탈퇴하기', style: 'destructive', onPress: () => void withdraw() },
+      ],
+    );
+  }
+
+  /** 첫 번째 창 — 실수로 누른 손을 여기서 돌려보낸다. */
   function confirmWithdraw() {
     if (busy) return;
-    Alert.alert('정말 탈퇴할까요?', '지워진 기록은 되돌릴 수 없어요.', [
+    Alert.alert('정말 탈퇴할까요?', '프로필과 답변, 주고받은 편지가 즉시 지워지고 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
-      { text: '탈퇴하기', style: 'destructive', onPress: () => void withdraw() },
+      { text: '계속', style: 'destructive', onPress: confirmFinal },
     ]);
   }
 
