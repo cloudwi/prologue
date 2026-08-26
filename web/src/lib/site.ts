@@ -6,7 +6,7 @@ export const SITE_URL = 'https://prologue.day';
 export const CONTACT_EMAIL = 'prologue.kr.team@gmail.com';
 
 /** App Store 앱 ID — App Store Connect의 앱 번호. */
-export const APPLE_APP_ID = '6792233022';
+export const APPLE_APP_ID = '6803755105';
 export const APP_STORE_URL = `https://apps.apple.com/kr/app/id${APPLE_APP_ID}`;
 
 /** Google Play 패키지명 — app.json android.package. */

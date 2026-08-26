@@ -8,7 +8,7 @@ pubDate: 2026-08-19
 
 ## 1. 다운로드와 가입
 
-[App Store](https://apps.apple.com/kr/app/id6792233022)나 [Google Play](https://play.google.com/store/apps/details?id=day.prologue.app)에서 "프롤로그"를 검색하거나, [prologue.day/download](/download)에서 바로 내려받을 수 있어요.
+[App Store](https://apps.apple.com/kr/app/id6803755105)나 [Google Play](https://play.google.com/store/apps/details?id=day.prologue.app)에서 "프롤로그"를 검색하거나, [prologue.day/download](/download)에서 바로 내려받을 수 있어요.
 
 가입은 이메일로 합니다. 이메일 주소를 넣으면 6자리 인증코드가 도착하고, 그 코드를 입력하면 끝이에요. 비밀번호는 없습니다 — 기억할 게 하나 줄어요.
 
