@@ -69,7 +69,7 @@ review:
 app:
   min-supported-version: ${APP_MIN_SUPPORTED_VERSION:1.0.0}
   latest-version: ${APP_LATEST_VERSION:1.0.0}
-  ios-store-url: ${APP_IOS_STORE_URL:https://apps.apple.com/app/id6792233022}
+  ios-store-url: ${APP_IOS_STORE_URL:https://apps.apple.com/kr/app/id6803755105}
   android-store-url: ${APP_ANDROID_STORE_URL:https://play.google.com/store/apps/details?id=day.prologue.app}
 
 # 바깥으로 나가는 링크가 전부 이 주소를 앞에 달고 나간다 — 인증코드 메일(/auth?code=),
