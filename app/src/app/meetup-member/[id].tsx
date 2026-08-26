@@ -38,7 +38,21 @@ export default function MeetupMemberScreen() {
   const meta =
     profile == null
       ? ''
-      : [profile.gender === 'MALE' ? '남성' : profile.gender === 'FEMALE' ? '여성' : null, profile.age ? `${profile.age}세` : null, profile.region]
+      : /*
+         * 모임장은 나이·성별을 싣지 않는다.
+         *
+         * 모임장은 소개받으러 온 사람이 아니라 그 자리를 여는 사람이다. 참여자가 알고 싶은 것은
+         * "몇 살인가"가 아니라 "이 사람이 모임을 제대로 여는가"이고, 그 답은 개최 이력에 있다.
+         * 매칭의 잣대를 운영자에게 들이대면 모임이 소개팅의 곁가지로만 읽힌다.
+         *
+         * 참여자 프로필에는 그대로 둔다 — 그쪽은 모임장이 "이 사람을 받을까"를 정하는 자리라
+         * 나이와 성별이 실제 판단 재료다.
+         */
+        [
+          asHost ? null : profile.gender === 'MALE' ? '남성' : profile.gender === 'FEMALE' ? '여성' : null,
+          asHost ? null : profile.age ? `${profile.age}세` : null,
+          profile.region,
+        ]
           .filter(Boolean)
           .join(' · ');
 
