@@ -21,6 +21,7 @@ import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
 import { answerToday, getPastPeers, getPeers, getToday, type Peer } from '@/lib/daily';
+import { getInkBalance } from '@/lib/ink';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/lib/haptics';
@@ -78,21 +79,26 @@ export default function DiscoverScreen() {
   const peersQuery = useQuery({ queryKey: ['daily', 'peers'], queryFn: getPeers });
   // 지난 상대는 보조 정보 — 실패해도 화면은 유지된다.
   const pastQuery = useQuery({ queryKey: ['daily', 'pastPeers'], queryFn: getPastPeers });
+  // 잉크 잔액 — 편지를 보내고 돌아와도 맞게. 실패하면 칩을 그리지 않는다.
+  const inkQuery = useQuery({ queryKey: ['ink', 'balance'], queryFn: getInkBalance });
 
   const today = todayQuery.data ?? null;
   const peersData = peersQuery.data ?? null;
   const pastPeers = pastQuery.data ?? [];
   const peersLoading = peersQuery.isPending;
+  const ink = inkQuery.data ?? null;
 
   // refetch는 React Query가 안정적으로 유지한다 — 쿼리 객체를 의존성에 두면 매 렌더 바뀐다.
   const { refetch: refetchToday } = todayQuery;
   const { refetch: refetchPeers } = peersQuery;
   const { refetch: refetchPast } = pastQuery;
+  const { refetch: refetchInk } = inkQuery;
   const refreshAll = useCallback(() => {
     void refetchToday();
     void refetchPeers();
     void refetchPast();
-  }, [refetchToday, refetchPeers, refetchPast]);
+    void refetchInk();
+  }, [refetchToday, refetchPeers, refetchPast, refetchInk]);
   useRefreshOnFocus(refreshAll);
 
   // 세션 만료는 "HTTP 403" 알림이 아니라 로그인 화면으로 답한다.
@@ -114,7 +120,13 @@ export default function DiscoverScreen() {
       setTyped(null); // 저장했으니 다시 서버 값을 비춘다
       setEditing(false);
       // 오늘의 답변으로 고인 잉크 — 칩을 그 자리에서 올리고, 어디서 늘었는지 한 줄로 알려준다.
-      if (updated.inkEarned > 0) setInkEarnedNote(updated.inkEarned);
+      if (updated.inkEarned > 0) {
+        // 서버를 다시 묻지 않고 캐시를 올린다 — 상이 도착하는 순간과 숫자가 어긋나면 안 된다.
+        queryClient.setQueryData(['ink', 'balance'], (n: number | undefined) =>
+          n == null ? n : n + updated.inkEarned,
+        );
+        setInkEarnedNote(updated.inkEarned);
+      }
       // 답을 남기면 그 자리에서 상대가 도착한다 — 이월 카드가 새 사람으로 바뀌는 순간.
       if (!wasAnswered && updated.answered) {
         void queryClient.invalidateQueries({ queryKey: ['daily', 'peers'] });
@@ -208,6 +220,24 @@ export default function DiscoverScreen() {
               {/* 잉크 잔액 칩은 뺐다 — 잔액은 지갑에서만, 모자라면 그 순간 충전으로 보낸다(유저 결정 2026-08-24). */}
               <View style={styles.topRow}>
                 <Text style={[styles.dateCaption, { color: c.primaryStrong }]}>{todayCaption()}</Text>
+                {/*
+                 * 잉크 잔액 — 결정을 재촉하지 않는 자리에만 둔다.
+                 * 편지를 쓸지 말지 정하는 순간의 '(남은 잉크 N)'은 산수를 앞세우지만,
+                 * 둘러보다 눈에 스치는 숫자는 "나한테 잉크라는 게 있구나"를 알려줄 뿐이다.
+                 * 여기가 지갑으로 가는 유일한 상시 통로이기도 하다.
+                 */}
+                {ink != null && (
+                  <Pressable
+                    onPress={() => router.push('/my/ink')}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`남은 잉크 ${ink}, 지갑 열기`}
+                    style={({ pressed }) => [styles.inkChip, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <Ionicons name="water" size={12} color={c.primaryStrong} />
+                    <Text style={[styles.inkChipText, { color: c.text }]}>{ink}</Text>
+                  </Pressable>
+                )}
               </View>
               <Text style={[styles.questionEyebrow, { color: c.textSecondary }]}>오늘의 질문</Text>
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>{today?.content}</Text>
@@ -603,6 +633,8 @@ const styles = StyleSheet.create({
   cover: { marginHorizontal: -20, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 26, borderBottomLeftRadius: Radius.lg + 8, borderBottomRightRadius: Radius.lg + 8 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 },
   dateCaption: { fontSize: 13.5, fontWeight: '700', letterSpacing: 0.3 },
+  inkChip: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 26, paddingHorizontal: 9, borderRadius: Radius.pill },
+  inkChipText: { fontSize: 13.5, fontWeight: '700' },
   questionEyebrow: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
   // 질문이 곧 헤더 — 크게, 왼쪽 정렬, 줄 간격 넉넉히.
   question: { fontSize: 27, fontWeight: '700', lineHeight: 38, letterSpacing: -0.3 },
