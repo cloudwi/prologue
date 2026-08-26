@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
 import { getJobStatus } from '@/lib/job';
@@ -205,9 +205,20 @@ export default function MeetupsScreen() {
               <Text style={[styles.subtitle, { color: c.textSecondary }]}>오프라인에서 만나는 작은 모임</Text>
             </View>
             <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonSearch} />
+            {/* 모임 카드 — 사진이 위를 꽉 채우고 그 아래에 제목·한 줄 정보·칩이 온다. */}
             <View style={styles.skeletonList}>
               {[0, 1].map((i) => (
-                <Skeleton key={i} c={c} height={268} radius={Radius.lg} />
+                <SkeletonCard key={i} c={c} background={c.backgroundElement} clip>
+                  <Skeleton c={c} height={150} radius={0} />
+                  <View style={styles.skeletonCardBody}>
+                    <Skeleton c={c} width="66%" height={17} />
+                    <Skeleton c={c} width="86%" height={13} style={styles.skeletonCardMeta} />
+                    <View style={styles.skeletonCardChips}>
+                      <Skeleton c={c} width={62} height={26} radius={Radius.pill} />
+                      <Skeleton c={c} width={78} height={26} radius={Radius.pill} />
+                    </View>
+                  </View>
+                </SkeletonCard>
               ))}
             </View>
           </View>
@@ -565,6 +576,9 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   skeletonSub: { marginTop: 10 },
   skeletonSearch: { marginTop: 18 },
+  skeletonCardBody: { padding: 18 },
+  skeletonCardMeta: { marginTop: 10 },
+  skeletonCardChips: { flexDirection: 'row', gap: 8, marginTop: 14 },
   skeletonList: { gap: 14, marginTop: 18 },
   content: { paddingHorizontal: 20, paddingTop: 8 },
 

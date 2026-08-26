@@ -74,6 +74,8 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, gap: 0 },
   rowSub: { marginTop: 8 },
   card: { borderRadius: Radius.lg, padding: 18 },
+  surface: { borderRadius: Radius.lg, padding: 16 },
+  clip: { padding: 0, overflow: 'hidden' },
   cardTitle: { marginTop: 10 },
   cardBody: { marginTop: 12 },
 });
@@ -130,6 +132,27 @@ export function SkeletonTextCard({
       <SkeletonLines c={c} lines={bodyLines} lineHeight={12} gap={9} style={styles.cardBody} />
     </View>
   );
+}
+
+/**
+ * 카드 면 위에 조각을 얹는 자리.
+ *
+ * 면 색을 화면이 정한다. 편지 봉투는 테라코타 틴트, 모임 카드는 중성 회색이라 통짜 회색 하나로
+ * 둘 다 흉내낼 수 없다 — 채워질 때 바뀌는 것이 글자만이 아니라 배경 전체가 되면 화면이 튄다.
+ */
+export function SkeletonCard({
+  c,
+  background,
+  clip = false,
+  children,
+}: {
+  c: ThemeColors;
+  background: string;
+  /** 사진이 카드 위쪽에 꽉 차는 카드 — 모서리 밖으로 넘치지 않게 자른다. */
+  clip?: boolean;
+  children: React.ReactNode;
+}) {
+  return <View style={[styles.surface, clip && styles.clip, { backgroundColor: background }]}>{children}</View>;
 }
 
 /** 여러 조각을 목록처럼 세울 때의 바깥 여백 — 화면마다 padding을 다시 쓰지 않도록. */

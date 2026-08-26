@@ -11,7 +11,7 @@ import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, getSentHearts, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
@@ -275,9 +275,18 @@ export default function MailsScreen() {
               <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>편지함</Text>
               <Text style={[styles.subtitle, { color: c.textSecondary }]}>마음이 닿은 흔적이 여기에 도착해요</Text>
             </View>
+            {/* 봉투가 들어올 자리 — 면 색까지 봉투의 것이라야 채워질 때 배경이 바뀌지 않는다. */}
             <View style={styles.skeletonList}>
               {[0, 1, 2].map((i) => (
-                <Skeleton key={i} c={c} height={92} radius={Radius.lg} />
+                <SkeletonCard key={i} c={c} background={c.primary + '14'}>
+                  <View style={styles.skeletonEnvelope}>
+                    <Skeleton c={c} width={44} height={55} radius={Radius.sm} />
+                    <View style={styles.flex}>
+                      <Skeleton c={c} width="42%" height={15} />
+                      <Skeleton c={c} width="76%" height={12} style={styles.skeletonEnvelopeMeta} />
+                    </View>
+                  </View>
+                </SkeletonCard>
               ))}
             </View>
           </View>
@@ -515,6 +524,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   skeletonSub: { marginTop: 10 },
+  skeletonEnvelope: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  skeletonEnvelopeMeta: { marginTop: 8 },
   skeletonList: { gap: 12, marginTop: 20 },
   content: { paddingHorizontal: 20, paddingTop: 8 },
 

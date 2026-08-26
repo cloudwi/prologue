@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { SkeletonList, Skeleton, SkeletonRow } from '@/components/skeleton';
+import { Skeleton, SkeletonCard, SkeletonList, SkeletonRow } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +39,16 @@ export default function InkScreen() {
     <SubScreen title="잉크" c={c}>
       {loading ? (
         <SkeletonList c={c}>
-          <Skeleton c={c} height={188} radius={Radius.lg} />
+          {/* 잔액 카드 — 이 화면의 주인공. 아이콘 하나와 큰 숫자, 그 아래 설명 두 줄. */}
+          <SkeletonCard c={c} background={c.backgroundElement}>
+            <View style={styles.skeletonBalance}>
+              <Skeleton c={c} width={36} height={36} radius={18} />
+              <Skeleton c={c} width={92} height={42} style={styles.skeletonBalanceNumber} />
+              <Skeleton c={c} width="84%" height={12} style={styles.skeletonBalanceHint} />
+              <Skeleton c={c} width="62%" height={12} style={styles.skeletonBalanceLine} />
+            </View>
+          </SkeletonCard>
+          {/* 충전 버튼은 실제로도 면 하나다 — 흉내낼 결이 없다. */}
           <Skeleton c={c} height={52} radius={Radius.md} />
           <SkeletonRow c={c} />
           <SkeletonRow c={c} />
@@ -141,6 +150,10 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
 
+  skeletonBalance: { alignItems: 'center', paddingVertical: 18 },
+  skeletonBalanceNumber: { marginTop: 14 },
+  skeletonBalanceHint: { marginTop: 18 },
+  skeletonBalanceLine: { marginTop: 9 },
   balanceCard: { borderRadius: Radius.md, alignItems: 'center', paddingVertical: 36, marginBottom: 14 },
   inkIcon: { marginBottom: 14 },
   balanceNumber: { fontSize: 44, fontWeight: '700' },

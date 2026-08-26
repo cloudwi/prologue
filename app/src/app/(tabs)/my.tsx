@@ -114,9 +114,13 @@ export default function MyScreen() {
         <SafeAreaView style={styles.flex} edges={['top']}>
           <View style={styles.content}>
             <Skeleton c={c} height={168} radius={Radius.lg} />
+            {/* 메뉴 줄 — 왼쪽 라벨과 오른쪽 값이 마주 본다. 막대 하나로는 그 결이 안 산다. */}
             <View style={styles.skeletonMenu}>
               {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} height={52} c={c} radius={Radius.md} />
+                <View key={i} style={styles.skeletonMenuRow}>
+                  <Skeleton c={c} width={i % 2 === 0 ? 84 : 68} height={15} />
+                  <Skeleton c={c} width={i % 2 === 0 ? 52 : 40} height={13} />
+                </View>
               ))}
             </View>
           </View>
@@ -342,6 +346,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
+  skeletonMenuRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 17 },
   skeletonMenu: { gap: 10, marginTop: 22, marginHorizontal: 20 },
   content: { paddingBottom: 40 }, // 실제 값은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
 

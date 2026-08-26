@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { SkeletonList, Skeleton, SkeletonRow } from '@/components/skeleton';
+import { Skeleton, SkeletonCard, SkeletonList, SkeletonRow } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -58,7 +58,12 @@ export default function InviteScreen() {
     <SubScreen title="친구 초대" c={c}>
       {loading || !referral ? (
         <SkeletonList c={c}>
-          <Skeleton c={c} height={120} radius={Radius.lg} />
+          {/* 초대 코드 카드 — 머리글 한 줄, 코드 큰 글자, 설명. */}
+          <SkeletonCard c={c} background={c.backgroundElement}>
+            <Skeleton c={c} width={72} height={12} />
+            <Skeleton c={c} width={148} height={30} style={styles.skeletonCode} />
+            <Skeleton c={c} width="78%" height={12} style={styles.skeletonCodeDesc} />
+          </SkeletonCard>
           <SkeletonRow c={c} />
         </SkeletonList>
       ) : (
@@ -130,6 +135,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48, gap: 14 },
+  skeletonCode: { marginTop: 14 },
+  skeletonCodeDesc: { marginTop: 16 },
   card: { borderRadius: Radius.md, padding: 22, alignItems: 'center' },
   eyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
   code: { fontSize: 40, fontWeight: '700', letterSpacing: 6, marginTop: 14, textAlign: 'center' },
