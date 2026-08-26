@@ -16,7 +16,11 @@
     "ios": {
       "bundleIdentifier": "day.prologue.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "ko",
+        "CFBundleLocalizations": [
+          "ko"
+        ]
       }
     },
     "android": {
