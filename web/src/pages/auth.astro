@@ -112,7 +112,8 @@ import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
           };
           document.addEventListener('visibilitychange', markSwitched);
 
-          location.href = 'prologue://email-auth?code=' + encodeURIComponent(code);
+          // 슬래시 셋 — 둘이면 'email-auth'가 호스트로 잡혀 경로가 비고 앱이 첫 화면으로 떨어진다.
+          location.href = 'prologue:///email-auth?code=' + encodeURIComponent(code);
 
           setTimeout(() => {
             if (switched || document.hidden) return;

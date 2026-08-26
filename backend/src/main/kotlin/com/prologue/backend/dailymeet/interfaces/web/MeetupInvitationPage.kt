@@ -28,7 +28,10 @@ object MeetupInvitationPage {
         val url = "$web/m/${v.meetupId}"
         val ogTitle = if (v.occurrenceTotal > 1) "${v.title} · ${v.occurrence}번째 만남" else v.title
         val image = v.coverUrl ?: "$web/og.png"
-        val deepLink = "prologue://meetup/${v.meetupId}"
+        // 슬래시가 셋이다. prologue://meetup/{id}로 쓰면 "meetup"이 호스트로 파싱되고 경로에는 id만 남아
+        // /meetup/[id] 라우트에 걸리지 않는다(앱이 Unmatched Route를 띄운다). 호스트를 비워 경로를 온전히 넘긴다 —
+        // Expo의 Linking.createURL이 만들어내는 형식도 이쪽이다.
+        val deepLink = "prologue:///meetup/${v.meetupId}"
 
         return page(
             title = "$ogTitle — 프롤로그 초대장",

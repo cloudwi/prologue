@@ -71,6 +71,15 @@ class MeetupInvitationPageTest {
         MeetupInvitationPage.render(v, "https://prologue.day", "https://apps.apple.com/kr/app/id1", "https://play.google.com/store/apps/details?id=x")
 
     @Test
+    fun `앱으로 여는 링크는 슬래시가 셋 — 둘이면 첫 마디가 호스트로 먹힌다`() {
+        // prologue://meetup/{id}로 쓰면 "meetup"이 호스트로 파싱되고 경로에는 id만 남아,
+        // 앱이 /meetup/[id]를 못 찾고 Unmatched Route를 띄운다. 눈으로는 구분이 안 가는 종류의 버그다.
+        val out = html()
+        assertContains(out, "prologue:///meetup/$id")
+        assertFalse(out.contains("prologue://meetup/"), "슬래시 둘짜리 딥링크가 남아 있으면 앱이 링크를 못 연다")
+    }
+
+    @Test
     fun `미리보기 태그가 응답 본문에 들어 있다 — 크롤러는 JS를 돌리지 않는다`() {
         val out = html()
         assertContains(out, """<meta property="og:title" content="밑줄 모임" />""")
