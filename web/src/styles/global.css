@@ -97,6 +97,7 @@ img {
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 0.95rem;
+  white-space: nowrap;
   transition: background 0.2s;
 }
 
@@ -577,6 +578,45 @@ img {
 @media (max-width: 560px) {
   .steps {
     grid-template-columns: 1fr;
+  }
+
+  /*
+   * 헤더 — 좁은 화면에는 규칙이 아예 없어서 넉 자리(마크·이름·메뉴 둘·버튼)가 한 줄에
+   * 밀어 넣어졌다. flex가 줄이다 못해 글자를 두 줄로 접었고, 알약 버튼이 원이 됐다.
+   *
+   * 메뉴를 지우지는 않는다. 링크가 둘뿐이라 햄버거를 열 만한 양이 아니고, 여기서 지우면
+   * /story로 가는 길이 바닥글에만 남는다. 대신 브랜드 이름을 접는다 — 바로 아래 히어로가
+   * 같은 이름을 훨씬 크게 다시 말하므로, 헤더의 글자는 없어도 잃는 게 없다.
+   */
+  .container {
+    padding: 0 16px;
+  }
+
+  .site-header .container {
+    height: 56px;
+    gap: 8px;
+  }
+
+  .header-brand-text {
+    display: none;
+  }
+
+  .header-brand img {
+    width: 34px;
+    height: 24px;
+  }
+
+  .header-nav {
+    gap: 2px;
+  }
+
+  .header-nav a {
+    padding: 7px 10px;
+    font-size: 0.875rem;
+  }
+
+  .header-nav a.cta {
+    padding: 7px 13px;
   }
 }
 
