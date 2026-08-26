@@ -154,8 +154,12 @@ export default function MeetupDetailScreen() {
           c={c}
           busy={busy}
           onPressImage={setViewerIndex}
-          onPressHost={() => router.push(`/meetup-member/${meetup.hostAccountId}?role=host`)}
-          onPressParticipant={(accountId) => router.push(`/meetup-member/${accountId}`)}
+          onPressHost={() =>
+            router.push(`/meetup-member/${meetup.hostAccountId}?role=host&nickname=${encodeURIComponent(meetup.hostNickname ?? '')}`)
+          }
+          onPressParticipant={(accountId, nickname) =>
+            router.push(`/meetup-member/${accountId}?nickname=${encodeURIComponent(nickname ?? '')}`)
+          }
           onApply={() => confirmApply(meetup)}
           onCancel={() => confirmCancel(meetup)}
           onOpenKakao={openKakao}

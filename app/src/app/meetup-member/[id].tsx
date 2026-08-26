@@ -1,5 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
@@ -8,7 +8,7 @@ import { Avatar } from '@/components/avatar';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getMeetupMemberProfile, type MeetupMemberHistoryRow, type MeetupMemberProfile } from '@/lib/meetups';
+import { getMeetupMemberProfile, type MeetupMemberHistoryRow } from '@/lib/meetups';
 
 /**
  * 모임 멤버 프로필 — 모임 세계의 평판.
@@ -21,22 +21,16 @@ import { getMeetupMemberProfile, type MeetupMemberHistoryRow, type MeetupMemberP
  */
 export default function MeetupMemberScreen() {
   const c = useTheme();
-  const { id, role } = useLocalSearchParams<{ id: string; role?: string }>();
+  const { id, role, nickname: knownNickname } = useLocalSearchParams<{ id: string; role?: string; nickname?: string }>();
   const asHost = role === 'host';
 
-  const [profile, setProfile] = useState<MeetupMemberProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    getMeetupMemberProfile(String(id))
-      .then((p) => active && setProfile(p))
-      .catch(() => active && setProfile(null))
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [id]);
+  /*
+   * 두 번째 방문은 기다림이 없다 — 캐시에 남아 있으면 그대로 그리고 갱신은 뒤에서 조용히 한다.
+   * 이 화면만 useState + useEffect로 남아 있어서 매번 처음부터 받아오고 있었다.
+   */
+  const profileQuery = useQuery({ queryKey: ['meetup', 'member', String(id)], queryFn: () => getMeetupMemberProfile(String(id)) });
+  const profile = profileQuery.data ?? null;
+  const loading = profileQuery.isPending;
 
   const meta =
     profile == null
@@ -48,12 +42,24 @@ export default function MeetupMemberScreen() {
   return (
     <SubScreen title="모임 프로필" c={c}>
       {loading ? (
-        /* 이 화면은 카드 조판이라 초대장 스켈레톤을 쓰지 않는다 — 자리가 어긋나면 채워질 때 화면이 튄다. */
+        /*
+         * 아는 것은 즉시 세우고 모르는 것만 회색으로 둔다.
+         *
+         * 목록에서 이 사람의 이름을 이미 보고 눌렀다. 그걸 버리고 통째로 회색을 그리면,
+         * 내가 누른 사람이 맞는지 확인하는 데까지 한 박자가 더 든다. 이름을 넘겨받아 먼저 세우면
+         * 그 확인이 즉시 끝나고, 기다림은 소개·이력처럼 원래 모르던 부분에만 남는다.
+         *
+         * 카드 조판이라 초대장 스켈레톤은 쓰지 않는다 — 자리가 어긋나면 채워질 때 화면이 튄다.
+         */
         <View style={styles.content}>
           <View style={[styles.card, styles.profileCard, { backgroundColor: c.backgroundElement }]}>
-            <Skeleton c={c} width={64} height={64} radius={32} />
+            <Avatar avatarId={null} nickname={knownNickname || undefined} size={64} c={c} />
             <View style={styles.flex}>
-              <Skeleton c={c} width={108} height={19} />
+              {knownNickname ? (
+                <Text style={[styles.nickname, { color: c.text }]}>{knownNickname}</Text>
+              ) : (
+                <Skeleton c={c} width={108} height={19} />
+              )}
               <Skeleton c={c} width={140} height={14} style={{ marginTop: 9 }} />
             </View>
           </View>

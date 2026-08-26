@@ -26,7 +26,8 @@ type Props = {
   busy?: boolean;
   onPressImage?: (index: number) => void;
   onPressHost?: () => void;
-  onPressParticipant?: (accountId: string) => void;
+  /** 이름도 함께 넘긴다 — 상세가 다시 받아오기 전에 이름부터 세울 수 있다. */
+  onPressParticipant?: (accountId: string, nickname: string | null) => void;
   onApply?: () => void;
   onCancel?: () => void;
   onOpenKakao?: (link: string) => void;
@@ -159,7 +160,7 @@ export function MeetupInvitation({
             {meetup.participants.map((p) => (
               <Pressable
                 key={p.accountId}
-                onPress={() => onPressParticipant?.(p.accountId)}
+                onPress={() => onPressParticipant?.(p.accountId, p.nickname)}
                 disabled={onPressParticipant == null}
                 style={({ pressed }) => [styles.participantChip, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 }]}
               >
