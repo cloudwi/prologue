@@ -35,7 +35,8 @@ class MemberPhotoService(
         }
         val format = requireSupportedFormat(bytes)
         // 저장소에 올리기 전에 판정한다 — 거절된 사진이 스토리지에 고아로 남지 않는다.
-        requireUsableProfilePhoto(photoInspector.inspect(bytes, format.mimeType))
+        // 몇 번째 자리에 놓이느냐가 잣대를 정한다: 앞자리는 얼굴, 뒷자리는 안전만.
+        requireUsableProfilePhoto(photoInspector.inspect(bytes, format.mimeType), member.photoUrls.size)
         val url = photoStorage.uploadProfilePhoto(accountId, bytes, format.mimeType)
         member.addPhoto(url)
         return memberRepository.save(member)
@@ -78,13 +79,28 @@ class MemberPhotoService(
      * 판별하지 못한 경우([PhotoInspection.skipped])는 통과시킨다.
      * 검수기가 죽었다고 가입이 막히는 쪽이, 얼굴 없는 사진 몇 장이 올라가는 쪽보다 나쁘다.
      */
-    private fun requireUsableProfilePhoto(inspection: PhotoInspection) {
+    /**
+     * 이 사진을 프로필에 걸어도 되는가. [position]은 이 사진이 놓일 자리(0부터).
+     *
+     * 잣대가 자리마다 다르다. 앞 [FACE_REQUIRED_UNTIL]장은 얼굴이 있어야 한다 — 소개 카드와
+     * 목록에 나가는 대표 사진이라, 여기가 풍경이면 상대는 누구를 만나는지 알 수 없다.
+     *
+     * 뒷자리는 풀어준다. 프로필은 얼굴 증명서가 아니라 그 사람을 보여주는 자리라, 좋아하는 것과
+     * 사는 모습이 얼굴만큼 말해준다 — 기르는 고양이, 다녀온 산, 만든 요리 같은 것들이다.
+     * 얼굴 넉 장을 더 요구하면 결국 같은 각도의 사진만 남는다.
+     *
+     * 자리와 무관하게 막는 건 하나다. 선정적이거나 폭력적인 사진은 어느 자리에도 걸 수 없다.
+     */
+    private fun requireUsableProfilePhoto(inspection: PhotoInspection, position: Int) {
         if (inspection.skipped) return
         if (inspection.unsafe) {
             throw PhotoRejectedException("선정적이거나 부적절한 사진은 등록할 수 없어요")
         }
+        if (position >= FACE_REQUIRED_UNTIL) return
+
+        val ordinal = position + 1
         if (inspection.faceCount == 0) {
-            throw PhotoRejectedException("얼굴이 보이지 않아요. 얼굴이 나온 사진으로 올려주세요")
+            throw PhotoRejectedException("${ordinal}번째 사진은 얼굴이 보여야 해요. 앞 ${FACE_REQUIRED_UNTIL}장은 얼굴이 나온 사진으로 올려주세요")
         }
         val ratio = inspection.largestFaceRatio
         if (ratio != null && ratio < MIN_FACE_AREA_RATIO) {
@@ -93,6 +109,14 @@ class MemberPhotoService(
     }
 
     companion object {
+        /**
+         * 얼굴을 요구하는 자리 수. 1·2번째 사진까지다.
+         *
+         * 대표 사진과 그다음 한 장은 소개 카드·목록에 그대로 나가므로 얼굴이 있어야 한다.
+         * 3번째부터는 자유다 — 그때부터는 "누구인가"가 아니라 "어떤 사람인가"를 보는 자리다.
+         */
+        const val FACE_REQUIRED_UNTIL = 2
+
         /**
          * 가장 큰 얼굴이 사진에서 차지해야 하는 최소 넓이 비율(2%).
          * 멀리서 찍혀 얼굴이 점만 한 풍경 사진을 거르는 하한선일 뿐, 상반신·전신 사진은 넉넉히 통과한다.

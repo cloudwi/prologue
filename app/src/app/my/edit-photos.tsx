@@ -97,8 +97,14 @@ export default function EditPhotosScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
+          {/*
+           * 규칙을 미리 말한다 — 올리고 나서 거절당하면 무엇이 잘못인지 모른 채 다른 사진을
+           * 고르게 된다. 앞 두 장과 뒷장의 잣대가 다르다는 것도 여기서 알려야 뒷장에 풍경을
+           * 올려볼 생각을 한다.
+           */}
           <Text style={[styles.lead, { color: c.text }]}>
-            첫 번째 사진이 대표로 보여요. 얼굴이 잘 보이는 사진만 등록돼요.
+            앞 2장은 얼굴이 잘 보이는 사진으로 올려주세요. 대표 사진으로 나가요.
+            {'\n'}3번째부터는 좋아하는 것, 사는 모습도 좋아요.
             {'\n'}꾹 눌러 순서를 바꾸는 기능은 준비 중이에요.
           </Text>
           <Text style={[styles.sub, { color: short ? c.primary : c.textSecondary }]}>

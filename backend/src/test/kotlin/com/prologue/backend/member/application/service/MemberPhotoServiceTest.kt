@@ -39,8 +39,11 @@ class MemberPhotoServiceTest {
         createdAt = Instant.now(),
     )
 
-    private fun givenMember() {
-        every { memberRepository.findByAccountId(accountId) } returns member()
+    /** [photos]는 이미 올라가 있는 사진들 — 새 사진이 몇 번째 자리에 놓이는지가 잣대를 정한다. */
+    private fun givenMember(photos: List<String> = emptyList()) {
+        val m = member()
+        photos.forEach { m.addPhoto(it) }
+        every { memberRepository.findByAccountId(accountId) } returns m
         every { memberRepository.save(any()) } answers { firstArg() }
     }
 
@@ -72,15 +75,47 @@ class MemberPhotoServiceTest {
     }
 
     @Test
-    fun `얼굴이 없으면 거절하고 저장소에 올리지 않는다`() {
+    fun `앞 두 장은 얼굴이 없으면 거절하고 저장소에 올리지 않는다`() {
         givenMember()
         inspectionReturns(PhotoInspection(faceCount = 0, largestFaceRatio = null, unsafe = false))
 
         val e = assertFailsWith<PhotoRejectedException> { service.addPhoto(accountId, bytes) }
 
-        assertEquals("얼굴이 보이지 않아요. 얼굴이 나온 사진으로 올려주세요", e.message)
+        assertEquals("1번째 사진은 얼굴이 보여야 해요. 앞 2장은 얼굴이 나온 사진으로 올려주세요", e.message)
         verify(exactly = 0) { photoStorage.uploadProfilePhoto(any(), any(), any()) }
         verify(exactly = 0) { memberRepository.save(any()) }
+    }
+
+    @Test
+    fun `세 번째부터는 얼굴이 없어도 받는다 - 프로필은 얼굴 증명서가 아니다`() {
+        // 기르는 고양이, 다녀온 산, 만든 요리. 앞 두 장으로 누구인지는 이미 말했다.
+        givenMember(photos = listOf("https://cdn/1.jpg", "https://cdn/2.jpg"))
+        inspectionReturns(PhotoInspection(faceCount = 0, largestFaceRatio = null, unsafe = false))
+        every { photoStorage.uploadProfilePhoto(any(), any(), any()) } returns "https://cdn/3.jpg"
+        every { memberRepository.save(any()) } answers { firstArg() }
+
+        val result = service.addPhoto(accountId, bytes)
+
+        assertEquals(3, result.photoUrls.size)
+    }
+
+    @Test
+    fun `세 번째여도 선정적이면 거절한다 - 자리와 무관하게 막는 것은 이것 하나다`() {
+        givenMember(photos = listOf("https://cdn/1.jpg", "https://cdn/2.jpg"))
+        inspectionReturns(PhotoInspection(faceCount = 1, largestFaceRatio = 0.3, unsafe = true))
+
+        val e = assertFailsWith<PhotoRejectedException> { service.addPhoto(accountId, bytes) }
+
+        assertEquals("선정적이거나 부적절한 사진은 등록할 수 없어요", e.message)
+        verify(exactly = 0) { photoStorage.uploadProfilePhoto(any(), any(), any()) }
+    }
+
+    @Test
+    fun `두 번째까지는 얼굴이 작아도 거절한다`() {
+        givenMember(photos = listOf("https://cdn/1.jpg"))
+        inspectionReturns(PhotoInspection(faceCount = 1, largestFaceRatio = 0.005, unsafe = false))
+
+        assertFailsWith<PhotoRejectedException> { service.addPhoto(accountId, bytes) }
     }
 
     @Test
