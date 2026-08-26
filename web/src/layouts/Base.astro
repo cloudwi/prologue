@@ -88,6 +88,21 @@ const baseJsonLd = [
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    {/*
+      본문 글씨는 Pretendard.
+
+      --sans에는 진작 첫 자리로 적혀 있었는데 정작 불러오지를 않아, 지금까지 시스템 기본체로
+      떨어지고 있었다. 기기마다 다른 글씨로 보였다는 뜻이다.
+
+      동적 서브셋 판을 쓴다 — 한글은 글자 수가 많아 통짜로 받으면 무겁고, 이 판은 쓰는 글자만
+      골라 받는다. 제목은 그대로 Gowun Batang(세리프)이다. 손으로 쓴 편지의 결은 제목이 지고,
+      읽는 글은 또렷한 산세리프가 낫다.
+    */}
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
