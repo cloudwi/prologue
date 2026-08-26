@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { SkeletonCards } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -100,9 +100,7 @@ export default function LettersScreen() {
   if (loading) {
     return (
       <SubScreen title="프로필 문답" c={c}>
-        <View style={[styles.flex, styles.center]}>
-          <ActivityIndicator color={c.primary} />
-        </View>
+        <SkeletonCards c={c} count={3} height={112} />
       </SubScreen>
     );
   }

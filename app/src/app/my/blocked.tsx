@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
+import { SkeletonCards } from '@/components/skeleton';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
@@ -85,9 +86,7 @@ export default function BlockedScreen() {
   return (
     <SubScreen title="지인 차단" c={c}>
       {blocks == null ? (
-        <View style={[styles.flex, styles.center]}>
-          <ActivityIndicator color={c.primary} />
-        </View>
+        <SkeletonCards c={c} count={3} height={72} />
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={[styles.desc, { color: c.textSecondary }]}>

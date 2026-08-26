@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { SkeletonCards } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -75,9 +76,7 @@ export default function MailViewScreen() {
   return (
     <SubScreen title="보낸 편지" c={c}>
       {loading ? (
-        <View style={[styles.flex, styles.center]}>
-          <ActivityIndicator color={c.primary} />
-        </View>
+        <SkeletonCards c={c} count={2} height={160} />
       ) : !mail ? (
         <View style={[styles.flex, styles.center, styles.emptyPad]}>
           <Text style={[styles.emptyText, { color: c.textSecondary }]}>보낸 편지를 찾지 못했어요.</Text>

@@ -263,11 +263,17 @@ export default function MailsScreen() {
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {inboxQuery.isPending && !inboxQuery.data ? (
-          // 생애 첫 로딩 — 제목 아래 카드 세 장이 들어올 자리를 그대로 비워 둔다.
+          /*
+           * 생애 첫 로딩 — 카드 세 장이 들어올 자리만 비워 둔다.
+           *
+           * 제목과 부제는 회색으로 덮지 않는다. "편지함"은 서버에서 오는 글자가 아니고,
+           * 부제도 아직 셀 것이 없을 뿐이지 할 말이 없는 게 아니다. 기다리는 동안 회색 막대를
+           * 보여주면 어느 탭에 서 있는지조차 알 수 없다 — 기다림은 모르는 것에만 걸어야 한다.
+           */
           <View style={styles.content}>
             <View style={styles.header}>
-              <Skeleton c={c} width={96} height={30} />
-              <Skeleton c={c} width={200} height={14} style={styles.skeletonSub} />
+              <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>편지함</Text>
+              <Text style={[styles.subtitle, { color: c.textSecondary }]}>마음이 닿은 흔적이 여기에 도착해요</Text>
             </View>
             <View style={styles.skeletonList}>
               {[0, 1, 2].map((i) => (

@@ -195,11 +195,14 @@ export default function MeetupsScreen() {
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         {boardQuery.isPending && !boardQuery.data ? (
-          // 생애 첫 로딩 — 제목·검색줄·카드 두 장이 들어올 자리.
+          /*
+           * 생애 첫 로딩 — 검색줄과 카드 두 장이 들어올 자리만 비워 둔다.
+           * 제목과 부제는 서버를 기다리지 않는다. 기다림은 모르는 것에만 걸어야 한다.
+           */
           <View style={styles.content}>
             <View style={styles.header}>
-              <Skeleton c={c} width={72} height={30} />
-              <Skeleton c={c} width={220} height={14} style={styles.skeletonSub} />
+              <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
+              <Text style={[styles.subtitle, { color: c.textSecondary }]}>오프라인에서 만나는 작은 모임</Text>
             </View>
             <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonSearch} />
             <View style={styles.skeletonList}>

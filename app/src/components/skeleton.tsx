@@ -67,3 +67,34 @@ export function SkeletonLines({
 export const skeletonStyles = StyleSheet.create({
   card: { borderRadius: Radius.lg, padding: 20, gap: 14 },
 });
+
+/**
+ * 카드가 줄지어 들어올 자리 — 목록 화면의 첫 로딩.
+ *
+ * 스피너 하나를 가운데 띄우면 화면이 비어 보이고, 내용이 들어오는 순간 위에서 아래로 밀려
+ * 눈이 다시 자리를 잡아야 한다. 같은 높이의 면을 미리 깔아두면 그 밀림이 없다.
+ *
+ * [count]는 화면을 넘기지 않을 만큼만 — 실제보다 많이 그리면 채워질 때 목록이 줄어드는
+ * 인상을 준다. 셋이면 대개 첫 화면을 채우고도 남는다.
+ */
+export function SkeletonCards({
+  c,
+  count = 3,
+  height = 92,
+  gap = 12,
+  style,
+}: {
+  c: ThemeColors;
+  count?: number;
+  height?: number;
+  gap?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[{ gap, padding: 20 }, style]}>
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} c={c} height={height} radius={Radius.lg} />
+      ))}
+    </View>
+  );
+}
