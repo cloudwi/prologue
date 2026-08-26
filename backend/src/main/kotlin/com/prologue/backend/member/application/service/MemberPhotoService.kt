@@ -8,6 +8,7 @@ import com.prologue.backend.member.domain.model.ImageFormat
 import com.prologue.backend.member.domain.model.Member
 import com.prologue.backend.member.domain.model.MemberDomainException
 import com.prologue.backend.member.domain.repository.MemberRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -100,15 +101,19 @@ class MemberPhotoService(
 
         val ordinal = position + 1
         if (inspection.faceCount == 0) {
+            log.info("사진 거절(얼굴 없음) — 자리={}", ordinal)
             throw PhotoRejectedException("${ordinal}번째 사진은 얼굴이 보여야 해요. 앞 ${FACE_REQUIRED_UNTIL}장은 얼굴이 나온 사진으로 올려주세요")
         }
         val ratio = inspection.largestFaceRatio
         if (ratio != null && ratio < MIN_FACE_AREA_RATIO) {
+            log.info("사진 거절(얼굴이 작음) — 자리={}, 넓이비율={}", ordinal, ratio)
             throw PhotoRejectedException("얼굴이 너무 작게 나왔어요. 조금 더 가까이서 찍은 사진으로 올려주세요")
         }
     }
 
     companion object {
+        private val log = LoggerFactory.getLogger(MemberPhotoService::class.java)
+
         /**
          * 얼굴을 요구하는 자리 수. 1·2번째 사진까지다.
          *

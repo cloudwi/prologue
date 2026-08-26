@@ -65,10 +65,17 @@ class GoogleVisionPhotoInspector(
         }
 
         val faces = result.faceAnnotations
+        val safe = result.safeSearchAnnotation
+        val unsafe = safe?.isUnsafe() ?: false
+        if (unsafe) {
+            // 어느 축이 걸렸는지 값째로 남긴다. racy 문턱(VERY_LIKELY)이 한국 감각보다 빡빡하면
+            // 이 로그가 그 사실을 알려주는 유일한 통로다 — 유저에게는 "부적절한 사진" 한 줄만 간다.
+            log.warn("사진 검수 거절 — adult={}, violence={}, racy={}", safe?.adult, safe?.violence, safe?.racy)
+        }
         return PhotoInspection(
             faceCount = faces.size,
             largestFaceRatio = largestFaceRatio(faces, bytes),
-            unsafe = result.safeSearchAnnotation?.isUnsafe() ?: false,
+            unsafe = unsafe,
         )
     }
 
