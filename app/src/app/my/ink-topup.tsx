@@ -14,6 +14,7 @@ import {
   type Product,
   type Purchase,
 } from 'expo-iap';
+import * as Sentry from '@sentry/react-native';
 
 import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
@@ -85,6 +86,16 @@ export default function InkTopupScreen() {
         const fetched = await fetchProducts({ skus: [...SKUS], type: 'in-app' });
         if (active && Array.isArray(fetched)) setProducts(fetched as Product[]);
 
+        // 스토어가 붙었는데도 목록이 비어 오는 경우가 있다 — 유료 앱 계약이 아직 활성화되지 않았거나,
+        // 상품이 심사를 통과하지 못했거나, 계약 활성화가 아직 전파되지 않은 때다(최대 24시간).
+        // 화면에는 똑같이 "준비 중"으로 보여서, 남기지 않으면 무엇이 막고 있는지 알 길이 없다.
+        if (!fetched?.length) {
+          Sentry.captureMessage('스토어가 잉크 상품을 하나도 주지 않았다', {
+            level: 'warning',
+            extra: { platform: STORE_PLATFORM, skus: SKUS },
+          });
+        }
+
         subs.push(
           purchaseUpdatedListener((purchase) => {
             void redeem(purchase).finally(() => active && setBusy(null));
@@ -108,8 +119,10 @@ export default function InkTopupScreen() {
             if (SKUS.includes(p.productId as (typeof SKUS)[number])) await redeem(p, true);
           }
         }
-      } catch {
-        // 스토어에 붙지 못해도 화면은 살아 있어야 한다 — 잔액과 안내는 보인다
+      } catch (e) {
+        // 스토어에 붙지 못해도 화면은 살아 있어야 한다 — 잔액과 안내는 보인다.
+        // 다만 조용히 삼키지는 않는다. 삼키면 "준비 중"이 계약 문제인지 연결 문제인지 영영 모른다.
+        Sentry.captureException(e, { tags: { where: 'ink-topup:init' } });
       } finally {
         if (active) setLoading(false);
       }
