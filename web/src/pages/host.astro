@@ -98,11 +98,16 @@ import { API_BASE, SITE_URL } from '../lib/site';
             </div>
           </div>
           <!-- 랜딩의 목업(.phone)은 장식이라 일부러 기울어 있다. 여기 것은 자로 재는 도구라
-               같은 이름을 쓰면 안 된다 — 기울어진 화면에서는 잘림도 여백도 믿을 수 없다. -->
-          <div class="device">
-            <div class="device-island" aria-hidden="true"></div>
-            <div class="screen" id="screen">
-              <div class="empty-preview">왼쪽에서 모임을 고르거나 만들면<br />여기에 폰 화면이 나타나요.</div>
+               같은 이름을 쓰면 안 된다 — 기울어진 화면에서는 잘림도 여백도 믿을 수 없다.
+
+               속(.device-inner)은 언제나 진짜 아이폰 크기(440×956)로 그리고, 겉(.device)이
+               그것을 화면에 맞게 줄인다. 콘솔에 자리가 얼마나 있든 줄바꿈은 실제 폰과 같다. -->
+          <div class="device" id="device">
+            <div class="device-inner">
+              <div class="device-island" aria-hidden="true"></div>
+              <div class="screen" id="screen">
+                <div class="empty-preview">왼쪽에서 모임을 고르거나 만들면<br />여기에 폰 화면이 나타나요.</div>
+              </div>
             </div>
           </div>
           <p class="device-note" id="phoneNote"></p>
@@ -347,6 +352,50 @@ import { API_BASE, SITE_URL } from '../lib/site';
   }
 
   // ── 미리보기 ────────────────────────────────────────────
+
+  /**
+   * 폰을 화면에 맞게 줄인다 — 줄이는 것은 보이는 크기뿐, 안의 조판은 진짜 기기 그대로다.
+   *
+   * CSS만으로는 길이끼리 나눌 수 없어(calc에서 px / px은 값이 아니다) 배율을 여기서 셈한다.
+   * 세로가 거의 늘 기준이 된다 — 956px짜리 폰이 다 들어오는 창은 흔치 않다.
+   */
+  function fitDevice() {
+    const el = $('device');
+    if (!el) return;
+    const availW = el.parentElement.clientWidth;
+    /*
+     * 폭과 높이를 다르게 다룬다.
+     *
+     * **폭은 줄이지 않는다.** 조판을 정하는 건 폭이라, 여기서 한 뼘이라도 좁히면 실제 폰에는
+     * 없는 줄바꿈이 생긴다("서로서/가"). 미리보기가 없는 문제를 보여주게 되는 것이다.
+     * 그래서 440px(17 Pro Max)을 그대로 쓰고, 칸이 그보다 좁을 때만 통째로 줄인다.
+     *
+     * **높이는 자리에 맞춰 자른다.** 956px짜리 폰이 통째로 들어오는 창은 흔치 않은데,
+     * 거기 맞춰 줄이면 폰이 손바닥만 해진다. 아래가 잘린 폰은 어색하지만, 작아서 못 읽는
+     * 폰보다는 낫다 — 어차피 안에서 스크롤해 아래를 본다.
+     *
+     * 세로 여유는 어림잡지 않고 잰다. 폰이 놓인 자리에서 창 바닥까지, 설명 한 줄만 남기고.
+     */
+    const top = el.getBoundingClientRect().top;
+    const availH = window.innerHeight - top - 58;
+    // 폭이 0이면 아직 숨겨진 자리다(로그인 전). 그때 잰 값으로 굳히면 폰이 손톱만 해진다 —
+    // 그냥 넘기고, 자리가 생기면 아래 ResizeObserver가 다시 부른다.
+    const scale = availW > 0 ? Math.max(0.3, Math.min(availW / 468, 1)) : 1;
+    const innerH = Math.min(984, Math.max(420, availH / scale));
+    // 같은 값을 다시 쓰면 ResizeObserver가 제 꼬리를 문다 — 달라졌을 때만 적는다.
+    if (
+      Math.abs(scale - Number(el.style.getPropertyValue('--scale') || 0)) > 0.002 ||
+      Math.abs(innerH - parseFloat(el.style.getPropertyValue('--h') || '0')) > 1
+    ) {
+      el.style.setProperty('--scale', String(scale));
+      el.style.setProperty('--h', `${innerH}px`);
+    }
+  }
+  fitDevice();
+  addEventListener('resize', fitDevice);
+  // 로그인해서 콘솔이 펼쳐지는 순간, 창을 줄이는 순간 — 자리가 달라질 때마다 스스로 다시 잰다.
+  new ResizeObserver(fitDevice).observe($('device').parentElement);
+
   for (const t of $('previewTabs').querySelectorAll('.tab')) {
     t.onclick = () => {
       previewView = t.dataset.view;
@@ -567,7 +616,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .gate-card h1 { font-size: 1.6rem; }
 
   /* 2분할 */
-  .console .split { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 32px; align-items: start; }
+  .console .split { display: grid; grid-template-columns: minmax(0, 1fr) 468px; gap: 32px; align-items: start; }
   .console .split[hidden] { display: none; }
   .console .pane { min-width: 0; }
   .console .pane-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
@@ -640,36 +689,48 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .tabs[hidden] { display: none; }
   .console .tab { padding: 6px 12px; border: 0; border-radius: 999px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.82rem; cursor: pointer; }
   .console .tab.on { background: var(--ink); color: var(--paper); }
-  /* 실제 아이폰 비율(19.5:9)과 곡률. 미리보기는 자로 재는 도구라 기울이지 않는다. */
+  /*
+   * 폰 미리보기 — 크기가 아니라 **폭**이 핵심이다.
+   *
+   * 처음에는 프레임을 자리에 맞춰 줄였는데, 그러면 안에 든 페이지가 그 좁은 폭으로 다시
+   * 줄바꿈된다. 제목이 두 줄로 꺾이고 문장이 어색하게 끊기는데, 정작 실제 폰에서는 그런 일이
+   * 없다 — 없는 문제를 보여주는 미리보기였다.
+   *
+   * 그래서 화면 폭은 **언제나 진짜 아이폰 폭(440px, 17 Pro Max)** 이다. 높이만 자리에 맞춰
+   * 자르고(--h), 칸이 440보다 좁은 창에서만 통째로 줄인다(--scale). 둘 다 JS가 넣는다.
+   */
   .console .device {
-    position: relative;
-    /* 세로가 기준이다 — 창에 다 들어오는 높이를 잡고, 폭은 아이폰 비율이 정하게 둔다.
-       스크롤을 내려가며 봐야 하는 미리보기는 미리보기가 아니다. */
-    height: min(812px, calc(100vh - 210px));
-    max-width: 100%;
-    aspect-ratio: 9 / 19.5;
+    --scale: 1;
+    --h: 984px;
+    width: calc(468px * var(--scale));
+    height: calc(var(--h) * var(--scale));
     margin-inline: auto;
-    padding: 11px;
+  }
+  .console .device-inner {
+    position: relative;
+    width: 468px;   /* 440 + 베젤 14 * 2 — 폭은 언제나 진짜 크기다 */
+    height: var(--h);
+    padding: 14px;
+    transform: scale(var(--scale));
+    transform-origin: top left;
     background: #1b2126;
-    border-radius: 54px;
-    transform: none;
+    border-radius: 68px;
     box-shadow: 0 18px 50px rgba(27, 33, 38, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
   }
   /* 다이나믹 아일랜드 — 화면 위에 떠 있어 이 자리에 무엇이 가리는지도 같이 보인다. */
   .console .device-island {
     position: absolute;
-    top: 22px;
+    top: 25px;
     left: 50%;
     transform: translateX(-50%);
-    width: 108px;
-    height: 30px;
+    width: 125px;
+    height: 37px;
     border-radius: 999px;
     background: #1b2126;
     z-index: 2;
     pointer-events: none;
   }
-  /* 스크롤은 하되 막대는 그리지 않는다 — 폰 화면에 회색 띠가 서면 그 순간 폰이 아니게 된다. */
-  .console .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 43px; overflow: auto; scrollbar-width: none; }
+  .console .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 54px; overflow: auto; scrollbar-width: none; }
   .console .screen::-webkit-scrollbar { display: none; }
   /* display:block이 아니면 인라인 요소로 취급돼 아래에 베이스라인 여백이 붙고, 그 몇 px 때문에
      화면이 넘쳐 스크롤바가 생긴다. 높이는 fitIframe이 내용에 맞게 다시 잡는다. */
@@ -702,7 +763,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   @media (max-width: 1100px) {
     .console .split { grid-template-columns: 1fr; }
     .console .pane.right { position: static; }
-    .console .device { margin: 0 auto; }
+    .console .device { margin-inline: auto; }
   }
   @media (max-width: 560px) {
     .console .grid2 { grid-template-columns: 1fr; }
