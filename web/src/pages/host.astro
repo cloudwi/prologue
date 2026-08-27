@@ -64,6 +64,23 @@ import { API_BASE, SITE_URL } from '../lib/site';
           <div id="v-new" hidden>
             <button class="back" id="backFromNew">← 내 모임</button>
             <div class="form">
+              <!--
+                커버가 맨 위다. 초대장에서 가장 먼저 보이는 것이 사진이라, 만드는 순서도 그래야
+                오른쪽 미리보기가 처음부터 말이 된다. 사진 없이 이름부터 적으면 한참 동안
+                회색 네모를 보며 작업하게 된다.
+              -->
+              <div class="field">
+                <div class="editor-head">
+                  <span>커버 사진 <em>첫 장이 초대장의 얼굴이에요</em></span>
+                  <em class="hint" id="coverCount">0 / 5장</em>
+                </div>
+                <label class="dropzone" id="dropzone">
+                  <input id="f-cover" type="file" accept="image/*" multiple hidden />
+                  <b>사진을 끌어다 놓거나 눌러서 고르세요</b>
+                  <span>초대장에는 여러 장이 나란히 실려요. 5장까지 올릴 수 있어요.</span>
+                </label>
+                <div id="coverPreview" class="covers"></div>
+              </div>
               <label class="field"><span>모임 이름 *</span><input id="f-title" maxlength="80" placeholder="밑줄 모임 · 서로서가" /></label>
               <div class="field editor">
                 <div class="editor-head">
@@ -88,8 +105,6 @@ import { API_BASE, SITE_URL } from '../lib/site';
               <label class="field"><span>장소 이름 * <em>건물·층·가게까지</em></span><input id="f-place" maxlength="120" placeholder="1층 파란지붕 서로서가" /></label>
               <label class="field"><span>정원 * <em>2~100명</em></span><input id="f-capacity" type="number" min="2" max="100" value="8" /></label>
               <label class="field"><span>오픈채팅 링크 * <em>신청한 사람에게만 보여요</em></span><input id="f-kakao" placeholder="https://open.kakao.com/o/..." /></label>
-              <label class="field"><span>커버 사진 <em>첫 장이 초대장의 얼굴이에요</em></span><input id="f-cover" type="file" accept="image/*" multiple /></label>
-              <div id="coverPreview" class="covers"></div>
 
               <!--
                 여기부터는 접어둔다.
@@ -658,7 +673,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   function openForm(m) {
     editingId = m?.meetupId ?? null;
     covers = m?.coverUrls ? [...m.coverUrls] : [];
-    $('coverPreview').innerHTML = covers.map((u) => `<img src="${esc(u)}" alt="" />`).join('');
+    renderCovers();
 
     const d = m ? new Date(m.meetAt) : null;
     const pad = (n) => String(n).padStart(2, '0');
@@ -805,23 +820,76 @@ import { API_BASE, SITE_URL } from '../lib/site';
     $(id).addEventListener('input', () => { if (!$('v-new').hidden) preview(draftFromForm(), true); });
   }
 
-  $('f-cover').onchange = async (e) => {
-    const files = [...e.target.files];
-    if (!files.length) return;
+  /**
+   * 커버 사진 — 올리고, 지우고, 순서를 바꾼다.
+   *
+   * 첫 장이 카드의 얼굴이자 초대장의 표지라 순서가 곧 편집이다. 그런데 예전에는 올리기만
+   * 되고 지우지도 옮기지도 못했다 — 잘못 고른 사진 하나 때문에 모임을 다시 만들 수는 없다.
+   */
+  const COVER_MAX = 5;
+
+  function renderCovers() {
+    $('coverCount').textContent = `${covers.length} / ${COVER_MAX}장`;
+    $('coverPreview').innerHTML = covers
+      .map(
+        (u, i) => `<div class="cover-item">
+          <img src="${esc(u)}" alt="" />
+          ${i === 0 ? '<em class="cover-badge">대표</em>' : ''}
+          <div class="cover-actions">
+            ${i > 0 ? `<button type="button" data-back="${i}" title="앞으로">&lsaquo;</button>` : ''}
+            ${i < covers.length - 1 ? `<button type="button" data-fwd="${i}" title="뒤로">&rsaquo;</button>` : ''}
+            <button type="button" data-del="${i}" title="빼기">&times;</button>
+          </div>
+        </div>`,
+      )
+      .join('');
+    const after = () => { renderCovers(); preview(draftFromForm(), true); };
+    const swap = (i, j) => { [covers[i], covers[j]] = [covers[j], covers[i]]; after(); };
+    for (const b of $('coverPreview').querySelectorAll('[data-del]')) {
+      b.onclick = () => { covers.splice(Number(b.dataset.del), 1); after(); };
+    }
+    for (const b of $('coverPreview').querySelectorAll('[data-back]')) {
+      b.onclick = () => swap(Number(b.dataset.back), Number(b.dataset.back) - 1);
+    }
+    for (const b of $('coverPreview').querySelectorAll('[data-fwd]')) {
+      b.onclick = () => swap(Number(b.dataset.fwd), Number(b.dataset.fwd) + 1);
+    }
+  }
+
+  async function uploadCovers(files) {
+    const room = COVER_MAX - covers.length;
+    if (room <= 0) return say(`사진은 ${COVER_MAX}장까지예요.`, true);
+    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
+    if (!picked.length) return;
+    if (files.length > picked.length) say(`${COVER_MAX}장까지만 올렸어요.`);
     say('사진을 올리는 중…');
     try {
-      for (const file of files) {
+      for (const file of picked) {
         const fd = new FormData();
         fd.append('file', file);
         const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
         covers.push(r.url);
+        renderCovers();
       }
-      $('coverPreview').innerHTML = covers.map((u) => `<img src="${esc(u)}" alt="" />`).join('');
       say(`사진 ${covers.length}장을 올렸어요.`);
       preview(draftFromForm(), true);
     } catch (err) { say(err.message, true); }
-    e.target.value = '';
-  };
+  }
+
+  $('f-cover').onchange = (e) => { uploadCovers([...e.target.files]); e.target.value = ''; };
+
+  // 끌어다 놓기 — 파일 탐색기를 여는 수고를 던다.
+  const zone = $('dropzone');
+  for (const type of ['dragenter', 'dragover']) {
+    zone.addEventListener(type, (e) => { e.preventDefault(); zone.classList.add('on'); });
+  }
+  for (const type of ['dragleave', 'drop']) {
+    zone.addEventListener(type, () => zone.classList.remove('on'));
+  }
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadCovers([...(e.dataTransfer?.files ?? [])]);
+  });
 
   $('saveBtn').onclick = async () => {
     const d = draftFromForm();
@@ -1014,8 +1082,32 @@ import { API_BASE, SITE_URL } from '../lib/site';
 
   .console .check { display: flex; align-items: center; gap: 8px; font-size: 0.93rem; }
   .console .check input { width: auto; }
-  .console .covers { display: flex; flex-wrap: wrap; gap: 8px; }
-  .console .covers img { width: 92px; height: 52px; object-fit: cover; border-radius: 8px; }
+  /* 끌어다 놓는 자리 — 브라우저 기본 파일 선택 버튼은 이 화면의 유일한 이물질이었다. */
+  .console .dropzone {
+    display: grid; gap: 4px; place-items: center; text-align: center;
+    padding: 26px 20px; border: 1.5px dashed var(--border); border-radius: 16px;
+    background: var(--surface); cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .console .dropzone:hover, .console .dropzone.on { border-color: var(--terracotta); background: var(--paper); }
+  .console .dropzone b { font-size: 0.93rem; }
+  .console .dropzone span { color: var(--muted); font-size: 0.82rem; }
+
+  .console .covers { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .console .covers:empty { display: none; }
+  .console .cover-item { position: relative; width: 116px; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; }
+  .console .cover-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* 첫 장이 초대장의 표지이자 카드의 얼굴이다 — 그 사실을 사진 위에 적어둔다. */
+  .console .cover-badge {
+    position: absolute; left: 6px; bottom: 6px; padding: 2px 8px; border-radius: 999px;
+    background: var(--terracotta); color: #fff; font-style: normal; font-size: 0.68rem; font-weight: 700;
+  }
+  .console .cover-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; }
+  .console .cover-actions button {
+    width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; cursor: pointer;
+    background: rgba(27, 33, 38, 0.72); color: #fff; font: inherit; font-size: 0.82rem; line-height: 1;
+  }
+  .console .cover-actions button:hover { background: var(--ink); }
 
   .console .btn { padding: 13px 22px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); font: inherit; font-weight: 700; cursor: pointer; transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease; }
   .console .btn:hover { opacity: 0.88; }

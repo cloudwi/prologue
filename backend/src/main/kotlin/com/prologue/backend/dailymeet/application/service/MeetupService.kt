@@ -221,7 +221,11 @@ data class MeetupInvitationView(
     val minHeightFemaleCm: Int?,
     val requireJobVerified: Boolean,
     /** 미리보기 이미지가 될 커버 첫 장. 없으면 페이지가 브랜드 기본 이미지를 쓴다. */
-    val coverUrl: String?,
+    /**
+     * 커버 사진 전부(첫 장이 대표). 초대장은 청첩장처럼 여러 장을 보여준다 —
+     * 그동안 다섯 장까지 올려두고 첫 장만 쓰고 있었다.
+     */
+    val coverUrls: List<String>,
     val hostNickname: String?,
     val occurrence: Int,
     val occurrenceTotal: Int,
@@ -357,7 +361,7 @@ class MeetupService(
             minHeightMaleCm = m.minHeightMaleCm,
             minHeightFemaleCm = m.minHeightFemaleCm,
             requireJobVerified = m.requireJobVerified,
-            coverUrl = m.coverUrls.firstOrNull(),
+            coverUrls = m.coverUrls,
             hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
             occurrence = siblings.indexOfFirst { it.id == m.id }.let { if (it < 0) siblings.size else it } + 1,
             occurrenceTotal = maxOf(siblings.size, 1),

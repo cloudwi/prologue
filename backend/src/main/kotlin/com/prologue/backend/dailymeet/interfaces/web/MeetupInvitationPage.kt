@@ -27,7 +27,7 @@ object MeetupInvitationPage {
         val web = baseUrl.trimEnd('/')
         val url = "$web/m/${v.meetupId}"
         val ogTitle = if (v.occurrenceTotal > 1) "${v.title} · ${v.occurrence}번째 만남" else v.title
-        val image = v.coverUrl ?: "$web/og.png"
+        val image = v.coverUrls.firstOrNull() ?: "$web/og.png"
         // 슬래시가 셋이다. prologue://meetup/{id}로 쓰면 "meetup"이 호스트로 파싱되고 경로에는 id만 남아
         // /meetup/[id] 라우트에 걸리지 않는다(앱이 Unmatched Route를 띄운다). 호스트를 비워 경로를 온전히 넘긴다 —
         // Expo의 Linking.createURL이 만들어내는 형식도 이쪽이다.
@@ -52,13 +52,14 @@ object MeetupInvitationPage {
             """.trimIndent(),
             body = """
                 <main class="card">
-                  ${if (v.coverUrl != null) """<img class="cover" src="${escape(v.coverUrl)}" alt="" />""" else ""}
+                  ${v.coverUrls.firstOrNull()?.let { """<img class="cover" src="${escape(it)}" alt="" />""" } ?: ""}
                   <p class="eyebrow">INVITATION</p>
                   ${if (v.occurrenceTotal > 1) """<p class="occurrence">${v.occurrence}번째 만남</p>""" else ""}
                   <h1>${escape(v.title)}</h1>
                   <p class="date">${escape(numeralDate(v.meetAt))}</p>
                   <p class="when">${escape(whenLine(v.meetAt))}</p>
                   ${if (v.description != null) """<p class="greeting">${escape(v.description).replace("\n", "<br />")}</p>""" else ""}
+                  ${gallery(v.coverUrls)}
                   <dl class="info">
                     ${row("여는 사람", v.hostNickname ?: "프롤로그")}
                     ${row("장소", listOfNotNull(v.placeName, v.placeAddress).joinToString(" · ").ifBlank { null })}
@@ -169,6 +170,20 @@ object MeetupInvitationPage {
 
     // ── 조판 ──
 
+    /**
+     * 나머지 사진들 — 청첩장처럼.
+     *
+     * 첫 장은 위에 표지로 걸리고, 여기서는 그 뒤의 사진들을 옆으로 밀어 보게 한다.
+     * 자바스크립트를 쓰지 않는다(scroll-snap) — 초대장은 링크 하나로 열리는 페이지라
+     * 스크립트가 늦게 오거나 막히는 환경에서도 사진은 보여야 한다.
+     */
+    private fun gallery(coverUrls: List<String>): String {
+        val rest = coverUrls.drop(1)
+        if (rest.isEmpty()) return ""
+        val items = rest.joinToString("") { """<img src="${escape(it)}" alt="" loading="lazy" />""" }
+        return """<div class="gallery">$items</div>"""
+    }
+
     private fun row(label: String, value: String?): String =
         if (value == null) "" else """<div class="row"><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>"""
 
@@ -210,6 +225,12 @@ ${head.prependIndent("        ")}
           .date { margin:18px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
           .when { margin:8px 0 0; font-size:14px; color:var(--muted); }
           .greeting { margin:28px 0 0; font-size:15px; line-height:1.85; }
+          /* 사진 여러 장 — 옆으로 밀어 본다. 카드 밖으로 흘러나가게 두면 폭이 넉넉해 보인다. */
+          .gallery { display:flex; gap:8px; margin:24px -24px 0; padding:0 24px; overflow-x:auto;
+                     scroll-snap-type:x mandatory; scrollbar-width:none; }
+          .gallery::-webkit-scrollbar { display:none; }
+          .gallery img { flex:0 0 auto; width:72%; max-width:280px; aspect-ratio:4/3; object-fit:cover;
+                         border-radius:14px; background:var(--line); scroll-snap-align:center; }
           .info { margin:32px 0 0; padding:0; text-align:left; }
           .row { display:flex; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid var(--line); }
           .row:last-child { border-bottom:0; }

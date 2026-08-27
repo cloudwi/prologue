@@ -25,7 +25,7 @@ class MeetupInvitationPageTest {
         title: String = "밑줄 모임",
         description: String? = null,
         meetAt: Instant = ZonedDateTime.of(2026, 9, 26, 19, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant(),
-        coverUrl: String? = "https://cdn.example.com/cover.jpg",
+        coverUrls: List<String> = listOf("https://cdn.example.com/cover.jpg"),
         fee: Int = 30_000,
         feeFemale: Int? = null,
         capacity: Int = 8,
@@ -60,12 +60,28 @@ class MeetupInvitationPageTest {
         minHeightMaleCm = minHeightMaleCm,
         minHeightFemaleCm = null,
         requireJobVerified = requireJobVerified,
-        coverUrl = coverUrl,
+        coverUrls = coverUrls,
         hostNickname = hostNickname,
         occurrence = occurrence,
         occurrenceTotal = occurrenceTotal,
         open = open,
     )
+
+    @Test
+    fun `커버가 여러 장이면 첫 장은 표지로, 나머지는 갤러리로 실린다`() {
+        val out = html(view(coverUrls = listOf("https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg")))
+
+        assertContains(out, """<img class="cover" src="https://cdn.example.com/a.jpg"""")
+        assertContains(out, """<div class="gallery">""")
+        assertContains(out, """<img src="https://cdn.example.com/b.jpg"""")
+    }
+
+    @Test
+    fun `커버가 한 장뿐이면 갤러리를 그리지 않는다`() {
+        val out = html(view(coverUrls = listOf("https://cdn.example.com/a.jpg")))
+
+        assertFalse(out.contains("""<div class="gallery">"""))
+    }
 
     private fun html(v: MeetupInvitationView = view()) =
         MeetupInvitationPage.render(v, "https://prologue.day", "https://apps.apple.com/kr/app/id1", "https://play.google.com/store/apps/details?id=x")
@@ -90,7 +106,7 @@ class MeetupInvitationPageTest {
     @Test
     fun `커버 사진이 미리보기 이미지가 되고, 없으면 브랜드 기본 이미지로 대신한다`() {
         assertContains(html(), """<meta property="og:image" content="https://cdn.example.com/cover.jpg" />""")
-        assertContains(html(view(coverUrl = null)), """<meta property="og:image" content="https://prologue.day/og.png" />""")
+        assertContains(html(view(coverUrls = emptyList())), """<meta property="og:image" content="https://prologue.day/og.png" />""")
     }
 
     @Test
