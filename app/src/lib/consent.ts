@@ -17,7 +17,7 @@ export type Consent = {
   privacy: boolean;
   /** 만 19세 이상 (필수) */
   age: boolean;
-  /** 민감정보 — 선호 성별은 성적 지향을 드러낸다 (필수) */
+  /** 민감정보 — 선호 성별은 성적 지향을 드러낸다. 소개팅을 쓸 때만 받는다. */
   sensitive: boolean;
   /** 마케팅 정보 수신 (선택) */
   marketing: boolean;
@@ -26,14 +26,27 @@ export type Consent = {
 const KEY = 'prologue.consent';
 const isWeb = Platform.OS === 'web';
 
-export async function saveConsent(marketing: boolean): Promise<void> {
-  // 필수 항목은 이 화면을 통과했다는 사실 자체가 동의다 — 화면이 그 전엔 버튼을 열어주지 않는다.
+/**
+ * 동의 화면을 통과한 사실을 적어둔다.
+ *
+ * 필수 항목(약관·개인정보·연령)은 이 화면을 통과했다는 사실 자체가 동의다 —
+ * 화면이 그 전엔 버튼을 열어주지 않는다. 민감정보만은 다르다: 모임만 하러 온 사람에게는
+ * 항목 자체를 보여주지 않으므로, 실제로 체크했는지를 그대로 실어 보낸다.
+ */
+export async function saveConsent({
+  marketing,
+  sensitive,
+}: {
+  marketing: boolean;
+  /** 민감정보(선호 성별) 동의. 모임 전용 가입에서는 false로 남고, 소개팅을 켤 때 따로 받는다. */
+  sensitive: boolean;
+}): Promise<void> {
   const consent: Consent = {
     legalVersion: LEGAL_VERSION,
     terms: true,
     privacy: true,
     age: true,
-    sensitive: true,
+    sensitive,
     marketing,
   };
   const value = JSON.stringify(consent);

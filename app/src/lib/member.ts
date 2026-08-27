@@ -8,7 +8,13 @@ export type OnboardingProfile = {
   gender: Gender;
   /** 생년월일, ISO 형식("1999-05-14"). */
   birthDate: string;
-  preferredGender: Gender;
+  /**
+   * 선호 성별 — 소개팅을 쓰는 사람만 채운다.
+   *
+   * 비워두면 소개에서 빠진다(서버 PeerEligibility). 모임만 하러 온 사람의 자리이고,
+   * 나중에 MY에서 소개팅을 켜면 그때 채워진다. 이 값이 곧 소개팅 스위치다.
+   */
+  preferredGender?: Gender | null;
   region: string;
   /** 전화번호(숫자만). 프로필에 공개되지 않고, 편지에 실을 때만 상대에게 전해진다. */
   phone: string;
@@ -28,7 +34,9 @@ export type OnboardingProfile = {
  * 프로필 조회 응답. 사진은 프로필 수정(PUT)이 아니라 사진 전용 엔드포인트로 관리하므로
  * 요청 타입(OnboardingProfile)에는 없고 응답에만 있다.
  */
-export type MemberProfile = Required<Omit<OnboardingProfile, 'phone' | 'consent'>> & {
+export type MemberProfile = Required<Omit<OnboardingProfile, 'phone' | 'consent' | 'preferredGender'>> & {
+  /** null이면 소개팅을 아직 켜지 않은 회원 — 모임만 쓰고 있다. */
+  preferredGender: Gender | null;
   accountId: string;
   /** 프로필 사진 URL 목록(등록 순). 첫 장이 대표. */
   photoUrls: string[];

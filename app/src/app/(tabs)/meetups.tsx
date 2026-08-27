@@ -10,9 +10,11 @@ import { Image } from 'expo-image';
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
+import { track } from '@/lib/analytics';
 import { getJobStatus } from '@/lib/job';
 import { getMyProfile } from '@/lib/member';
 import { feeLabel, getMeetupHistory, getMeetups, type Meetup } from '@/lib/meetups';
@@ -121,6 +123,10 @@ export default function MeetupsScreen() {
   const [eligibleOnly, setEligibleOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
+  // 1.3부터 이 탭은 가입 없이도 열린다 — 앱에서 문 밖으로 열려 있는 유일한 방이다.
+  const session = useSession();
+  const guest = !session.loading && !session.signedIn;
+
   /*
    * 한 화면에 필요한 것 넷을 한 쿼리로 묶는다 — 목록·지난 기록·내 조건이 함께 그려져야
    * '내가 갈 수 있는 모임'이 판정되기 때문이다. 보조 정보는 실패해도 나머지를 그린다.
@@ -142,14 +148,13 @@ export default function MeetupsScreen() {
             jobVerified: job.verified,
           }
         : null;
-      // 모임은 아직 운영자만 연다 — 서버가 판정해 내려주고, 앱은 버튼을 그릴지만 정한다.
-      return { meetups: ups.meetups, canCreate: ups.canCreate, history: done, my };
+      // 모임을 여는 일은 웹 콘솔(prologue.day/host)로 옮겼다 — 앱은 손드는 쪽만 한다.
+      return { meetups: ups.meetups, history: done, my };
     },
   });
 
   const meetups = boardQuery.data?.meetups ?? [];
   const history = boardQuery.data?.history ?? [];
-  const canCreate = boardQuery.data?.canCreate ?? false;
   const my = boardQuery.data?.my ?? null;
 
   const { refetch: refetchBoard } = boardQuery;
@@ -392,6 +397,34 @@ export default function MeetupsScreen() {
             )}
 
             {/* 지난 모임 — 접힌 기록. 모임이 실제로 열리고 있다는 증거. */}
+            {/*
+              * 손님에게 건네는 한 줄 — 목록 끝에 둔다.
+              *
+              * 모임을 다 훑어본 사람은 이미 이 서비스가 무엇인지 안다. 그때가 소개팅 이야기를
+              * 꺼낼 자리다. 목록 위에 띠를 두르면 보러 온 것을 가리고, 팝업으로 띄우면
+              * 쫓아내는 것이 된다.
+              */}
+            {guest && (
+              <Pressable
+                onPress={() => {
+                  track('guest_signup_prompted');
+                  router.push('/consent');
+                }}
+                style={({ pressed }) => [
+                  styles.guestInvite,
+                  { backgroundColor: c.backgroundElement, borderColor: c.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Text style={[styles.guestInviteTitle, { color: c.text, fontFamily: Fonts.serif }]}>
+                  프롤로그는 소개팅 앱이기도 해요
+                </Text>
+                <Text style={[styles.guestInviteBody, { color: c.textSecondary }]}>
+                  하루에 한 사람, 같은 질문에 답한 사람이 소개돼요.{'\n'}지금 둘러보는 모임은 가입 없이도 계속 볼 수 있어요.
+                </Text>
+                <Text style={[styles.guestInviteCta, { color: c.primaryStrong }]}>가입하고 시작하기 ›</Text>
+              </Pressable>
+            )}
+
             {history.length > 0 && (
               <View style={styles.section}>
                 <Pressable
@@ -621,6 +654,10 @@ const styles = StyleSheet.create({
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
   historyTitle: { fontSize: 15.5, fontWeight: '700' },
   historyMeta: { fontSize: 13, marginTop: 2 },
+  guestInvite: { marginTop: 28, marginHorizontal: 20, padding: 20, borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg },
+  guestInviteTitle: { fontSize: 17, fontWeight: '700' },
+  guestInviteBody: { fontSize: 14, lineHeight: 22, marginTop: 8 },
+  guestInviteCta: { fontSize: 14.5, fontWeight: '700', marginTop: 14 },
   historyCount: { fontSize: 13.5, fontWeight: '700' },
 
   emptyCard: { borderRadius: Radius.lg, alignItems: 'center', paddingVertical: 40, paddingHorizontal: 28 },

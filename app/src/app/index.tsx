@@ -7,17 +7,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { Colors, Fonts } from '@/constants/theme';
-import { identify } from '@/lib/analytics';
+import { identify, track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { useAppearance } from '@/lib/appearance';
 import { getMyProfile } from '@/lib/member';
+import { SESSION_QUERY_KEY } from '@/lib/session';
 
 export default function LoginScreen() {
   const { scheme } = useAppearance();
   const c = Colors[scheme];
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
 
   /** 갈 곳이 정해졌으니 스플래시를 내린다. 실패해도 앱은 그대로 간다(루트에 안전장치가 있다). */
@@ -35,6 +39,9 @@ export default function LoginScreen() {
       try {
         const profile = await getMyProfile();
         if (profile?.accountId) identify(profile.accountId);
+        // 방금 확인한 것을 세션 캐시에 심어둔다 — 탭들이 같은 질문을 다시 네트워크로 묻지 않게.
+        // (심지 않으면 발견 탭이 자기 차례에 프로필을 또 기다리며 빈 화면을 낸다)
+        queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: true, profile });
         if (active) {
           router.replace(profile ? '/discover' : '/onboarding');
           hideSplash(); // 목적지가 그려지는 프레임에 맞춰 내린다
@@ -48,7 +55,7 @@ export default function LoginScreen() {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [router, queryClient]);
 
   /*
    * 확인이 끝나기 전 — 그 자리는 스플래시가 덮고 있다.
@@ -99,6 +106,24 @@ export default function LoginScreen() {
             <Text style={[styles.startBtnText, { color: c.primaryText }]}>이메일로 시작하기</Text>
           </Pressable>
 
+          {/*
+            * 가입하지 않고 모임부터 — 1.3에서 낸 두 번째 문.
+            *
+            * 소개팅은 사진과 문답을 먼저 요구해서 문턱이 높다. 그런데 모임은 그럴 이유가 없다
+            * ("모임을 하는 사람이 굳이 솔로일 필요는 없다"). 어떤 자리가 열려 있는지 먼저 보고
+            * 가입을 정하게 한다 — 손드는 순간에만 나를 밝히면 된다.
+            */}
+          <Pressable
+            onPress={() => {
+              track('guest_browsed');
+              queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: false, profile: null });
+              router.replace('/meetups');
+            }}
+            style={({ pressed }) => [styles.guestBtn, { borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Text style={[styles.guestBtnText, { color: c.text }]}>가입 없이 모임 둘러보기</Text>
+          </Pressable>
+
           {/* 동의는 다음 화면에서 항목별로 받는다 — 여기서는 미리 읽어볼 수 있는 통로만 둔다 */}
           <Text style={[styles.terms, { color: c.textSecondary }]}>
             <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/terms')}>
@@ -127,6 +152,9 @@ const styles = StyleSheet.create({
   buttons: { gap: 12 },
   startBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   startBtnText: { fontSize: 17, fontWeight: '700' },
+  // 두 번째 문이라 테두리만 — 색 덩어리가 둘이면 어느 쪽이 본길인지 흐려진다.
+  guestBtn: { height: 52, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  guestBtnText: { fontSize: 16, fontWeight: '600' },
   terms: { fontSize: 12, textAlign: 'center', marginTop: 12, marginBottom: 8, lineHeight: 18 },
   termsLink: { textDecorationLine: 'underline', fontWeight: '600' },
 });

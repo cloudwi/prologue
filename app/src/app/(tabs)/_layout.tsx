@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { enableNotifications } from '@/lib/notifications';
+import { useSession } from '@/lib/session';
 
 /**
  * 하단 탭.
@@ -30,11 +31,18 @@ const ICONS: Record<string, TabIcon> = {
 export default function TabsLayout() {
   const c = useTheme();
 
-  // 권한은 앱의 본 화면에 도달했을 때 묻는다. 가입 첫 화면에서 물으면
-  // 무엇에 쓰는 알림인지 모른 채 거절당하고, 한 번 거절되면 되돌리기 어렵다.
+  /*
+   * 권한은 앱의 본 화면에 도달했을 때 묻는다. 가입 첫 화면에서 물으면
+   * 무엇에 쓰는 알림인지 모른 채 거절당하고, 한 번 거절되면 되돌리기 어렵다.
+   *
+   * 손님에게는 아예 묻지 않는다(1.3). 가입도 하지 않은 사람에게 보낼 알림이 없을뿐더러,
+   * 둘러보러 들어온 첫 화면에서 시스템 팝업이 뜨면 그게 문턱이 된다.
+   */
+  const { signedIn } = useSession();
   useEffect(() => {
+    if (!signedIn) return;
     void enableNotifications();
-  }, []);
+  }, [signedIn]);
   // 제스처 바가 있는 기기에서는 그만큼을 바닥에 더 둬야 라벨이 눌리지 않는다
   const insets = useSafeAreaInsets();
 

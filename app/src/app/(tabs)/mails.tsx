@@ -11,6 +11,8 @@ import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { SignupGate } from '@/components/signup-gate';
+import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, getSentHearts, type ReceivedHeart } from '@/lib/daily';
@@ -32,7 +34,44 @@ type Inbox = { hearts: ReceivedHeart[]; sentHearts: ReceivedHeart[] | null; mail
 
 const INBOX_KEY = ['mails', 'inbox'] as const;
 
+/** 편지함의 문지기 — 발견 탭과 같은 이유로 본체 바깥에 선다(discover.tsx 참고). */
 export default function MailsScreen() {
+  const session = useSession();
+
+  if (session.loading) return null;
+
+  if (!session.signedIn) {
+    return (
+      <SignupGate
+        mode="guest"
+        icon="mail-outline"
+        title={'마음이 닿으면,\n편지가 와요'}
+        lines={[
+          '받은 하트와 편지가 이곳에 쌓여요.',
+          '편지에는 연락처가 담겨 있어요 — 다음 대화는 앱 밖에서 이어져요.',
+        ]}
+      />
+    );
+  }
+
+  if (!session.dating) {
+    return (
+      <SignupGate
+        mode="dating-off"
+        icon="mail-outline"
+        title="편지함은 소개가 시작되면 열려요"
+        lines={[
+          '소개를 받아야 하트도 편지도 오갈 수 있어요.',
+          '모임은 지금처럼 그대로 쓸 수 있어요.',
+        ]}
+      />
+    );
+  }
+
+  return <MailsInbox />;
+}
+
+function MailsInbox() {
   const c = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();

@@ -27,6 +27,8 @@ import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/lib/haptics';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { SignupGate } from '@/components/signup-gate';
+import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
@@ -50,7 +52,52 @@ function todayCaption(): string {
   return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
 }
 
+/**
+ * 발견 탭의 문지기.
+ *
+ * 1.3부터 모임은 가입 없이 둘러볼 수 있어서, 이 탭에도 손님과 '모임만 쓰는 회원'이 들어온다.
+ * 문지기를 화면 본체 **바깥**에 세우는 이유는 하나다 — 본체가 마운트되면 오늘의 문답을 묻는
+ * 쿼리가 먼저 나가고, 손님에게는 그게 403으로 돌아와 세션 만료로 읽혀 로그인 화면으로
+ * 튕겨나간다. 둘러보러 온 사람을 문 밖으로 밀어내는 셈이다. 그래서 여기서 갈라선다.
+ */
 export default function DiscoverScreen() {
+  const session = useSession();
+
+  // 아직 누구인지 모른다 — 이 한 프레임에 손님으로 단정하면 회원에게 가입 유도가 번쩍인다.
+  if (session.loading) return null;
+
+  if (!session.signedIn) {
+    return (
+      <SignupGate
+        mode="guest"
+        icon="sparkles-outline"
+        title={'하루에 한 사람,\n문답으로 알아가요'}
+        lines={[
+          '매일 같은 질문에 답한 사람 중 한 명이 소개돼요.',
+          '사진보다 답변을 먼저 읽는 소개예요.',
+        ]}
+      />
+    );
+  }
+
+  if (!session.dating) {
+    return (
+      <SignupGate
+        mode="dating-off"
+        icon="sparkles-outline"
+        title="아직 소개를 받고 있지 않아요"
+        lines={[
+          '만나고 싶은 성별만 정하면 내일부터 소개가 시작돼요.',
+          '모임은 지금처럼 그대로 쓸 수 있어요.',
+        ]}
+      />
+    );
+  }
+
+  return <DiscoverBoard />;
+}
+
+function DiscoverBoard() {
   const c = useTheme();
   const isDark = useAppearance().scheme === 'dark';
   const insets = useSafeAreaInsets();

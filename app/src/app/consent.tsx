@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -46,11 +46,26 @@ const ITEMS: Item[] = [
   },
 ];
 
-const REQUIRED_KEYS = ITEMS.filter((i) => i.required).map((i) => i.key);
-
 export default function ConsentScreen() {
   const c = useTheme();
   const router = useRouter();
+  /**
+   * intent — 이 사람이 무엇을 하러 왔는지. 'meetup'이면 모임에 손들려고 온 손님이다.
+   * next — 가입이 끝나면 되돌아갈 자리(보던 모임의 초대장 등).
+   */
+  const { intent, next } = useLocalSearchParams<{ intent?: string; next?: string }>();
+  const meetupOnly = intent === 'meetup';
+
+  /*
+   * 모임만 하러 온 사람에게는 민감정보 동의를 묻지 않는다.
+   *
+   * 이 항목은 '만나고 싶은 성별' 때문에 있는데, 그 사람에게는 애초에 그걸 묻지 않는다.
+   * 받지도 않을 정보의 동의를 미리 받아두는 것은 최소수집 원칙에 어긋나고, 무엇보다
+   * 모임 하나 신청하러 온 사람에게 성적 지향 이야기를 꺼내는 건 그 자체로 문턱이다.
+   * 이 동의는 나중에 소개팅을 켤 때(my/start-dating) 그 자리에서 받는다.
+   */
+  const items = meetupOnly ? ITEMS.filter((i) => i.key !== 'sensitive') : ITEMS;
+  const requiredKeys = items.filter((i) => i.required).map((i) => i.key);
 
   useEffect(() => track('consent_viewed'), []);
   const [checked, setChecked] = useState<Record<ItemKey, boolean>>({
@@ -61,20 +76,28 @@ export default function ConsentScreen() {
     marketing: false,
   });
 
-  const allChecked = ITEMS.every((i) => checked[i.key]);
-  const canProceed = useMemo(() => REQUIRED_KEYS.every((k) => checked[k]), [checked]);
+  const allChecked = items.every((i) => checked[i.key]);
+  // 항목 목록이 갈래에 따라 달라져 메모이제이션이 오히려 어긋난다 — 다섯 개짜리 검사라 그냥 센다.
+  const canProceed = requiredKeys.every((k) => checked[k]);
 
   const toggle = (key: ItemKey) => setChecked((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const toggleAll = () => {
-    const next = !allChecked;
-    setChecked({ terms: next, privacy: next, age: next, sensitive: next, marketing: next });
+    const on = !allChecked;
+    setChecked((prev) => ({
+      ...prev,
+      ...Object.fromEntries(items.map((i) => [i.key, on])),
+    }));
   };
 
   const proceed = async () => {
     track('consent_completed');
-    await saveConsent(checked.marketing);
-    router.push('/email-auth');
+    await saveConsent({ marketing: checked.marketing, sensitive: checked.sensitive });
+    // 무엇을 하러 왔는지와 돌아갈 자리를 다음 화면에 넘긴다 — 인증이 끼어 있어 상태로는 못 잇는다.
+    router.push({
+      pathname: '/email-auth',
+      params: { ...(meetupOnly ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) },
+    });
   };
 
   return (
@@ -107,7 +130,7 @@ export default function ConsentScreen() {
           </Pressable>
 
           <View style={styles.items}>
-            {ITEMS.map((item) => (
+            {items.map((item) => (
               <View key={item.key}>
                 <View style={styles.itemRow}>
                   <Pressable

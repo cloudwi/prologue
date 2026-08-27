@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -20,6 +21,7 @@ import { ApiError } from '@/lib/api';
 import { requestCode, verifyCode } from '@/lib/auth';
 import { clearPendingEmail, getPendingEmail, savePendingEmail } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
+import { SESSION_QUERY_KEY } from '@/lib/session';
 import { useTheme } from '@/hooks/use-theme';
 
 type Step = 'email' | 'code';
@@ -29,8 +31,13 @@ const RESEND_SECONDS = 60;
 export default function EmailAuthScreen() {
   const c = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
   // 메일의 "앱에서 바로 입력하기" 버튼으로 들어오면 코드가 실려 온다.
-  const { code: linkedCode } = useLocalSearchParams<{ code?: string }>();
+  const {
+    code: linkedCode,
+    intent,
+    next,
+  } = useLocalSearchParams<{ code?: string; intent?: string; next?: string }>();
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -105,7 +112,24 @@ export default function EmailAuthScreen() {
       track('auth_succeeded');
       await clearPendingEmail();
       const profile = await getMyProfile();
-      router.replace(profile ? '/discover' : '/onboarding');
+      // 세션 캐시를 채워둔다 — 다음 화면이 같은 질문을 네트워크로 다시 묻지 않게.
+      queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: true, profile });
+      /*
+       * 갈림길 셋.
+       *  - 프로필이 없다 → 온보딩. 모임 하러 온 사람에게는 짧은 쪽(intent=meetup)으로 보낸다.
+       *  - 프로필이 있고 돌아갈 자리가 있다 → 그 자리로. 보던 모임에서 가입하러 온 경우다.
+       *  - 그 외 → 늘 가던 발견 탭.
+       */
+      if (!profile) {
+        router.replace({
+          pathname: '/onboarding',
+          params: { ...(intent === 'meetup' ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) },
+        });
+      } else if (next) {
+        router.replace(next as never);
+      } else {
+        router.replace(intent === 'meetup' ? '/meetups' : '/discover');
+      }
     } catch (e) {
       setError(verifyErrorMessage(e));
     } finally {

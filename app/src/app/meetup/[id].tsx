@@ -13,6 +13,7 @@ import { haptics } from '@/lib/haptics';
 import { meetupShareText } from '@/lib/meetup-format';
 import { applyMeetup, cancelMeetup, feeLabel, followMeetup, getMeetups, type Meetup } from '@/lib/meetups';
 import { useAllowScreenCapture } from '@/lib/screen-capture';
+import { useSession } from '@/lib/session';
 
 /**
  * 모임 상세 — 정보 화면이 아니라 초대장이다(유저 결정 2026-08-24).
@@ -25,6 +26,7 @@ export default function MeetupDetailScreen() {
   const c = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const session = useSession();
 
   const [meetup, setMeetup] = useState<Meetup | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,26 @@ export default function MeetupDetailScreen() {
     }, [load]),
   );
 
+
+  /**
+   * 손님이 회원의 문을 두드렸을 때 — 신청도, 참여자 프로필도 여기서 한 번 멈춘다.
+   *
+   * 모임은 가입 없이 볼 수 있지만 손을 드는 건 다르다. 누가 오는지 모임장이 알아야 하고,
+   * 참여자들의 얼굴과 나이는 아무나 열어볼 것이 아니다. 그 경계를 이 함수 하나가 지킨다.
+   * 돌아올 자리(next)를 들려 보내 가입이 끝나면 보던 모임으로 되돌아오게 한다.
+   */
+  function askSignup(reason: string): boolean {
+    if (session.loading || session.signedIn) return false;
+    track('guest_signup_prompted');
+    Alert.alert('가입하고 이어서 할까요?', reason, [
+      { text: '나중에', style: 'cancel' },
+      {
+        text: '가입하기',
+        onPress: () => router.push(`/consent?intent=meetup&next=${encodeURIComponent(`/meetup/${id}`)}`),
+      },
+    ]);
+    return true;
+  }
 
   function confirmApply(m: Meetup) {
     Alert.alert(
@@ -155,13 +177,19 @@ export default function MeetupDetailScreen() {
           c={c}
           busy={busy}
           onPressImage={setViewerIndex}
-          onPressHost={() =>
-            router.push(`/meetup-member/${meetup.hostAccountId}?role=host&nickname=${encodeURIComponent(meetup.hostNickname ?? '')}`)
-          }
-          onPressParticipant={(accountId, nickname) =>
-            router.push(`/meetup-member/${accountId}?nickname=${encodeURIComponent(nickname ?? '')}`)
-          }
-          onApply={() => confirmApply(meetup)}
+          onPressHost={() => {
+            if (askSignup('모임장 프로필은 회원에게만 열려요. 가입하면 바로 볼 수 있어요.')) return;
+            router.push(`/meetup-member/${meetup.hostAccountId}?role=host&nickname=${encodeURIComponent(meetup.hostNickname ?? '')}`);
+          }}
+          onPressParticipant={(accountId, nickname) => {
+            if (askSignup('함께 가는 분들의 프로필은 회원에게만 열려요.')) return;
+            router.push(`/meetup-member/${accountId}?nickname=${encodeURIComponent(nickname ?? '')}`);
+          }}
+          onApply={() => {
+            // 손을 드는 순간에만 나를 밝히면 된다 — 그 순간이 여기다.
+            if (askSignup('모임에 손을 들려면 가입이 필요해요. 사진 한 장과 기본 정보만 있으면 돼요.')) return;
+            confirmApply(meetup);
+          }}
           onCancel={() => confirmCancel(meetup)}
           onOpenKakao={openKakao}
           onToggleFollow={(on) => void toggleFollow(on)}

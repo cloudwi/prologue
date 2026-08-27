@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   Alert,
@@ -33,7 +33,10 @@ import { ApiError } from '@/lib/api';
 import { clearConsent, getConsent } from '@/lib/consent';
 import { getLetterQuestions, writeLetter, LETTER_MIN_LENGTH, LETTER_MAX_LENGTH, type LetterQuestion } from '@/lib/letters';
 import { completeOnboarding, type Gender } from '@/lib/member';
+import { SESSION_QUERY_KEY } from '@/lib/session';
 import { uploadPhoto } from '@/lib/photo';
+import { useQueryClient } from '@tanstack/react-query';
+
 import { useTheme } from '@/hooks/use-theme';
 
 const EMPTY_EXTRA: ProfileExtra = { bio: '', avatarId: null, height: '', hobbies: [], interests: [], strengths: [] };
@@ -69,6 +72,24 @@ type StepDef = {
 export default function OnboardingScreen() {
   const c = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  /*
+   * 두 갈래 가입(1.3).
+   *
+   * 소개팅으로 온 사람에게는 지금까지처럼 다 묻는다 — 사진 두 장, 선호 성별, 문답 하나.
+   * 그 셋이 소개의 재료라서 하나라도 비면 소개가 성립하지 않는다.
+   *
+   * 모임으로 온 사람에게는 그 셋을 묻지 않는다. 얼굴 한 장과 기본 정보면 모임장이 누가
+   * 오는지 알기에 충분하고, 그 이상은 모임과 상관없는 질문이다. 소개팅을 나중에 켜면
+   * (my/start-dating) 그때 필요한 것을 그 자리에서 채운다.
+   */
+  const { intent, next: nextPath } = useLocalSearchParams<{ intent?: string; next?: string }>();
+  const meetupOnly = intent === 'meetup';
+  /** 모임 전용 가입은 얼굴 한 장이면 된다 — 소개팅은 여전히 두 장. */
+  const minPhotos = meetupOnly ? 1 : MIN_PHOTOS;
+  /** 가입을 마치고 갈 곳. 보던 모임에서 왔다면 그 초대장으로 되돌아간다. */
+  const done = () => router.replace((nextPath ?? (meetupOnly ? '/meetups' : '/discover')) as never);
 
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
@@ -131,7 +152,7 @@ export default function OnboardingScreen() {
   const inputStyle: StyleProp<TextStyle> = [styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundElement }];
 
   // 필수 스텝 — 모두 채워야 가입이 완료된다.
-  const requiredSteps: StepDef[] = [
+  const allRequiredSteps: StepDef[] = [
     {
       key: 'nickname',
       title: '어떤 이름으로 소개할까요?',
@@ -239,8 +260,10 @@ export default function OnboardingScreen() {
     {
       key: 'photos',
       title: '프로필 사진을 올려주세요',
-      subtitle: `최소 ${MIN_PHOTOS}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.\n얼굴이 잘 보이는 사진만 등록돼요.`,
-      valid: photos.length >= MIN_PHOTOS,
+      subtitle: meetupOnly
+        ? `얼굴이 보이는 사진 ${minPhotos}장이면 충분해요. 모임장이 누가 오는지 알 수 있게요.\n최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`
+        : `최소 ${minPhotos}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.\n얼굴이 잘 보이는 사진만 등록돼요.`,
+      valid: photos.length >= minPhotos,
       content: (
         <PhotoGrid
           photos={photos}
@@ -299,6 +322,17 @@ export default function OnboardingScreen() {
       ),
     },
   ];
+
+  /*
+   * 모임으로 온 사람에게서 빼는 두 가지.
+   *  - preferredGender: 소개팅 스위치다. 비운 채로 두면 소개가 오가지 않는다(서버 PeerEligibility).
+   *  - letter: 프로필 문답은 상대가 나를 읽는 창이다. 소개를 받지 않는 사람에게는 읽을 사람이 없다.
+   * 둘 다 소개팅을 켜는 날 그 자리에서 받는다.
+   */
+  const MEETUP_SKIPPED = ['preferredGender', 'letter'];
+  const requiredSteps = meetupOnly
+    ? allRequiredSteps.filter((s) => !MEETUP_SKIPPED.includes(s.key))
+    : allRequiredSteps;
 
   // 선택 스텝 — 가입 후 이성에게 더 잘 보이기 위해 채우는 항목. MY에서도 언제든 수정 가능.
   const optionalSteps: StepDef[] = [
@@ -381,7 +415,8 @@ export default function OnboardingScreen() {
         nickname: nickname.trim(),
         gender: gender!,
         birthDate: birthDate!,
-        preferredGender: preferredGender!,
+        // 모임으로 온 사람은 비운 채로 보낸다 — 이 빈칸이 곧 "소개는 아직"이라는 뜻이다.
+        preferredGender: meetupOnly ? null : preferredGender!,
         region: region.trim(),
         phone: phoneDigits,
         ...toProfilePayload(extra),
@@ -430,13 +465,25 @@ export default function OnboardingScreen() {
     if (!photosOk) { setSubmitting(false); return; }
     // 필수 문답 — 골라둔 질문에 남긴 답을 프로필 문답으로 올린다(계정은 이미 만들어진 뒤라서 여기서).
     try {
-      if (currentLetterQuestion) await writeLetter(currentLetterQuestion.questionId, letterDraft.trim());
+      if (!meetupOnly && currentLetterQuestion) await writeLetter(currentLetterQuestion.questionId, letterDraft.trim());
     } catch (e) {
       setSubmitting(false);
       Alert.alert('문답 저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       return;
     }
     setSubmitting(false);
+    // 방금 만든 회원을 세션 캐시에 알린다 — 잠겨 있던 탭들의 판단이 이 값 하나에 걸려 있다.
+    await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+    /*
+     * 모임으로 온 사람은 여기서 끝이다.
+     *
+     * 이어지는 '프로필 마저 채우기'는 키·취미·강점 — 이성에게 더 잘 보이기 위한 항목이라
+     * 소개를 받지 않는 사람에게는 권할 이유가 없다. 손들러 왔으니 모임으로 돌려보낸다.
+     */
+    if (meetupOnly) {
+      done();
+      return;
+    }
     setPhase('choice');
   }
 
@@ -445,7 +492,7 @@ export default function OnboardingScreen() {
     setSubmitting(true);
     const ok = await saveProfile();
     setSubmitting(false);
-    if (ok) router.replace('/discover');
+    if (ok) done();
   }
 
   function startOptional() {
@@ -493,7 +540,7 @@ export default function OnboardingScreen() {
             >
               <Text style={[styles.submitText, { color: c.primaryText }]}>프로필 마저 채우기</Text>
             </Pressable>
-            <Pressable onPress={() => router.replace('/discover')} hitSlop={8} style={styles.choiceLater}>
+            <Pressable onPress={done} hitSlop={8} style={styles.choiceLater}>
               <Text style={{ color: c.textSecondary, fontSize: 16 }}>나중에 할게요</Text>
             </Pressable>
           </View>

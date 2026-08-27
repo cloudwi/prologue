@@ -158,6 +158,8 @@ function Navigation() {
         <Stack.Screen name="my/invite" />
         <Stack.Screen name="my/guide" />
         <Stack.Screen name="my/withdraw" />
+        {/* 모임만 쓰던 회원이 소개팅을 켜는 자리 — 민감정보 동의를 여기서 받는다 */}
+        <Stack.Screen name="my/start-dating" />
         <Stack.Screen name="peer" />
         <Stack.Screen name="past-peers" />
         <Stack.Screen name="meetup/[id]" />

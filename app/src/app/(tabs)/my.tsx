@@ -25,6 +25,8 @@ import { ageFrom, nextStep } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
+import { SignupGate } from '@/components/signup-gate';
+import { useSession } from '@/lib/session';
 import { Skeleton } from '@/components/skeleton';
 
 /**
@@ -32,7 +34,35 @@ import { Skeleton } from '@/components/skeleton';
  * 편집은 전부 하위 화면으로 내려가고, 여기서는 대표 사진과 메뉴만 보여준다.
  * (예전에는 이 화면 자체가 거대한 편집 폼이라 기능을 더할 자리가 없었다)
  */
+/**
+ * MY의 문지기 — 손님만 돌려세운다.
+ *
+ * 소개팅이 꺼진 회원은 여기 들어와야 한다. 프로필도 모임 이력도 이 탭에 있고,
+ * 무엇보다 소개팅을 켜는 문이 여기 있기 때문이다(아래 '매칭' 구획).
+ */
 export default function MyScreen() {
+  const session = useSession();
+
+  if (session.loading) return null;
+
+  if (!session.signedIn) {
+    return (
+      <SignupGate
+        mode="guest"
+        icon="person-outline"
+        title={'가입하면\n내 자리가 생겨요'}
+        lines={[
+          '프로필과 모임 신청 내역이 여기 모여요.',
+          '모임은 가입하지 않아도 둘러볼 수 있어요.',
+        ]}
+      />
+    );
+  }
+
+  return <MyHub />;
+}
+
+function MyHub() {
   const c = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -97,6 +127,9 @@ export default function MyScreen() {
   async function logout() {
     resetAnalytics();
     await clearTokens();
+    // 캐시도 함께 비운다 — 남겨두면 다음 사람(또는 손님으로 돌아온 나)이 앞사람의 프로필과
+    // 편지함을 잠깐 보게 된다. 로그아웃은 화면을 끄는 게 아니라 지우는 일이다.
+    queryClient.clear();
     router.replace('/');
   }
 
@@ -130,8 +163,15 @@ export default function MyScreen() {
   }
 
   const photos = profile?.photoUrls ?? [];
+  // 선호 성별이 비어 있으면 아직 모임만 쓰는 회원이다 — 소개는 오가지 않는다.
+  const datingOff = profile != null && profile.preferredGender == null;
   const age = profile ? ageFrom(profile.birthDate) : null;
-  const todo = profile ? nextStep(profile) : null;
+  /*
+   * '다음 한 가지' 제안은 소개팅의 언어로 쓰여 있다("사진이 있어야 상대에게 소개돼요").
+   * 모임만 쓰는 회원에게는 오지도 않을 소개를 준비시키는 잔소리가 된다. 그 사람에게는
+   * 전화번호처럼 소개와 무관하게 필요한 것만 남긴다.
+   */
+  const todo = profile ? (datingOff ? (profile.phone ? null : nextStep(profile)) : nextStep(profile)) : null;
   const hasPhoto = photos.length > 0;
 
   return (
@@ -253,7 +293,21 @@ export default function MyScreen() {
         </Section>
 
         <Section title="매칭" c={c}>
-          <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
+          {/*
+           * 소개팅이 꺼진 회원(선호 성별이 빈 회원)에게 '선호하는 이성'은 열어도 소용없는 문이다.
+           * 그 자리에 켜는 문을 둔다 — 이 탭에서 소개팅으로 넘어가는 유일한 길이다.
+           */}
+          {datingOff ? (
+            <Row
+              label="소개팅 시작하기"
+              value="하루 한 문답으로 알아가는 소개를 받아요"
+              valueHighlight
+              onPress={() => router.push('/my/start-dating')}
+              c={c}
+            />
+          ) : (
+            <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
+          )}
           {/* 미인증이면 혜택을 말로 권한다 — 배지가 곧 모임에서의 신뢰다. */}
           <Row
             label="직장 인증"

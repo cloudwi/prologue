@@ -50,7 +50,11 @@ type AnalyticsEvent =
   | 'meetup_applied'         // 모임 신청
   | 'meetup_followed'        // 모임 따라가기 — 다음 회차 알림 신청(연속 참여 의사)
   | 'meetup_created'         // 모임 열기 — 유저가 모임장이 된 순간
-  | 'meetup_shared';         // 초대장 전하기 — 자리를 채우는 유일한 손
+  | 'meetup_shared'          // 초대장 전하기 — 자리를 채우는 유일한 손
+  // 두 단 가입(1.3) — 모임으로 들어와 소개팅으로 넘어가는 길
+  | 'guest_browsed'          // 가입 없이 모임 둘러보기 시작
+  | 'guest_signup_prompted'  // 손님이 잠긴 문을 두드림(가입 유도 노출)
+  | 'dating_enabled';        // 모임만 쓰던 회원이 소개팅을 켠 순간 — 이 퍼널의 결승선
 
 export function track(event: AnalyticsEvent, properties?: Record<string, string | number | boolean>) {
   client?.capture(event, properties);
