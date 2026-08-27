@@ -119,7 +119,19 @@ import { API_BASE, SITE_URL } from '../lib/site';
                 <label class="field"><span>날짜 *</span><input id="f-date" type="date" /></label>
                 <label class="field"><span>시간 *</span><input id="f-time" type="time" step="900" /></label>
               </div>
-              <label class="field"><span>주소</span><input id="f-address" placeholder="서울 서초구 언남길 49" /></label>
+              <!--
+                주소는 손으로 적게 두지 않는다. 초대장의 지도와 길찾기가 이 문자열 하나에
+                걸려 있어서, 한 글자만 어긋나도 손님이 엉뚱한 데로 간다. 우편번호 서비스로
+                고르면 도로명이 표준 표기로 들어온다. 그래도 칸은 잠그지 않았다 —
+                신축이라 검색에 안 잡히는 자리가 있다.
+              -->
+              <div class="field">
+                <span>주소 <em>찾아서 고르면 초대장의 길찾기가 정확해져요</em></span>
+                <div class="addr-row">
+                  <input id="f-address" placeholder="서울 서초구 언남길 49" />
+                  <button type="button" class="chip addr-find" id="findAddr">주소 찾기</button>
+                </div>
+              </div>
               <label class="field"><span>장소 이름 * <em>건물·층·가게까지</em></span><input id="f-place" maxlength="120" placeholder="1층 파란지붕 서로서가" /></label>
               <label class="field"><span>정원 * <em>2~100명</em></span><input id="f-capacity" type="number" min="2" max="100" value="8" /></label>
               <label class="field"><span>오픈채팅 링크 * <em>신청한 사람에게만 보여요</em></span><input id="f-kakao" placeholder="https://open.kakao.com/o/..." /></label>
@@ -281,6 +293,17 @@ import { API_BASE, SITE_URL } from '../lib/site';
           </div>
           <p class="device-note" id="phoneNote"></p>
         </div>
+      </div>
+    </div>
+
+    <!-- 주소 검색 — 팝업 창은 차단당하는 자리가 있어 콘솔 위에 겹쳐 띄운다. -->
+    <div class="addr-layer" id="addrLayer" hidden>
+      <div class="addr-panel">
+        <div class="addr-panel-head">
+          <b>주소 찾기</b>
+          <button type="button" class="chip" id="closeAddr">닫기</button>
+        </div>
+        <div class="addr-embed" id="addrEmbed"></div>
       </div>
     </div>
   </section>
@@ -1238,6 +1261,63 @@ import { API_BASE, SITE_URL } from '../lib/site';
     uploadCovers([...(e.dataTransfer?.files ?? [])]);
   });
 
+  /**
+   * 주소 찾기 — 다음(카카오) 우편번호 서비스.
+   *
+   * 키도 가입도 필요 없고 국내에서 가장 널리 쓰이는 물건이라, 모임장이 이미 다른 데서
+   * 본 적 있는 화면이 뜬다. 처음 누를 때 내려받는다 — 콘솔에 들어온 사람 대부분은
+   * 목록만 보고 나가는데, 그들에게 검색 스크립트 값을 물릴 이유가 없다.
+   */
+  function loadPostcode() {
+    if (window.daum && window.daum.Postcode) return Promise.resolve();
+    if (!loadPostcode.pending) {
+      loadPostcode.pending = new Promise((ok, fail) => {
+        const el = document.createElement('script');
+        el.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+        el.onload = ok;
+        el.onerror = () => { loadPostcode.pending = null; fail(new Error('주소 검색을 불러오지 못했어요. 직접 적어주세요.')); };
+        document.head.appendChild(el);
+      });
+    }
+    return loadPostcode.pending;
+  }
+
+  function closeAddrLayer() {
+    $('addrLayer').hidden = true;
+    $('addrEmbed').innerHTML = '';
+  }
+
+  $('closeAddr').onclick = closeAddrLayer;
+  $('addrLayer').onclick = (e) => { if (e.target === $('addrLayer')) closeAddrLayer(); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('addrLayer').hidden) closeAddrLayer(); });
+
+  $('findAddr').onclick = async () => {
+    try {
+      await loadPostcode();
+    } catch (err) { return say(err.message, true); }
+    $('addrLayer').hidden = false;
+    // embed는 그릴 자리의 크기를 보고 조판하므로, 창을 먼저 띄운 뒤에 심는다.
+    new window.daum.Postcode({
+      width: '100%',
+      height: '100%',
+      oncomplete: (data) => {
+        // 도로명이 원칙이다. 도로명이 아직 없는 자리에만 지번으로 물러선다.
+        $('f-address').value = data.roadAddress || data.jibunAddress || data.address || '';
+        $('f-address').dispatchEvent(new Event('input', { bubbles: true }));
+        closeAddrLayer();
+        // 건물 이름은 장소 이름의 초안이 된다 — 비어 있을 때만. 적어둔 것을 덮지 않는다.
+        const place = $('f-place');
+        if (!place.value.trim() && data.buildingName) {
+          place.value = data.buildingName;
+          place.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        // 주소 다음에 적을 것은 늘 "몇 층 어느 가게"다. 거기로 커서를 옮겨준다.
+        place.focus();
+        say('주소를 넣었어요. 건물·층·가게는 장소 이름에 적어주세요.');
+      },
+    }).embed($('addrEmbed'), { autoClose: false });
+  };
+
   $('saveBtn').onclick = async () => {
     const d = draftFromForm();
     if (!$('f-title').value.trim() || !$('f-date').value || !$('f-time').value || !$('f-place').value.trim() || !$('f-kakao').value.trim()) {
@@ -1391,6 +1471,40 @@ import { API_BASE, SITE_URL } from '../lib/site';
     transition: color 0.15s ease, border-color 0.15s ease;
   }
   .console .chip:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* 주소 칸 — 입력과 '주소 찾기'를 한 줄에. 좁아지면 버튼이 아래로 내려간다. */
+  .console .addr-row { display: flex; gap: 8px; align-items: stretch; }
+  .console .addr-row input { flex: 1 1 auto; min-width: 0; }
+  .console .addr-find { flex: 0 0 auto; padding-inline: 16px; white-space: nowrap; }
+  @media (max-width: 520px) {
+    .console .addr-row { flex-wrap: wrap; }
+    .console .addr-find { width: 100%; padding-block: 10px; }
+  }
+
+  /* 우편번호 창 — 콘솔 위에 겹친다. */
+  .addr-layer {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: color-mix(in srgb, var(--ink) 42%, transparent);
+  }
+  .addr-layer[hidden] { display: none; }
+  .addr-panel {
+    width: min(480px, 100%); max-height: min(620px, 100%);
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--paper); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 24px 60px color-mix(in srgb, var(--ink) 24%, transparent);
+  }
+  .addr-panel-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+  }
+  .addr-panel-head b { font-size: 0.95rem; }
+  /*
+    높이를 확정값으로 준다. 우편번호 위젯의 iframe은 height:100%로 들어오는데,
+    부모가 flex의 min-height뿐이면 그 퍼센트가 0으로 풀려 창이 텅 빈 채로 뜬다.
+  */
+  .addr-embed { height: min(460px, 60vh); }
+  .addr-embed iframe { display: block; width: 100%; height: 100%; border: 0; }
   .console .editor textarea { min-height: 220px; line-height: 1.8; resize: vertical; }
   .console .editor textarea.on { border-color: var(--terracotta); background: var(--paper); }
   .console .editor-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
