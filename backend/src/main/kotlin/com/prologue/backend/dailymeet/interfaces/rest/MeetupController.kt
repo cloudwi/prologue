@@ -11,6 +11,7 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -100,11 +101,19 @@ class MeetupController(
 
     data class CreateMeetupResponse(val meetupId: String)
 
-    /** 다가오는 모임 — 가까운 날짜순. 내 신청 상태와 (신청자에게만) 카카오 링크가 담긴다. */
+    /**
+     * 다가오는 모임 — 가까운 날짜순. 내 신청 상태와 (신청자에게만) 카카오 링크가 담긴다.
+     *
+     * **로그인 없이도 답한다.** 모임은 이 앱에서 유일하게 문 밖에서 들여다볼 수 있는 방이다 —
+     * 어떤 자리가 열려 있는지 보고 나서 가입할지 정하게 하려는 것이다. 손을 들려면 그때 가입한다.
+     */
     @GetMapping
-    fun upcoming(authentication: Authentication): MeetupsResponse {
-        val accountId = UUID.fromString(authentication.name)
-        return MeetupsResponse(meetupService.upcoming(accountId), canCreate = meetupService.canHost(accountId))
+    fun upcoming(authentication: Authentication?): MeetupsResponse {
+        val accountId = accountIdOrNull(authentication)
+        return MeetupsResponse(
+            meetupService.upcoming(accountId),
+            canCreate = accountId != null && meetupService.canHost(accountId),
+        )
     }
 
     /** 지난 모임 — 개최 완료 기록. 모임이 얼마나 잘 굴러가는지의 공개 신호. */
@@ -260,6 +269,17 @@ class MeetupController(
     fun cancelHosting(authentication: Authentication, @PathVariable meetupId: String) {
         meetupService.cancelMeetup(UUID.fromString(authentication.name), parseId(meetupId))
     }
+
+    /**
+     * 인증에서 계정을 꺼낸다. 손님이면 null.
+     *
+     * 스프링은 인증이 없는 요청에도 익명 토큰을 채워 넣는다 — 이름이 "anonymousUser"라
+     * 그대로 UUID로 읽으면 터진다. 문을 열어둔 자리에서는 반드시 이 문을 통해 꺼낸다.
+     */
+    private fun accountIdOrNull(authentication: Authentication?): UUID? =
+        authentication
+            ?.takeIf { it.isAuthenticated && it !is AnonymousAuthenticationToken }
+            ?.let { runCatching { UUID.fromString(it.name) }.getOrNull() }
 
     private fun parseId(raw: String): UUID = try {
         UUID.fromString(raw)

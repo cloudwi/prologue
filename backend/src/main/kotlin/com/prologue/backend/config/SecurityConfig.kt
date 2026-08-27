@@ -4,6 +4,7 @@ import com.prologue.backend.auth.infrastructure.jwt.JwtAuthenticationFilter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -46,6 +47,9 @@ class SecurityConfig(
                 it.requestMatchers("/error").permitAll()
                 it.requestMatchers("/auth/**", "/actuator/health", "/app-config").permitAll()
                 it.requestMatchers("/m/*").permitAll()
+                // 모임 목록·지난 모임은 가입 전에도 읽힌다. 읽기만이고, 손드는 건 여전히 회원의 일이다.
+                // 참가자 프로필(/meetups/members/*)은 열지 않는다 — 사진과 나이는 아무나 볼 것이 아니다.
+                it.requestMatchers(HttpMethod.GET, "/meetups", "/meetups/history").permitAll()
                 it.requestMatchers("/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
             }

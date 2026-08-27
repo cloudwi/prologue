@@ -248,13 +248,20 @@ class MeetupService(
 
     // ── 회원(앱) ──
 
-    /** 다가오는 모임 — 가까운 날짜순. */
+    /**
+     * 다가오는 모임 — 가까운 날짜순.
+     *
+     * [accountId]가 없으면 아직 가입하지 않은 사람이 보는 것이다. 모임이 어떤 자리인지는
+     * 문 앞에서도 보여야 하니 목록은 그대로 그리고, 그 사람에게 매인 것만 비운다 —
+     * 내 신청 상태도, 따라가기도, 오픈채팅 링크도 없다. 링크는 손든 사람의 것이라 특히 그렇다.
+     */
     @Transactional(readOnly = true)
-    fun upcoming(accountId: UUID): List<MeetupView> {
+    fun upcoming(accountId: UUID?): List<MeetupView> {
         val meetups = meetupRepository.findUpcoming(Instant.now())
-        val mine = applicationRepository.findAllByApplicant(accountId).associateBy { it.meetupId }
+        val mine = accountId?.let { applicationRepository.findAllByApplicant(it).associateBy { a -> a.meetupId } }
+            ?: emptyMap()
         // 목록이 모임 수만큼 되묻지 않도록 한 번에 읽는다.
-        val followed = followRepository.findSeriesIdsByAccount(accountId)
+        val followed = accountId?.let { followRepository.findSeriesIdsByAccount(it) } ?: emptySet()
         val seriesCounts = mutableMapOf<UUID, List<Meetup>>()
         return meetups.map { m ->
             val siblings = seriesCounts.getOrPut(m.seriesId) { meetupRepository.findAllBySeries(m.seriesId) }
@@ -298,7 +305,7 @@ class MeetupService(
                     )
                 },
                 hostAccountId = m.hostAccountId,
-                isMine = m.hostAccountId == accountId,
+                isMine = accountId != null && m.hostAccountId == accountId,
                 seriesId = m.seriesId,
                 occurrence = siblings.indexOfFirst { it.id == m.id }.let { if (it < 0) siblings.size else it } + 1,
                 occurrenceTotal = maxOf(siblings.size, 1),
