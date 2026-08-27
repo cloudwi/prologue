@@ -39,6 +39,16 @@ class SecurityConfig(
             .httpBasic { it.disable() }
             .formLogin { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            /*
+             * 프레임 삽입은 같은 출처에만 허용한다.
+             *
+             * 스프링 기본값은 DENY다 — 클릭재킹을 막으려고 어떤 페이지에서도 iframe에 못 들어가게 한다.
+             * 그런데 모임장 콘솔(prologue.day/host)은 오른쪽 폰 화면에 진짜 초대장(prologue.day/m/{id})을
+             * 그대로 끼워 보여준다. 흉내낸 그림이 아니라 참여자가 보는 바로 그 페이지여야 의미가 있어서다.
+             * 둘은 같은 출처라 SAMEORIGIN이면 그 화면만 살아나고, 남의 사이트가 우리 페이지를 덮어씌우는
+             * 길은 그대로 닫혀 있다.
+             */
+            .headers { headers -> headers.frameOptions { it.sameOrigin() } }
             .authorizeHttpRequests {
                 // /error를 열어두는 건 편의가 아니라 정확성 문제다. 없는 주소로 404가 나면 스프링은
                 // /error로 포워드하는데, 그 디스패치에서는 JWT 필터가 다시 돌지 않는다(OncePerRequestFilter
