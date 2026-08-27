@@ -71,6 +71,14 @@ class MeetupController(
         @field:Min(value = 2, message = "정원은 2명 이상이어야 해요")
         @field:Max(value = 100, message = "정원은 100명까지예요")
         val capacity: Int,
+        /**
+         * 성별로 나눈 정원(선택). 둘 다 보내거나 둘 다 보내지 않는다 — 합이 [capacity]와 같아야 한다.
+         * 옛 앱은 보내지 않으므로 나누지 않은 모임이 된다(가산적 변경).
+         */
+        val capacityMale: Int? = null,
+        val capacityFemale: Int? = null,
+        /** 확정을 기다리는 줄의 길이(선택). null이면 제한 없음. */
+        val waitlistCapacity: Int? = null,
         @field:Min(value = 0, message = "참가비는 0원 이상이어야 해요")
         val fee: Int = 0,
         /** 여성 참가비 — 성별에 따라 값을 달리 받는 모임. null이면 fee(공통). */
@@ -174,6 +182,9 @@ class MeetupController(
             placeUrl = request.placeUrl,
             placeAddress = request.placeAddress,
             capacity = request.capacity,
+            capacityMale = request.capacityMale,
+            capacityFemale = request.capacityFemale,
+            waitlistCapacity = request.waitlistCapacity,
             fee = request.fee,
             feeFemale = request.feeFemale,
             genderLimit = request.genderLimit,
@@ -216,6 +227,9 @@ class MeetupController(
             placeUrl = request.placeUrl,
             placeAddress = request.placeAddress,
             capacity = request.capacity,
+            capacityMale = request.capacityMale,
+            capacityFemale = request.capacityFemale,
+            waitlistCapacity = request.waitlistCapacity,
             fee = request.fee,
             feeFemale = request.feeFemale,
             genderLimit = request.genderLimit,

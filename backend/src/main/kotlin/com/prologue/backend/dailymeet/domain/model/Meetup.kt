@@ -34,6 +34,19 @@ class Meetup private constructor(
     /** 도로명 주소(주소 검색 결과) — 네이버·카카오 지도 링크의 원료. */
     val placeAddress: String?,
     val capacity: Int,
+    /**
+     * 성별로 나눈 정원. 둘 다 있거나 둘 다 없다 — 한쪽만 정한 자리는 나눈 것도 안 나눈 것도 아니다.
+     * 나눈 모임에서는 [capacity]가 두 값의 합이다.
+     */
+    val capacityMale: Int?,
+    val capacityFemale: Int?,
+    /**
+     * 확정을 기다리는 줄의 길이. null이면 제한 없음.
+     *
+     * 여덟 자리에 마흔 명이 손을 들면 서른두 명은 언젠가 거절당할 사람이다. 그걸 알면서 계속
+     * 받는 건 기다리게 하는 것이 아니라 속이는 것에 가깝다.
+     */
+    val waitlistCapacity: Int?,
     val fee: Int,
     /** 여성 참가비 — null이면 fee(공통)와 동일. 성별에 따라 값을 달리 받는 모임이 흔해서. */
     val feeFemale: Int?,
@@ -101,6 +114,50 @@ class Meetup private constructor(
     /** 지금 신청을 받을 수 있는지. */
     fun isOpen(): Boolean = status == MeetupStatus.OPEN
 
+    /** 성별로 자리를 나눈 모임인지. */
+    fun hasSplitSeats(): Boolean = capacityMale != null && capacityFemale != null
+
+    /** [gender] 자리의 정원. 나누지 않았으면 통합 정원을 돌려준다. */
+    fun seatsFor(gender: String?): Int = when {
+        !hasSplitSeats() -> capacity
+        gender == "MALE" -> capacityMale!!
+        gender == "FEMALE" -> capacityFemale!!
+        // 성별을 모르는 회원(옛 데이터)은 나눈 자리에 앉힐 수 없다.
+        else -> 0
+    }
+
+    /**
+     * 손을 들 수 있는지 — 대기 줄이 아직 남았는가.
+     *
+     * [waiting]은 지금 확정을 기다리는 사람 수다. 신청은 별개 애그리거트라 도메인이 셀 수 없어
+     * 세어서 넘긴다([complete]와 같은 방식).
+     */
+    fun checkCanApply(waiting: Int) {
+        if (waitlistCapacity == null) return
+        if (waiting >= waitlistCapacity) {
+            throw DailyMeetException("신청이 많아 대기가 가득 찼어요. 다음 회차를 기다려주세요.")
+        }
+    }
+
+    /**
+     * 확정할 수 있는지 — 그 자리가 아직 남았는가.
+     *
+     * 지금까지 확정에는 정원 검사가 아예 없었다. 여덟 자리 모임에 스무 명을 확정해도 서버는
+     * 아무 말도 하지 않았고, 넘친 사실은 당일 현장에서 드러났다.
+     *
+     * [confirmedInSameSeat]은 같은 자리(나눈 모임이면 같은 성별)에 이미 확정된 사람 수다.
+     */
+    fun checkCanConfirm(confirmedInSameSeat: Int, gender: String?) {
+        val seats = seatsFor(gender)
+        if (hasSplitSeats() && seats == 0) {
+            throw DailyMeetException("이 모임은 성별로 자리를 나눠 받아요. 프로필에 성별이 없는 분은 확정할 수 없어요.")
+        }
+        if (confirmedInSameSeat >= seats) {
+            val where = if (hasSplitSeats()) (if (gender == "MALE") "남성 자리가" else "여성 자리가") else "자리가"
+            throw DailyMeetException("$where 모두 찼어요. 정원을 늘리거나 다른 분의 확정을 취소해주세요.")
+        }
+    }
+
     companion object {
         private const val TITLE_MAX = 80
         private const val DESCRIPTION_MAX = 1000
@@ -109,6 +166,9 @@ class Meetup private constructor(
         private const val CAPACITY_MIN = 2
         private const val CAPACITY_MAX = 100
         private const val COVER_MAX = 5
+
+        /** 대기 줄의 최대 길이 — 이보다 길면 기다림이 아니라 방치다. */
+        private const val WAITLIST_MAX = 200
 
         fun create(
             hostAccountId: UUID,
@@ -119,6 +179,9 @@ class Meetup private constructor(
             placeUrl: String?,
             placeAddress: String?,
             capacity: Int,
+            capacityMale: Int? = null,
+            capacityFemale: Int? = null,
+            waitlistCapacity: Int? = null,
             fee: Int,
             feeFemale: Int?,
             genderLimit: String?,
@@ -146,6 +209,7 @@ class Meetup private constructor(
             val cleanDescription = description?.trim()?.ifBlank { null }
             if ((cleanDescription?.length ?: 0) > DESCRIPTION_MAX) throw DailyMeetException("소개는 ${DESCRIPTION_MAX}자 이하여야 해요")
             if (capacity < CAPACITY_MIN || capacity > CAPACITY_MAX) throw DailyMeetException("정원은 ${CAPACITY_MIN}~${CAPACITY_MAX}명이어야 해요")
+            validateSeats(capacity, capacityMale, capacityFemale, waitlistCapacity)
             if (fee < 0) throw DailyMeetException("참가비가 올바르지 않아요")
             if (feeFemale != null && feeFemale < 0) throw DailyMeetException("여성 참가비가 올바르지 않아요")
             if (genderLimit != null && genderLimit != "MALE" && genderLimit != "FEMALE") {
@@ -177,7 +241,7 @@ class Meetup private constructor(
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
                 null, seriesId ?: UUID.randomUUID(), hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl, cleanPlaceAddress,
-                capacity, fee, feeFemale, genderLimit,
+                capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanLink, MeetupStatus.OPEN, now,
             )
@@ -196,6 +260,9 @@ class Meetup private constructor(
             placeUrl: String?,
             placeAddress: String?,
             capacity: Int,
+            capacityMale: Int? = null,
+            capacityFemale: Int? = null,
+            waitlistCapacity: Int? = null,
             fee: Int,
             feeFemale: Int?,
             genderLimit: String?,
@@ -216,15 +283,16 @@ class Meetup private constructor(
             }
             val fresh = create(
                 existing.hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
-                capacity, fee, feeFemale, genderLimit,
+                capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, kakaoLink,
             )
             return Meetup(
                 // 수정은 회차를 옮기지 않는다 — 회차를 잇는 건 '다시 열기'뿐이다.
                 existing.id, existing.seriesId, existing.hostAccountId, fresh.title, fresh.description, fresh.meetAt,
-                fresh.place, fresh.placeUrl, fresh.placeAddress, fresh.capacity, fresh.fee,
-                fresh.feeFemale, fresh.genderLimit,
+                fresh.place, fresh.placeUrl, fresh.placeAddress,
+                fresh.capacity, fresh.capacityMale, fresh.capacityFemale, fresh.waitlistCapacity,
+                fresh.fee, fresh.feeFemale, fresh.genderLimit,
                 fresh.minAgeMale, fresh.maxAgeMale, fresh.minAgeFemale, fresh.maxAgeFemale,
                 fresh.minHeightMaleCm, fresh.minHeightFemaleCm,
                 fresh.requireJobVerified, fresh.emoji, fresh.color, fresh.coverUrls,
@@ -243,6 +311,9 @@ class Meetup private constructor(
             placeUrl: String?,
             placeAddress: String?,
             capacity: Int,
+            capacityMale: Int? = null,
+            capacityFemale: Int? = null,
+            waitlistCapacity: Int? = null,
             fee: Int,
             feeFemale: Int?,
             genderLimit: String?,
@@ -260,11 +331,30 @@ class Meetup private constructor(
             status: MeetupStatus,
             createdAt: Instant,
         ): Meetup = Meetup(
-            id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity, fee,
-            feeFemale, genderLimit,
+            id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
+            capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
             requireJobVerified, emoji, color, coverUrls, kakaoLink, status, createdAt,
         )
+
+        /**
+         * 나눈 자리와 대기 줄의 규칙.
+         *
+         * 한쪽만 정한 정원은 받지 않는다 — "남 4명, 여자는 몇 명이든"은 정원이 아니라 소원이다.
+         * 나눴다면 합이 곧 전체 정원이어야 한다. 둘이 어긋나면 어느 쪽을 믿을지 정할 수 없다.
+         */
+        private fun validateSeats(capacity: Int, male: Int?, female: Int?, waitlist: Int?) {
+            if ((male == null) != (female == null)) {
+                throw DailyMeetException("성별로 나눈 정원은 남성·여성 모두 정해야 해요")
+            }
+            if (male != null && female != null) {
+                if (male < 0 || female < 0) throw DailyMeetException("정원은 0명 이상이어야 해요")
+                if (male + female != capacity) throw DailyMeetException("남성·여성 정원의 합이 전체 정원과 달라요")
+            }
+            if (waitlist != null && (waitlist < 0 || waitlist > WAITLIST_MAX)) {
+                throw DailyMeetException("대기 인원은 0~${WAITLIST_MAX}명으로 정할 수 있어요")
+            }
+        }
 
         private fun validateConditions(minAge: Int?, maxAge: Int?, minHeightCm: Int?) {
             if (minAge != null && minAge < 19) throw DailyMeetException("나이 제한은 19세부터예요")

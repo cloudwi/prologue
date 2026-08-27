@@ -27,6 +27,9 @@ data class MeetupView(
     val placeUrl: String?,
     val placeAddress: String?,
     val capacity: Int,
+    /** 성별로 나눈 정원 — null이면 나누지 않은 모임(통합 정원). */
+    val capacityMale: Int?,
+    val capacityFemale: Int?,
     val fee: Int,
     /** 여성 참가비 — null이면 fee와 동일. */
     val feeFemale: Int?,
@@ -165,6 +168,10 @@ data class HostMeetupView(
     val placeUrl: String?,
     val placeAddress: String?,
     val capacity: Int,
+    val capacityMale: Int?,
+    val capacityFemale: Int?,
+    /** 확정을 기다리는 줄의 길이 — null이면 제한 없음. */
+    val waitlistCapacity: Int?,
     val fee: Int,
     val feeFemale: Int?,
     val genderLimit: String?,
@@ -277,6 +284,8 @@ class MeetupService(
                 placeUrl = m.placeUrl,
                 placeAddress = m.placeAddress,
                 capacity = m.capacity,
+                capacityMale = m.capacityMale,
+                capacityFemale = m.capacityFemale,
                 fee = m.fee,
                 feeFemale = m.feeFemale,
                 genderLimit = m.genderLimit,
@@ -428,6 +437,13 @@ class MeetupService(
         if (meetup.hostAccountId == accountId) throw DailyMeetException("내가 여는 모임이에요")
         checkConditions(meetup, accountId)
         val existing = applicationRepository.findByMeetupAndApplicant(meetupId, accountId)
+        // 새로 손드는 사람만 대기 줄 검사를 받는다 — 이미 줄에 서 있던 사람이 다시 누른 것까지
+        // 막으면, 취소했다 마음을 돌린 사람이 제 자리로 돌아오지 못한다.
+        if (existing == null || existing.status == MeetupApplicationStatus.CANCELED) {
+            val waiting = applicationRepository.findAllByMeetup(meetupId)
+                .count { it.status == MeetupApplicationStatus.APPLIED }
+            meetup.checkCanApply(waiting)
+        }
         if (existing == null) {
             applicationRepository.save(MeetupApplication.apply(meetupId, accountId))
         } else {
@@ -463,6 +479,9 @@ class MeetupService(
         placeUrl: String?,
         placeAddress: String?,
         capacity: Int,
+        capacityMale: Int? = null,
+        capacityFemale: Int? = null,
+        waitlistCapacity: Int? = null,
         fee: Int,
         feeFemale: Int?,
         genderLimit: String?,
@@ -490,8 +509,8 @@ class MeetupService(
         }
         val saved = meetupRepository.save(
             Meetup.create(
-                hostAccountId, title, description, meetAt, place, placeUrl, placeAddress, capacity,
-                fee, feeFemale, genderLimit,
+                hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
+                capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, kakaoLink, seriesId,
             ),
@@ -517,6 +536,9 @@ class MeetupService(
         placeUrl: String?,
         placeAddress: String?,
         capacity: Int,
+        capacityMale: Int? = null,
+        capacityFemale: Int? = null,
+        waitlistCapacity: Int? = null,
         fee: Int,
         feeFemale: Int?,
         genderLimit: String?,
@@ -536,7 +558,7 @@ class MeetupService(
         meetupRepository.save(
             Meetup.update(
                 existing, title, description, meetAt, place, placeUrl, placeAddress,
-                capacity, fee, feeFemale, genderLimit,
+                capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, kakaoLink,
             ),
@@ -589,6 +611,9 @@ class MeetupService(
                 placeUrl = m.placeUrl,
                 placeAddress = m.placeAddress,
                 capacity = m.capacity,
+                capacityMale = m.capacityMale,
+                capacityFemale = m.capacityFemale,
+                waitlistCapacity = m.waitlistCapacity,
                 fee = m.fee,
                 feeFemale = m.feeFemale,
                 genderLimit = m.genderLimit,
@@ -626,6 +651,15 @@ class MeetupService(
     @Transactional
     fun confirmApplication(hostAccountId: UUID, applicationId: UUID) {
         val (meetup, application) = ownedApplication(hostAccountId, applicationId)
+        // 같은 자리에 이미 앉은 사람을 센다. 나눈 모임이면 같은 성별만, 아니면 전부.
+        val gender = memberQueryService.findProfile(application.applicantAccountId)?.gender?.name
+        val takenInSameSeat = applicationRepository.findAllByMeetup(application.meetupId)
+            .filter { it.status == MeetupApplicationStatus.CONFIRMED && it.id != application.id }
+            .count { app ->
+                !meetup.hasSplitSeats() ||
+                    memberQueryService.findProfile(app.applicantAccountId)?.gender?.name == gender
+            }
+        meetup.checkCanConfirm(takenInSameSeat, gender)
         application.confirm()
         applicationRepository.save(application)
         notificationService.meetupConfirmed(application.applicantAccountId, meetup.title)

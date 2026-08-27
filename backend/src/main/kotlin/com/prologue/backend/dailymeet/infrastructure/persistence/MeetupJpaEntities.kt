@@ -49,6 +49,17 @@ class MeetupJpaEntity(
     @Column(name = "capacity", nullable = false)
     val capacity: Int,
 
+    /** 성별로 나눈 정원. 둘 다 null이면 나누지 않은 모임. */
+    @Column(name = "capacity_male")
+    val capacityMale: Int? = null,
+
+    @Column(name = "capacity_female")
+    val capacityFemale: Int? = null,
+
+    /** 확정 대기(신청) 인원 상한. null이면 제한 없음. */
+    @Column(name = "waitlist_capacity")
+    val waitlistCapacity: Int? = null,
+
     @Column(name = "fee", nullable = false)
     val fee: Int,
 
