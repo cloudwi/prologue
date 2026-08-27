@@ -18,7 +18,7 @@ class Member private constructor(
     nickname: String,
     gender: Gender,
     birthDate: LocalDate,
-    preferredGender: Gender,
+    preferredGender: Gender?,
     region: String,
     val createdAt: Instant,
     bio: String?,
@@ -38,7 +38,7 @@ class Member private constructor(
         private set
     var birthDate: LocalDate = birthDate
         private set
-    var preferredGender: Gender = preferredGender
+    var preferredGender: Gender? = preferredGender
         private set
     var region: String = region
         private set
@@ -115,7 +115,7 @@ class Member private constructor(
         nickname: String,
         gender: Gender,
         birthDate: LocalDate,
-        preferredGender: Gender,
+        preferredGender: Gender?,
         region: String,
         phone: String,
         bio: String? = null,
@@ -171,7 +171,7 @@ class Member private constructor(
             nickname: String,
             gender: Gender,
             birthDate: LocalDate,
-            preferredGender: Gender,
+            preferredGender: Gender?,
             region: String,
             phone: String,
             bio: String? = null,
@@ -208,7 +208,7 @@ class Member private constructor(
             nickname: String,
             gender: Gender,
             birthDate: LocalDate,
-            preferredGender: Gender,
+            preferredGender: Gender?,
             region: String,
             createdAt: Instant,
             bio: String? = null,

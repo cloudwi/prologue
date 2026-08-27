@@ -21,9 +21,17 @@ object PeerEligibility {
             hasEnoughPhotos(peer) &&
             !alreadyMetBefore(peer, alreadyMet)
 
-    /** 나는 상대의 성별을 원하고 상대도 내 성별을 원해야 한다 — 한쪽만이면 소개가 아니라 강요다. */
+    /**
+     * 나는 상대의 성별을 원하고 상대도 내 성별을 원해야 한다 — 한쪽만이면 소개가 아니라 강요다.
+     *
+     * 선호 성별이 비어 있으면 이 식은 저절로 거짓이 된다. 그게 모임만 하러 온 사람이 소개에서
+     * 빠지는 방식이다 — 따로 플래그를 두지 않는다. 원하는 바가 없으면 오가지 않는다.
+     */
     private fun prefersEachOther(me: Member, peer: Member): Boolean =
-        peer.gender == me.preferredGender && peer.preferredGender == me.gender
+        me.preferredGender != null &&
+            peer.preferredGender != null &&
+            peer.gender == me.preferredGender &&
+            peer.preferredGender == me.gender
 
     /** 사진 없는 프로필은 소개하지 않는다. MY 탭이 "사진이 있어야 소개돼요"라고 약속한 그 기준. */
     private fun hasEnoughPhotos(peer: Member): Boolean = peer.isVisibleToOthers()

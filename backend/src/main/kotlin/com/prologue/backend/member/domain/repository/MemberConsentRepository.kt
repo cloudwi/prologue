@@ -9,4 +9,7 @@ interface MemberConsentRepository {
 
     /** 해당 계정에 남은 동의 기록이 있는지. 가입 시 한 번만 남기기 위한 확인. */
     fun existsByAccountId(accountId: UUID): Boolean
+
+    /** 민감정보(선호 성별)에 동의한 기록이 이미 있는지. 소개팅을 켤 때 한 번만 더 쌓기 위한 확인. */
+    fun sensitiveAgreedByAccountId(accountId: UUID): Boolean
 }

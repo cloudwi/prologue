@@ -67,7 +67,7 @@ class OnboardingController(
                 nickname = request.nickname,
                 gender = request.gender!!,
                 birthDate = request.birthDate!!,
-                preferredGender = request.preferredGender!!,
+                preferredGender = request.preferredGender,
                 region = request.region,
                 phone = request.phone,
                 kakaoId = request.kakaoId,

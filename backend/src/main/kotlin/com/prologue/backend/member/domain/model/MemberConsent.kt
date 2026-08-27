@@ -18,7 +18,7 @@ class MemberConsent private constructor(
     val terms: Boolean,
     val privacy: Boolean,
     val age: Boolean,
-    /** 선호 성별은 성적 지향을 드러내므로 민감정보(23조) — 별도로 받은 동의. */
+    /** 선호 성별은 성적 지향을 드러내므로 민감정보(23조) — 소개팅을 켤 때 별도로 받는다. */
     val sensitive: Boolean,
     /** 유일한 선택 항목. 거부해도 가입은 된다(16조 3항). */
     val marketing: Boolean,
@@ -37,7 +37,11 @@ class MemberConsent private constructor(
         ): MemberConsent {
             require(legalVersion.isNotBlank()) { "약관 버전이 비어 있습니다" }
             // 필수 항목이 빠진 동의는 기록으로 남길 이유가 없다 — 그 상태로는 가입이 성립하지 않는다.
-            if (!terms || !privacy || !age || !sensitive) {
+            //
+            // 민감정보(선호 성별)는 여기에 없다. 모임만 하러 온 사람에게는 선호 성별을 묻지 않으므로,
+            // 받지도 않은 정보에 동의를 요구하는 꼴이 된다. 최소수집 원칙이 그렇게 말한다 —
+            // 이 동의는 소개팅을 켜는 순간 별도 기록으로 쌓인다.
+            if (!terms || !privacy || !age) {
                 throw MemberDomainException("필수 항목에 모두 동의해야 가입할 수 있어요")
             }
             return MemberConsent(

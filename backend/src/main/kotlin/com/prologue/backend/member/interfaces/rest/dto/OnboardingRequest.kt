@@ -19,8 +19,13 @@ data class OnboardingRequest(
     @field:Past(message = "생년월일이 올바르지 않습니다")
     val birthDate: LocalDate?,
 
-    @field:NotNull(message = "선호 성별은 필수입니다")
-    val preferredGender: Gender?,
+    /**
+     * 선호 성별. 소개팅을 쓰는 사람만 채운다 — 모임만 하러 온 사람에게는 물을 이유가 없다.
+     *
+     * 비워 두면 소개에서 빠진다(PeerEligibility). 나중에 마이 탭에서 채우면 그때부터 소개가 시작된다.
+     * 민감정보라 값이 있을 때만 별도 동의를 요구한다(OnboardingService).
+     */
+    val preferredGender: Gender? = null,
 
     @field:NotBlank(message = "지역은 필수입니다")
     val region: String,

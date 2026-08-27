@@ -31,8 +31,8 @@ class MemberJpaEntity(
     var birthDate: LocalDate,
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "preferred_gender", nullable = false, length = 10)
-    var preferredGender: Gender,
+    @Column(name = "preferred_gender", length = 10)
+    var preferredGender: Gender?,
 
     @Column(name = "region", nullable = false, length = 50)
     var region: String,

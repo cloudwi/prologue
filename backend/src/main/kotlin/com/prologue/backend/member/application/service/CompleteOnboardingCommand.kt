@@ -11,7 +11,8 @@ data class CompleteOnboardingCommand(
     val nickname: String,
     val gender: Gender,
     val birthDate: LocalDate,
-    val preferredGender: Gender,
+    /** 비어 있으면 소개팅을 쓰지 않는 사람 — 모임만 하러 온 경우다. */
+    val preferredGender: Gender?,
     val region: String,
     val phone: String,
     val bio: String? = null,

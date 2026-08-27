@@ -8,6 +8,8 @@ import java.util.UUID
 
 interface MemberConsentJpaRepository : JpaRepository<MemberConsentJpaEntity, UUID> {
     fun existsByAccountId(accountId: UUID): Boolean
+
+    fun existsByAccountIdAndSensitiveIsTrue(accountId: UUID): Boolean
 }
 
 /** MemberConsentRepository 포트의 JPA 어댑터. */
@@ -19,6 +21,9 @@ class MemberConsentPersistenceAdapter(
     override fun save(consent: MemberConsent): MemberConsent = jpa.save(consent.toEntity()).toDomain()
 
     override fun existsByAccountId(accountId: UUID): Boolean = jpa.existsByAccountId(accountId)
+
+    override fun sensitiveAgreedByAccountId(accountId: UUID): Boolean =
+        jpa.existsByAccountIdAndSensitiveIsTrue(accountId)
 
     private fun MemberConsent.toEntity() = MemberConsentJpaEntity(
         id = id,

@@ -10,7 +10,7 @@ data class MemberProfileResponse(
     val nickname: String,
     val gender: Gender,
     val birthDate: LocalDate,
-    val preferredGender: Gender,
+    val preferredGender: Gender?,
     val region: String,
     val bio: String?,
     val heightCm: Int?,
