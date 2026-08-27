@@ -3,70 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>프롤로그 인증코드</title>
+  <title>프롤로그 인증번호</title>
 </head>
-<body style="margin:0;padding:0;background:#F3EDE4;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F3EDE4;">
+<!--
+  인증 메일은 여섯 자리를 전하는 일이 전부다.
+
+  예전 판은 코드를 큰 상자에 넣고 테라코타 버튼을 큼직하게 얹었는데, 그러면 광고 메일처럼
+  보인다. 인증 메일이 광고처럼 보이면 사람은 그걸 의심한다 — 정작 신뢰가 가장 필요한 자리에서.
+  토스·깃허브 같은 곳이 이 메일을 밋밋하게 만드는 이유가 그것이다.
+
+  색도 함께 고쳤다. 옛 베이지 팔레트(#F3EDE4 계열)가 남아 있어서 앱·웹과 다른 서비스처럼
+  보였다. design/README.md의 차가운 회색 + 테라코타 하나로 맞춘다.
+-->
+<body style="margin:0;padding:0;background:#F6F8FA;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F6F8FA;">
   <tr>
-    <td align="center" style="padding:32px 16px;">
+    <td align="center" style="padding:40px 16px;">
 
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:460px;background:#FAF6F0;border-radius:20px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+             style="max-width:460px;background:#FFFFFF;border:1px solid #E3E8EE;border-radius:16px;">
         <tr>
-          <td style="padding:8px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FFFFFF;border-radius:16px;border:1px solid #EFE6D8;">
-              <tr>
-                <td style="padding:40px 40px 34px;font-family:-apple-system,'Apple SD Gothic Neo','Segoe UI',sans-serif;">
+          <td style="padding:36px 32px;font-family:-apple-system,'Apple SD Gothic Neo','Segoe UI',Roboto,sans-serif;color:#1B2126;">
 
-                  <!-- 워드마크 -->
-                  <div style="font-family:Georgia,'Times New Roman',serif;font-size:23px;font-weight:700;letter-spacing:2px;color:#2B2723;">프롤로그</div>
-                  <div style="font-size:10px;font-weight:700;letter-spacing:5px;color:#D9694C;margin-top:5px;">PROLOGUE</div>
+            <div style="font-size:15px;font-weight:700;letter-spacing:1px;color:#1B2126;">프롤로그</div>
 
-                  <!-- 구분선 -->
-                  <div style="height:1px;background:#EFE6D8;margin:26px 0;"></div>
+            <h1 style="margin:26px 0 0;font-size:21px;font-weight:700;line-height:1.4;color:#1B2126;">
+              이메일 인증번호 안내
+            </h1>
 
-                  <!-- 안내 -->
-                  <div style="font-size:13px;letter-spacing:3px;color:#8A8178;font-weight:600;">인증코드</div>
-                  <div style="font-size:16px;line-height:1.6;color:#2B2723;margin-top:10px;">
-                    아래 <b>6자리 코드</b>를 앱에 입력하면<br>로그인이 완료돼요.
-                  </div>
+            <p style="margin:18px 0 0;font-size:15px;line-height:1.75;color:#1B2126;">
+              인증번호는
+              <b style="font-size:17px;letter-spacing:2px;color:#C25539;">{{code}}</b>
+              입니다.
+            </p>
+            <p style="margin:8px 0 0;font-size:15px;line-height:1.75;color:#69747E;">
+              프롤로그 앱의 인증번호 입력 화면에서 위 번호를 입력해주세요.<br>
+              5분이 지나면 만료돼요.
+            </p>
 
-                  <!-- 코드 박스 -->
-                  <div style="margin:24px 0 8px;background:#FBEDE6;border:1px solid #F0D9CD;border-radius:14px;padding:22px 0;text-align:center;">
-                    <span style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:38px;font-weight:700;letter-spacing:12px;color:#D9694C;padding-left:12px;">{{code}}</span>
-                  </div>
+            <!--
+              복사 버튼은 만들 수 없다 — 모든 주요 메일 클라이언트가 script를 지운다.
+              그래서 웹 페이지로 넘겨 처리한다. 휴대폰이면 앱을 열어 코드를 자동 입력하고,
+              데스크탑이면 그 페이지가 복사 버튼을 보여준다.
+              단추가 아니라 글자 링크로 둔다. 인증 메일에서 큰 단추는 피싱과 같은 모양이라,
+              눌러도 되는 것과 눌러선 안 되는 것을 사람이 구분하기 어려워진다.
+            -->
+            <p style="margin:20px 0 0;font-size:14px;line-height:1.7;color:#69747E;">
+              휴대폰에서 보고 계신가요?
+              <a href="{{authUrl}}" style="color:#C25539;font-weight:600;">앱에서 바로 입력하기</a>
+            </p>
 
-                  <!--
-                    이메일에서는 클립보드 복사 버튼을 만들 수 없다(모든 주요 클라이언트가 script를 제거).
-                    그래서 웹 페이지로 넘겨서 처리한다. 휴대폰이면 앱을 열어 코드를 자동 입력하고,
-                    앱이 없거나 데스크탑이면 그 페이지가 복사 버튼을 보여준다.
-                  -->
-                  <div style="text-align:center;margin-top:20px;">
-                    <a href="{{authUrl}}"
-                       style="display:inline-block;background:#D9694C;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;padding:15px 30px;border-radius:12px;font-family:-apple-system,'Apple SD Gothic Neo','Segoe UI',sans-serif;">앱에서 바로 입력하기</a>
-                  </div>
+            <div style="height:1px;background:#E3E8EE;margin:30px 0 18px;"></div>
 
-                  <!-- 복사 안내 · 만료 -->
-                  <div style="font-size:13px;color:#8A8178;text-align:center;margin-top:16px;line-height:1.7;">
-                    휴대폰에서 열었다면 버튼 한 번으로 입력돼요<br>
-                    <b style="color:#2B2723;">5분</b> 안에 입력해 주세요
-                  </div>
+            <p style="margin:0;font-size:13px;line-height:1.75;color:#69747E;">
+              본인이 요청하지 않았다면 이 메일을 무시하셔도 괜찮아요.<br>
+              누군가 이메일 주소를 잘못 입력했을 수 있어요.
+            </p>
+            <p style="margin:14px 0 0;font-size:12px;line-height:1.7;color:#96A1AC;">
+              ※ 본 메일은 발신 전용이라 회신 내용을 확인할 수 없어요.
+            </p>
 
-                  <!-- 하단 안내 -->
-                  <div style="height:1px;background:#EFE6D8;margin:30px 0 20px;"></div>
-                  <div style="font-size:12px;line-height:1.7;color:#A89C8C;">
-                    본인이 요청하지 않았다면 이 메일은 무시하셔도 괜찮아요.<br>
-                    누군가 실수로 이메일을 입력했을 수 있어요.
-                  </div>
-
-                </td>
-              </tr>
-            </table>
-
-            <!-- 푸터 -->
-            <div style="text-align:center;padding:20px 12px 10px;font-family:-apple-system,'Apple SD Gothic Neo','Segoe UI',sans-serif;font-size:12px;color:#A89C8C;line-height:1.6;">
-              <span style="color:#8A8178;font-weight:600;">프롤로그</span> · 하루 한 문답, 서로를 알아가는<br>
-              가치관 소개팅
-            </div>
           </td>
         </tr>
       </table>

@@ -40,19 +40,20 @@ class ResendEmailSender(
         val payload = mapOf(
             "from" to from,
             "to" to listOf(email),
-            "subject" to "[프롤로그] 인증코드 $code",
+            "subject" to "[프롤로그] 이메일 인증번호 $code",
             "html" to htmlTemplate.replace("{{code}}", code).replace("{{authUrl}}", authUrl),
             // HTML 미지원 클라이언트용 폴백
             "text" to buildString {
-                appendLine("프롤로그 인증코드입니다.")
+                appendLine("인증번호는 $code 입니다.")
                 appendLine()
-                appendLine("    $code")
+                appendLine("프롤로그 앱의 인증번호 입력 화면에서 위 번호를 입력해주세요.")
+                appendLine("5분이 지나면 만료돼요.")
                 appendLine()
-                appendLine("5분 안에 앱에 입력해 주세요.")
-                appendLine("휴대폰이라면 아래 주소로 앱을 바로 열 수 있어요.")
+                appendLine("휴대폰에서 보고 계신가요? 아래 주소로 앱을 열면 바로 입력돼요.")
                 appendLine("    $authUrl")
                 appendLine()
-                appendLine("본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다.")
+                appendLine("본인이 요청하지 않았다면 이 메일을 무시하셔도 괜찮아요.")
+                appendLine("※ 본 메일은 발신 전용이라 회신 내용을 확인할 수 없어요.")
             },
         )
         try {
