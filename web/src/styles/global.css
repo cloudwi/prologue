@@ -618,6 +618,11 @@ img {
   .header-nav a.cta {
     padding: 7px 13px;
   }
+
+  /* 모임 열기는 좁은 화면에서 접는다 — 바닥글에 같은 링크가 있다. */
+  .header-nav .host-link {
+    display: none;
+  }
 }
 
 /* ── FAQ ── */
