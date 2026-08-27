@@ -351,6 +351,32 @@ import { API_BASE, SITE_URL } from '../lib/site';
     };
   }
 
+  /**
+   * 끼운 초대장을 제 내용 높이만큼 늘린다 — 폰 안에 스크롤바가 두 겹으로 생기지 않게.
+   *
+   * 그냥 두면 iframe은 화면 높이에 갇혀 자기 스크롤바를 그리고, 바깥 .screen도 스크롤바를
+   * 그린다. 폰 안에 회색 띠가 두 줄 서고, 그만큼 초대장이 좁아져 실제와 다른 조판이 된다.
+   * 내용 높이를 그대로 주면 iframe은 스크롤할 것이 없어지고, 스크롤은 .screen 하나만 맡는다
+   * (그 막대는 CSS에서 숨긴다) — 손가락으로 미는 진짜 폰과 같은 모양이다.
+   */
+  function fitIframe(frame) {
+    if (!frame) return;
+    const fit = () => {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return; // 다른 출처 — 높이를 잴 수 없으니 100%로 둔다
+        frame.style.height = `${doc.documentElement.scrollHeight}px`;
+      } catch {
+        // 접근이 막혔을 뿐이다. 스크롤바 두 겹은 남지만 미리보기는 그대로 보인다.
+      }
+    };
+    frame.addEventListener('load', () => {
+      fit();
+      // 커버 사진이 늦게 들어오면 높이가 늘어난다 — 그때 한 번 더 잰다.
+      setTimeout(fit, 400);
+    });
+  }
+
   /** 폼으로 만든 가짜 모임 — 아직 저장 전이라 서버에 물어볼 수 없다. */
   function draftFromForm() {
     const date = $('f-date').value, time = $('f-time').value;
@@ -403,6 +429,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       // 이미 연 모임은 서버가 그리는 진짜 초대장을 그대로 끼운다 — 흉내가 아니라 그 페이지다.
       $('phoneNote').textContent = '링크를 받은 사람이 보는 바로 그 초대장이에요.';
       $('screen').innerHTML = `<iframe src="${SITE_URL}/m/${m.meetupId}" title="초대장 미리보기"></iframe>`;
+      fitIframe($('screen').firstChild);
       return;
     }
     $('phoneNote').textContent = '아직 만들기 전이라 폼의 값으로 그려본 모습이에요.';
@@ -616,8 +643,12 @@ import { API_BASE, SITE_URL } from '../lib/site';
     z-index: 2;
     pointer-events: none;
   }
-  .console .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 43px; overflow: auto; }
-  .console .screen iframe { width: 100%; height: 100%; border: 0; }
+  /* 스크롤은 하되 막대는 그리지 않는다 — 폰 화면에 회색 띠가 서면 그 순간 폰이 아니게 된다. */
+  .console .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 43px; overflow: auto; scrollbar-width: none; }
+  .console .screen::-webkit-scrollbar { display: none; }
+  /* display:block이 아니면 인라인 요소로 취급돼 아래에 베이스라인 여백이 붙고, 그 몇 px 때문에
+     화면이 넘쳐 스크롤바가 생긴다. 높이는 fitIframe이 내용에 맞게 다시 잡는다. */
+  .console .screen iframe { display: block; width: 100%; height: 100%; border: 0; }
   .console .empty-preview { padding: 60px 30px; text-align: center; color: var(--muted); font-size: 0.9rem; line-height: 1.7; }
   .console .device-note { margin-top: 14px; color: var(--muted); font-size: 0.85rem; }
 
