@@ -165,7 +165,14 @@ class Meetup private constructor(
         private const val KAKAO_LINK_MAX = 300
         private const val CAPACITY_MIN = 2
         private const val CAPACITY_MAX = 100
-        private const val COVER_MAX = 5
+        /**
+         * 커버 사진의 최대 장수.
+         *
+         * 5장에서 10장으로 늘린다. 초대장이 청첩장처럼 사진을 여러 장 싣게 되면서
+         * 표지 한 장에 갤러리 몇 장이면 금세 찼다. 그렇다고 무한정 열어둘 수는 없다 —
+         * 사진마다 선정성 검사가 돌고, 초대장을 여는 사람은 그걸 전부 내려받는다.
+         */
+        private const val COVER_MAX = 10
 
         /** 대기 줄의 최대 길이 — 이보다 길면 기다림이 아니라 방치다. */
         private const val WAITLIST_MAX = 200

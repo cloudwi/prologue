@@ -94,7 +94,7 @@ class MeetupController(
         val minHeightFemaleCm: Int? = null,
         /** 직장 인증 필수(선택). */
         val requireJobVerified: Boolean = false,
-        /** 커버(선택) — 업로드해 둔 사진 URL들(첫 장이 메인, 최대 5장). */
+        /** 커버(선택) — 업로드해 둔 사진 URL들(첫 장이 메인, 최대 10장). */
         val emoji: String? = null,
         val color: String? = null,
         val coverUrls: List<String> = emptyList(),
