@@ -1,0 +1,58 @@
+---
+// 404 — 없는 주소로 온 사람에게 보이는 유일한 화면.
+//
+// Render 정적 사이트는 못 찾은 경로에 dist/404.html을 내준다. 이 파일이 없던 동안에는
+// 호스팅의 기본 화면("Not Found" 한 줄)이 나갔다. 프롤로그를 처음 본 사람에게 그 화면은
+// 잘못 누른 링크가 아니라 망한 서비스로 읽힌다 — 머리글도 바닥글도 없으니 돌아갈 길조차 없다.
+//
+// 그래서 사과를 길게 하지 않고 다음 걸음을 준다. 여기까지 온 사람이 찾던 것은 대개 셋 중
+// 하나다: 앱, 읽을거리, 그리고 자기 모임(모임장 콘솔).
+//
+// 색인에서는 뺀다. 없는 쪽이 검색 결과에 남으면 그 자체로 한 번 더 헛걸음이 된다.
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="찾으시는 쪽이 없어요 — 프롤로그"
+  description="주소가 잘못되었거나, 있던 글이 자리를 옮겼어요."
+  noindex
+>
+  <section class="hero notfound">
+    <p class="code" aria-hidden="true">404</p>
+    <h1>찾으시는 쪽이 없어요</h1>
+    <p class="sub">
+      주소를 잘못 적으셨거나, 있던 글이 자리를 옮겼어요.<br />
+      가시려던 곳을 아래에서 골라주세요.
+    </p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/">첫 쪽으로</a>
+      <a class="btn btn-ghost" href="/story">스토리 읽기</a>
+      <a class="btn btn-ghost" href="/download">앱 다운로드</a>
+    </div>
+    <p class="hero-note">모임을 여시는 분이라면 <a href="/host">모임장 콘솔</a>로 가세요.</p>
+  </section>
+</Base>
+
+<style>
+  /*
+    숫자는 크게 두되 읽는 순서에서는 뒤로 물린다 — 먼저 눈에 들어와야 하는 것은
+    "없다"는 사실이 아니라 다음에 누를 곳이다. 그래서 흐린 회색이고, 스크린리더는 건너뛴다.
+  */
+  .notfound .code {
+    font-family: var(--serif);
+    font-size: clamp(4rem, 14vw, 8rem);
+    line-height: 1;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--muted) 26%, var(--paper));
+    letter-spacing: 0.06em;
+    user-select: none;
+  }
+
+  .notfound h1 {
+    margin-top: 8px;
+  }
+
+  .notfound .hero-note {
+    margin-top: 28px;
+  }
+</style>
