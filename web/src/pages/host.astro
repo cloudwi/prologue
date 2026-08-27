@@ -65,18 +65,55 @@ import { API_BASE, SITE_URL } from '../lib/site';
             <button class="back" id="backFromNew">← 내 모임</button>
             <div class="form">
               <label class="field"><span>모임 이름 *</span><input id="f-title" maxlength="80" placeholder="밑줄 모임 · 서로서가" /></label>
-              <label class="field"><span>소개</span><textarea id="f-desc" rows="4" maxlength="1000" placeholder="어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요."></textarea></label>
+              <div class="field editor">
+                <div class="editor-head">
+                  <span>소개</span>
+                  <div class="editor-tools">
+                    <button type="button" class="chip" data-insert="blank">한 줄 띄우기</button>
+                    <button type="button" class="chip" data-insert="dot">가운뎃점 ·</button>
+                  </div>
+                </div>
+                <textarea id="f-desc" rows="10" maxlength="1000"
+                  placeholder="어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.&#10;&#10;줄을 짧게 끊으면 초대장에서 읽기 좋아요."></textarea>
+                <div class="editor-foot">
+                  <em>줄바꿈은 초대장에 그대로 나와요. 오른쪽 ‘모임 상세’에서 확인해 보세요.</em>
+                  <b id="descCount">0 / 1000</b>
+                </div>
+              </div>
               <div class="grid2">
                 <label class="field"><span>날짜 *</span><input id="f-date" type="date" /></label>
                 <label class="field"><span>시간 *</span><input id="f-time" type="time" step="900" /></label>
               </div>
               <label class="field"><span>주소</span><input id="f-address" placeholder="서울 서초구 언남길 49" /></label>
               <label class="field"><span>장소 이름 * <em>건물·층·가게까지</em></span><input id="f-place" maxlength="120" placeholder="1층 파란지붕 서로서가" /></label>
-              <div class="grid2">
-                <label class="field"><span>정원 * <em>2~100</em></span><input id="f-capacity" type="number" min="2" max="100" value="8" /></label>
-                <label class="field"><span>참가비 <em>원</em></span><input id="f-fee" type="number" min="0" step="1000" value="0" /></label>
+              <label class="field"><span>정원 * <em>2~100명</em></span><input id="f-capacity" type="number" min="2" max="100" value="8" /></label>
+
+              <!--
+                참가비는 한 덩어리로 묶는다. 예전에는 '참가비'와 '여성 참가비 (비우면 위와 같음)'가
+                따로 있었는데, 비우는 것이 곧 "같다"는 뜻이라는 걸 아무도 모른다. 빈칸은 "안 정했다"로
+                읽히지 "위와 같다"로 읽히지 않는다. 스위치를 켜야 두 번째 칸이 나오게 해서,
+                나뉘어 있다는 사실 자체가 보이게 했다.
+              -->
+              <div class="field fee">
+                <div class="editor-head">
+                  <span>참가비</span>
+                  <label class="toggle">
+                    <input id="f-feeSplit" type="checkbox" />
+                    <span>성별에 따라 다르게</span>
+                  </label>
+                </div>
+                <div class="fee-row">
+                  <label class="fee-cell">
+                    <em id="feeLabelAll">모두</em>
+                    <span class="fee-input"><input id="f-fee" type="number" min="0" step="1000" value="0" /><b>원</b></span>
+                  </label>
+                  <label class="fee-cell" id="feeCellFemale" hidden>
+                    <em>여성</em>
+                    <span class="fee-input"><input id="f-feeFemale" type="number" min="0" step="1000" value="0" /><b>원</b></span>
+                  </label>
+                </div>
+                <em class="fee-hint" id="feeHint">0으로 두면 무료예요.</em>
               </div>
-              <label class="field"><span>여성 참가비 <em>비우면 위와 같음</em></span><input id="f-feeFemale" type="number" min="0" step="1000" /></label>
               <label class="field"><span>오픈채팅 링크 * <em>신청한 사람에게만 보여요</em></span><input id="f-kakao" placeholder="https://open.kakao.com/o/..." /></label>
               <label class="field"><span>커버 사진 <em>첫 장이 초대장의 얼굴이에요</em></span><input id="f-cover" type="file" accept="image/*" multiple /></label>
               <div id="coverPreview" class="covers"></div>
@@ -477,7 +514,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       place: $('f-place').value.trim() || '장소',
       capacity: Number($('f-capacity').value) || 8,
       fee: Number($('f-fee').value) || 0,
-      feeFemale: $('f-feeFemale').value === '' ? null : Number($('f-feeFemale').value),
+      feeFemale: $('f-feeSplit').checked ? Number($('f-feeFemale').value) || 0 : null,
       coverUrls: covers,
       confirmedCount: 0,
       status: 'OPEN',
@@ -597,9 +634,14 @@ import { API_BASE, SITE_URL } from '../lib/site';
     set('f-place', detail);
     set('f-capacity', m?.capacity ?? 8);
     set('f-fee', m?.fee ?? 0);
-    set('f-feeFemale', m?.feeFemale ?? '');
+    // 저장된 여성 참가비가 있고 남성과 다를 때만 갈라진 상태로 연다.
+    const split = m?.feeFemale != null && m.feeFemale !== m.fee;
+    $('f-feeSplit').checked = split;
+    set('f-feeFemale', split ? m.feeFemale : 0);
     set('f-kakao', m?.kakaoLink ?? '');
     $('f-jobVerified').checked = !!m?.requireJobVerified;
+    syncFee();
+    syncDesc();
 
     $('paneTitle').textContent = m ? '모임 고치기' : '새 모임';
     $('paneLead').textContent = m
@@ -614,6 +656,50 @@ import { API_BASE, SITE_URL } from '../lib/site';
   $('newBtn').onclick = () => openForm(null);
   $('backFromNew').onclick = () => loadList();
   $('backFromDetail').onclick = () => loadList();
+
+  /*
+   * 소개 칸 — 서식 편집기를 넣지 않았다.
+   *
+   * 굵게·기울임을 만들어봐야 초대장은 그걸 그릴 수 없다. 서버가 그리는 초대장은 줄바꿈만
+   * <br>로 바꿔 내보내는 평문이라(MeetupInvitationPage), 서식 단추를 달면 화면에서만 예뻐 보이고
+   * 실제로는 별표가 그대로 찍힌다. 도구가 결과를 배신하는 것보다 나쁜 건 없다.
+   *
+   * 대신 이 글이 실제로 어떻게 읽히는지를 돕는다 — 남은 글자 수, 내용만큼 자라는 높이,
+   * 그리고 자주 쓰는 두 가지 삽입. 진짜 미리보기는 오른쪽 폰이 이미 맡고 있다.
+   */
+  const descBox = $('f-desc');
+  function syncDesc() {
+    $('descCount').textContent = `${descBox.value.length} / 1000`;
+    // 내용만큼 자란다 — 스크롤바 안에서 긴 글을 쓰면 전체 흐름이 보이지 않는다.
+    descBox.style.height = 'auto';
+    descBox.style.height = `${Math.max(descBox.scrollHeight, 220)}px`;
+  }
+  descBox.addEventListener('input', syncDesc);
+  for (const b of document.querySelectorAll('.console [data-insert]')) {
+    b.onclick = () => {
+      const text = b.dataset.insert === 'blank' ? '\n\n' : ' · ';
+      const at = descBox.selectionStart ?? descBox.value.length;
+      const end = descBox.selectionEnd ?? at;
+      descBox.value = descBox.value.slice(0, at) + text + descBox.value.slice(end);
+      descBox.focus();
+      descBox.setSelectionRange(at + text.length, at + text.length);
+      descBox.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+  }
+
+  /** 참가비 스위치 — 켜면 남/여로 갈라지고, 끄면 하나로 합쳐진다. */
+  function syncFee() {
+    const split = $('f-feeSplit').checked;
+    $('feeCellFemale').hidden = !split;
+    $('feeLabelAll').textContent = split ? '남성' : '모두';
+    $('feeHint').textContent = split
+      ? '성별에 따라 다른 금액을 받아요. 0으로 두면 그쪽은 무료예요.'
+      : '0으로 두면 무료예요.';
+  }
+  $('f-feeSplit').addEventListener('change', () => {
+    syncFee();
+    preview(draftFromForm(), true);
+  });
 
   // 적는 동안 오른쪽이 따라 바뀐다 — 다 만들고 나서 "잘렸네"를 알면 늦다.
   for (const id of ['f-title', 'f-desc', 'f-date', 'f-time', 'f-place', 'f-capacity', 'f-fee', 'f-feeFemale', 'f-jobVerified']) {
@@ -776,6 +862,34 @@ import { API_BASE, SITE_URL } from '../lib/site';
     outline: none; border-color: var(--terracotta);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--terracotta) 18%, transparent);
   }
+  /* 소개 에디터 — 긴 글을 쓰는 유일한 칸이라 다른 입력들과 다르게 다룬다. */
+  .console .editor { gap: 8px; }
+  .console .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .console .editor-tools { display: flex; gap: 6px; }
+  .console .chip {
+    padding: 5px 11px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface); color: var(--muted); font: inherit; font-size: 0.78rem; cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .console .chip:hover { color: var(--ink); border-color: var(--ink); }
+  .console .editor textarea { min-height: 220px; line-height: 1.8; resize: vertical; }
+  .console .editor-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .console .editor-foot em { font-style: normal; color: var(--muted); font-size: 0.82rem; }
+  .console .editor-foot b { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* 참가비 — 스위치 하나로 갈라지는 한 덩어리. */
+  .console .toggle { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 0.82rem; font-weight: 400; cursor: pointer; }
+  .console .toggle input { width: auto; }
+  .console .fee-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .console .fee-cell { display: grid; gap: 6px; }
+  .console .fee-cell[hidden] { display: none; }
+  .console .fee-cell em { font-style: normal; color: var(--muted); font-size: 0.84rem; }
+  /* 단위를 칸 안에 둔다 — 라벨에 '(원)'을 적어두면 숫자를 보며 눈이 위로 올라가야 한다. */
+  .console .fee-input { position: relative; display: block; }
+  .console .fee-input input { padding-right: 38px; }
+  .console .fee-input b { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 400; pointer-events: none; }
+  .console .fee-hint { font-style: normal; color: var(--muted); font-size: 0.82rem; }
+
   .console .check { display: flex; align-items: center; gap: 8px; font-size: 0.93rem; }
   .console .check input { width: auto; }
   .console .covers { display: flex; flex-wrap: wrap; gap: 8px; }
