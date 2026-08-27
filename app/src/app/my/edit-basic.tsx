@@ -64,12 +64,18 @@ export default function EditBasicScreen() {
   }, []);
 
   const birthDate = parseBirthDigits(birthDigits);
+  /*
+   * 소개팅을 켠 회원만 선호 성별을 갖는다. 모임만 쓰는 회원에게 이 칸은 아예 보이지 않고
+   * (켜는 자리는 my/start-dating 하나뿐이다), 그래서 저장 조건에서도 빠진다 —
+   * 여기서 필수로 두면 이름 한 글자 고치러 들어온 사람이 성적 지향부터 답해야 한다.
+   */
+  const datingOn = base != null && base.preferredGender != null;
   const canSave =
     base != null &&
     nickname.trim().length > 0 &&
     gender != null &&
     birthDate != null &&
-    preferredGender != null &&
+    (!datingOn || preferredGender != null) &&
     region.trim().length > 0 &&
     isValidPhoneDigits(phoneDigits);
 
@@ -83,7 +89,7 @@ export default function EditBasicScreen() {
           nickname: nickname.trim(),
           gender: gender!,
           birthDate: birthDate!,
-          preferredGender: preferredGender!,
+          preferredGender: datingOn ? preferredGender : null,
           region: region.trim(),
           phone: phoneDigits,
           kakaoId: kakaoId.trim() || null,
@@ -144,9 +150,11 @@ export default function EditBasicScreen() {
               />
             </Field>
 
-            <Field label="내가 만나고 싶은 성별" c={c}>
-              <GenderToggle value={preferredGender} onChange={setPreferredGender} c={c} />
-            </Field>
+            {datingOn && (
+              <Field label="내가 만나고 싶은 성별" c={c}>
+                <GenderToggle value={preferredGender} onChange={setPreferredGender} c={c} />
+              </Field>
+            )}
 
             <Field label="지역" c={c}>
               <RegionPicker value={region || null} onChange={setRegion} c={c} />
