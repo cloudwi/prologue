@@ -185,6 +185,8 @@ data class HostMeetupView(
     val emoji: String?,
     val color: String?,
     val coverUrls: List<String>,
+    /** 소개 글 안에 놓는 사진 — `[사진N]` 표시가 가리키는 목록. */
+    val bodyImageUrls: List<String>,
     val kakaoLink: String,
     val status: String,
     val confirmedCount: Int,
@@ -226,6 +228,8 @@ data class MeetupInvitationView(
      * 그동안 다섯 장까지 올려두고 첫 장만 쓰고 있었다.
      */
     val coverUrls: List<String>,
+    /** 소개 글 안에 놓는 사진 — `[사진N]` 표시가 가리키는 목록. */
+    val bodyImageUrls: List<String>,
     val hostNickname: String?,
     val occurrence: Int,
     val occurrenceTotal: Int,
@@ -243,6 +247,9 @@ data class MeetupInvitationView(
  * 돈은 카카오에서 오간다 — 여기에는 신청·확정·개최의 기록만 남고,
  * 그 기록이 모임장의 신뢰 신호(개최 횟수·확정 인원)로 공개된다.
  */
+/** 소개 글에서 사진 자리를 가리키는 표시 — 초대장만 이해한다. */
+private val PHOTO_TOKEN = Regex("""\[사진(\d+)]""")
+
 @Service
 class MeetupService(
     private val meetupRepository: MeetupRepository,
@@ -258,6 +265,21 @@ class MeetupService(
     fun canHost(accountId: UUID): Boolean = hostPolicy.canHost(accountId)
 
     // ── 회원(앱) ──
+
+    /**
+     * 앱에 내려줄 소개 글 — 사진 표시를 걷어낸 것.
+     *
+     * 초대장(웹)은 `[사진1]` 자리에 사진을 그리지만, 앱은 그 표시를 모른다. 지금 스토어에 있는
+     * 버전에게 그대로 내려보내면 화면에 "[사진2]"가 글자로 남는다 — 표시가 날것으로 새는 건
+     * 기능이 없는 것보다 나쁘다. 앱이 이 표시를 배우면 이 함수를 지우면 된다.
+     */
+    private fun descriptionForApp(description: String?): String? =
+        description
+            ?.replace(PHOTO_TOKEN, "")
+            // 표시만 있던 줄이 빈 줄로 남는다 — 줄이 셋 이상 겹치면 둘로 줄인다.
+            ?.replace(Regex("\n{3,}"), "\n\n")
+            ?.trim()
+            ?.ifBlank { null }
 
     /**
      * 다가오는 모임 — 가까운 날짜순.
@@ -282,7 +304,7 @@ class MeetupService(
             MeetupView(
                 meetupId = requireNotNull(m.id),
                 title = m.title,
-                description = m.description,
+                description = descriptionForApp(m.description),
                 meetAt = m.meetAt,
                 place = m.place,
                 placeUrl = m.placeUrl,
@@ -362,6 +384,7 @@ class MeetupService(
             minHeightFemaleCm = m.minHeightFemaleCm,
             requireJobVerified = m.requireJobVerified,
             coverUrls = m.coverUrls,
+            bodyImageUrls = m.bodyImageUrls,
             hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
             occurrence = siblings.indexOfFirst { it.id == m.id }.let { if (it < 0) siblings.size else it } + 1,
             occurrenceTotal = maxOf(siblings.size, 1),
@@ -499,6 +522,7 @@ class MeetupService(
         emoji: String?,
         color: String?,
         coverUrls: List<String>,
+        bodyImageUrls: List<String> = emptyList(),
         kakaoLink: String,
         /** 이어 여는 회차면 그 모임의 seriesId. 내가 연 모임의 회차만 이을 수 있다. */
         seriesId: UUID? = null,
@@ -516,7 +540,7 @@ class MeetupService(
                 hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, emoji, color, coverUrls, kakaoLink, seriesId,
+                requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, seriesId,
             ),
         )
         // 이어 여는 회차면 따라가던 사람들에게 알린다 — 이게 '다시 참여하고 싶다'는 마음이 돌아오는 길이다.
@@ -556,6 +580,7 @@ class MeetupService(
         emoji: String?,
         color: String?,
         coverUrls: List<String>,
+        bodyImageUrls: List<String> = emptyList(),
         kakaoLink: String,
     ) {
         val existing = owned(hostAccountId, meetupId)
@@ -564,7 +589,7 @@ class MeetupService(
                 existing, title, description, meetAt, place, placeUrl, placeAddress,
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, emoji, color, coverUrls, kakaoLink,
+                requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink,
             ),
         )
     }
@@ -631,6 +656,7 @@ class MeetupService(
                 emoji = m.emoji,
                 color = m.color,
                 coverUrls = m.coverUrls,
+                bodyImageUrls = m.bodyImageUrls,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
                 seriesId = m.seriesId,

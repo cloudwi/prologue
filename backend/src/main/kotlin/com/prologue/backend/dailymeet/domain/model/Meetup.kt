@@ -65,6 +65,16 @@ class Meetup private constructor(
     val emoji: String?,
     val color: String?,
     val coverUrls: List<String>,
+    /**
+     * 소개 글 사이에 놓는 사진.
+     *
+     * 커버와 나눠 두는 이유는 역할이 달라서다. 커버는 표지라 카드에 걸리고, 이쪽은 글의
+     * 흐름 속에 놓여야 뜻이 사는 사진이다("이 서점에서 만나요"). 한 목록에 섞으면
+     * 무엇이 카드의 얼굴이 될지 모임장이 알 수 없다.
+     *
+     * 소개 글의 `[사진N]` 표시가 이 목록의 N번째를 가리킨다.
+     */
+    val bodyImageUrls: List<String>,
     val kakaoLink: String,
     status: MeetupStatus,
     val createdAt: Instant,
@@ -168,11 +178,13 @@ class Meetup private constructor(
         /**
          * 커버 사진의 최대 장수.
          *
-         * 5장에서 10장으로 늘린다. 초대장이 청첩장처럼 사진을 여러 장 싣게 되면서
-         * 표지 한 장에 갤러리 몇 장이면 금세 찼다. 그렇다고 무한정 열어둘 수는 없다 —
-         * 사진마다 선정성 검사가 돌고, 초대장을 여는 사람은 그걸 전부 내려받는다.
+         * 커버는 표지다 — 모임 탭 카드의 얼굴이자 초대장 맨 위 한 장. 그 역할에는 세 장이면 넉넉하다.
+         * 글 사이에 놓을 사진은 여기가 아니라 [BODY_IMAGE_MAX] 쪽이다.
          */
-        private const val COVER_MAX = 10
+        private const val COVER_MAX = 3
+
+        /** 소개 글 안에 놓는 사진의 최대 장수. 글이 길어질 수 있으니 커버보다 넉넉히 둔다. */
+        private const val BODY_IMAGE_MAX = 10
 
         /** 대기 줄의 최대 길이 — 이보다 길면 기다림이 아니라 방치다. */
         private const val WAITLIST_MAX = 200
@@ -202,6 +214,7 @@ class Meetup private constructor(
             emoji: String?,
             color: String?,
             coverUrls: List<String>,
+            bodyImageUrls: List<String> = emptyList(),
             kakaoLink: String,
             /** 이어 여는 회차면 그 모임의 seriesId. null이면 새 모임(자기 혼자짜리 회차). */
             seriesId: UUID? = null,
@@ -241,6 +254,13 @@ class Meetup private constructor(
             if (cleanCovers.any { !it.startsWith("https://") || it.length > 500 }) {
                 throw DailyMeetException("커버 사진 주소가 올바르지 않아요")
             }
+            val cleanBodyImages = bodyImageUrls.map { it.trim() }.filter { it.isNotBlank() }
+            if (cleanBodyImages.size > BODY_IMAGE_MAX) {
+                throw DailyMeetException("소개 사진은 ${BODY_IMAGE_MAX}장까지예요")
+            }
+            if (cleanBodyImages.any { !it.startsWith("https://") || it.length > 500 }) {
+                throw DailyMeetException("소개 사진 주소가 올바르지 않아요")
+            }
             if (meetAt.isBefore(now)) throw DailyMeetException("모임 일시는 미래여야 해요")
             val cleanLink = kakaoLink.trim()
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
@@ -250,7 +270,8 @@ class Meetup private constructor(
                 null, seriesId ?: UUID.randomUUID(), hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl, cleanPlaceAddress,
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanLink, MeetupStatus.OPEN, now,
+                requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanBodyImages, cleanLink,
+                MeetupStatus.OPEN, now,
             )
         }
 
@@ -283,6 +304,7 @@ class Meetup private constructor(
             emoji: String?,
             color: String?,
             coverUrls: List<String>,
+            bodyImageUrls: List<String> = emptyList(),
             kakaoLink: String,
         ): Meetup {
             if (existing.status == MeetupStatus.DONE || existing.status == MeetupStatus.CANCELED) {
@@ -292,7 +314,7 @@ class Meetup private constructor(
                 existing.hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-                requireJobVerified, emoji, color, coverUrls, kakaoLink,
+                requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink,
             )
             return Meetup(
                 // 수정은 회차를 옮기지 않는다 — 회차를 잇는 건 '다시 열기'뿐이다.
@@ -302,7 +324,7 @@ class Meetup private constructor(
                 fresh.fee, fresh.feeFemale, fresh.genderLimit,
                 fresh.minAgeMale, fresh.maxAgeMale, fresh.minAgeFemale, fresh.maxAgeFemale,
                 fresh.minHeightMaleCm, fresh.minHeightFemaleCm,
-                fresh.requireJobVerified, fresh.emoji, fresh.color, fresh.coverUrls,
+                fresh.requireJobVerified, fresh.emoji, fresh.color, fresh.coverUrls, fresh.bodyImageUrls,
                 fresh.kakaoLink, existing.status, existing.createdAt,
             )
         }
@@ -334,6 +356,7 @@ class Meetup private constructor(
             emoji: String?,
             color: String?,
             coverUrls: List<String>,
+            bodyImageUrls: List<String> = emptyList(),
             kakaoLink: String,
             status: MeetupStatus,
             createdAt: Instant,
@@ -341,7 +364,7 @@ class Meetup private constructor(
             id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
             capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-            requireJobVerified, emoji, color, coverUrls, kakaoLink, status, createdAt,
+            requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, status, createdAt,
         )
 
         /**

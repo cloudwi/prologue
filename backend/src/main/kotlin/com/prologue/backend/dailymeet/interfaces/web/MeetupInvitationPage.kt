@@ -20,6 +20,10 @@ import java.util.Locale
  * 초대장 한 장이 남의 브라우저에서 스크립트가 된다.
  */
 object MeetupInvitationPage {
+
+    /** 소개 글에서 사진 자리를 가리키는 표시 — `[사진1]`, `[사진2]` … */
+    private val PHOTO_TOKEN = Regex("""\[사진(\d+)]""")
+
     private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
     /** 초대장 HTML. [baseUrl]은 이 페이지가 서 있는 주소(OG url·기본 이미지의 뿌리). */
@@ -58,7 +62,7 @@ object MeetupInvitationPage {
                   <h1>${escape(v.title)}</h1>
                   <p class="date">${escape(numeralDate(v.meetAt))}</p>
                   <p class="when">${escape(whenLine(v.meetAt))}</p>
-                  ${if (v.description != null) """<p class="greeting">${escape(v.description).replace("\n", "<br />")}</p>""" else ""}
+                  ${greeting(v.description, v.bodyImageUrls)}
                   ${gallery(v.coverUrls)}
                   <dl class="info">
                     ${row("여는 사람", v.hostNickname ?: "프롤로그")}
@@ -177,6 +181,32 @@ object MeetupInvitationPage {
      * 자바스크립트를 쓰지 않는다(scroll-snap) — 초대장은 링크 하나로 열리는 페이지라
      * 스크립트가 늦게 오거나 막히는 환경에서도 사진은 보여야 한다.
      */
+    /**
+     * 소개 글 — 글 사이에 사진이 놓인다.
+     *
+     * 글에 `[사진1]`처럼 적어두면 그 자리에 [bodyImageUrls]의 그 사진이 들어간다.
+     * 서식 편집기를 만들지 않은 이유가 이것이다. 글은 여전히 평문이라 저장 형식이 바뀌지 않고,
+     * 우리가 만든 표시만 치환하므로 남의 HTML이 끼어들 자리도 없다 — **이스케이프한 뒤에**
+     * 치환하는 순서가 그 안전을 지킨다. 순서가 뒤집히면 그 자리가 곧 XSS 구멍이 된다.
+     *
+     * 가리키는 사진이 없는 표시(사진을 지웠거나 오타)는 조용히 지운다. 화면에 [사진3]이
+     * 글자로 남는 것보다는 없는 편이 낫다.
+     */
+    private fun greeting(description: String?, bodyImageUrls: List<String>): String {
+        if (description == null) return ""
+        val escaped = escape(description)
+        val withPhotos = PHOTO_TOKEN.replace(escaped) { match ->
+            val index = match.groupValues[1].toIntOrNull()?.minus(1) ?: return@replace ""
+            bodyImageUrls.getOrNull(index)
+                ?.let { """</p><img class="body-photo" src="${escape(it)}" alt="" loading="lazy" /><p class="greeting">""" }
+                ?: ""
+        }
+        // 사진이 끼어든 자리에 빈 문단이 남는다 — 문단을 열고 닫는 방식이라 어쩔 수 없이 생긴다.
+        return """<p class="greeting">${withPhotos.replace("\n", "<br />")}</p>"""
+            .replace("""<p class="greeting"><br /></p>""", "")
+            .replace("""<p class="greeting"></p>""", "")
+    }
+
     private fun gallery(coverUrls: List<String>): String {
         val rest = coverUrls.drop(1)
         if (rest.isEmpty()) return ""
@@ -225,6 +255,9 @@ ${head.prependIndent("        ")}
           .date { margin:18px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
           .when { margin:8px 0 0; font-size:14px; color:var(--muted); }
           .greeting { margin:28px 0 0; font-size:15px; line-height:1.85; }
+          /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다. */
+          .body-photo { display:block; width:calc(100% + 48px); margin:24px -24px; border-radius:0;
+                        object-fit:cover; background:var(--line); }
           /* 사진 여러 장 — 옆으로 밀어 본다. 카드 밖으로 흘러나가게 두면 폭이 넉넉해 보인다. */
           .gallery { display:flex; gap:8px; margin:24px -24px 0; padding:0 24px; overflow-x:auto;
                      scroll-snap-type:x mandatory; scrollbar-width:none; }

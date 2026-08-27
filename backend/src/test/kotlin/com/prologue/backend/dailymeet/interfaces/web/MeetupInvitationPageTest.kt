@@ -26,6 +26,7 @@ class MeetupInvitationPageTest {
         description: String? = null,
         meetAt: Instant = ZonedDateTime.of(2026, 9, 26, 19, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant(),
         coverUrls: List<String> = listOf("https://cdn.example.com/cover.jpg"),
+        bodyImageUrls: List<String> = emptyList(),
         fee: Int = 30_000,
         feeFemale: Int? = null,
         capacity: Int = 8,
@@ -61,6 +62,7 @@ class MeetupInvitationPageTest {
         minHeightFemaleCm = null,
         requireJobVerified = requireJobVerified,
         coverUrls = coverUrls,
+        bodyImageUrls = bodyImageUrls,
         hostNickname = hostNickname,
         occurrence = occurrence,
         occurrenceTotal = occurrenceTotal,
@@ -81,6 +83,38 @@ class MeetupInvitationPageTest {
         val out = html(view(coverUrls = listOf("https://cdn.example.com/a.jpg")))
 
         assertFalse(out.contains("""<div class="gallery">"""))
+    }
+
+    @Test
+    fun `소개 글의 사진 표시는 그 자리에 사진으로 바뀐다`() {
+        val out = html(
+            view(
+                description = "첫 문단\n[사진1]\n둘째 문단",
+                bodyImageUrls = listOf("https://cdn.example.com/body.jpg"),
+            ),
+        )
+
+        assertContains(out, """<img class="body-photo" src="https://cdn.example.com/body.jpg"""")
+        assertFalse(out.contains("[사진1]")) // 표시가 글자로 남으면 안 된다
+    }
+
+    @Test
+    fun `가리키는 사진이 없는 표시는 조용히 지운다`() {
+        // 사진을 지웠거나 오타를 냈을 때 — 화면에 [사진3]이 글자로 남는 것보다 없는 편이 낫다.
+        val out = html(view(description = "첫 문단\n[사진3]\n둘째 문단", bodyImageUrls = emptyList()))
+
+        assertFalse(out.contains("[사진3]"))
+        assertContains(out, "첫 문단")
+        assertContains(out, "둘째 문단")
+    }
+
+    @Test
+    fun `사진 표시를 흉내낸 글자는 태그가 되지 못한다`() {
+        // 이스케이프가 치환보다 먼저다 — 순서가 뒤집히면 이 자리가 곧 구멍이 된다.
+        val out = html(view(description = "<script>alert(1)</script>", bodyImageUrls = emptyList()))
+
+        assertFalse(out.contains("<script>alert"))
+        assertContains(out, "&lt;script&gt;")
     }
 
     private fun html(v: MeetupInvitationView = view()) =

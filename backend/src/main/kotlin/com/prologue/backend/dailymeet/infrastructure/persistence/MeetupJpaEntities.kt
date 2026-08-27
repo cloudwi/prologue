@@ -99,6 +99,10 @@ class MeetupJpaEntity(
     @Column(name = "cover_urls", columnDefinition = "text")
     val coverUrls: String? = null,
 
+    /** 소개 글 안에 놓는 사진 — 쉼표로 이어 붙인다(커버와 같은 방식). */
+    @Column(name = "body_image_urls", columnDefinition = "text")
+    val bodyImageUrls: String? = null,
+
     @Column(name = "kakao_link", nullable = false, length = 300)
     val kakaoLink: String,
 
