@@ -168,7 +168,68 @@ import { API_BASE, SITE_URL } from '../lib/site';
               <details class="more" id="moreCond">
                 <summary><b>참가 조건</b><span class="sum" id="sumCond">누구나</span></summary>
                 <div class="more-body">
-                  <label class="check"><input id="f-jobVerified" type="checkbox" /> <span>직장 인증한 분만 신청할 수 있어요</span></label>
+                  <!--
+                    조건은 전부 끄고 시작한다. 기본값이 '누구나'인 이유는 게을러서가 아니라,
+                    조건 하나가 늘 때마다 올 수 있는 사람이 줄기 때문이다. 여덟 자리를 채우는 게
+                    먼저인 모임에서 조건은 대개 비용이다.
+                  -->
+                  <label class="toggle self">
+                    <input id="f-genderOn" type="checkbox" />
+                    <span>성별 제한</span>
+                  </label>
+                  <div class="seg" id="genderRow" hidden>
+                    <label><input type="radio" name="glimit" value="MALE" /><span>남성만</span></label>
+                    <label><input type="radio" name="glimit" value="FEMALE" /><span>여성만</span></label>
+                  </div>
+
+                  <label class="toggle self spaced">
+                    <input id="f-ageOn" type="checkbox" />
+                    <span>나이 제한</span>
+                  </label>
+                  <div id="ageRow" hidden>
+                    <label class="toggle" id="ageSplitRow">
+                      <input id="f-ageSplit" type="checkbox" />
+                      <span>성별에 따라 다르게</span>
+                    </label>
+                    <div class="fee-row" style="margin-top:10px">
+                      <label class="fee-cell">
+                        <em id="ageLabelAll">모두</em>
+                        <span class="fee-input"><input id="f-minAgeMale" type="number" min="19" max="100" placeholder="19" /><b>세 이상</b></span>
+                      </label>
+                      <label class="fee-cell">
+                        <em>&nbsp;</em>
+                        <span class="fee-input"><input id="f-maxAgeMale" type="number" min="19" max="100" placeholder="100" /><b>세 이하</b></span>
+                      </label>
+                    </div>
+                    <div class="fee-row" id="ageFemaleRow" hidden style="margin-top:10px">
+                      <label class="fee-cell">
+                        <em>여성</em>
+                        <span class="fee-input"><input id="f-minAgeFemale" type="number" min="19" max="100" placeholder="19" /><b>세 이상</b></span>
+                      </label>
+                      <label class="fee-cell">
+                        <em>&nbsp;</em>
+                        <span class="fee-input"><input id="f-maxAgeFemale" type="number" min="19" max="100" placeholder="100" /><b>세 이하</b></span>
+                      </label>
+                    </div>
+                    <em class="fee-hint">비워두면 그쪽은 제한 없어요. 만 19세 미만은 애초에 가입할 수 없어요.</em>
+                  </div>
+
+                  <label class="toggle self spaced">
+                    <input id="f-heightOn" type="checkbox" />
+                    <span>키 제한</span>
+                  </label>
+                  <div class="fee-row" id="heightRow" hidden>
+                    <label class="fee-cell" id="heightMaleCell">
+                      <em>남성</em>
+                      <span class="fee-input"><input id="f-minHeightMale" type="number" min="140" max="210" placeholder="제한 없음" /><b>cm 이상</b></span>
+                    </label>
+                    <label class="fee-cell" id="heightFemaleCell">
+                      <em>여성</em>
+                      <span class="fee-input"><input id="f-minHeightFemale" type="number" min="140" max="210" placeholder="제한 없음" /><b>cm 이상</b></span>
+                    </label>
+                  </div>
+
+                  <label class="check spaced"><input id="f-jobVerified" type="checkbox" /> <span>직장 인증한 분만 신청할 수 있어요</span></label>
                 </div>
               </details>
               <button class="btn block" id="saveBtn">모임 열기</button>
@@ -705,9 +766,24 @@ import { API_BASE, SITE_URL } from '../lib/site';
     // 기본값이 아닌 것만 펼쳐 둔다 — 고치러 온 사람은 자기가 정해둔 것부터 보고 싶다.
     $('moreFee').open = (m?.fee ?? 0) > 0 || feeSplit;
     $('moreSeats').open = seatSplit || waitOn;
-    $('moreCond').open = !!m?.requireJobVerified;
+    $('moreCond').open = !!m?.requireJobVerified || m?.genderLimit != null || ageOn || heightOn;
     set('f-kakao', m?.kakaoLink ?? '');
     $('f-jobVerified').checked = !!m?.requireJobVerified;
+    $('f-genderOn').checked = m?.genderLimit != null;
+    for (const r of document.querySelectorAll('input[name="glimit"]')) r.checked = r.value === m?.genderLimit;
+    const ageOn = [m?.minAgeMale, m?.maxAgeMale, m?.minAgeFemale, m?.maxAgeFemale].some((v) => v != null);
+    $('f-ageOn').checked = ageOn;
+    // 남녀 값이 다를 때만 '성별에 따라 다르게'로 연다 — 같은 값이면 화면에서는 하나로 보인다.
+    $('f-ageSplit').checked =
+      ageOn && (m.minAgeMale !== m.minAgeFemale || m.maxAgeMale !== m.maxAgeFemale);
+    set('f-minAgeMale', m?.minAgeMale ?? '');
+    set('f-maxAgeMale', m?.maxAgeMale ?? '');
+    set('f-minAgeFemale', m?.minAgeFemale ?? '');
+    set('f-maxAgeFemale', m?.maxAgeFemale ?? '');
+    const heightOn = m?.minHeightMaleCm != null || m?.minHeightFemaleCm != null;
+    $('f-heightOn').checked = heightOn;
+    set('f-minHeightMale', m?.minHeightMaleCm ?? '');
+    set('f-minHeightFemale', m?.minHeightFemaleCm ?? '');
     syncFee();
     syncSeats();
     syncCond();
@@ -801,9 +877,105 @@ import { API_BASE, SITE_URL } from '../lib/site';
     $('sumSeats').textContent = `${seats} · ${wait}`;
   }
 
-  function syncCond() {
-    $('sumCond').textContent = $('f-jobVerified').checked ? '직장 인증한 분만' : '누구나';
+  /**
+   * 화면의 조건을 서버 모양으로 옮긴다.
+   *
+   * 서버는 나이·키를 성별별로만 안다(minAgeMale/minAgeFemale). 화면에서 '성별에 따라 다르게'를
+   * 끄면 한 쌍을 양쪽에 똑같이 실어 보낸다 — 보이기는 하나로, 저장은 서버 모양대로.
+   * 한 성별만 받는 모임이면 반대쪽은 아예 비운다. 쓰이지 않을 값을 남겨두면 다음에 조건을
+   * 풀었을 때 유령 규칙이 되살아난다.
+   */
+  function conditionPayload() {
+    const g = genderLimitValue();
+    const ageOn = $('f-ageOn').checked;
+    const heightOn = $('f-heightOn').checked;
+    const split = g == null && $('f-ageSplit').checked;
+    const minA = condNum('f-minAgeMale', ageOn);
+    const maxA = condNum('f-maxAgeMale', ageOn);
+    const minB = split ? condNum('f-minAgeFemale', ageOn) : minA;
+    const maxB = split ? condNum('f-maxAgeFemale', ageOn) : maxA;
+    return {
+      genderLimit: g,
+      minAgeMale: g === 'FEMALE' ? null : minA,
+      maxAgeMale: g === 'FEMALE' ? null : maxA,
+      minAgeFemale: g === 'MALE' ? null : minB,
+      maxAgeFemale: g === 'MALE' ? null : maxB,
+      minHeightMaleCm: g === 'FEMALE' ? null : condNum('f-minHeightMale', heightOn),
+      minHeightFemaleCm: g === 'MALE' ? null : condNum('f-minHeightFemale', heightOn),
+    };
   }
+
+  /** 지금 켜져 있는 성별 제한(MALE/FEMALE/null). */
+  function genderLimitValue() {
+    if (!$('f-genderOn').checked) return null;
+    return document.querySelector('input[name="glimit"]:checked')?.value ?? null;
+  }
+
+  /** 나이·키 칸의 값 — 꺼져 있거나 비어 있으면 null(제한 없음). */
+  function condNum(id, on) {
+    if (!on) return null;
+    const v = $(id).value.trim();
+    return v === '' ? null : Number(v);
+  }
+
+  /**
+   * 참가 조건 — 켠 것만 보이고, 접힌 채로도 요약줄이 무엇이 걸렸는지 말한다.
+   *
+   * 나이는 서버가 성별별로 갖는다(minAgeMale/minAgeFemale). '성별에 따라 다르게'를 끄면
+   * 한 쌍의 값을 양쪽에 똑같이 실어 보낸다 — 화면에서는 하나로 보이되 저장은 서버 모양대로.
+   */
+  function syncCond() {
+    const genderOn = $('f-genderOn').checked;
+    const g = genderLimitValue();
+    const ageOn = $('f-ageOn').checked;
+    const heightOn = $('f-heightOn').checked;
+    /*
+     * 성별을 한쪽으로 제한하면 반대쪽 조건은 물어볼 이유가 없다.
+     * "여성만 받는 모임의 남성 나이 제한"은 답이 있어도 쓰이지 않는 값이라, 화면에서 아예 치운다.
+     * 따라서 성별을 제한한 모임에서는 나이·키가 저절로 한 벌이 된다.
+     */
+    const oneGender = genderOn && g != null;
+    const ageSplit = !oneGender && $('f-ageSplit').checked;
+
+    $('genderRow').hidden = !genderOn;
+    $('ageRow').hidden = !ageOn;
+    $('ageSplitRow').hidden = oneGender;
+    $('ageFemaleRow').hidden = !ageSplit;
+    $('heightRow').hidden = !heightOn;
+    $('heightMaleCell').hidden = oneGender && g === 'FEMALE';
+    $('heightFemaleCell').hidden = oneGender && g === 'MALE';
+    $('ageLabelAll').textContent = ageSplit ? '남성' : oneGender ? (g === 'MALE' ? '남성' : '여성') : '모두';
+
+    const parts = [];
+    if (g) parts.push(g === 'MALE' ? '남성만' : '여성만');
+    if (ageOn) {
+      const span = (min, max) =>
+        min && max ? `${min}~${max}세` : min ? `${min}세 이상` : max ? `${max}세 이하` : null;
+      const first = span(condNum('f-minAgeMale', true), condNum('f-maxAgeMale', true));
+      const second = ageSplit ? span(condNum('f-minAgeFemale', true), condNum('f-maxAgeFemale', true)) : null;
+      if (ageSplit && (first || second)) parts.push(`남 ${first ?? '제한 없음'} · 여 ${second ?? '제한 없음'}`);
+      else if (first) parts.push(first);
+    }
+    if (heightOn) {
+      const male = condNum('f-minHeightMale', true);
+      const female = condNum('f-minHeightFemale', true);
+      // 한 성별만 받는 모임에서는 '남/여'를 붙이지 않는다 — 누구 얘긴지 이미 정해져 있다.
+      if (male && !(oneGender && g === 'FEMALE')) parts.push(oneGender ? `${male}cm↑` : `남 ${male}cm↑`);
+      if (female && !(oneGender && g === 'MALE')) parts.push(oneGender ? `${female}cm↑` : `여 ${female}cm↑`);
+    }
+    if ($('f-jobVerified').checked) parts.push('직장 인증');
+    $('sumCond').textContent = parts.length ? parts.join(' · ') : '누구나';
+  }
+
+  for (const id of [
+    'f-genderOn', 'f-ageOn', 'f-ageSplit', 'f-heightOn',
+    'f-minAgeMale', 'f-maxAgeMale', 'f-minAgeFemale', 'f-maxAgeFemale',
+    'f-minHeightMale', 'f-minHeightFemale',
+  ]) {
+    $(id).addEventListener('input', syncCond);
+    $(id).addEventListener('change', syncCond);
+  }
+  for (const r of document.querySelectorAll('input[name="glimit"]')) r.addEventListener('change', syncCond);
 
   for (const id of ['f-feeSplit', 'f-fee', 'f-feeFemale']) {
     $(id).addEventListener('input', () => { syncFee(); preview(draftFromForm(), true); });
@@ -910,6 +1082,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       fee: d.fee,
       feeFemale: d.feeFemale,
       requireJobVerified: d.requireJobVerified,
+      ...conditionPayload(),
       coverUrls: covers,
       kakaoLink: $('f-kakao').value.trim(),
     };
@@ -1064,7 +1237,14 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .more summary:hover .sum { color: var(--ink); }
   .console .more-body { padding: 4px 18px 18px; display: grid; gap: 12px; border-top: 1px solid var(--border); }
   .console .toggle.self { padding-top: 12px; }
-  .console .toggle.spaced { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .console .toggle[hidden], .console .fee-cell[hidden] { display: none; }
+  .console .toggle.spaced, .console .check.spaced { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 16px; }
+  /* 둘 중 하나 — 알약 두 개면 라디오 버튼보다 무엇을 고르는지가 빨리 읽힌다. */
+  .console .seg { display: flex; gap: 8px; }
+  .console .seg[hidden] { display: none; }
+  .console .seg label { display: flex; align-items: center; gap: 7px; padding: 9px 15px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 0.9rem; }
+  .console .seg label:has(input:checked) { border-color: var(--terracotta); background: color-mix(in srgb, var(--terracotta) 8%, transparent); }
+  .console .seg input { width: auto; }
   .console input[readonly] { background: var(--paper); color: var(--muted); }
 
   /* 참가비 — 스위치 하나로 갈라지는 한 덩어리. */
