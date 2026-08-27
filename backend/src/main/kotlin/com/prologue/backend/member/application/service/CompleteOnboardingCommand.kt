@@ -13,6 +13,10 @@ data class CompleteOnboardingCommand(
     val birthDate: LocalDate,
     /** 비어 있으면 소개팅을 쓰지 않는 사람 — 모임만 하러 온 경우다. */
     val preferredGender: Gender?,
+
+    /** 소개받고 싶은 나이대. 둘 다 null이면 상관없다는 뜻이다. */
+    val minAge: Int? = null,
+    val maxAge: Int? = null,
     val region: String,
     val phone: String,
     val bio: String? = null,

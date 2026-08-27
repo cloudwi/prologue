@@ -27,6 +27,13 @@ data class OnboardingRequest(
      */
     val preferredGender: Gender? = null,
 
+    /**
+     * 소개받고 싶은 나이대(선택). 비워두면 나이로 거르지 않는다.
+     * 옛 앱은 이 값을 보내지 않으므로 null이 되고, 어제까지와 똑같이 동작한다(가산적 변경).
+     */
+    val minAge: Int? = null,
+    val maxAge: Int? = null,
+
     @field:NotBlank(message = "지역은 필수입니다")
     val region: String,
 

@@ -34,6 +34,13 @@ class MemberJpaEntity(
     @Column(name = "preferred_gender", length = 10)
     var preferredGender: Gender?,
 
+    /** 소개받고 싶은 나이대. null이면 그쪽 방향으로는 제한이 없다. */
+    @Column(name = "min_age")
+    var minAge: Int?,
+
+    @Column(name = "max_age")
+    var maxAge: Int?,
+
     @Column(name = "region", nullable = false, length = 50)
     var region: String,
 

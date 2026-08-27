@@ -3,6 +3,8 @@ package com.prologue.backend.dailymeet.domain.model
 import com.prologue.backend.member.domain.model.Member
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -16,8 +18,18 @@ import java.util.UUID
  */
 object PeerEligibility {
 
-    fun isEligible(me: Member, peer: Member, alreadyMet: Set<UUID>): Boolean =
+    /** 나이를 세는 기준 시간대 — Member.age()와 같아야 하루 차이로 판정이 갈리지 않는다. */
+    private val KST = ZoneId.of("Asia/Seoul")
+
+
+    fun isEligible(
+        me: Member,
+        peer: Member,
+        alreadyMet: Set<UUID>,
+        today: LocalDate = LocalDate.now(KST),
+    ): Boolean =
         prefersEachOther(me, peer) &&
+            withinEachOthersAgeRange(me, peer, today) &&
             hasEnoughPhotos(peer) &&
             !alreadyMetBefore(peer, alreadyMet)
 
@@ -32,6 +44,24 @@ object PeerEligibility {
             peer.preferredGender != null &&
             peer.gender == me.preferredGender &&
             peer.preferredGender == me.gender
+
+    /**
+     * 서로가 정한 나이대 안에 들어와야 한다.
+     *
+     * 나이는 [PeerScore]에서도 쓰이지만 그건 순서의 문제다 — 나이 차가 벌어질수록 뒤로 밀릴 뿐,
+     * 스물아홉이 마흔을 소개받는 날은 여전히 생긴다. 본인이 정한 범위는 자격의 문제라 여기서 본다.
+     *
+     * 성별 선호와 같은 원칙으로 **양쪽 모두**를 본다. 내 범위에 상대가 들어와도 상대의 범위에
+     * 내가 없으면 소개하지 않는다 — 한쪽만 원하는 건 소개가 아니라 강요다.
+     *
+     * 비워둔 쪽은 조건을 걸지 않는다. 그래서 아무도 범위를 정하지 않은 지금은 이 규칙이
+     * 있으나 없으나 같고, 정한 사람에게만 조여든다.
+     */
+    private fun withinEachOthersAgeRange(me: Member, peer: Member, today: LocalDate): Boolean =
+        fits(peer.age(today), me.minAge, me.maxAge) && fits(me.age(today), peer.minAge, peer.maxAge)
+
+    private fun fits(age: Int, min: Int?, max: Int?): Boolean =
+        (min == null || age >= min) && (max == null || age <= max)
 
     /** 사진 없는 프로필은 소개하지 않는다. MY 탭이 "사진이 있어야 소개돼요"라고 약속한 그 기준. */
     private fun hasEnoughPhotos(peer: Member): Boolean = peer.isVisibleToOthers()

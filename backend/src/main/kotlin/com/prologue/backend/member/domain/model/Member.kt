@@ -31,6 +31,8 @@ class Member private constructor(
     photoUrls: List<String>,
     phone: String?,
     kakaoId: String?,
+    minAge: Int?,
+    maxAge: Int?,
 ) {
     var nickname: String = nickname
         private set
@@ -55,6 +57,17 @@ class Member private constructor(
     var strengths: List<String> = strengths
         private set
     var avatarId: Int? = avatarId
+        private set
+
+    /**
+     * 소개받고 싶은 나이대. 둘 다 비어 있으면 상관없다는 뜻이고, 한쪽만 채우면 그쪽만 조인다.
+     *
+     * 나이는 [PeerScore]에서 이미 점수로 쓰이지만 그건 순서의 문제다. 본인이 정한 범위는
+     * 자격의 문제라 [PeerEligibility]가 본다 — 순서를 미루는 것과 아예 소개하지 않는 것은 다르다.
+     */
+    var minAge: Int? = minAge
+        private set
+    var maxAge: Int? = maxAge
         private set
 
     /** 전화번호(숫자만 저장). 편지에 실어 보내는 연락처 — 신규 가입은 필수, 이전 회원만 null일 수 있다. */
@@ -126,8 +139,11 @@ class Member private constructor(
         strengths: List<String> = emptyList(),
         avatarId: Int? = null,
         kakaoId: String? = null,
+        minAge: Int? = null,
+        maxAge: Int? = null,
     ) {
         validate(nickname, birthDate, region, bio, heightCm, avatarId)
+        validateAgeRange(minAge, maxAge)
         this.nickname = nickname.trim()
         this.gender = gender
         this.birthDate = birthDate
@@ -142,6 +158,8 @@ class Member private constructor(
         this.interests = normalizeKeywords(interests)
         this.strengths = normalizeKeywords(strengths)
         this.avatarId = avatarId
+        this.minAge = minAge
+        this.maxAge = maxAge
     }
 
     companion object {
@@ -153,6 +171,9 @@ class Member private constructor(
         private const val MIN_BIRTH_YEAR = 1920
         /** 가입 가능한 최소 만 나이 — 한국 성년(만 19세). */
         private const val ADULT_AGE = 19
+
+        /** 나이대의 상한 — 이 위로는 사실상 "상관없음"과 같아서 굳이 나누지 않는다. */
+        private const val AGE_MAX = 99
         private const val BIO_MAX = 500
 
         /**
@@ -183,9 +204,12 @@ class Member private constructor(
             avatarId: Int? = null,
             kakaoId: String? = null,
             photoUrls: List<String> = emptyList(),
+            minAge: Int? = null,
+            maxAge: Int? = null,
             now: Instant = Instant.now(),
         ): Member {
             validate(nickname, birthDate, region, bio, heightCm, avatarId, now)
+            validateAgeRange(minAge, maxAge)
             // 사진은 회원이 생긴 뒤에야 업로드할 수 있으므로(POST /members/me/photos)
             // 가입 시점에 최소 장수를 요구하면 프로필도 사진도 만들 수 없는 교착이 된다.
             // "최소 ${MIN_PHOTOS}장"은 가입 조건이 아니라 소개 노출 조건으로 다룬다(isVisibleToOthers).
@@ -199,6 +223,8 @@ class Member private constructor(
                 photoUrls = photoUrls,
                 phone = normalizePhone(phone),
                 kakaoId = normalizeKakaoId(kakaoId),
+                minAge = minAge,
+                maxAge = maxAge,
             )
         }
 
@@ -221,10 +247,12 @@ class Member private constructor(
             photoUrls: List<String> = emptyList(),
             phone: String? = null,
             kakaoId: String? = null,
+            minAge: Int? = null,
+            maxAge: Int? = null,
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
             bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
-            phone, kakaoId,
+            phone, kakaoId, minAge, maxAge,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =
@@ -265,6 +293,23 @@ class Member private constructor(
                 throw MemberDomainException("자기소개는 ${BIO_MIN}자 이상 적어주세요 — 비워둘 수는 있어요")
             }
             if (heightCm != null && (heightCm < 120 || heightCm > 230)) throw MemberDomainException("키가 올바르지 않습니다")
+        }
+
+        /**
+         * 소개받고 싶은 나이대. 비우는 것은 자유이고, 채운다면 말이 되는 범위여야 한다.
+         *
+         * 하한을 성년(만 19세)으로 두는 것은 취향의 문제가 아니다 — 그보다 어린 회원은 존재하지
+         * 않으므로, 더 낮게 적으면 지키지도 못할 약속을 화면에 적어두는 꼴이 된다.
+         */
+        private fun validateAgeRange(minAge: Int?, maxAge: Int?) {
+            listOfNotNull(minAge, maxAge).forEach {
+                if (it < ADULT_AGE || it > AGE_MAX) {
+                    throw MemberDomainException("나이대는 ${ADULT_AGE}세부터 ${AGE_MAX}세까지 정할 수 있어요")
+                }
+            }
+            if (minAge != null && maxAge != null && minAge > maxAge) {
+                throw MemberDomainException("최소 나이가 최대 나이보다 클 수 없어요")
+            }
         }
     }
 }

@@ -68,6 +68,8 @@ class OnboardingController(
                 gender = request.gender!!,
                 birthDate = request.birthDate!!,
                 preferredGender = request.preferredGender,
+                minAge = request.minAge,
+                maxAge = request.maxAge,
                 region = request.region,
                 phone = request.phone,
                 kakaoId = request.kakaoId,

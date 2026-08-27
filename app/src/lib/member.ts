@@ -15,6 +15,14 @@ export type OnboardingProfile = {
    * 나중에 MY에서 소개팅을 켜면 그때 채워진다. 이 값이 곧 소개팅 스위치다.
    */
   preferredGender?: Gender | null;
+  /**
+   * 소개받고 싶은 나이대. 비워두면 나이로 거르지 않는다.
+   *
+   * 서버는 **양쪽 모두**를 본다 — 내 범위에 상대가 들어와도 상대의 범위에 내가 없으면
+   * 소개되지 않는다. 성별 선호와 같은 원칙이다.
+   */
+  minAge?: number | null;
+  maxAge?: number | null;
   region: string;
   /** 전화번호(숫자만). 프로필에 공개되지 않고, 편지에 실을 때만 상대에게 전해진다. */
   phone: string;
@@ -34,7 +42,11 @@ export type OnboardingProfile = {
  * 프로필 조회 응답. 사진은 프로필 수정(PUT)이 아니라 사진 전용 엔드포인트로 관리하므로
  * 요청 타입(OnboardingProfile)에는 없고 응답에만 있다.
  */
-export type MemberProfile = Required<Omit<OnboardingProfile, 'phone' | 'consent' | 'preferredGender'>> & {
+export type MemberProfile = Required<
+  Omit<OnboardingProfile, 'phone' | 'consent' | 'preferredGender' | 'minAge' | 'maxAge'>
+> & {
+  minAge: number | null;
+  maxAge: number | null;
   /** null이면 소개팅을 아직 켜지 않은 회원 — 모임만 쓰고 있다. */
   preferredGender: Gender | null;
   accountId: string;

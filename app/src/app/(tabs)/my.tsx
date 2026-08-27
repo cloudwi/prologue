@@ -19,7 +19,7 @@ import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/the
 import { resetAnalytics } from '@/lib/analytics';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
-import { getMyProfile } from '@/lib/member';
+import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
@@ -306,7 +306,12 @@ function MyHub() {
               c={c}
             />
           ) : (
-            <Row label="선호하는 이성" onPress={() => router.push('/my/preferences')} c={c} />
+            <Row
+              label="선호하는 이성"
+              value={ageRangeLabel(profile)}
+              onPress={() => router.push('/my/preferences')}
+              c={c}
+            />
           )}
           {/* 미인증이면 혜택을 말로 권한다 — 배지가 곧 모임에서의 신뢰다. */}
           <Row
@@ -348,6 +353,18 @@ function MyHub() {
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * 정해둔 나이대를 한 줄로. 정하지 않았으면 그 사실을 적는다 —
+ * 빈칸은 "아직 안 봤다"로도 읽히지만, "상관없음"이라고 적혀 있으면 이미 정해진 상태로 읽힌다.
+ */
+function ageRangeLabel(profile: MemberProfile | null): string {
+  const min = profile?.minAge ?? null;
+  const max = profile?.maxAge ?? null;
+  if (min == null && max == null) return '나이 상관없음';
+  if (min != null && max != null) return `${min}~${max}세`;
+  return min != null ? `${min}세 이상` : `${max}세 이하`;
 }
 
 function Section({ title, c, children }: { title: string; c: ThemeColors; children: React.ReactNode }) {

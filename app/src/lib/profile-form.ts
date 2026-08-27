@@ -11,6 +11,8 @@ export function toRequest(p: MemberProfile, patch: Partial<OnboardingProfile> = 
     gender: p.gender,
     birthDate: p.birthDate,
     preferredGender: p.preferredGender,
+    minAge: p.minAge,
+    maxAge: p.maxAge,
     region: p.region,
     // 이전 회원은 아직 전화번호가 없을 수 있다 — 그 상태로 저장하면 서버가 등록을 요구한다(기본 정보에서 채움).
     phone: p.phone ?? '',
