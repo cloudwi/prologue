@@ -97,12 +97,15 @@ import { API_BASE, SITE_URL } from '../lib/site';
               <button class="tab" data-view="detail">모임 상세</button>
             </div>
           </div>
-          <div class="phone">
+          <!-- 랜딩의 목업(.phone)은 장식이라 일부러 기울어 있다. 여기 것은 자로 재는 도구라
+               같은 이름을 쓰면 안 된다 — 기울어진 화면에서는 잘림도 여백도 믿을 수 없다. -->
+          <div class="device">
+            <div class="device-island" aria-hidden="true"></div>
             <div class="screen" id="screen">
               <div class="empty-preview">왼쪽에서 모임을 고르거나 만들면<br />여기에 폰 화면이 나타나요.</div>
             </div>
           </div>
-          <p class="phone-note" id="phoneNote"></p>
+          <p class="device-note" id="phoneNote"></p>
         </div>
       </div>
     </div>
@@ -243,6 +246,17 @@ import { API_BASE, SITE_URL } from '../lib/site';
     const confirmed = apps.filter((a) => a.status === 'CONFIRMED');
     const declined = apps.filter((a) => a.status === 'DECLINED');
 
+    /*
+     * 개최 완료로 남길 수 있는 조건 — 서버(Meetup.complete)가 지키는 규칙 그대로다.
+     * 만난 적 없는 모임은 이력이 될 수 없고, 아무도 확정되지 않은 자리도 마찬가지다.
+     * 눌러본 뒤에야 거절 사유를 듣는 대신, 왜 아직 안 되는지를 버튼 자리에서 미리 말한다.
+     */
+    const passed = new Date(m.meetAt).getTime() <= Date.now();
+    const completable = passed && confirmed.length > 0;
+    const completeBlockedWhy = !passed
+      ? '모임 시각이 지난 뒤에 개최 완료로 남길 수 있어요.'
+      : '확정된 참가자가 있어야 개최 기록으로 남아요.';
+
     const person = (a, actions) => {
       const meta = [a.gender === 'MALE' ? '남' : a.gender === 'FEMALE' ? '여' : null, a.age ? `${a.age}세` : null, a.region].filter(Boolean).join(' · ');
       return `<div class="person">
@@ -288,9 +302,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
       <div class="row wrap gap">
         ${m.status === 'OPEN' ? `<button class="btn ghost small" data-hosting="close">모집 마감</button>` : ''}
         ${m.status === 'CLOSED' ? `<button class="btn ghost small" data-hosting="reopen">모집 다시 열기</button>` : ''}
-        ${m.status !== 'DONE' && m.status !== 'CANCELED' ? `<button class="btn ghost small" data-hosting="complete">개최 완료</button>` : ''}
-        ${m.status !== 'CANCELED' ? `<button class="btn ghost small danger" data-hosting="cancel">모임 취소</button>` : ''}
-      </div>`;
+        ${m.status !== 'DONE' && m.status !== 'CANCELED' && completable ? `<button class="btn ghost small" data-hosting="complete">개최 완료</button>` : ''}
+        ${m.status !== 'DONE' && m.status !== 'CANCELED' ? `<button class="btn ghost small danger" data-hosting="cancel">모임 취소</button>` : ''}
+      </div>
+      ${m.status !== 'DONE' && m.status !== 'CANCELED' && !completable ? `<p class="hint">${completeBlockedWhy}</p>` : ''}`;
 
     for (const b of $('detail').querySelectorAll('[data-confirm]')) b.onclick = () => act(b.dataset.confirm, 'confirm');
     for (const b of $('detail').querySelectorAll('[data-decline]')) b.onclick = () => act(b.dataset.decline, 'decline');
@@ -573,11 +588,38 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .tabs[hidden] { display: none; }
   .console .tab { padding: 6px 12px; border: 0; border-radius: 999px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.82rem; cursor: pointer; }
   .console .tab.on { background: var(--ink); color: var(--paper); }
-  .console .phone { width: 390px; max-width: 100%; height: 720px; padding: 12px; background: #1b2126; border-radius: 44px; box-shadow: 0 18px 50px rgba(27, 33, 38, 0.18); }
-  .console .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 33px; overflow: auto; }
+  /* 실제 아이폰 비율(19.5:9)과 곡률. 미리보기는 자로 재는 도구라 기울이지 않는다. */
+  .console .device {
+    position: relative;
+    /* 세로가 기준이다 — 창에 다 들어오는 높이를 잡고, 폭은 아이폰 비율이 정하게 둔다.
+       스크롤을 내려가며 봐야 하는 미리보기는 미리보기가 아니다. */
+    height: min(812px, calc(100vh - 210px));
+    max-width: 100%;
+    aspect-ratio: 9 / 19.5;
+    margin-inline: auto;
+    padding: 11px;
+    background: #1b2126;
+    border-radius: 54px;
+    transform: none;
+    box-shadow: 0 18px 50px rgba(27, 33, 38, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  }
+  /* 다이나믹 아일랜드 — 화면 위에 떠 있어 이 자리에 무엇이 가리는지도 같이 보인다. */
+  .console .device-island {
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 108px;
+    height: 30px;
+    border-radius: 999px;
+    background: #1b2126;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .console .screen { width: 100%; height: 100%; background: var(--paper); border-radius: 43px; overflow: auto; }
   .console .screen iframe { width: 100%; height: 100%; border: 0; }
   .console .empty-preview { padding: 60px 30px; text-align: center; color: var(--muted); font-size: 0.9rem; line-height: 1.7; }
-  .console .phone-note { margin-top: 12px; color: var(--muted); font-size: 0.85rem; }
+  .console .device-note { margin-top: 14px; color: var(--muted); font-size: 0.85rem; }
 
   /* 폰 안의 앱 흉내 — 실물과 완전히 같지는 않지만 조판과 잘림은 그대로 보인다. */
   .console .app-head { padding: 22px 20px 14px; display: grid; gap: 5px; }
@@ -604,7 +646,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   @media (max-width: 1100px) {
     .console .split { grid-template-columns: 1fr; }
     .console .pane.right { position: static; }
-    .console .phone { margin: 0 auto; }
+    .console .device { margin: 0 auto; }
   }
   @media (max-width: 560px) {
     .console .grid2 { grid-template-columns: 1fr; }
