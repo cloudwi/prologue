@@ -60,7 +60,7 @@ export function SignupGate({
             style={({ pressed }) => [styles.cta, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
             <Text style={[styles.ctaText, { color: c.primaryText }]}>
-              {guest ? '가입하고 시작하기' : '소개팅 시작하기'}
+              {guest ? '프롤로그 시작하기' : '소개팅 시작하기'}
             </Text>
           </Pressable>
 

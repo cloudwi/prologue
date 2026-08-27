@@ -243,7 +243,11 @@ export default function OnboardingScreen() {
     {
       key: 'phone',
       title: '전화번호를 알려주세요',
-      subtitle: '프로필에 공개되지 않아요.\n마음이 닿아 편지를 보낼 때, 내가 담기로 한 경우에만 상대에게 전해져요.',
+      // 편지는 소개팅의 말이다 — 모임만 하러 온 사람에게 "마음이 닿아 편지를 보낼 때"는
+      // 무슨 소린지 알 수 없는 문장이다. 그 사람에게는 그 사람의 이유를 말한다.
+      subtitle: meetupOnly
+        ? '모임장이 연락할 때 쓰는 번호예요.\n프로필에 공개되지 않아요.'
+        : '프로필에 공개되지 않아요.\n마음이 닿아 편지를 보낼 때, 내가 담기로 한 경우에만 상대에게 전해져요.',
       valid: isValidPhoneDigits(phoneDigits),
       content: (
         <PlaceholderInput

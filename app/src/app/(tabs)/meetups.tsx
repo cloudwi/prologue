@@ -421,7 +421,7 @@ export default function MeetupsScreen() {
                 <Text style={[styles.guestInviteBody, { color: c.textSecondary }]}>
                   하루에 한 사람, 같은 질문에 답한 사람이 소개돼요.{'\n'}지금 둘러보는 모임은 가입 없이도 계속 볼 수 있어요.
                 </Text>
-                <Text style={[styles.guestInviteCta, { color: c.primaryStrong }]}>가입하고 시작하기 ›</Text>
+                <Text style={[styles.guestInviteCta, { color: c.primaryStrong }]}>프롤로그 시작하기 ›</Text>
               </Pressable>
             )}
 
