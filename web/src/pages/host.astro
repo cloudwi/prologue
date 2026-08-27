@@ -93,7 +93,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
                 <textarea id="f-desc" rows="10" maxlength="1000"
                   placeholder="어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.&#10;&#10;줄을 짧게 끊으면 초대장에서 읽기 좋아요."></textarea>
                 <div class="editor-foot">
-                  <em>줄바꿈은 초대장에 그대로 나와요. 오른쪽 ‘모임 상세’에서 확인해 보세요.</em>
+                  <em>사진은 글 위로 끌어다 놓으면 그 자리에 들어가요. 줄바꿈은 초대장에 그대로 나와요.</em>
                   <b id="descCount">0 / 1000</b>
                 </div>
 
@@ -110,7 +110,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
                   <label class="dropzone slim" id="bodyDrop">
                     <input id="f-bodyImage" type="file" accept="image/*" multiple hidden />
                     <b>사진을 끌어다 놓거나 눌러서 고르세요</b>
-                    <span>올린 뒤 ‘넣기’를 누르면 글의 커서 자리에 들어가요.</span>
+                    <span>글 위로 바로 끌어다 놓아도 돼요. 여기에 올린 뒤 ‘넣기’를 눌러도 되고요.</span>
                   </label>
                   <div id="bodyPreview" class="covers"></div>
                 </div>
@@ -1164,6 +1164,67 @@ import { API_BASE, SITE_URL } from '../lib/site';
     uploadBodyImages([...(e.dataTransfer?.files ?? [])]);
   });
 
+  /**
+   * 소개 칸에 바로 떨어뜨린다.
+   *
+   * 올리고 나서 '넣기'를 누르는 두 걸음은 쓰는 사람 머릿속에서 한 걸음이다 — "여기에 이 사진".
+   * 그래서 글 칸 자체가 사진을 받는다. 표시는 떨어뜨린 글자 자리에 들어가므로 어디에 놓을지는
+   * 손이 정하고, 저장되는 것은 여전히 평문과 [사진N] 표시뿐이다.
+   */
+  function caretFromPoint(el, x, y) {
+    // 이름이 브라우저마다 다르고, textarea 안쪽을 짚지 못하는 판도 있다 — 그때는 커서 자리로.
+    for (const at of [document.caretPositionFromPoint?.(x, y)?.offset, document.caretRangeFromPoint?.(x, y)?.startOffset]) {
+      if (Number.isInteger(at) && at >= 0 && at <= el.value.length) return at;
+    }
+    return el.selectionStart ?? el.value.length;
+  }
+
+  async function dropIntoDesc(files, at) {
+    const room = BODY_IMAGE_MAX - bodyImages.length;
+    if (room <= 0) return say(`소개 사진은 ${BODY_IMAGE_MAX}장까지예요.`, true);
+    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
+    if (!picked.length) return;
+    if (files.length > picked.length) say(`${BODY_IMAGE_MAX}장까지만 올렸어요.`);
+    say('사진을 올리는 중…');
+    let cursor = Math.min(Math.max(at, 0), descBox.value.length);
+    try {
+      for (const file of picked) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
+        bodyImages.push(r.url);
+        renderBodyImages();
+        // 문장 한가운데 떨어뜨려도 사진이 글을 자르지 않게, 앞뒤로 줄을 세운다.
+        const token = `${cursor > 0 && descBox.value[cursor - 1] !== '\n' ? '\n' : ''}[사진${bodyImages.length}]\n`;
+        descBox.value = descBox.value.slice(0, cursor) + token + descBox.value.slice(cursor);
+        cursor += token.length;
+      }
+      descBox.focus();
+      descBox.setSelectionRange(cursor, cursor);
+      syncDesc();
+      preview(draftFromForm(), true);
+      say(picked.length > 1 ? `사진 ${picked.length}장을 글에 놓았어요.` : '사진을 글에 놓았어요.');
+    } catch (err) { say(err.message, true); }
+  }
+
+  for (const type of ['dragenter', 'dragover']) {
+    descBox.addEventListener(type, (e) => {
+      // 글자를 끄는 것은 브라우저가 하던 대로 둔다 — 우리가 맡는 것은 파일뿐이다.
+      if (![...(e.dataTransfer?.types ?? [])].includes('Files')) return;
+      e.preventDefault();
+      descBox.classList.add('on');
+    });
+  }
+  for (const type of ['dragleave', 'dragend', 'drop']) {
+    descBox.addEventListener(type, () => descBox.classList.remove('on'));
+  }
+  descBox.addEventListener('drop', (e) => {
+    const files = [...(e.dataTransfer?.files ?? [])];
+    if (!files.length) return;
+    e.preventDefault();
+    dropIntoDesc(files, caretFromPoint(descBox, e.clientX, e.clientY));
+  });
+
   // 끌어다 놓기 — 파일 탐색기를 여는 수고를 던다.
   const zone = $('dropzone');
   for (const type of ['dragenter', 'dragover']) {
@@ -1331,6 +1392,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   }
   .console .chip:hover { color: var(--ink); border-color: var(--ink); }
   .console .editor textarea { min-height: 220px; line-height: 1.8; resize: vertical; }
+  .console .editor textarea.on { border-color: var(--terracotta); background: var(--paper); }
   .console .editor-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .console .editor-foot em { font-style: normal; color: var(--muted); font-size: 0.82rem; }
   .console .editor-foot b { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; font-weight: 600; }
