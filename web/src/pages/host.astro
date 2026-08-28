@@ -2153,8 +2153,16 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   .console .inv-desc { margin-top: 16px; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; text-align: left; }
   .console .inv-desc.center { text-align: center; }
   .console .inv-desc.right { text-align: right; }
-  /* 글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다. */
-  .console .inv-photo { display: block; width: calc(100% + 48px); height: auto; margin: 18px -24px; object-fit: cover; }
+  /*
+    글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다.
+
+    max-width를 풀어야 한다. 전역에 img { max-width: 100% }가 걸려 있어서, 여백을 뚫으라고
+    준 calc(100% + 48px)가 100%로 잘렸다. 왼쪽 -24px 마진만 살아남으니 사진이 왼쪽으로만
+    비어져 나가고 오른쪽에 48px이 남았다 — 미리보기가 초대장을 거짓으로 그리고 있었다.
+    서버 쪽 초대장에는 이 전역 규칙이 없어서 같은 CSS인데도 멀쩡했다.
+  */
+  .console .inv-photo { display: block; width: calc(100% + 48px); max-width: none; height: auto;
+                        margin: 18px -24px; object-fit: cover; }
   .console .inv-photo.w25, .console .inv-photo.w50, .console .inv-photo.w75 {
     margin: 18px auto; border-radius: 10px; }
   .console .inv-photo.w25 { width: 25%; }
