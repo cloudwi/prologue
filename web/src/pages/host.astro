@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
+import RichField from '../components/RichField.astro';
 
 /*
  * 모임장 콘솔 — 모임을 열고, 누가 왔는지 보고, 오픈채팅으로 건너가는 자리.
@@ -143,45 +144,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
                 자리는 하나뿐이고 내용만 바뀐다. 사진을 고르면 그 자리에 크기 단추가 온다 —
                 단추가 여기저기서 튀어나오지 않으니 어디를 볼지 헤매지 않는다.
               -->
-              <div class="field editor">
-                <div class="editor-head"><span>소개</span></div>
-                <div class="editor-bar" id="descBar">
-                  <button type="button" class="chip" id="insertPhoto">사진 넣기</button>
-                  <span class="bar-sep" aria-hidden="true"></span>
-                  <span class="bar-group" id="textTools">
-                    <!--
-                      정렬 — 어느 편집기에서나 같은 모양의 아이콘이라 설명이 필요 없다.
-                      선의 들여쓰기가 곧 정렬이다. 지금 줄의 정렬이 켜진 채로 보인다.
-                    -->
-                    <span class="seg" role="group" aria-label="문단 정렬">
-                      <button type="button" class="ico" data-align="left" aria-label="왼쪽 정렬" title="왼쪽">
-                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" /></svg>
-                      </button>
-                      <button type="button" class="ico" data-align="center" aria-label="가운데 정렬" title="가운데">
-                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" /></svg>
-                      </button>
-                      <button type="button" class="ico" data-align="right" aria-label="오른쪽 정렬" title="오른쪽">
-                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" /></svg>
-                      </button>
-                    </span>
-                    <span class="bar-sep" aria-hidden="true"></span>
-                    <button type="button" class="chip" id="insertDot">가운뎃점 ·</button>
-                  </span>
-                  <span class="bar-group" id="imageTools" hidden>
-                    <em class="bar-label">사진 크기</em>
-                    <button type="button" class="chip" data-w="25">25%</button>
-                    <button type="button" class="chip" data-w="50">50%</button>
-                    <button type="button" class="chip" data-w="75">75%</button>
-                    <button type="button" class="chip" data-w="100">100%</button>
-                  </span>
-                </div>
-                <div id="f-desc" class="rich"></div>
-                <input id="f-bodyImage" type="file" accept="image/*" multiple hidden />
-                <div class="editor-foot">
-                  <em>사진은 글 위로 끌어다 놓거나 붙여넣어도 돼요.</em>
-                  <b id="descCount">0 / 1000</b>
-                </div>
-              </div>
+              <RichField label="소개" id="desc" />
               <div class="grid2">
                 <label class="field"><span>날짜 *</span><input id="f-date" type="date" /></label>
                 <label class="field"><span>시간 *</span><input id="f-time" type="time" step="900" /></label>
@@ -333,6 +296,30 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
             </div>
           </div>
 
+          <!--
+            후기 — 개최 완료된 모임에만 열리는 자리.
+
+            모임 폼과 따로 둔다. 끝난 모임은 내용을 고칠 수 없고(서버가 막는다), 여기서 쓰는 것은
+            모임이 아니라 그 뒤에 붙는 글이다. 한 폼에 섞으면 "수정할 수 없는 모임을 수정하는 화면"이
+            되어버린다.
+          -->
+          <div id="v-recap" hidden>
+            <div class="form">
+              <div class="review-note" id="recapReview" hidden></div>
+              <RichField
+                label="후기"
+                id="recap"
+                hint="그날 어땠는지 적고 사진을 놓아주세요. 다음에 올 사람이 읽어요."
+              />
+              <p class="hint">
+                저장하면 운영자가 한 번 읽어봐요. 승인되면 앱의 ‘지난 모임’과 초대장에 실려요.
+                사람 얼굴이 담긴 사진은 찍힌 분의 동의를 받고 올려주세요.
+              </p>
+              <button class="btn block" id="recapSaveBtn">후기 저장</button>
+              <button class="btn ghost block" id="recapBackBtn">돌아가기</button>
+            </div>
+          </div>
+
           <p class="msg" id="msg" hidden></p>
         </div>
 
@@ -427,7 +414,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   }
 
   const view = (name) => {
-    for (const v of ['list', 'detail', 'new']) $(`v-${v}`).hidden = v !== name;
+    for (const v of ['list', 'detail', 'new', 'recap']) $(`v-${v}`).hidden = v !== name;
   };
 
   async function api(path, { method = 'GET', body, raw } = {}) {
@@ -671,6 +658,20 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
         <span class="hint">‘모임 수정’에서 고쳐 저장하면 다시 심사에 올라가요.</span>
       </div>` : ''}
 
+      ${m.status === 'DONE' && m.recapStatus === 'PENDING' ? `<div class="review-note wait">
+        <strong>후기가 심사 중이에요</strong>
+        <span>운영자가 읽어보고 있어요. 승인되면 앱의 ‘지난 모임’과 초대장에 실려요.</span>
+      </div>` : ''}
+      ${m.status === 'DONE' && m.recapStatus === 'REJECTED' ? `<div class="review-note bad">
+        <strong>후기를 다시 봐주세요</strong>
+        <span>${esc(m.recapReviewNote || '내용을 조금 손봐주세요.')}</span>
+        <span class="hint">‘후기 고치기’에서 손보고 저장하면 다시 심사에 올라가요.</span>
+      </div>` : ''}
+      ${m.status === 'DONE' && (!m.recapStatus || m.recapStatus === 'NONE') ? `<div class="review-note">
+        <strong>후기를 남겨보세요</strong>
+        <span>그날 어땠는지 적고 사진을 놓으면, 다음 모임을 고민하는 사람이 읽어요.</span>
+      </div>` : ''}
+
       <a class="kakao" href="${esc(m.kakaoLink)}" target="_blank" rel="noopener">오픈채팅 열기</a>
       <p class="hint">참가비 안내와 입금 확인은 오픈채팅에서 하세요. 확인이 끝나면 아래에서 ‘확정’을 눌러주세요.</p>
 
@@ -700,6 +701,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
         ${m.status === 'OPEN' ? `<button class="btn ghost small" data-hosting="close">모집 마감</button>` : ''}
         ${m.status === 'CLOSED' ? `<button class="btn ghost small" data-hosting="reopen">모집 다시 열기</button>` : ''}
         ${m.status !== 'DONE' && m.status !== 'CANCELED' && completable ? `<button class="btn ghost small" data-hosting="complete">개최 완료</button>` : ''}
+        ${m.status === 'DONE' ? `<button class="btn ghost small" id="recapBtn">${m.recapStatus && m.recapStatus !== 'NONE' ? '후기 고치기' : '후기 쓰기'}</button>` : ''}
         ${m.status !== 'DONE' && m.status !== 'CANCELED' ? `<button class="btn ghost small danger" data-hosting="cancel">모임 취소</button>` : ''}
       </div>
       ${m.status !== 'DONE' && m.status !== 'CANCELED' && !completable ? `<p class="hint">${completeBlockedWhy}</p>` : ''}`;
@@ -709,6 +711,8 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
     for (const b of $('detail').querySelectorAll('[data-hosting]')) b.onclick = () => hosting(b.dataset.hosting, b);
     const edit = $('editBtn');
     if (edit) edit.onclick = () => openForm(current);
+    const toRecap = $('recapBtn');
+    if (toRecap) toRecap.onclick = () => openRecap();
     const copy = $('copyBtn');
     if (copy) copy.onclick = () => {
       $('shareUrl').select();
@@ -729,6 +733,72 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
     } catch (e) { done(); say(e.message, true); }
     // 성공하면 목록을 다시 그려 버튼 자체가 사라지므로 되돌릴 것이 없다.
   }
+
+  /*
+   * 후기 쓰기 화면.
+   *
+   * 미리보기는 초대장 그대로다 — 후기가 붙은 초대장이 곧 남이 보게 될 화면이라, 따로 그릴
+   * 것이 없다. 지금 쓰고 있는 글을 그 자리에 얹어서 보여준다.
+   */
+  const RECAP_LABEL = {
+    NONE: null,
+    PENDING: { cls: 'wait', title: '심사 중이에요', body: '운영자가 읽어보고 있어요. 승인되면 앱의 ‘지난 모임’과 초대장에 실려요.' },
+    APPROVED: { cls: '', title: '올라갔어요', body: '앱의 ‘지난 모임’과 초대장에서 볼 수 있어요. 고쳐 저장하면 다시 심사에 올라가요.' },
+    REJECTED: { cls: 'bad', title: '다시 봐주세요', body: null },
+  };
+
+  function openRecap() {
+    const m = current;
+    $('paneTitle').textContent = '후기 쓰기';
+    recap.setContent(m.recap || '', m.recapImageUrls || []);
+    recapEditor.sync();
+
+    const label = RECAP_LABEL[m.recapStatus || 'NONE'];
+    const box = $('recapReview');
+    box.hidden = !label;
+    if (label) {
+      box.className = `review-note ${label.cls}`.trim();
+      box.innerHTML = `<strong>${esc(label.title)}</strong><span>${esc(label.body || m.recapReviewNote || '내용을 조금 손봐주세요.')}</span>`;
+    }
+    view('recap');
+    previewRecap();
+  }
+
+  let recapTimer = null;
+  function scheduleRecapPreview() {
+    if (recapTimer) clearTimeout(recapTimer);
+    recapTimer = setTimeout(() => { recapTimer = null; if (!$('v-recap').hidden) previewRecap(); }, 180);
+  }
+
+  /** 지금 쓰고 있는 후기를 얹은 초대장 — 남이 보게 될 바로 그 화면. */
+  function previewRecap() {
+    previewView = 'detail';
+    for (const o of $('previewTabs').querySelectorAll('.tab')) o.classList.toggle('on', o.dataset.view === 'detail');
+    preview(previewSource(), true);
+  }
+
+  $('recapBackBtn').onclick = () => { $('paneTitle').textContent = '모임'; openDetail(current.meetupId); };
+
+  $('recapSaveBtn').onclick = async () => {
+    const text = recap.getText().trim();
+    if (text.length > 1000) return say('후기는 1000자 이하여야 해요', true);
+    // 단추를 잠가두긴 했지만 여기서 한 번 더 본다 — blob: 주소가 넘어가면 초대장에 깨진 사진이 걸린다.
+    if (recap.hasPendingImages()) return say('사진을 다 올린 뒤에 저장해 주세요', true);
+
+    const done = pending($('recapSaveBtn'), '저장하는 중');
+    say('');
+    try {
+      await api(`/meetups/${current.meetupId}/recap`, {
+        method: 'PUT',
+        body: { recap: text || null, recapImageUrls: recap.getImages() },
+      });
+      const id = current.meetupId;
+      await loadList();
+      $('paneTitle').textContent = '모임';
+      openDetail(id);
+      say(text || recap.getImages().length ? '후기를 올렸어요. 운영자가 읽어본 뒤 실려요.' : '후기를 지웠어요.');
+    } catch (e) { say(e.message, true); } finally { done(); }
+  };
 
   const HOSTING_ASK = { close: '모집을 마감할까요?', reopen: '모집을 다시 열까요?', complete: '개최를 완료로 표시할까요?', cancel: '모임을 취소할까요? 신청한 분들에게 알림이 갑니다.' };
   async function hosting(what, btn) {
@@ -789,11 +859,27 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   // 로그인해서 콘솔이 펼쳐지는 순간, 창을 줄이는 순간 — 자리가 달라질 때마다 스스로 다시 잰다.
   new ResizeObserver(fitDevice).observe($('device').parentElement);
 
+  /**
+   * 지금 미리보기가 보여줘야 할 것.
+   *
+   * 화면에 따라 다르다. 폼을 열고 있으면 **쓰고 있는 것**이고, 목록·상세를 보고 있으면
+   * 저장된 그 모임이다. 이걸 가리지 않고 늘 저장된 모임을 그리면, 사진을 넣어둔 채로 탭을
+   * 누르는 순간 서버에 있는 옛 초대장으로 되돌아간다 — 넣은 사진이 사라진 것처럼 보인다.
+   * 그 뒤로는 글자를 치기 전까지 다시 그려지지도 않는다.
+   */
+  function previewSource() {
+    if (!$('v-new').hidden) return draftFromForm();
+    if (!$('v-recap').hidden) {
+      return { ...current, meetupId: null, recap: recap.getText().trim(), recapImageUrls: recap.getImages() };
+    }
+    return current;
+  }
+
   for (const t of $('previewTabs').querySelectorAll('.tab')) {
     t.onclick = () => {
       previewView = t.dataset.view;
       for (const o of $('previewTabs').querySelectorAll('.tab')) o.classList.toggle('on', o === t);
-      preview(current, true);
+      preview(previewSource(), true);
     };
   }
 
@@ -1023,6 +1109,10 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
             <div class="inv-row"><span>참가비</span><b>${feeLabel}</b></div>
             <div class="inv-row"><span>남은 자리</span><b>${left}</b></div>
           </div>
+          ${(m.recap || m.recapImageUrls?.length) ? `<div class="inv-recap">
+            <div class="inv-eyebrow">그날의 기록</div>
+            ${greetingHtml(m.recap, m.recapImageUrls)}
+          </div>` : ''}
         </div>
       </div>`;
     restore();
@@ -1133,133 +1223,177 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
    */
   const BODY_IMAGE_MAX = 10;
 
-  const bar = $('descBar');
-  const textTools = $('textTools');
-  const imageTools = $('imageTools');
-  const alignBtns = [...bar.querySelectorAll('[data-align]')];
-  const widthChips = [...imageTools.querySelectorAll('[data-w]')];
-
-  const desc = createDescEditor({
-    mount: $('f-desc'),
-    placeholder: '어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.',
-    maxImages: BODY_IMAGE_MAX,
-    onFiles: (files) => uploadBodyImages(files),
-    onChange: () => { syncDesc(); schedulePreview(); },
-  });
-
-  // 개발 서버에서만 열리는 손잡이 — 편집기의 왕복(평문 ↔ 문서)을 브라우저에서 직접 확인할 때 쓴다.
-  if (import.meta.env.DEV) window.__desc = desc;
-
-  syncDesc();
-
-  function syncDesc() {
-    const text = desc.getText();
-    $('descCount').textContent = `${text.length} / 1000`;
-    // 넘치면 저장에서 막히므로 그 전에 눈으로 알려준다.
-    $('descCount').classList.toggle('over', text.length > 1000);
-    syncBar();
-  }
-
-  /*
-   * 단추를 눌러도 편집기가 포커스를 잃지 않게 한다.
-   *
-   * 이게 없으면 여러 줄을 고른 뒤 '가운데'를 눌렀을 때 아무 일도 일어나지 않는다 —
-   * mousedown 순간 브라우저가 편집기에서 포커스를 걷어가면서 고른 범위가 무너지기 때문이다.
-   */
-  for (const b of bar.querySelectorAll('button')) b.addEventListener('mousedown', (e) => e.preventDefault());
-
   /**
-   * 툴바는 자리가 하나고 내용만 바뀐다.
+   * 글 편집기 하나를 세운다 — 편집기 + 툴바 + 사진 업로드가 한 벌.
    *
-   * 사진을 고르면 글자 도구 대신 크기 도구가 온다. 단추가 여기저기서 튀어나오지 않으니
-   * 무엇을 하려면 어디를 봐야 하는지 헤맬 일이 없다.
+   * 소개와 후기는 같은 문법으로 저장되고 같은 조판을 탄다. 그러니 쓰는 도구도 같아야 한다.
+   * 후기용으로 툴바 코드를 한 벌 더 두면, 오늘은 같아 보여도 다음에 소개 쪽만 고쳐지고
+   * 두 화면이 조금씩 달라진다 — 그 차이는 쓰는 사람이 먼저 알아챈다.
+   *
+   * @param {object} o
+   * @param {string} o.mountId    편집기가 들어설 자리의 id
+   * @param {string} o.barId      툴바의 id
+   * @param {string} o.fileId     숨은 파일 입력의 id
+   * @param {string} o.countId    글자 수를 적는 자리의 id
+   * @param {string} o.saveId     사진 올리는 동안 잠글 저장 단추의 id
+   * @param {string} o.what       말에 쓰는 이름 — '소개' | '후기'
+   * @param {() => void} o.onChange
    */
-  function syncBar() {
-    const onImage = desc.isImageSelected();
-    textTools.hidden = onImage;
-    imageTools.hidden = !onImage;
-    const where = desc.align();
-    for (const b of alignBtns) b.classList.toggle('on', b.dataset.align === where);
-    const w = desc.imageWidth();
-    for (const b of widthChips) b.classList.toggle('on', Number(b.dataset.w) === w);
-  }
-  desc.onSelection(syncBar);
+  function mountEditor({ mountId, barId, fileId, countId, saveId, what, placeholder, onChange }) {
+    const bar = $(barId);
+    const textTools = bar.querySelector('[data-tools="text"]');
+    const imageTools = bar.querySelector('[data-tools="image"]');
+    const alignBtns = [...bar.querySelectorAll('[data-align]')];
+    const widthChips = [...imageTools.querySelectorAll('[data-w]')];
+    const insertPhoto = bar.querySelector('[data-act="photo"]');
+    const insertDot = bar.querySelector('[data-act="dot"]');
 
-  /*
-   * 가운데 정렬 — 고른 줄에만 건다.
-   *
-   * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 머리줄이나 맺는 한 줄에만
-   * 쓰라는 뜻으로 줄 단위로 걸린다.
-   */
-  for (const b of alignBtns) b.onclick = () => { desc.setAlign(b.dataset.align); syncBar(); };
-  for (const b of widthChips) b.onclick = () => { desc.setImageWidth(Number(b.dataset.w)); syncBar(); };
-
-  /**
-   * 소개 안에 놓는 사진 — 끌어다 놓거나, 붙여넣거나, 이 단추로 고른다.
-   */
-  $('insertPhoto').onclick = () => $('f-bodyImage').click();
-  $('insertDot').onclick = () => desc.insertText(' · ');
-  $('f-bodyImage').onchange = (e) => { uploadBodyImages([...e.target.files]); e.target.value = ''; };
-
-  /**
-   * 사진은 **먼저 자리에 앉고** 그 다음에 올라간다.
-   *
-   * 서버가 답할 때까지 기다렸다 넣으면, 그 몇 초 동안 화면에는 아무 일도 일어나지 않는다.
-   * 사진을 놓은 사람은 들어간 건지 씹힌 건지 알 수 없어서 결국 한 번 더 확인하게 된다 —
-   * 기다림이 눈에 보이지 않는 자리에서 일어나기 때문이다.
-   *
-   * 그래서 고른 파일을 곧바로 그 자리에 그린다(blob: 주소). 다 올라가면 주소만 갈아 끼우니
-   * 화면은 흔들리지 않는다. 올라가는 동안은 사진이 흐리게 앉아 있고, 넣기 단추도 같이 돈다.
-   *
-   * blob: 주소는 이 브라우저 안에서만 뜻이 있다. 그대로 저장되면 초대장에 깨진 사진이
-   * 걸리므로, 다 올라갈 때까지 저장을 막는다.
-   */
-  async function uploadBodyImages(files) {
-    const room = desc.roomForImages();
-    if (room <= 0) return say(`소개 사진은 ${BODY_IMAGE_MAX}장까지예요.`, true);
-    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
-    if (!picked.length) return;
-    if (files.length > picked.length) say(`${BODY_IMAGE_MAX}장까지만 올렸어요.`);
-
-    const jobs = picked.map((file) => {
-      const local = URL.createObjectURL(file);
-      desc.insertImage(local);
-      return { file, local };
+    const editor = createDescEditor({
+      mount: $(mountId),
+      placeholder,
+      maxImages: BODY_IMAGE_MAX,
+      onFiles: (files) => upload(files),
+      onChange: () => { sync(); onChange(); },
     });
 
-    const done = pending($('insertPhoto'), '올리는 중…');
-    setUploading(true);
-    let placed = 0;
-    try {
-      for (const job of jobs) {
-        const fd = new FormData();
-        fd.append('file', job.file);
-        try {
-          const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
-          desc.replaceImage(job.local, r.url);
-          placed += 1;
-        } finally {
-          URL.revokeObjectURL(job.local);
-        }
-      }
-      say(placed > 1 ? `사진 ${placed}장을 글에 놓았어요.` : '사진을 글에 놓았어요.');
-    } catch (err) {
-      // 올라가지 못한 자리는 걷어낸다 — 뜨지 않을 그림이 남아 있는 게 더 나쁘다.
-      for (const job of jobs) desc.removeImage(job.local);
-      say(err.message, true);
-    } finally {
-      done();
-      setUploading(false);
-      schedulePreview();
+    function sync() {
+      const text = editor.getText();
+      $(countId).textContent = `${text.length} / 1000`;
+      // 넘치면 저장에서 막히므로 그 전에 눈으로 알려준다.
+      $(countId).classList.toggle('over', text.length > 1000);
+      syncBar();
     }
+
+    /*
+     * 단추를 눌러도 편집기가 포커스를 잃지 않게 한다.
+     *
+     * 이게 없으면 여러 줄을 고른 뒤 '가운데'를 눌렀을 때 아무 일도 일어나지 않는다 —
+     * mousedown 순간 브라우저가 편집기에서 포커스를 걷어가면서 고른 범위가 무너지기 때문이다.
+     */
+    for (const b of bar.querySelectorAll('button')) b.addEventListener('mousedown', (e) => e.preventDefault());
+
+    /**
+     * 툴바는 자리가 하나고 내용만 바뀐다.
+     *
+     * 사진을 고르면 글자 도구 대신 크기 도구가 온다. 단추가 여기저기서 튀어나오지 않으니
+     * 무엇을 하려면 어디를 봐야 하는지 헤맬 일이 없다.
+     */
+    function syncBar() {
+      const onImage = editor.isImageSelected();
+      textTools.hidden = onImage;
+      imageTools.hidden = !onImage;
+      const where = editor.align();
+      for (const b of alignBtns) b.classList.toggle('on', b.dataset.align === where);
+      const w = editor.imageWidth();
+      for (const b of widthChips) b.classList.toggle('on', Number(b.dataset.w) === w);
+    }
+    editor.onSelection(syncBar);
+
+    /*
+     * 가운데 정렬 — 고른 줄에만 건다.
+     *
+     * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 머리줄이나 맺는 한 줄에만
+     * 쓰라는 뜻으로 줄 단위로 걸린다.
+     */
+    for (const b of alignBtns) b.onclick = () => { editor.setAlign(b.dataset.align); syncBar(); };
+    for (const b of widthChips) b.onclick = () => { editor.setImageWidth(Number(b.dataset.w)); syncBar(); };
+
+    /** 글 안에 놓는 사진 — 끌어다 놓거나, 붙여넣거나, 이 단추로 고른다. */
+    insertPhoto.onclick = () => $(fileId).click();
+    insertDot.onclick = () => editor.insertText(' · ');
+    $(fileId).onchange = (e) => { upload([...e.target.files]); e.target.value = ''; };
+
+    /**
+     * 사진은 **먼저 자리에 앉고** 그 다음에 올라간다.
+     *
+     * 서버가 답할 때까지 기다렸다 넣으면, 그 몇 초 동안 화면에는 아무 일도 일어나지 않는다.
+     * 사진을 놓은 사람은 들어간 건지 씹힌 건지 알 수 없어서 결국 한 번 더 확인하게 된다 —
+     * 기다림이 눈에 보이지 않는 자리에서 일어나기 때문이다.
+     *
+     * 그래서 고른 파일을 곧바로 그 자리에 그린다(blob: 주소). 다 올라가면 주소만 갈아 끼우니
+     * 화면은 흔들리지 않는다. 올라가는 동안은 사진이 흐리게 앉아 있고, 넣기 단추도 같이 돈다.
+     *
+     * blob: 주소는 이 브라우저 안에서만 뜻이 있다. 그대로 저장되면 초대장에 깨진 사진이
+     * 걸리므로, 다 올라갈 때까지 저장을 막는다.
+     */
+    async function upload(files) {
+      const room = editor.roomForImages();
+      if (room <= 0) return say(`${what} 사진은 ${BODY_IMAGE_MAX}장까지예요.`, true);
+      const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
+      if (!picked.length) return;
+      if (files.length > picked.length) say(`${BODY_IMAGE_MAX}장까지만 올렸어요.`);
+
+      const jobs = picked.map((file) => {
+        const local = URL.createObjectURL(file);
+        editor.insertImage(local);
+        return { file, local };
+      });
+
+      const done = pending(insertPhoto, '올리는 중…');
+      setUploading(true);
+      let placed = 0;
+      try {
+        for (const job of jobs) {
+          const fd = new FormData();
+          fd.append('file', job.file);
+          try {
+            const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
+            editor.replaceImage(job.local, r.url);
+            placed += 1;
+          } finally {
+            URL.revokeObjectURL(job.local);
+          }
+        }
+        say(placed > 1 ? `사진 ${placed}장을 글에 놓았어요.` : '사진을 글에 놓았어요.');
+      } catch (err) {
+        // 올라가지 못한 자리는 걷어낸다 — 뜨지 않을 그림이 남아 있는 게 더 나쁘다.
+        for (const job of jobs) editor.removeImage(job.local);
+        say(err.message, true);
+      } finally {
+        done();
+        setUploading(false);
+        onChange();
+      }
+    }
+
+    /** 사진이 올라가는 동안은 저장을 막는다 — blob: 주소가 서버로 넘어가면 초대장이 깨진다. */
+    function setUploading(on) {
+      const btn = $(saveId);
+      btn.disabled = on;
+      btn.title = on ? '사진을 다 올린 뒤에 저장할 수 있어요' : '';
+    }
+
+    sync();
+    return { editor, sync };
   }
 
-  /** 사진이 올라가는 동안은 저장을 막는다 — blob: 주소가 서버로 넘어가면 초대장이 깨진다. */
-  function setUploading(on) {
-    const btn = $('saveBtn');
-    btn.disabled = on;
-    btn.title = on ? '사진을 다 올린 뒤에 저장할 수 있어요' : '';
-  }
+  const descEditor = mountEditor({
+    mountId: 'f-desc',
+    barId: 'descBar',
+    fileId: 'f-descImage',
+    countId: 'descCount',
+    saveId: 'saveBtn',
+    what: '소개',
+    placeholder: '어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.',
+    onChange: () => schedulePreview(),
+  });
+  const desc = descEditor.editor;
+  const syncDesc = descEditor.sync;
+
+  const recapEditor = mountEditor({
+    mountId: 'f-recap',
+    barId: 'recapBar',
+    fileId: 'f-recapImage',
+    countId: 'recapCount',
+    saveId: 'recapSaveBtn',
+    what: '후기',
+    placeholder: '그날 어땠는지 적어주세요. 몇 분이 오셨고, 무슨 이야기를 했는지.',
+    onChange: () => scheduleRecapPreview(),
+  });
+  const recap = recapEditor.editor;
+
+  // 개발 서버에서만 열리는 손잡이 — 편집기의 왕복(평문 ↔ 문서)을 브라우저에서 직접 확인할 때 쓴다.
+  if (import.meta.env.DEV) { window.__desc = desc; window.__recap = recap; }
 
   /*
    * 접어둔 묶음들 — 접혀 있어도 무엇이 걸려 있는지는 요약줄이 말해준다.
@@ -2168,6 +2302,13 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   .console .inv-photo.w25 { width: 25%; }
   .console .inv-photo.w50 { width: 50%; }
   .console .inv-photo.w75 { width: 75%; }
+  /*
+    후기 — 정보 표 아래에 선 하나로 갈라 놓는다(초대장의 .recap과 같은 규칙).
+    같은 카드 안이지만 다른 시간의 글이다. 위는 "오세요"이고 여기는 "이랬어요"다.
+  */
+  .console .inv-recap { margin: 28px -24px 0; padding: 22px 24px 0; border-top: 1px solid var(--scr-line); }
+  .console .inv-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 3px; color: var(--scr-muted); }
+  .console .inv-recap .inv-desc { margin-top: 14px; }
   .console .inv-info { margin-top: 22px; padding: 4px 14px; background: var(--scr-sunken, rgba(255,255,255,0.05)); border-radius: 14px; }
   .console .inv-row { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 10px 0; font-size: 0.9rem; }
   .console .inv-row span { color: var(--scr-muted); }

@@ -1,0 +1,60 @@
+---
+/**
+ * 글 편집기 한 벌 — 머리글 + 툴바 + 편집기 + 글자 수.
+ *
+ * 소개와 후기가 이걸 함께 쓴다. 둘은 같은 문법으로 저장되고 초대장에서 같은 조판을 타므로,
+ * 쓰는 도구도 같아야 한다. 후기용으로 한 벌 더 적어두면 오늘은 같아 보여도 다음에 소개
+ * 쪽만 고쳐지고, 그 차이는 쓰는 사람이 먼저 알아챈다.
+ *
+ * 스크립트는 여기 없다. 자바스크립트 쪽 mountEditor(host.astro)가 id로 찾아 붙인다 —
+ * 단추 하나하나에 id를 주는 대신 data-act·data-tools로 찾게 해서, 같은 바가 몇 개든 선다.
+ */
+interface Props {
+  /** 머리글에 적히는 이름 — '소개' | '후기'. */
+  label: string;
+  /** 툴바·편집기·파일 입력·글자 수의 id 접두사. 예: 'desc' → descBar, f-desc, f-descImage, descCount */
+  id: string;
+  hint?: string;
+}
+const { label, id, hint = '사진은 글 위로 끌어다 놓거나 붙여넣어도 돼요.' } = Astro.props;
+---
+
+<div class="field editor">
+  <div class="editor-head"><span>{label}</span></div>
+  <div class="editor-bar" id={`${id}Bar`}>
+    <button type="button" class="chip" data-act="photo">사진 넣기</button>
+    <span class="bar-sep" aria-hidden="true"></span>
+    <span class="bar-group" data-tools="text">
+      {/*
+        정렬 — 어느 편집기에서나 같은 모양의 아이콘이라 설명이 필요 없다.
+        선의 들여쓰기가 곧 정렬이다. 지금 줄의 정렬이 켜진 채로 보인다.
+      */}
+      <span class="seg" role="group" aria-label="문단 정렬">
+        <button type="button" class="ico" data-align="left" aria-label="왼쪽 정렬" title="왼쪽">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" /></svg>
+        </button>
+        <button type="button" class="ico" data-align="center" aria-label="가운데 정렬" title="가운데">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" /></svg>
+        </button>
+        <button type="button" class="ico" data-align="right" aria-label="오른쪽 정렬" title="오른쪽">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" /></svg>
+        </button>
+      </span>
+      <span class="bar-sep" aria-hidden="true"></span>
+      <button type="button" class="chip" data-act="dot">가운뎃점 ·</button>
+    </span>
+    <span class="bar-group" data-tools="image" hidden>
+      <em class="bar-label">사진 크기</em>
+      <button type="button" class="chip" data-w="25">25%</button>
+      <button type="button" class="chip" data-w="50">50%</button>
+      <button type="button" class="chip" data-w="75">75%</button>
+      <button type="button" class="chip" data-w="100">100%</button>
+    </span>
+  </div>
+  <div id={`f-${id}`} class="rich"></div>
+  <input id={`f-${id}Image`} type="file" accept="image/*" multiple hidden />
+  <div class="editor-foot">
+    <em>{hint}</em>
+    <b id={`${id}Count`}>0 / 1000</b>
+  </div>
+</div>

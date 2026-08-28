@@ -17,9 +17,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       listEl.textContent = '불러오는 중...';
       try {
         const data = await api('/admin/meetups');
-        // 할 일이 먼저 보여야 한다 — 심사 대기를 맨 위로 올린다.
+        /*
+          할 일이 먼저 보여야 한다 — 사람 손을 기다리는 줄을 맨 위로 올린다.
+
+          후기 심사도 그 줄이다. 다만 후기는 모임이 끝난 **뒤에** 올라오므로 그 모임의
+          status는 이미 DONE이고, 상태만 보고 정렬하면 목록 아래에 묻힌다.
+        */
         const order = { PENDING: 0, REJECTED: 1 };
-        render([...data.meetups].sort((a, b) => (order[a.status] ?? 2) - (order[b.status] ?? 2)));
+        const rank = (m) => (m.recapStatus === 'PENDING' ? 0 : (order[m.status] ?? 2));
+        render([...data.meetups].sort((a, b) => rank(a) - rank(b)));
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
         listEl.textContent = e.message;
@@ -103,6 +109,38 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           }
         }
 
+        /*
+          후기 심사 — 모임 심사와 같은 이유로 글과 사진을 그 자리에 편다.
+
+          후기는 모임이 끝난 **뒤에** 올라오므로 모임 자체는 이미 DONE이다. 그래서 모임
+          상태(status)로는 이 줄이 손을 기다리고 있다는 사실이 드러나지 않는다.
+        */
+        if (m.recapStatus && m.recapStatus !== 'NONE') {
+          const head = document.createElement('div');
+          head.className = 'admin-row-date';
+          const label = { PENDING: '심사 대기', APPROVED: '공개 중', REJECTED: '반려됨' }[m.recapStatus];
+          head.textContent = '후기 · ' + label;
+          info.append(head);
+          if (m.recap) {
+            const body = document.createElement('div');
+            body.className = 'admin-review-desc';
+            body.textContent = m.recap;
+            info.append(body);
+          }
+          if (m.recapImageUrls && m.recapImageUrls.length > 0) {
+            const shots = document.createElement('div');
+            shots.className = 'admin-row-date';
+            shots.textContent = '후기 사진 ' + m.recapImageUrls.length + '장';
+            info.append(shots);
+          }
+          if (m.recapReviewNote) {
+            const note = document.createElement('div');
+            note.className = 'admin-row-date';
+            note.textContent = '후기 반려 사유: ' + m.recapReviewNote;
+            info.append(note);
+          }
+        }
+
         const actions = document.createElement('div');
         actions.className = 'admin-row-actions';
 
@@ -130,6 +168,40 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             no.disabled = true;
             try {
               await window.admin.api('/admin/meetups/' + m.meetupId + '/reject', {
+                method: 'POST',
+                body: JSON.stringify({ reason: reason.trim() }),
+              });
+              await window.pageLoad();
+            } catch (e) { alert(e.message); no.disabled = false; }
+          };
+          actions.append(ok, no);
+        }
+        if (m.recapStatus === 'PENDING') {
+          if (m.recapImageUrls && m.recapImageUrls.length > 0) {
+            const shots = document.createElement('button');
+            shots.className = 'admin-btn ghost small';
+            shots.textContent = '후기 사진';
+            shots.onclick = () => m.recapImageUrls.forEach((u) => window.open(u, '_blank', 'noopener'));
+            actions.append(shots);
+          }
+          const ok = document.createElement('button');
+          ok.className = 'admin-btn small';
+          ok.textContent = '후기 승인';
+          ok.onclick = () => {
+            if (confirm("'" + m.title + "' 후기를 승인할까요? 앱의 지난 모임과 초대장에 실려요.")) {
+              act(m.meetupId, 'recap/approve', ok);
+            }
+          };
+          const no = document.createElement('button');
+          no.className = 'admin-btn ghost small';
+          no.textContent = '후기 반려';
+          no.onclick = async () => {
+            // 사유는 필수다 — 없으면 같은 글이 그대로 다시 올라온다.
+            const reason = prompt('후기 반려 사유를 적어주세요. 모임장에게 그대로 보여요.');
+            if (reason == null || !reason.trim()) return;
+            no.disabled = true;
+            try {
+              await window.admin.api('/admin/meetups/' + m.meetupId + '/recap/reject', {
                 method: 'POST',
                 body: JSON.stringify({ reason: reason.trim() }),
               });
