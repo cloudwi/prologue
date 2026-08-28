@@ -21,8 +21,25 @@ import java.util.Locale
  */
 object MeetupInvitationPage {
 
-    /** 소개 글에서 사진 자리를 가리키는 표시 — `[사진1]`, `[사진2]` … */
-    private val PHOTO_TOKEN = Regex("""\[사진(\d+)]""")
+    /**
+     * 소개 글에서 사진 자리를 가리키는 표시 — `[사진1]`, `[사진2]` …
+     *
+     * 폭을 붙일 수 있다: `[사진1:50]`은 카드 폭의 절반. 폭이 없으면 지금까지처럼
+     * 카드 밖으로 흘려 꽉 채운다 — 그래서 폭이 없던 시절의 글이 그대로 보인다.
+     */
+    private val PHOTO_TOKEN = Regex("""\[사진(\d+)(?::(\d+))?]""")
+
+    /**
+     * 폭은 네 칸뿐이다 — 25·50·75·100.
+     *
+     * 임의의 숫자를 받지 않는 이유가 둘이다. 하나, 초대장은 폰에서 380px 폭으로 읽히므로
+     * 콘솔에서 맞춘 63%는 거기서 다른 그림이 된다. 둘, 숫자를 그대로 style에 흘리면
+     * 그 자리가 곧 주입 통로다 — 클래스 이름으로만 내보내면 그 여지가 아예 없다.
+     */
+    private fun widthClass(raw: String): String = when (raw.toIntOrNull()) {
+        25, 50, 75 -> " w$raw"
+        else -> "" // 100이거나 알 수 없는 값 — 지금까지의 꽉 찬 모양.
+    }
 
     private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
@@ -197,8 +214,9 @@ object MeetupInvitationPage {
         val escaped = escape(description)
         val withPhotos = PHOTO_TOKEN.replace(escaped) { match ->
             val index = match.groupValues[1].toIntOrNull()?.minus(1) ?: return@replace ""
+            val width = widthClass(match.groupValues[2])
             bodyImageUrls.getOrNull(index)
-                ?.let { """</p><img class="body-photo" src="${escape(it)}" alt="" loading="lazy" /><p class="greeting">""" }
+                ?.let { """</p><img class="body-photo$width" src="${escape(it)}" alt="" loading="lazy" /><p class="greeting">""" }
                 ?: ""
         }
         // 사진이 끼어든 자리에 빈 문단이 남는다 — 문단을 열고 닫는 방식이라 어쩔 수 없이 생긴다.
@@ -255,9 +273,15 @@ ${head.prependIndent("        ")}
           .date { margin:18px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
           .when { margin:8px 0 0; font-size:14px; color:var(--muted); }
           .greeting { margin:28px 0 0; font-size:15px; line-height:1.85; }
-          /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다. */
+          /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다(폭을 정하지 않았을 때의 모양). */
           .body-photo { display:block; width:calc(100% + 48px); margin:24px -24px; border-radius:0;
                         object-fit:cover; background:var(--line); }
+          /* 폭을 정한 사진은 카드 안으로 들어와 가운데 선다 — 흘려보낼 이유가 없으니 모서리도 둥글다. */
+          .body-photo.w25, .body-photo.w50, .body-photo.w75 {
+            margin:24px auto; border-radius:14px; }
+          .body-photo.w25 { width:25%; }
+          .body-photo.w50 { width:50%; }
+          .body-photo.w75 { width:75%; }
           /* 사진 여러 장 — 옆으로 밀어 본다. 카드 밖으로 흘러나가게 두면 폭이 넉넉해 보인다. */
           .gallery { display:flex; gap:8px; margin:24px -24px 0; padding:0 24px; overflow-x:auto;
                      scroll-snap-type:x mandatory; scrollbar-width:none; }

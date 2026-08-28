@@ -247,8 +247,31 @@ data class MeetupInvitationView(
  * 돈은 카카오에서 오간다 — 여기에는 신청·확정·개최의 기록만 남고,
  * 그 기록이 모임장의 신뢰 신호(개최 횟수·확정 인원)로 공개된다.
  */
-/** 소개 글에서 사진 자리를 가리키는 표시 — 초대장만 이해한다. */
-private val PHOTO_TOKEN = Regex("""\[사진(\d+)]""")
+/**
+ * 소개 글에서 사진 자리를 가리키는 표시 — 초대장만 이해한다.
+ *
+ * `[사진1]`이 기본이고, `[사진1:50]`처럼 폭(%)이 붙을 수 있다. 폭은 **선택 항목**이라
+ * 폭이 없던 시절의 글도 그대로 읽힌다 — 마이그레이션 없이 문법만 자랐다.
+ */
+private val PHOTO_TOKEN = Regex("""\[사진(\d+)(?::(\d+))?]""")
+
+/**
+ * 소개 글에서 사진 표시를 걷어낸다 — 앱에게 내려보내기 전에.
+ *
+ * 이 함수가 앱의 하위 호환을 혼자 지고 있다. 콘솔의 편집기가 무엇으로 바뀌든, 표시에
+ * 폭이 붙든, 앱이 받는 것은 표시가 없는 평문이어야 한다. 지금 스토어에 있는 버전은
+ * `[사진2]`를 모르고, 모르는 것은 글자로 남는다 — 표시가 날것으로 새는 건 기능이 없는
+ * 것보다 나쁘다. **그래서 강제 업데이트 없이 편집기를 바꿀 수 있다.**
+ *
+ * 앱이 이 표시를 배우는 날 이 함수를 지우면 된다.
+ */
+internal fun stripPhotoTokens(description: String?): String? =
+    description
+        ?.replace(PHOTO_TOKEN, "")
+        // 표시만 있던 줄이 빈 줄로 남는다 — 줄이 셋 이상 겹치면 둘로 줄인다.
+        ?.replace(Regex("\n{3,}"), "\n\n")
+        ?.trim()
+        ?.ifBlank { null }
 
 @Service
 class MeetupService(
@@ -273,13 +296,7 @@ class MeetupService(
      * 버전에게 그대로 내려보내면 화면에 "[사진2]"가 글자로 남는다 — 표시가 날것으로 새는 건
      * 기능이 없는 것보다 나쁘다. 앱이 이 표시를 배우면 이 함수를 지우면 된다.
      */
-    private fun descriptionForApp(description: String?): String? =
-        description
-            ?.replace(PHOTO_TOKEN, "")
-            // 표시만 있던 줄이 빈 줄로 남는다 — 줄이 셋 이상 겹치면 둘로 줄인다.
-            ?.replace(Regex("\n{3,}"), "\n\n")
-            ?.trim()
-            ?.ifBlank { null }
+    private fun descriptionForApp(description: String?): String? = stripPhotoTokens(description)
 
     /**
      * 다가오는 모임 — 가까운 날짜순.

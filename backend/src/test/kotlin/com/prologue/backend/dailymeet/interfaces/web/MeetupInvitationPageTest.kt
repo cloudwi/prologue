@@ -99,6 +99,35 @@ class MeetupInvitationPageTest {
     }
 
     @Test
+    fun `폭이 붙은 표시는 그 폭의 클래스를 단다`() {
+        val out = html(
+            view(
+                description = "[사진1:50]",
+                bodyImageUrls = listOf("https://cdn.example.com/body.jpg"),
+            ),
+        )
+
+        assertContains(out, """<img class="body-photo w50"""")
+    }
+
+    @Test
+    fun `폭이 없던 시절의 글은 그대로 꽉 찬 사진으로 읽힌다`() {
+        // 문법이 자랐지 바뀌지 않았다 — 마이그레이션 없이 옛 글이 어제와 같아야 한다.
+        val out = html(view(description = "[사진1]", bodyImageUrls = listOf("https://cdn.example.com/body.jpg")))
+
+        assertContains(out, """<img class="body-photo" """)
+    }
+
+    @Test
+    fun `폭은 네 칸뿐 — 그 밖의 숫자는 꽉 찬 모양으로 떨어진다`() {
+        // 임의의 숫자를 style에 흘리면 그 자리가 곧 주입 통로가 된다. 클래스는 우리가 정한 것만 나간다.
+        val out = html(view(description = "[사진1:63]", bodyImageUrls = listOf("https://cdn.example.com/body.jpg")))
+
+        assertContains(out, """<img class="body-photo" """)
+        assertFalse(out.contains("w63"))
+    }
+
+    @Test
     fun `가리키는 사진이 없는 표시는 조용히 지운다`() {
         // 사진을 지웠거나 오타를 냈을 때 — 화면에 [사진3]이 글자로 남는 것보다 없는 편이 낫다.
         val out = html(view(description = "첫 문단\n[사진3]\n둘째 문단", bodyImageUrls = emptyList()))
