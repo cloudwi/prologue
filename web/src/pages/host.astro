@@ -695,6 +695,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       description: desc.getText().trim(),
       meetAt: date && time ? `${date}T${time}:00+09:00` : new Date().toISOString(),
       place: $('f-place').value.trim() || '장소',
+      placeAddress: $('f-address').value.trim() || null,
       capacity: Number($('f-capacity').value) || 8,
       capacityMale: $('f-seatSplit').checked ? Number($('f-capacityMale').value) || 0 : null,
       capacityFemale: $('f-seatSplit').checked ? Number($('f-capacityFemale').value) || 0 : null,
@@ -783,9 +784,12 @@ import { API_BASE, SITE_URL } from '../lib/site';
           <div class="inv-meta">${'일월화수목금토'[d.getDay()]}요일 ${tf(d)}</div>
           <div class="inv-dday">${dday(d)}</div>
           ${greetingHtml(m.description, m.bodyImageUrls)}
-          <div class="inv-row"><span>장소</span><b>${esc(m.place)}</b></div>
-          <div class="inv-row"><span>참가비</span><b>${feeLabel}</b></div>
-          <div class="inv-row"><span>남은 자리</span><b>${left}</b></div>
+          <div class="inv-info">
+            <div class="inv-row"><span>장소</span><b>${esc(m.place)}</b></div>
+            ${m.placeAddress ? `<div class="inv-row"><span>주소</span><b>${esc(m.placeAddress)}</b></div>` : ''}
+            <div class="inv-row"><span>참가비</span><b>${feeLabel}</b></div>
+            <div class="inv-row"><span>남은 자리</span><b>${left}</b></div>
+          </div>
         </div>
       </div>`;
   }
@@ -1694,7 +1698,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .inv-title { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; }
   .console .inv-date { font-size: 1.15rem; letter-spacing: 1px; }
   .console .inv-meta, .console .inv-dday { color: var(--scr-muted); font-size: 0.88rem; }
-  .console .inv-desc { margin-top: 12px; font-size: 0.92rem; line-height: 1.75; white-space: pre-wrap; }
+  .console .inv-desc { margin-top: 16px; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; text-align: left; }
   /* 글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다. */
   .console .inv-photo { display: block; width: calc(100% + 48px); margin: 18px -24px; object-fit: cover; }
   .console .inv-photo.w25, .console .inv-photo.w50, .console .inv-photo.w75 {
@@ -1702,7 +1706,8 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .inv-photo.w25 { width: 25%; }
   .console .inv-photo.w50 { width: 50%; }
   .console .inv-photo.w75 { width: 75%; }
-  .console .inv-row { display: flex; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--scr-line); font-size: 0.9rem; }
+  .console .inv-info { margin-top: 22px; padding: 4px 14px; background: var(--scr-sunken, rgba(255,255,255,0.05)); border-radius: 14px; }
+  .console .inv-row { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 10px 0; font-size: 0.9rem; }
   .console .inv-row span { color: var(--scr-muted); }
 
   @media (max-width: 1100px) {

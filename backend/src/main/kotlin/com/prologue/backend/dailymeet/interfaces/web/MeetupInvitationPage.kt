@@ -83,10 +83,11 @@ object MeetupInvitationPage {
                   ${gallery(v.coverUrls)}
                   <dl class="info">
                     ${row("여는 사람", v.hostNickname ?: "프롤로그")}
-                    ${row("장소", listOfNotNull(v.placeName, v.placeAddress).joinToString(" · ").ifBlank { null })}
-                    ${row("참가비", feeLabel(v))}
+                    ${row("장소", v.placeName)}
+                    ${row("주소", v.placeAddress)}
+                    ${row("참가비", feeValue(v))}
                     ${row("참석 조건", conditionLabel(v))}
-                    ${row("자리", seatsLabel(v))}
+                    ${row("남은 자리", seatsValue(v))}
                   </dl>
                   <a class="cta" href="${escape(deepLink)}" id="open">앱에서 초대장 열기</a>
                   <p class="note">프롤로그 앱에서 신청할 수 있어요. 앱이 없다면 아래에서 받아주세요.</p>
@@ -151,13 +152,25 @@ object MeetupInvitationPage {
         return "${t.monthValue}월 ${t.dayOfMonth}일 ($weekday) $ampm $hour12${minute}시"
     }
 
-    internal fun feeLabel(v: MeetupInvitationView): String {
+    /**
+     * 표 안에 넣을 값 — 라벨을 되풀이하지 않는다.
+     *
+     * '참가비' 칸에 "참가비 35,000원"이 들어가면 같은 말을 두 번 하는 셈이다. 그런데
+     * 카카오톡 미리보기 한 줄([ogDescription])에는 라벨이 없으니 "35,000원"만으로는 무슨
+     * 숫자인지 알 수 없다 — 그래서 값과 한 줄짜리 문구를 갈라 둔다.
+     */
+    internal fun feeValue(v: MeetupInvitationView): String {
         // 자리 구분 쉼표는 서버 로케일에 맡기지 않는다 — 배포 환경에 따라 "30.000원"이 될 수 있다.
         fun won(n: Int) = String.format(Locale.KOREA, "%,d원", n)
         if (v.feeFemale != null && v.feeFemale != v.fee) {
             return "남 ${if (v.fee > 0) won(v.fee) else "무료"} · 여 ${if (v.feeFemale > 0) won(v.feeFemale) else "무료"}"
         }
-        return if (v.fee > 0) "참가비 ${won(v.fee)}" else "무료"
+        return if (v.fee > 0) won(v.fee) else "무료"
+    }
+
+    internal fun feeLabel(v: MeetupInvitationView): String {
+        val value = feeValue(v)
+        return if (v.fee > 0 && (v.feeFemale == null || v.feeFemale == v.fee)) "참가비 $value" else value
     }
 
     internal fun conditionLabel(v: MeetupInvitationView): String? {
@@ -181,6 +194,12 @@ object MeetupInvitationPage {
         }
         if (v.requireJobVerified) parts += "직장인증"
         return parts.joinToString(" · ").ifBlank { null }
+    }
+
+    internal fun seatsValue(v: MeetupInvitationView): String {
+        if (!v.open) return "모집이 끝났어요"
+        val remaining = (v.capacity - v.confirmedCount).coerceAtLeast(0)
+        return if (remaining > 0) "${remaining}자리" else "다 찼어요"
     }
 
     internal fun seatsLabel(v: MeetupInvitationView): String {
@@ -256,9 +275,9 @@ object MeetupInvitationPage {
         <title>${escape(title)}</title>
 ${head.prependIndent("        ")}
         <style>
-          :root { --bg:#F6F8FA; --card:#FFFFFF; --text:#1B2126; --muted:#69747E; --line:#E3E8EE; --point:#D9694C; --on-point:#fff; }
+          :root { --bg:#F6F8FA; --card:#FFFFFF; --sunken:#F3F6F9; --text:#1B2126; --muted:#69747E; --line:#E3E8EE; --point:#D9694C; --on-point:#fff; }
           @media (prefers-color-scheme: dark) {
-            :root { --bg:#101418; --card:#181D22; --text:#EAEFF4; --muted:#96A1AC; --line:#28303A; --point:#E07A5C; --on-point:#101418; }
+            :root { --bg:#101418; --card:#181D22; --sunken:#1F252B; --text:#EAEFF4; --muted:#96A1AC; --line:#28303A; --point:#E07A5C; --on-point:#101418; }
           }
           * { box-sizing: border-box; }
           body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",system-ui,sans-serif;
@@ -270,9 +289,15 @@ ${head.prependIndent("        ")}
           .cover ~ .eyebrow { margin-top:0; }
           .occurrence { margin:10px 0 0; font-size:13px; font-weight:700; color:var(--point); }
           h1 { margin:14px 0 0; font-size:26px; line-height:1.38; letter-spacing:-0.3px; }
-          .date { margin:18px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
+          .date { margin:20px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
           .when { margin:8px 0 0; font-size:14px; color:var(--muted); }
-          .greeting { margin:28px 0 0; font-size:15px; line-height:1.85; }
+          /*
+            머리말(눈썹·제목·날짜)만 가운데에 두고 **본문은 왼쪽으로 흘린다**.
+            청첩장이 가운데 정렬로 읽히는 건 한 줄 한 줄을 손으로 끊어 놓기 때문이다. 모임장이
+            쓰는 소개는 긴 문단이라, 가운데에 두면 줄 끝이 들쭉날쭉해지고 "들려드릴 / 게요."처럼
+            한 음절이 홀로 떨어진다. 청첩장다움은 정렬이 아니라 눈썹의 자간·숫자 날짜·여백이 낸다.
+          */
+          .greeting { margin:36px 0 0; font-size:15.5px; line-height:1.9; letter-spacing:-0.2px; text-align:left; }
           /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다(폭을 정하지 않았을 때의 모양). */
           .body-photo { display:block; width:calc(100% + 48px); margin:24px -24px; border-radius:0;
                         object-fit:cover; background:var(--line); }
@@ -283,17 +308,21 @@ ${head.prependIndent("        ")}
           .body-photo.w50 { width:50%; }
           .body-photo.w75 { width:75%; }
           /* 사진 여러 장 — 옆으로 밀어 본다. 카드 밖으로 흘러나가게 두면 폭이 넉넉해 보인다. */
-          .gallery { display:flex; gap:8px; margin:24px -24px 0; padding:0 24px; overflow-x:auto;
+          .gallery { display:flex; gap:8px; margin:36px -24px 0; padding:0 24px; overflow-x:auto;
                      scroll-snap-type:x mandatory; scrollbar-width:none; }
           .gallery::-webkit-scrollbar { display:none; }
           .gallery img { flex:0 0 auto; width:72%; max-width:280px; aspect-ratio:4/3; object-fit:cover;
                          border-radius:14px; background:var(--line); scroll-snap-align:center; }
-          .info { margin:32px 0 0; padding:0; text-align:left; }
-          .row { display:flex; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid var(--line); }
-          .row:last-child { border-bottom:0; }
+          /*
+            표에서 줄마다 긋던 선을 걷어냈다. 면과 테두리를 함께 쓰면 같은 말을 두 번 하는 셈이고,
+            다섯 줄에 다섯 개의 선이 그어지면 정보보다 선이 먼저 눈에 든다. 한 칸 눌린 면에
+            올려 덩어리로 묶고, 그 안은 여백으로만 가른다.
+          */
+          .info { margin:40px 0 0; padding:6px 18px; text-align:left; background:var(--sunken); border-radius:16px; }
+          .row { display:flex; justify-content:space-between; align-items:baseline; gap:20px; padding:13px 0; }
           dt { font-size:14px; color:var(--muted); flex-shrink:0; }
-          dd { margin:0; font-size:15px; font-weight:600; text-align:right; }
-          .cta { display:block; margin:28px 0 0; padding:15px; border-radius:999px; background:var(--point); color:var(--on-point);
+          dd { margin:0; font-size:15px; font-weight:600; text-align:right; line-height:1.55; }
+          .cta { display:block; margin:32px 0 0; padding:17px; border-radius:16px; background:var(--point); color:var(--on-point);
                  font-size:16px; font-weight:700; text-decoration:none; }
           .note { margin:16px 0 0; font-size:13px; line-height:1.7; color:var(--muted); }
           .stores { margin:10px 0 0; font-size:13px; color:var(--muted); display:flex; gap:8px; justify-content:center; }
