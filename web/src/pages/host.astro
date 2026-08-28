@@ -663,6 +663,29 @@ import { API_BASE, SITE_URL } from '../lib/site';
       .join('')}</div>`;
   }
 
+  /**
+   * 소개 글을 초대장 조판으로 — 사진 표시를 그 자리의 사진으로 바꾼다.
+   *
+   * 서버의 MeetupInvitationPage.greeting()과 **같은 규칙**이어야 한다. 여기가 어긋나면
+   * 미리보기가 거짓말을 하고, 미리보기가 거짓말을 하면 없느니만 못하다.
+   *
+   * 순서가 곧 안전이다 — **이스케이프한 뒤에** 우리 표시만 치환한다. 뒤집히면 모임장이 쓴
+   * 글자가 태그가 된다. 가리키는 사진이 없는 표시는 조용히 지운다.
+   */
+  function greetingHtml(description, bodyImageUrls) {
+    if (!description) return '';
+    const sized = new Set(['25', '50', '75']);
+    const withPhotos = esc(description).replace(/\[사진(\d+)(?::(\d+))?]/g, (_, n, w) => {
+      const url = bodyImageUrls?.[Number(n) - 1];
+      if (!url) return '';
+      const cls = sized.has(w) ? `inv-photo w${w}` : 'inv-photo';
+      return `</p><img class="${cls}" src="${esc(url)}" alt="" /><p class="inv-desc">`;
+    });
+    // 사진이 끼어든 자리에 빈 문단이 남는다 — 문단을 열고 닫는 방식이라 어쩔 수 없이 생긴다.
+    return `<p class="inv-desc">${withPhotos}</p>`
+      .replaceAll('<p class="inv-desc"></p>', '');
+  }
+
   /** 폼으로 만든 가짜 모임 — 아직 저장 전이라 서버에 물어볼 수 없다. */
   function draftFromForm() {
     const date = $('f-date').value, time = $('f-time').value;
@@ -679,6 +702,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       fee: Number($('f-fee').value) || 0,
       feeFemale: $('f-feeSplit').checked ? Number($('f-feeFemale').value) || 0 : null,
       coverUrls: covers,
+      bodyImageUrls: desc.getImages(),
       confirmedCount: 0,
       status: 'OPEN',
       requireJobVerified: $('f-jobVerified').checked,
@@ -758,7 +782,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
           <div class="inv-date">${numeral(d)}</div>
           <div class="inv-meta">${'일월화수목금토'[d.getDay()]}요일 ${tf(d)}</div>
           <div class="inv-dday">${dday(d)}</div>
-          ${m.description ? `<p class="inv-desc">${esc(m.description)}</p>` : ''}
+          ${greetingHtml(m.description, m.bodyImageUrls)}
           <div class="inv-row"><span>장소</span><b>${esc(m.place)}</b></div>
           <div class="inv-row"><span>참가비</span><b>${feeLabel}</b></div>
           <div class="inv-row"><span>남은 자리</span><b>${left}</b></div>
@@ -1417,6 +1441,12 @@ import { API_BASE, SITE_URL } from '../lib/site';
   }
   /* 글 사이의 사진 — 초대장에서처럼 문단과 문단 사이에 자리를 갖는다. */
   .console .rich img { display: block; max-width: 100%; height: auto; border-radius: 10px; margin: 12px 0; }
+  /*
+    확장이 사진 위에 얹는 정렬 단추(왼쪽·가운데·오른쪽)는 감춘다.
+    우리는 정렬을 저장하지 않는다 — 폭을 정한 사진은 초대장에서 늘 가운데 선다. 눌러도
+    저장되지 않는 단추를 두는 건 도구가 결과를 배신하는 일이다. 크기 조절 손잡이는 남는다.
+  */
+  .console .rich [style*="z-index: 999"] { display: none !important; }
   /* 넘친 글자 수는 붉게 — 저장에서 막히기 전에 알아야 한다. */
   .console .editor-foot b.over { color: var(--terracotta-strong); }
   .console .editor-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -1665,6 +1695,13 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .inv-date { font-size: 1.15rem; letter-spacing: 1px; }
   .console .inv-meta, .console .inv-dday { color: var(--scr-muted); font-size: 0.88rem; }
   .console .inv-desc { margin-top: 12px; font-size: 0.92rem; line-height: 1.75; white-space: pre-wrap; }
+  /* 글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다. */
+  .console .inv-photo { display: block; width: calc(100% + 48px); margin: 18px -24px; object-fit: cover; }
+  .console .inv-photo.w25, .console .inv-photo.w50, .console .inv-photo.w75 {
+    margin: 18px auto; border-radius: 10px; }
+  .console .inv-photo.w25 { width: 25%; }
+  .console .inv-photo.w50 { width: 50%; }
+  .console .inv-photo.w75 { width: 75%; }
   .console .inv-row { display: flex; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--scr-line); font-size: 0.9rem; }
   .console .inv-row span { color: var(--scr-muted); }
 
