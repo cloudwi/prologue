@@ -64,12 +64,12 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
         listItem: false, listKeymap: false, orderedList: false, strike: false, underline: false,
       }),
       /*
-       * 정렬은 가운데 하나만 연다.
+       * 정렬 셋 — 왼쪽·가운데·오른쪽.
        *
-       * 긴 문단은 왼쪽으로 흘려야 읽히고, 머리줄이나 맺는 한 줄은 가운데가 어울린다.
-       * 오른쪽 정렬은 초대장에서 쓸 일이 없어 열지 않았다 — 저장할 수 있는 것만 준다.
+       * 왼쪽이 기본이라 저장할 때 표시가 붙지 않는다. 가운데는 머리줄, 오른쪽은 맺는 말
+       * ("— 프롤로그 드림") 자리다. 위아래 정렬은 열지 않는다 — 저장할 수 없는 것은 주지 않는다.
        */
-      TextAlign.configure({ types: ['paragraph'], alignments: ['left', 'center'], defaultAlignment: 'left' }),
+      TextAlign.configure({ types: ['paragraph'], alignments: ['left', 'center', 'right'], defaultAlignment: 'left' }),
       /*
        * 안내 문구는 **글이 통째로 비었을 때만** 보여준다.
        *
@@ -170,7 +170,8 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
       }
       let line = '';
       node.forEach((child) => { line += child.type.name === 'hardBreak' ? '\n' : (child.text ?? ''); });
-      lines.push(node.attrs.textAlign === 'center' ? `[가운데]${line}` : line);
+      const mark = { center: '[가운데]', right: '[오른쪽]' }[node.attrs.textAlign] ?? '';
+      lines.push(mark + line);
     });
     /*
      * 끝의 빈 줄은 떨군다.
@@ -198,9 +199,9 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
         }
         continue;
       }
-      const centered = /^\s*\[가운데]\s?/.exec(line);
-      const text = centered ? line.slice(centered[0].length) : line;
-      const attrs = centered ? { textAlign: 'center' } : {};
+      const aligned = /^\s*\[(가운데|오른쪽)]\s?/.exec(line);
+      const text = aligned ? line.slice(aligned[0].length) : line;
+      const attrs = aligned ? { textAlign: aligned[1] === '가운데' ? 'center' : 'right' } : {};
       content.push(text ? { type: 'paragraph', attrs, content: [{ type: 'text', text }] } : { type: 'paragraph', attrs });
     }
     if (!content.length) content.push({ type: 'paragraph' });
@@ -225,11 +226,11 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
       }).run();
     },
     insertText(text) { editor.chain().focus().insertContent(text).run(); },
-    toggleCenter() {
-      const centered = editor.isActive({ textAlign: 'center' });
-      editor.chain().focus().setTextAlign(centered ? 'left' : 'center').run();
-    },
-    isCentered: () => editor.isActive({ textAlign: 'center' }),
+    /** 고른 줄의 정렬을 정한다 — 'left' | 'center' | 'right'. */
+    setAlign(where) { editor.chain().focus().setTextAlign(where).run(); },
+    /** 지금 줄의 정렬. 표시가 없으면 왼쪽이다. */
+    align: () => (editor.isActive({ textAlign: 'center' }) ? 'center'
+      : editor.isActive({ textAlign: 'right' }) ? 'right' : 'left'),
 
     /** 지금 고른 사진의 폭(%) — 고른 사진이 없으면 null. */
     imageWidth() {

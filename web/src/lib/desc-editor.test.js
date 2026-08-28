@@ -71,6 +71,20 @@ describe('평문 왕복', () => {
     expect(roundTrip('[가운데]머리줄\n본문')).toBe('[가운데]머리줄\n본문');
   });
 
+  it('오른쪽 표시가 그대로 돌아온다', () => {
+    expect(roundTrip('본문\n[오른쪽]— 프롤로그 드림')).toBe('본문\n[오른쪽]— 프롤로그 드림');
+  });
+
+  it('왼쪽은 표시를 붙이지 않는다 — 기본값을 적어 두면 글자 수만 축낸다', () => {
+    const e = make();
+    e.setContent('한 줄', []);
+    e.focus();
+    e.setAlign('center');
+    expect(e.getText()).toBe('[가운데]한 줄');
+    e.setAlign('left');
+    expect(e.getText()).toBe('한 줄');
+  });
+
   it('사진과 가운데가 섞여도 무너지지 않는다', () => {
     const text = '앞\n\n[가운데]머리줄\n\n[사진1:50]\n본문\n\n[가운데]맺는 줄';
     expect(roundTrip(text, [PHOTO])).toBe(text);
@@ -129,14 +143,18 @@ describe('사진 목록', () => {
 });
 
 describe('정렬과 크기', () => {
-  it('가운데를 걸고 풀 수 있다', () => {
+  it('세 정렬을 오간다', () => {
     const e = make();
     e.setContent('한 줄', []);
     e.focus();
-    e.toggleCenter();
-    expect(e.getText()).toBe('[가운데]한 줄');
-    e.toggleCenter();
-    expect(e.getText()).toBe('한 줄');
+    expect(e.align()).toBe('left');
+    e.setAlign('center');
+    expect(e.align()).toBe('center');
+    e.setAlign('right');
+    expect(e.align()).toBe('right');
+    expect(e.getText()).toBe('[오른쪽]한 줄');
+    e.setAlign('left');
+    expect(e.align()).toBe('left');
   });
 
   it('고른 사진이 없으면 크기를 묻어도 아무 일도 없다', () => {

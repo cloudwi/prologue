@@ -34,6 +34,11 @@ class MeetupDescriptionForAppTest {
     }
 
     @Test
+    fun `오른쪽 정렬 표시도 걷어낸다`() {
+        assertEquals("— 프롤로그 드림", stripPhotoTokens("[오른쪽]— 프롤로그 드림"))
+    }
+
+    @Test
     fun `표시만 있는 글은 빈 글이 된다`() {
         assertNull(stripPhotoTokens("[사진1]\n[사진2:75]"))
     }

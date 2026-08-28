@@ -37,13 +37,19 @@ object MeetupInvitationPage {
      * 그 자리가 곧 주입 통로다 — 클래스 이름으로만 내보내면 그 여지가 아예 없다.
      */
     /**
-     * 줄 앞에 붙는 가운데 정렬 표시 — `[가운데]무엇을 준비했나요`.
+     * 줄 앞에 붙는 정렬 표시 — `[가운데]무엇을 준비했나요`, `[오른쪽]— 프롤로그 드림`.
      *
-     * 긴 문단은 왼쪽으로 흘려야 읽히고, 머리줄이나 맺는 한 줄은 가운데가 어울린다. 그 판단은
-     * 글을 쓴 사람만 할 수 있어서 자동으로 정하지 않는다(짧은 줄을 기계적으로 가운데로 보내면
-     * 우연히 짧아진 문장까지 끌려간다).
+     * 왼쪽이 기본이라 표시가 없다. 긴 문단은 왼쪽으로 흘려야 읽히고, 머리줄이나 맺는 한 줄만
+     * 가운데·오른쪽이 어울린다. 그 판단은 글을 쓴 사람만 할 수 있어서 자동으로 정하지 않는다
+     * (짧은 줄을 기계적으로 가운데로 보내면 우연히 짧아진 문장까지 끌려간다).
      */
-    private val CENTER_TOKEN = Regex("""^\s*\[가운데]\s?""")
+    private val ALIGN_TOKEN = Regex("""^\s*\[(가운데|오른쪽)]\s?""")
+
+    private fun alignClass(raw: String): String = when (raw) {
+        "가운데" -> " center"
+        "오른쪽" -> " right"
+        else -> ""
+    }
 
     private fun widthClass(raw: String): String = when (raw.toIntOrNull()) {
         25, 50, 75 -> " w$raw"
@@ -251,9 +257,8 @@ object MeetupInvitationPage {
         }
 
         for (raw in description.split("\n")) {
-            val centered = CENTER_TOKEN.containsMatchIn(raw)
-            val cls = if (centered) "greeting center" else "greeting"
-            val escaped = escape(CENTER_TOKEN.replace(raw, ""))
+            val cls = "greeting" + (ALIGN_TOKEN.find(raw)?.let { alignClass(it.groupValues[1]) } ?: "")
+            val escaped = escape(ALIGN_TOKEN.replace(raw, ""))
             openWith(cls)
             // 사진은 문단을 끊고 들어간다. 끊은 뒤에는 같은 정렬로 다시 연다.
             val withPhotos = PHOTO_TOKEN.replace(escaped) { match ->
@@ -269,8 +274,8 @@ object MeetupInvitationPage {
 
         // 사진이 끼어든 자리에 빈 문단이 남는다 — 문단을 열고 닫는 방식이라 어쩔 수 없이 생긴다.
         return out.toString()
-            .replace(Regex("""<p class="greeting( center)?"><br /></p>"""), "")
-            .replace(Regex("""<p class="greeting( center)?"></p>"""), "")
+            .replace(Regex("""<p class="greeting( center| right)?"><br /></p>"""), "")
+            .replace(Regex("""<p class="greeting( center| right)?"></p>"""), "")
     }
 
     private fun gallery(coverUrls: List<String>): String {
@@ -327,8 +332,9 @@ ${head.prependIndent("        ")}
             한 음절이 홀로 떨어진다. 청첩장다움은 정렬이 아니라 눈썹의 자간·숫자 날짜·여백이 낸다.
           */
           .greeting { margin:36px 0 0; font-size:15.5px; line-height:1.9; letter-spacing:-0.2px; text-align:left; }
-          /* 글쓴이가 가운데로 세운 줄 — 머리줄과 맺는 한 줄이 여기 온다. */
+          /* 글쓴이가 세운 줄 — 머리줄과 맺는 한 줄이 여기 온다. 기본은 왼쪽이라 클래스가 없다. */
           .greeting.center { text-align:center; }
+          .greeting.right { text-align:right; }
           /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다(폭을 정하지 않았을 때의 모양). */
           .body-photo { display:block; width:calc(100% + 48px); margin:24px -24px; border-radius:0;
                         object-fit:cover; background:var(--line); }

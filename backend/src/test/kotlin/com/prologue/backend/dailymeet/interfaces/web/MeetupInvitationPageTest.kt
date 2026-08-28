@@ -108,6 +108,15 @@ class MeetupInvitationPageTest {
     }
 
     @Test
+    fun `오른쪽 표시가 붙은 줄은 오른쪽으로 선다`() {
+        val out = html(view(description = "[오른쪽]— 프롤로그 드림\n본문"))
+
+        assertContains(out, """<p class="greeting right">— 프롤로그 드림</p>""")
+        assertContains(out, """<p class="greeting">본문</p>""")
+        assertFalse(out.contains("[오른쪽]"))
+    }
+
+    @Test
     fun `같은 정렬이 이어지면 한 문단으로 묶는다 — 줄마다 문단을 열면 간격이 벌어진다`() {
         val out = html(view(description = "첫 줄\n둘째 줄"))
 

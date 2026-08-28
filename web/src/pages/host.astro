@@ -149,7 +149,22 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
                   <button type="button" class="chip" id="insertPhoto">사진 넣기</button>
                   <span class="bar-sep" aria-hidden="true"></span>
                   <span class="bar-group" id="textTools">
-                    <button type="button" class="chip" id="alignCenter">가운데</button>
+                    <!--
+                      정렬 — 어느 편집기에서나 같은 모양의 아이콘이라 설명이 필요 없다.
+                      선의 들여쓰기가 곧 정렬이다. 지금 줄의 정렬이 켜진 채로 보인다.
+                    -->
+                    <span class="seg" role="group" aria-label="문단 정렬">
+                      <button type="button" class="ico" data-align="left" aria-label="왼쪽 정렬" title="왼쪽">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" /></svg>
+                      </button>
+                      <button type="button" class="ico" data-align="center" aria-label="가운데 정렬" title="가운데">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" /></svg>
+                      </button>
+                      <button type="button" class="ico" data-align="right" aria-label="오른쪽 정렬" title="오른쪽">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" /></svg>
+                      </button>
+                    </span>
+                    <span class="bar-sep" aria-hidden="true"></span>
                     <button type="button" class="chip" id="insertDot">가운뎃점 ·</button>
                   </span>
                   <span class="bar-group" id="imageTools" hidden>
@@ -862,9 +877,9 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
     };
 
     for (const raw of String(description).split('\n')) {
-      const centered = /^\s*\[가운데]\s?/.exec(raw);
-      const cls = centered ? 'inv-desc center' : 'inv-desc';
-      const text = esc(centered ? raw.slice(centered[0].length) : raw);
+      const aligned = /^\s*\[(가운데|오른쪽)]\s?/.exec(raw);
+      const cls = 'inv-desc' + (aligned ? (aligned[1] === '가운데' ? ' center' : ' right') : '');
+      const text = esc(aligned ? raw.slice(aligned[0].length) : raw);
       openWith(cls);
       out.push(text.replace(/\[사진(\d+)(?::(\d+))?]/g, (_, n, w) => {
         const url = bodyImageUrls?.[Number(n) - 1];
@@ -877,7 +892,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
 
     // 사진이 끼어든 자리에 빈 문단이 남는다 — 서버 조판과 같은 뒷정리다.
     return out.join('')
-      .replace(/<p class="inv-desc( center)?">\s*<\/p>/g, '');
+      .replace(/<p class="inv-desc( center| right)?">\s*<\/p>/g, '');
   }
 
   /** 폼으로 만든 가짜 모임 — 아직 저장 전이라 서버에 물어볼 수 없다. */
@@ -1119,7 +1134,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   const bar = $('descBar');
   const textTools = $('textTools');
   const imageTools = $('imageTools');
-  const alignChip = $('alignCenter');
+  const alignBtns = [...bar.querySelectorAll('[data-align]')];
   const widthChips = [...imageTools.querySelectorAll('[data-w]')];
 
   const desc = createDescEditor({
@@ -1161,7 +1176,8 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
     const onImage = desc.isImageSelected();
     textTools.hidden = onImage;
     imageTools.hidden = !onImage;
-    alignChip.classList.toggle('on', desc.isCentered());
+    const where = desc.align();
+    for (const b of alignBtns) b.classList.toggle('on', b.dataset.align === where);
     const w = desc.imageWidth();
     for (const b of widthChips) b.classList.toggle('on', Number(b.dataset.w) === w);
   }
@@ -1173,7 +1189,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
    * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 머리줄이나 맺는 한 줄에만
    * 쓰라는 뜻으로 줄 단위로 걸린다.
    */
-  alignChip.onclick = () => { desc.toggleCenter(); syncBar(); };
+  for (const b of alignBtns) b.onclick = () => { desc.setAlign(b.dataset.align); syncBar(); };
   for (const b of widthChips) b.onclick = () => { desc.setImageWidth(Number(b.dataset.w)); syncBar(); };
 
   /**
@@ -1688,6 +1704,17 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   .console .bar-group[hidden] { display: none; }
   .console .bar-sep { width: 1px; height: 18px; background: var(--border); }
   .console .bar-label { font-style: normal; color: var(--muted); font-size: 0.78rem; padding-left: 2px; }
+  /* 정렬 셋은 한 덩어리로 붙인다 — 서로 배타적인 선택지라는 걸 모양이 말한다. */
+  .console .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--surface); }
+  .console .ico {
+    display: grid; place-items: center; width: 30px; height: 28px; padding: 0;
+    border: 0; border-right: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .console .seg .ico:last-child { border-right: 0; }
+  .console .ico svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; fill: none; }
+  .console .ico:hover { color: var(--ink); background: var(--sunken); }
+  .console .ico.on { background: var(--ink); color: var(--paper); }
 
   /*
     기다리는 버튼 — 도는 자리는 누른 그 자리다.
@@ -1754,6 +1781,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   .console .rich .ProseMirror { outline: none; line-height: 1.8; white-space: pre-wrap; }
   .console .rich .ProseMirror p { margin: 0; min-height: 1.8em; }
   .console .rich .ProseMirror p[style*="center"] { text-align: center; }
+  .console .rich .ProseMirror p[style*="right"] { text-align: right; }
   /*
     안내 문구는 **글이 통째로 비었을 때만** 보여준다.
 
@@ -2053,6 +2081,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   .console .inv-meta, .console .inv-dday { color: var(--scr-muted); font-size: 0.88rem; }
   .console .inv-desc { margin-top: 16px; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; text-align: left; }
   .console .inv-desc.center { text-align: center; }
+  .console .inv-desc.right { text-align: right; }
   /* 글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다. */
   .console .inv-photo { display: block; width: calc(100% + 48px); margin: 18px -24px; object-fit: cover; }
   .console .inv-photo.w25, .console .inv-photo.w50, .console .inv-photo.w75 {

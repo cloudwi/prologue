@@ -263,8 +263,8 @@ data class MeetupInvitationView(
  */
 private val PHOTO_TOKEN = Regex("""\[사진(\d+)(?::(\d+))?]""")
 
-/** 줄 앞의 가운데 정렬 표시 — 초대장만 이해한다. 앱에는 이것도 남기지 않는다. */
-private val CENTER_TOKEN = Regex("""(?m)^[ \t]*\[가운데][ \t]?""")
+/** 줄 앞의 정렬 표시 — 초대장만 이해한다. 앱에는 이것도 남기지 않는다. */
+private val ALIGN_TOKEN = Regex("""(?m)^[ \t]*\[(?:가운데|오른쪽)][ \t]?""")
 
 /**
  * 소개 글에서 사진 표시를 걷어낸다 — 앱에게 내려보내기 전에.
@@ -279,7 +279,7 @@ private val CENTER_TOKEN = Regex("""(?m)^[ \t]*\[가운데][ \t]?""")
 internal fun stripPhotoTokens(description: String?): String? =
     description
         ?.replace(PHOTO_TOKEN, "")
-        ?.replace(CENTER_TOKEN, "")
+        ?.replace(ALIGN_TOKEN, "")
         // 표시만 있던 줄이 빈 줄로 남는다 — 줄이 셋 이상 겹치면 둘로 줄인다.
         ?.replace(Regex("\n{3,}"), "\n\n")
         ?.trim()
