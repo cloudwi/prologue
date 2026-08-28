@@ -11,9 +11,12 @@
  * 서버 쪽 소독기로 다시 사야 한다. Tiptap은 직렬화를 우리가 쥔다.
  */
 import { Editor } from '@tiptap/core';
+import { NodeSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import { BubbleMenu } from '@tiptap/extension-bubble-menu';
+import { FloatingMenu } from '@tiptap/extension-floating-menu';
+import { Placeholder } from '@tiptap/extension-placeholder';
 import { ImageResize } from 'tiptap-extension-resize-image';
 
 /**
@@ -44,7 +47,7 @@ const styleFor = (pct) => `width: ${pct}%; height: auto; cursor: pointer;`;
  * @param {(files: File[]) => void} o.onFiles  사진 파일이 들어왔을 때 (업로드는 부르는 쪽 몫)
  * @param {number} o.maxImages
  */
-export function createDescEditor({ mount, onChange, onFiles, bubble, maxImages = 10 }) {
+export function createDescEditor({ mount, onChange, onFiles, bubble, insertBar, imageBar, placeholder, maxImages = 10 }) {
   // 다시 그리는 중에 또 불려 들어오지 않게 — 붙임(snap)이 자기 자신을 부르면 멈추지 않는다.
   let snapping = false;
 
@@ -69,18 +72,53 @@ export function createDescEditor({ mount, onChange, onFiles, bubble, maxImages =
        * 오른쪽 정렬은 초대장에서 쓸 일이 없어 열지 않았다 — 저장할 수 있는 것만 준다.
        */
       TextAlign.configure({ types: ['paragraph'], alignments: ['left', 'center'], defaultAlignment: 'left' }),
+      Placeholder.configure({ placeholder: placeholder ?? '' }),
+
       /*
-       * 고른 자리에 떠오르는 툴바 — 블로그 편집기들이 하는 방식이다.
+       * 상시 툴바를 두지 않는다.
        *
-       * 툴바를 칸 맨 위에만 두면 글이 길어질수록 쓰던 자리에서 멀어진다. 아래에서 한 줄을
-       * 고르고 정렬을 바꾸려고 맨 위까지 올라갔다 내려오는 건, 고친 자리를 다시 찾아야 한다는 뜻이다.
+       * Medium·Ghost·Notion·브런치가 모두 같은 구조다 — 쓰는 동안에는 아무것도 떠 있지 않고,
+       * **지금 할 수 있는 일**만 그 자리에 나타난다. 칸 위에 단추를 늘어놓으면 글이 길어질수록
+       * 손에서 멀어지고, 무엇이 무엇에 걸리는지도 알 수 없다("이 정렬은 어디에 적용되지?").
+       *
+       * 그래서 셋으로 나눈다.
+       *   빈 줄에 커서  → 넣기 단추 (Medium의 +)
+       *   글자를 고름   → 꾸미기 툴바
+       *   사진을 고름   → 크기 단추
        */
+      ...(insertBar
+        ? [FloatingMenu.configure({
+            element: insertBar,
+            pluginKey: 'insertMenu',
+            /*
+             * 글 왼쪽 여백에 세운다 — Medium·Ghost의 '+' 자리다.
+             *
+             * 줄 위에 겹쳐 두면 그 줄의 안내 문구를 덮어버린다. 커서가 놓인 줄에 뜨는 물건이라
+             * 하필 항상 겹친다. 바깥으로 빼면 글을 가리지 않으면서 "이 줄에 넣는다"는 것도 말한다.
+             */
+            options: { placement: 'left-start', offset: 10, flip: false, shift: false },
+            // 빈 줄에서만. 글이 있는 줄에 뜨면 읽는 것을 가린다.
+            shouldShow: ({ state }) => {
+              const { $from, empty } = state.selection;
+              return empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
+            },
+          })]
+        : []),
       ...(bubble
         ? [BubbleMenu.configure({
             element: bubble,
+            pluginKey: 'textMenu',
             updateDelay: 100,
-            // 글자를 고른 동안에만 뜬다. 사진을 골랐을 때는 사진 자신의 손잡이가 이미 떠 있다.
             shouldShow: ({ editor: e, from, to }) => from !== to && !e.isActive('imageResize'),
+          })]
+        : []),
+      ...(imageBar
+        ? [BubbleMenu.configure({
+            element: imageBar,
+            pluginKey: 'imageMenu',
+            updateDelay: 0,
+            // 사진을 고르면 크기를 숫자로 고른다. 끌어서 맞추는 것보다 빠르고, 무엇이 지금 크기인지도 보인다.
+            shouldShow: ({ editor: e }) => e.isActive('imageResize'),
           })]
         : []),
       ImageResize.configure({ inline: false, allowBase64: false }),
@@ -108,6 +146,32 @@ export function createDescEditor({ mount, onChange, onFiles, bubble, maxImages =
       onChange();
     },
   });
+
+  /*
+   * 사진을 누르면 **고른 상태로** 만든다.
+   *
+   * 크기 조절 확장은 눌렸을 때 자기 테두리와 손잡이만 그리고 ProseMirror의 선택은 건드리지
+   * 않는다. 그래서 isActive('imageResize')가 영영 거짓이었고, 그 조건에 매달린 크기 툴바는
+   * 한 번도 뜨지 않았다.
+   *
+   * ProseMirror의 handleClickOn으로는 못 잡는다 — 확장이 자기 DOM에서 클릭을 먼저 삼킨다.
+   * 그래서 **캡처 단계**에서 우리가 먼저 받는다. 어느 사진을 눌렀는지는 문서를 훑어
+   * 그 노드의 DOM이 눌린 지점을 품고 있는지로 찾는다.
+   */
+  editor.view.dom.addEventListener(
+    'click',
+    (event) => {
+      let at = null;
+      editor.state.doc.descendants((node, pos) => {
+        if (at !== null || node.type.name !== 'imageResize') return;
+        const dom = editor.view.nodeDOM(pos);
+        if (dom && dom.contains && dom.contains(event.target)) at = pos;
+      });
+      if (at === null) return;
+      editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, at)));
+    },
+    true,
+  );
 
   /** 잡아끈 크기를 네 칸 중 가까운 곳에 붙인다. 바뀐 게 없으면 아무 일도 하지 않아 여기서 멈춘다. */
   function snapImages() {
@@ -206,6 +270,24 @@ export function createDescEditor({ mount, onChange, onFiles, bubble, maxImages =
       editor.chain().focus().setTextAlign(centered ? 'left' : 'center').run();
     },
     isCentered: () => editor.isActive({ textAlign: 'center' }),
+
+    /** 지금 고른 사진의 폭(%) — 고른 사진이 없으면 null. */
+    imageWidth() {
+      const node = editor.state.selection.node;
+      if (!node || node.type.name !== 'imageResize') return null;
+      return nearest(widthFromStyle(node.attrs.containerStyle, editor.view.dom.clientWidth));
+    },
+    /** 고른 사진의 폭을 네 칸 중 하나로 정한다. */
+    setImageWidth(pct) {
+      const { selection } = editor.state;
+      const node = selection.node;
+      if (!node || node.type.name !== 'imageResize') return;
+      editor.view.dispatch(
+        editor.state.tr.setNodeMarkup(selection.from, undefined, { ...node.attrs, containerStyle: styleFor(pct) }),
+      );
+      onChange();
+    },
+    isImageSelected: () => editor.isActive('imageResize'),
     onSelection(fn) { editor.on('selectionUpdate', fn); },
     focus() { editor.commands.focus(); },
     destroy() { editor.destroy(); },
