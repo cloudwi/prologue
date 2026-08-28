@@ -53,7 +53,13 @@ class MeetupController(
      */
     data class MeetupsResponse(val meetups: List<MeetupView>, val canCreate: Boolean = false)
     data class MeetupHistoryResponse(val meetups: List<MeetupHistoryView>)
-    data class MyMeetupsResponse(val meetups: List<HostMeetupView>)
+    /**
+     * [canCreate] — 이 사람이 모임을 열 수 있는지.
+     *
+     * 콘솔이 '새 모임' 단추를 그릴지 정한다. 이게 없으면 열 수 없는 사람이 폼을 다 채우고
+     * **저장할 때야** 거절당한다 — 못 하는 일은 하기 전에 말해야 한다.
+     */
+    data class MyMeetupsResponse(val meetups: List<HostMeetupView>, val canCreate: Boolean = false)
 
     data class CreateMeetupRequest(
         @field:NotBlank(message = "모임 이름을 적어주세요")
@@ -254,7 +260,9 @@ class MeetupController(
     /** 내가 여는 모임 전부 — 신청자 목록까지 한 번에. */
     @GetMapping("/mine")
     fun mine(authentication: Authentication): MyMeetupsResponse =
-        MyMeetupsResponse(meetupService.hostMeetups(UUID.fromString(authentication.name)))
+        UUID.fromString(authentication.name).let { id ->
+            MyMeetupsResponse(meetupService.hostMeetups(id), meetupService.canHost(id))
+        }
 
     /** 입금 확인 후 확정 — 신청자에게 푸시가 간다. */
     @PostMapping("/applications/{applicationId}/confirm")

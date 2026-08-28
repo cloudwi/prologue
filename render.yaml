@@ -43,6 +43,16 @@ services:
       # 사진을 올리는 앱이 필터 없이 심사에 들어가면 1.2(UGC)에서 되돌아온다. 대시보드에서 넣는다.
       - key: GOOGLE_VISION_API_KEY
         sync: false
+      # 모임을 열 수 있는 사람 — 쉼표로 구분한 이메일 허용목록(MeetupHostPolicy).
+      #
+      # **비워 두면 제한이 풀려 누구나 연다.** 기능을 전체 공개할 때 배포 없이 이 값만
+      # 비우면 되도록 그렇게 짰다. 반대로 코드 기본값은 잠금 쪽이라, 값을 안 넣으면
+      # 운영자(cloudwi@naver.com)만 열 수 있다.
+      #
+      # 열기 전에 모임 심사(PENDING → 승인)가 돌고 있어야 한다 — 그게 없으면 아무나
+      # 우리 이름으로 사람을 모으고 참가비를 받는다.
+      - key: MEETUP_HOST_EMAILS
+        sync: false
       # ── 아래 3개는 Supabase 프로젝트 만든 뒤 대시보드에서 입력 ──
       - key: SPRING_DATASOURCE_URL
         sync: false
