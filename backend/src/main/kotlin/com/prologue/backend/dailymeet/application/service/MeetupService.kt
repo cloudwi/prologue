@@ -133,6 +133,12 @@ data class AdminMeetupView(
     val appliedCount: Int,
     val hostNickname: String?,
     val coverUrls: List<String>,
+    /** 심사에 필요한 것들 — 읽어보지 않고는 승인할 수 없다. */
+    val description: String?,
+    val bodyImageUrls: List<String>,
+    val placeAddress: String?,
+    val kakaoLink: String,
+    val reviewNote: String?,
     val createdAt: Instant,
 )
 
@@ -189,6 +195,8 @@ data class HostMeetupView(
     val bodyImageUrls: List<String>,
     val kakaoLink: String,
     val status: String,
+    /** 반려됐다면 그 사유 — 모임장이 무엇을 고쳐야 하는지 알아야 한다. */
+    val reviewNote: String?,
     val confirmedCount: Int,
     val applications: List<HostApplicationView>,
     /** 회차 묶음 — 앱의 '다음 회차 열기'가 이 값을 그대로 넘겨 회차를 잇는다. */
@@ -680,6 +688,7 @@ class MeetupService(
                 bodyImageUrls = m.bodyImageUrls,
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
+                reviewNote = m.reviewNote,
                 seriesId = m.seriesId,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },
                 applications = applications.map { app ->
@@ -787,8 +796,34 @@ class MeetupService(
             appliedCount = apps.count { it.status == MeetupApplicationStatus.APPLIED },
             hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
             coverUrls = m.coverUrls,
+            description = m.description,
+            bodyImageUrls = m.bodyImageUrls,
+            placeAddress = m.placeAddress,
+            kakaoLink = m.kakaoLink,
+            reviewNote = m.reviewNote,
             createdAt = m.createdAt,
         )
+    }
+
+    /**
+     * 심사 — 승인.
+     *
+     * 모든 모임이 이 문을 지난다(2026-08-28). 오프라인 모임은 사고가 앱 밖에서 나고 책임은
+     * 우리에게 오므로, 목록에 실리기 전에 사람이 한 번 읽는다. 승인되면 모임장에게 알린다.
+     */
+    @Transactional
+    fun approveMeetup(meetupId: UUID) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        meetup.approve()
+        meetupRepository.save(meetup)
+    }
+
+    /** 심사 — 반려. 사유를 남겨야 모임장이 무엇을 고칠지 안다. */
+    @Transactional
+    fun rejectMeetup(meetupId: UUID, reason: String) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        meetup.reject(reason)
+        meetupRepository.save(meetup)
     }
 
     /** 어드민 강제 취소 — 소유권 없이. 신청자(신청·확정)에게 취소 푸시가 간다. */

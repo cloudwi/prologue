@@ -470,7 +470,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
     const diff = Math.round((b - a) / 86400000);
     return diff === 0 ? '오늘 열리는 모임이에요' : diff > 0 ? `모임까지 ${diff}일 남았어요` : `${-diff}일 전에 열린 모임이에요`;
   };
-  const STATUS = { OPEN: '모집 중', CLOSED: '모집 마감', DONE: '개최 완료', CANCELED: '취소됨' };
+  const STATUS = {
+    PENDING: '심사 중', REJECTED: '반려됨',
+    OPEN: '모집 중', CLOSED: '모집 마감', DONE: '개최 완료', CANCELED: '취소됨',
+  };
 
   // ── 목록 ────────────────────────────────────────────────
   async function loadList() {
@@ -553,6 +556,16 @@ import { API_BASE, SITE_URL } from '../lib/site';
         <div class="stat"><b>${waiting.length}</b><span>기다리는 중</span></div>
         <div class="stat"><b>${m.capacity - confirmed.length}</b><span>남은 자리</span></div>
       </div>
+
+      ${m.status === 'PENDING' ? `<div class="review-note wait">
+        <strong>심사 중이에요</strong>
+        <span>운영자가 읽어보고 있어요. 승인되면 앱 모임 탭에 실려요. 그때까지는 신청을 받지 않아요.</span>
+      </div>` : ''}
+      ${m.status === 'REJECTED' ? `<div class="review-note bad">
+        <strong>다시 봐주세요</strong>
+        <span>${esc(m.reviewNote || '내용을 조금 손봐주세요.')}</span>
+        <span class="hint">‘모임 수정’에서 고쳐 저장하면 다시 심사에 올라가요.</span>
+      </div>` : ''}
 
       <a class="kakao" href="${esc(m.kakaoLink)}" target="_blank" rel="noopener">오픈채팅 열기</a>
       <p class="hint">참가비 안내와 입금 확인은 오픈채팅에서 하세요. 확인이 끝나면 아래에서 ‘확정’을 눌러주세요.</p>
@@ -1743,6 +1756,19 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .btn.danger { color: var(--terracotta-strong); }
   .console .btn.danger:hover { border-color: var(--terracotta); }
   .console .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.65; }
+
+  /*
+    심사 알림 — 모임장이 "왜 앱에 안 보이지"를 여기서 알아야 한다.
+    모르면 고장난 줄 알고 같은 모임을 다시 만든다.
+  */
+  .console .review-note {
+    display: grid; gap: 6px; margin-bottom: 18px; padding: 16px 18px; border-radius: 16px;
+    background: var(--sunken); border: 1px solid var(--border);
+  }
+  .console .review-note strong { font-size: 0.98rem; }
+  .console .review-note span { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+  .console .review-note.bad { border-color: color-mix(in srgb, var(--terracotta) 45%, var(--border)); }
+  .console .review-note.bad strong { color: var(--terracotta-strong); }
   /*
     안내 문구는 앞 덩어리에 달라붙어 있었다 — 전역 `* { margin: 0 }` 탓에 <p>의 여백이
     없어서, 노란 버튼 바로 밑에 글자가 붙어 한 덩어리로 읽혔다. 무엇에 대한 설명인지는

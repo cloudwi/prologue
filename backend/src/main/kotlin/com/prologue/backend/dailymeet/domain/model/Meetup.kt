@@ -4,7 +4,17 @@ import java.time.Instant
 import java.util.UUID
 
 /** 모임의 상태 — 모집 중(OPEN) → 모집 마감(CLOSED) → 개최 완료(DONE), 또는 취소(CANCELED). */
-enum class MeetupStatus { OPEN, CLOSED, DONE, CANCELED }
+/**
+ * 모임의 상태.
+ *
+ * [PENDING]은 **모든 모임이 거쳐야 하는 문**이다(2026-08-28). 모임장이 만들면 여기서
+ * 시작하고, 운영자가 승인해야 [OPEN]이 되어 앱 목록에 실린다. 오프라인 모임은 사고가
+ * 앱 밖에서 나고 책임은 우리에게 오므로, 처음 몇 번은 사람이 읽어보는 편이 낫다.
+ *
+ * [REJECTED]는 되돌릴 수 있는 상태다 — 모임장이 고쳐서 다시 올리면 [PENDING]으로 간다.
+ * [CANCELED]와 다르다: 취소는 열렸던 모임이 무산된 것이고, 반려는 아직 열린 적이 없다.
+ */
+enum class MeetupStatus { PENDING, REJECTED, OPEN, CLOSED, DONE, CANCELED }
 
 /**
  * 오프라인 모임 — 모임장이 웹 콘솔(/host)에서 만들고, 회원이 앱에서 신청한다.
@@ -77,10 +87,48 @@ class Meetup private constructor(
     val bodyImageUrls: List<String>,
     val kakaoLink: String,
     status: MeetupStatus,
+    reviewNote: String?,
     val createdAt: Instant,
 ) {
     var status: MeetupStatus = status
         private set
+
+    /**
+     * 심사 결과를 적어 두는 자리 — 반려 사유. 모임장이 무엇을 고쳐야 하는지 알아야 한다.
+     * "부적절합니다"로 끝나면 같은 모임이 그대로 다시 올라온다.
+     */
+    var reviewNote: String? = reviewNote
+        private set
+
+    /** 승인 — 이제야 앱 목록에 실린다. */
+    fun approve() {
+        if (status != MeetupStatus.PENDING) throw DailyMeetException("심사 중인 모임만 승인할 수 있어요")
+        status = MeetupStatus.OPEN
+        reviewNote = null
+    }
+
+    /** 반려 — 사유를 반드시 남긴다. */
+    fun reject(reason: String) {
+        if (status != MeetupStatus.PENDING) throw DailyMeetException("심사 중인 모임만 반려할 수 있어요")
+        val clean = reason.trim()
+        if (clean.isBlank()) throw DailyMeetException("반려 사유를 적어주세요")
+        if (clean.length > REVIEW_NOTE_MAX) throw DailyMeetException("반려 사유는 ${REVIEW_NOTE_MAX}자 이하여야 해요")
+        status = MeetupStatus.REJECTED
+        reviewNote = clean
+    }
+
+    /**
+     * 내용을 고치면 다시 심사를 받는다.
+     *
+     * 승인은 **그때 읽은 그 글**에 준 것이다. 승인 뒤에 소개와 장소를 전부 바꿔치기할 수
+     * 있으면 심사는 형식이 된다. 이미 열려 신청자가 붙은 모임도 마찬가지다 —
+     * 다시 문을 닫고 사람이 읽는다.
+     */
+    fun sendBackToReview() {
+        if (status == MeetupStatus.DONE || status == MeetupStatus.CANCELED) return
+        status = MeetupStatus.PENDING
+        reviewNote = null
+    }
 
     /** 모집을 닫는다 — 자리가 다 찼거나 모임장이 그만 받기로 했을 때. 신청만 막히고 확정은 계속할 수 있다. */
     fun close() {
@@ -188,6 +236,7 @@ class Meetup private constructor(
 
         /** 대기 줄의 최대 길이 — 이보다 길면 기다림이 아니라 방치다. */
         private const val WAITLIST_MAX = 200
+        private const val REVIEW_NOTE_MAX = 300
 
         fun create(
             hostAccountId: UUID,
@@ -271,7 +320,8 @@ class Meetup private constructor(
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanBodyImages, cleanLink,
-                MeetupStatus.OPEN, now,
+                // 새 모임은 언제나 심사부터 — 승인 전에는 목록에 실리지 않는다.
+                MeetupStatus.PENDING, null, now,
             )
         }
 
@@ -325,7 +375,8 @@ class Meetup private constructor(
                 fresh.minAgeMale, fresh.maxAgeMale, fresh.minAgeFemale, fresh.maxAgeFemale,
                 fresh.minHeightMaleCm, fresh.minHeightFemaleCm,
                 fresh.requireJobVerified, fresh.emoji, fresh.color, fresh.coverUrls, fresh.bodyImageUrls,
-                fresh.kakaoLink, existing.status, existing.createdAt,
+                // 고친 모임은 다시 심사를 받는다 — 승인은 그때 읽은 그 글에 준 것이다.
+                fresh.kakaoLink, MeetupStatus.PENDING, null, existing.createdAt,
             )
         }
 
@@ -359,12 +410,13 @@ class Meetup private constructor(
             bodyImageUrls: List<String> = emptyList(),
             kakaoLink: String,
             status: MeetupStatus,
+            reviewNote: String? = null,
             createdAt: Instant,
         ): Meetup = Meetup(
             id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
             capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
-            requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, status, createdAt,
+            requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, status, reviewNote, createdAt,
         )
 
         /**

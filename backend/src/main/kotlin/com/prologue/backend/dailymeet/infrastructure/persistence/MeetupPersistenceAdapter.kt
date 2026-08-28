@@ -74,6 +74,7 @@ class MeetupPersistenceAdapter(
             bodyImageUrls = bodyImageUrls.joinToString(",").ifBlank { null },
             kakaoLink = kakaoLink,
             status = status.name,
+            reviewNote = reviewNote,
             createdAt = createdAt,
         )
 
@@ -108,6 +109,7 @@ class MeetupPersistenceAdapter(
             bodyImageUrls = bodyImageUrls?.split(',')?.filter { it.isNotBlank() } ?: emptyList(),
             kakaoLink = kakaoLink,
             status = MeetupStatus.valueOf(status),
+            reviewNote = reviewNote,
             createdAt = createdAt,
         )
 }

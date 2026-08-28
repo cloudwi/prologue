@@ -6,7 +6,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <div id="meetup-list" class="admin-card admin-list"></div>
 
   <script is:inline>
-    const MEETUP_STATUS = { OPEN: '모집 중', CLOSED: '모집 마감', DONE: '개최 완료', CANCELED: '취소됨' };
+    const MEETUP_STATUS = {
+      PENDING: '심사 대기', REJECTED: '반려됨',
+      OPEN: '모집 중', CLOSED: '모집 마감', DONE: '개최 완료', CANCELED: '취소됨',
+    };
 
     window.pageLoad = async function () {
       const { $, api, showLogin } = window.admin;
@@ -14,7 +17,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       listEl.textContent = '불러오는 중...';
       try {
         const data = await api('/admin/meetups');
-        render(data.meetups);
+        // 할 일이 먼저 보여야 한다 — 심사 대기를 맨 위로 올린다.
+        const order = { PENDING: 0, REJECTED: 1 };
+        render([...data.meetups].sort((a, b) => (order[a.status] ?? 2) - (order[b.status] ?? 2)));
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
         listEl.textContent = e.message;
@@ -41,7 +46,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         name.className = 'admin-row-name';
         name.textContent = m.title;
         const badge = document.createElement('span');
-        badge.className = 'admin-badge' + (m.status === 'OPEN' ? ' ok' : m.status === 'CANCELED' ? ' warn' : '');
+        badge.className = 'admin-badge' +
+          (m.status === 'OPEN' ? ' ok' : (m.status === 'CANCELED' || m.status === 'REJECTED' || m.status === 'PENDING') ? ' warn' : '');
         badge.textContent = MEETUP_STATUS[m.status] || m.status;
         name.append(' ', badge);
         if (m.coverUrls && m.coverUrls.length > 0) {
@@ -66,6 +72,37 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
         info.append(name, meta, host);
 
+        /*
+          심사에 필요한 것을 함께 편다.
+
+          제목과 날짜만 보고 승인하면 심사가 아니라 결재다. 소개 글·주소·오픈채팅 링크가
+          그 자리에 있어야 "이 모임이 실재하는가"를 판단할 수 있다. 반려 사유도 여기 남는다.
+        */
+        if (m.status === 'PENDING' || m.status === 'REJECTED') {
+          if (m.placeAddress) {
+            const addr = document.createElement('div');
+            addr.className = 'admin-row-date';
+            addr.textContent = '주소 ' + m.placeAddress;
+            info.append(addr);
+          }
+          const link = document.createElement('div');
+          link.className = 'admin-row-date';
+          link.textContent = '오픈채팅 ' + m.kakaoLink;
+          info.append(link);
+          if (m.description) {
+            const desc = document.createElement('div');
+            desc.className = 'admin-review-desc';
+            desc.textContent = m.description;
+            info.append(desc);
+          }
+          if (m.reviewNote) {
+            const note = document.createElement('div');
+            note.className = 'admin-row-date';
+            note.textContent = '반려 사유: ' + m.reviewNote;
+            info.append(note);
+          }
+        }
+
         const actions = document.createElement('div');
         actions.className = 'admin-row-actions';
 
@@ -75,6 +112,31 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           photos.textContent = '사진 보기';
           photos.onclick = () => m.coverUrls.forEach((u) => window.open(u, '_blank', 'noopener'));
           actions.append(photos);
+        }
+        if (m.status === 'PENDING') {
+          const ok = document.createElement('button');
+          ok.className = 'admin-btn small';
+          ok.textContent = '승인';
+          ok.onclick = () => {
+            if (confirm("'" + m.title + "' 모임을 승인할까요? 승인하면 앱 모임 탭에 바로 실려요.")) act(m.meetupId, 'approve', ok);
+          };
+          const no = document.createElement('button');
+          no.className = 'admin-btn ghost small';
+          no.textContent = '반려';
+          no.onclick = async () => {
+            // 사유는 필수다 — 없으면 같은 모임이 그대로 다시 올라온다.
+            const reason = prompt('반려 사유를 적어주세요. 모임장에게 그대로 보여요.');
+            if (reason == null || !reason.trim()) return;
+            no.disabled = true;
+            try {
+              await window.admin.api('/admin/meetups/' + m.meetupId + '/reject', {
+                method: 'POST',
+                body: JSON.stringify({ reason: reason.trim() }),
+              });
+              await window.pageLoad();
+            } catch (e) { alert(e.message); no.disabled = false; }
+          };
+          actions.append(ok, no);
         }
         if (m.status === 'OPEN' || m.status === 'CLOSED') {
           const cancel = document.createElement('button');

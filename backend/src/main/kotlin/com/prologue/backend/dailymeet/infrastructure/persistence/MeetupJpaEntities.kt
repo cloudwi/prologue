@@ -108,6 +108,9 @@ class MeetupJpaEntity(
 
     @Column(name = "status", nullable = false, length = 12)
     var status: String = "OPEN",
+    /** 반려 사유 — 모임장이 무엇을 고쳐야 하는지 알아야 한다. 승인되면 지운다. */
+    @Column(name = "review_note", length = 300)
+    var reviewNote: String? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
