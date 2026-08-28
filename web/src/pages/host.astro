@@ -112,7 +112,14 @@ import RichField from '../components/RichField.astro';
                 </label>
                 <div id="coverPreview" class="covers"></div>
               </div>
-              <label class="field"><span>모임 이름 *</span><input id="f-title" maxlength="80" placeholder="밑줄 모임 · 서로서가" /></label>
+              <!--
+                예시는 실재하는 가게가 아니라 공공장소로 든다.
+
+                남의 가게 이름을 안내 문구에 박아두면 우리가 그 가게와 무슨 관계인 것처럼 읽히고,
+                모임장은 그 가게에서 열어야 하나 잠깐 헷갈린다. 예시는 칸을 어떻게 채우는지만
+                보여주면 된다.
+              -->
+              <label class="field"><span>모임 이름 *</span><input id="f-title" maxlength="80" placeholder="수요일 저녁 책 모임" /></label>
               <!--
                 소개 칸은 이제 편집기다. 사진이 글자들 사이에 실제 그림으로 앉고, 누르면
                 잡아끌어 크기를 바꾼다. 저장되는 것은 여전히 평문과 [사진N] 표시뿐이라
@@ -158,11 +165,11 @@ import RichField from '../components/RichField.astro';
               <div class="field">
                 <span>주소 <em>찾아서 고르면 초대장의 길찾기가 정확해져요</em></span>
                 <div class="addr-row">
-                  <input id="f-address" placeholder="서울 서초구 언남길 49" />
+                  <input id="f-address" placeholder="서울 중구 세종대로 110" />
                   <button type="button" class="chip addr-find" id="findAddr">주소 찾기</button>
                 </div>
               </div>
-              <label class="field"><span>장소 이름 * <em>건물·층·가게까지</em></span><input id="f-place" maxlength="120" placeholder="1층 파란지붕 서로서가" /></label>
+              <label class="field"><span>장소 이름 * <em>건물·층·가게까지</em></span><input id="f-place" maxlength="120" placeholder="서울시청 시민청 지하 1층" /></label>
               <label class="field"><span>정원 * <em>2~100명</em></span><input id="f-capacity" type="number" min="2" max="100" value="8" /></label>
               <label class="field"><span>오픈채팅 링크 * <em>신청한 사람에게만 보여요</em></span><input id="f-kakao" placeholder="https://open.kakao.com/o/..." /></label>
 
