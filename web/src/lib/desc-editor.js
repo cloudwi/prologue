@@ -12,6 +12,7 @@
  */
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import TextAlign from '@tiptap/extension-text-align';
 import { ImageResize } from 'tiptap-extension-resize-image';
 
 /**
@@ -60,6 +61,13 @@ export function createDescEditor({ mount, onChange, onFiles, maxImages = 10 }) {
         heading: false, horizontalRule: false, italic: false, link: false,
         listItem: false, listKeymap: false, orderedList: false, strike: false, underline: false,
       }),
+      /*
+       * 정렬은 가운데 하나만 연다.
+       *
+       * 긴 문단은 왼쪽으로 흘려야 읽히고, 머리줄이나 맺는 한 줄은 가운데가 어울린다.
+       * 오른쪽 정렬은 초대장에서 쓸 일이 없어 열지 않았다 — 저장할 수 있는 것만 준다.
+       */
+      TextAlign.configure({ types: ['paragraph'], alignments: ['left', 'center'], defaultAlignment: 'left' }),
       ImageResize.configure({ inline: false, allowBase64: false }),
     ],
     editorProps: {
@@ -123,7 +131,7 @@ export function createDescEditor({ mount, onChange, onFiles, maxImages = 10 }) {
       }
       let line = '';
       node.forEach((child) => { line += child.type.name === 'hardBreak' ? '\n' : (child.text ?? ''); });
-      lines.push(line);
+      lines.push(node.attrs.textAlign === 'center' ? `[가운데]${line}` : line);
     });
     /*
      * 끝의 빈 줄은 떨군다.
@@ -151,7 +159,10 @@ export function createDescEditor({ mount, onChange, onFiles, maxImages = 10 }) {
         }
         continue;
       }
-      content.push(line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph' });
+      const centered = /^\s*\[가운데]\s?/.exec(line);
+      const text = centered ? line.slice(centered[0].length) : line;
+      const attrs = centered ? { textAlign: 'center' } : {};
+      content.push(text ? { type: 'paragraph', attrs, content: [{ type: 'text', text }] } : { type: 'paragraph', attrs });
     }
     if (!content.length) content.push({ type: 'paragraph' });
     return { type: 'doc', content };
@@ -175,6 +186,12 @@ export function createDescEditor({ mount, onChange, onFiles, maxImages = 10 }) {
       }).run();
     },
     insertText(text) { editor.chain().focus().insertContent(text).run(); },
+    toggleCenter() {
+      const centered = editor.isActive({ textAlign: 'center' });
+      editor.chain().focus().setTextAlign(centered ? 'left' : 'center').run();
+    },
+    isCentered: () => editor.isActive({ textAlign: 'center' }),
+    onSelection(fn) { editor.on('selectionUpdate', fn); },
     focus() { editor.commands.focus(); },
     destroy() { editor.destroy(); },
   };

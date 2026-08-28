@@ -29,6 +29,11 @@ class MeetupDescriptionForAppTest {
     }
 
     @Test
+    fun `가운데 정렬 표시도 걷어낸다 — 글자는 남기고 표시만 뗀다`() {
+        assertEquals("상은 이렇게 차려 둘게요\n와인과 치즈를 준비해요", stripPhotoTokens("[가운데]상은 이렇게 차려 둘게요\n와인과 치즈를 준비해요"))
+    }
+
+    @Test
     fun `표시만 있는 글은 빈 글이 된다`() {
         assertNull(stripPhotoTokens("[사진1]\n[사진2:75]"))
     }

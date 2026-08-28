@@ -95,6 +95,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
                   <span>소개</span>
                   <div class="editor-tools">
                     <button type="button" class="chip" id="descPhoto">사진 넣기</button>
+                    <button type="button" class="chip" id="descCenter">가운데</button>
                     <button type="button" class="chip" data-insert="blank">한 줄 띄우기</button>
                     <button type="button" class="chip" data-insert="dot">가운뎃점 ·</button>
                     <input id="f-bodyImage" type="file" accept="image/*" multiple hidden />
@@ -675,15 +676,31 @@ import { API_BASE, SITE_URL } from '../lib/site';
   function greetingHtml(description, bodyImageUrls) {
     if (!description) return '';
     const sized = new Set(['25', '50', '75']);
-    const withPhotos = esc(description).replace(/\[사진(\d+)(?::(\d+))?]/g, (_, n, w) => {
-      const url = bodyImageUrls?.[Number(n) - 1];
-      if (!url) return '';
-      const cls = sized.has(w) ? `inv-photo w${w}` : 'inv-photo';
-      return `</p><img class="${cls}" src="${esc(url)}" alt="" /><p class="inv-desc">`;
-    });
-    // 사진이 끼어든 자리에 빈 문단이 남는다 — 문단을 열고 닫는 방식이라 어쩔 수 없이 생긴다.
-    return `<p class="inv-desc">${withPhotos}</p>`
-      .replaceAll('<p class="inv-desc"></p>', '');
+    const out = [];
+    let open = null;
+    const close = () => { if (open !== null) out.push('</p>'); open = null; };
+    const openWith = (cls) => {
+      if (open === cls) out.push('\n');
+      else { close(); out.push(`<p class="${cls}">`); open = cls; }
+    };
+
+    for (const raw of String(description).split('\n')) {
+      const centered = /^\s*\[가운데]\s?/.exec(raw);
+      const cls = centered ? 'inv-desc center' : 'inv-desc';
+      const text = esc(centered ? raw.slice(centered[0].length) : raw);
+      openWith(cls);
+      out.push(text.replace(/\[사진(\d+)(?::(\d+))?]/g, (_, n, w) => {
+        const url = bodyImageUrls?.[Number(n) - 1];
+        if (!url) return '';
+        const photoCls = sized.has(w) ? `inv-photo w${w}` : 'inv-photo';
+        return `</p><img class="${photoCls}" src="${esc(url)}" alt="" /><p class="${cls}">`;
+      }));
+    }
+    close();
+
+    // 사진이 끼어든 자리에 빈 문단이 남는다 — 서버 조판과 같은 뒷정리다.
+    return out.join('')
+      .replace(/<p class="inv-desc( center)?">\s*<\/p>/g, '');
   }
 
   /** 폼으로 만든 가짜 모임 — 아직 저장 전이라 서버에 물어볼 수 없다. */
@@ -916,11 +933,22 @@ import { API_BASE, SITE_URL } from '../lib/site';
     $('descCount').classList.toggle('over', text.length > 1000);
     // 빈 편집기에는 안내 문구가 비쳐 보인다 — 커서만 깜빡이는 흰 칸은 무엇을 적으라는 말이 없다.
     $('f-desc').classList.toggle('is-empty', text.trim() === '');
+    syncCenterChip();
   }
 
   for (const b of document.querySelectorAll('.console [data-insert]')) {
     b.onclick = () => desc.insertText(b.dataset.insert === 'blank' ? '\n\n' : ' · ');
   }
+
+  /*
+   * 가운데 정렬 — 커서가 놓인 줄 하나에만 건다.
+   *
+   * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 그래서 전체가 아니라 줄 단위이고,
+   * 쓰는 사람이 머리줄이나 맺는 한 줄에만 건다. 지금 줄이 가운데인지는 단추가 켜져서 말해준다.
+   */
+  $('descCenter').onclick = () => { desc.toggleCenter(); syncCenterChip(); };
+  function syncCenterChip() { $('descCenter').classList.toggle('on', desc.isCentered()); }
+  desc.onSelection(syncCenterChip);
 
   /**
    * 소개 안에 놓는 사진.
@@ -1389,6 +1417,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
     transition: color 0.15s ease, border-color 0.15s ease;
   }
   .console .chip:hover { color: var(--ink); border-color: var(--ink); }
+  .console .chip.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 
   /* 주소 칸 — 입력과 '주소 찾기'를 한 줄에. 좁아지면 버튼이 아래로 내려간다. */
   .console .addr-row { display: flex; gap: 8px; align-items: stretch; }
@@ -1438,6 +1467,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   }
   .console .rich .ProseMirror { outline: none; line-height: 1.8; white-space: pre-wrap; }
   .console .rich .ProseMirror p { margin: 0; min-height: 1.8em; }
+  .console .rich .ProseMirror p[style*="center"] { text-align: center; }
   /* 빈 칸에는 안내가 비쳐 보인다 — 커서만 깜빡이는 흰 칸은 무엇을 적으라는 말이 없다. */
   .console .rich.is-empty::before {
     content: attr(data-placeholder); position: absolute; top: 12px; left: 14px; right: 14px;
@@ -1699,6 +1729,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .inv-date { font-size: 1.15rem; letter-spacing: 1px; }
   .console .inv-meta, .console .inv-dday { color: var(--scr-muted); font-size: 0.88rem; }
   .console .inv-desc { margin-top: 16px; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; text-align: left; }
+  .console .inv-desc.center { text-align: center; }
   /* 글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다. */
   .console .inv-photo { display: block; width: calc(100% + 48px); margin: 18px -24px; object-fit: cover; }
   .console .inv-photo.w25, .console .inv-photo.w50, .console .inv-photo.w75 {

@@ -99,6 +99,32 @@ class MeetupInvitationPageTest {
     }
 
     @Test
+    fun `가운데 표시가 붙은 줄만 가운데로 선다`() {
+        val out = html(view(description = "[가운데]상은 이렇게\n와인과 치즈를 준비해요"))
+
+        assertContains(out, """<p class="greeting center">상은 이렇게</p>""")
+        assertContains(out, """<p class="greeting">와인과 치즈를 준비해요</p>""")
+        assertFalse(out.contains("[가운데]")) // 표시가 글자로 남으면 안 된다
+    }
+
+    @Test
+    fun `같은 정렬이 이어지면 한 문단으로 묶는다 — 줄마다 문단을 열면 간격이 벌어진다`() {
+        val out = html(view(description = "첫 줄\n둘째 줄"))
+
+        assertContains(out, """<p class="greeting">첫 줄<br />둘째 줄</p>""")
+    }
+
+    @Test
+    fun `가운데 줄 사이에 낀 사진도 가운데 문단을 이어서 연다`() {
+        val out = html(
+            view(description = "[가운데]앞\n[사진1]\n[가운데]뒤", bodyImageUrls = listOf("https://cdn.example.com/b.jpg")),
+        )
+
+        assertContains(out, """<p class="greeting center">앞</p>""")
+        assertContains(out, """<p class="greeting center">뒤</p>""")
+    }
+
+    @Test
     fun `폭이 붙은 표시는 그 폭의 클래스를 단다`() {
         val out = html(
             view(

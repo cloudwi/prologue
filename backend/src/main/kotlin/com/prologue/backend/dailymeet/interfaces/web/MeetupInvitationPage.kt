@@ -36,6 +36,15 @@ object MeetupInvitationPage {
      * 콘솔에서 맞춘 63%는 거기서 다른 그림이 된다. 둘, 숫자를 그대로 style에 흘리면
      * 그 자리가 곧 주입 통로다 — 클래스 이름으로만 내보내면 그 여지가 아예 없다.
      */
+    /**
+     * 줄 앞에 붙는 가운데 정렬 표시 — `[가운데]무엇을 준비했나요`.
+     *
+     * 긴 문단은 왼쪽으로 흘려야 읽히고, 머리줄이나 맺는 한 줄은 가운데가 어울린다. 그 판단은
+     * 글을 쓴 사람만 할 수 있어서 자동으로 정하지 않는다(짧은 줄을 기계적으로 가운데로 보내면
+     * 우연히 짧아진 문장까지 끌려간다).
+     */
+    private val CENTER_TOKEN = Regex("""^\s*\[가운데]\s?""")
+
     private fun widthClass(raw: String): String = when (raw.toIntOrNull()) {
         25, 50, 75 -> " w$raw"
         else -> "" // 100이거나 알 수 없는 값 — 지금까지의 꽉 찬 모양.
@@ -230,18 +239,38 @@ object MeetupInvitationPage {
      */
     private fun greeting(description: String?, bodyImageUrls: List<String>): String {
         if (description == null) return ""
-        val escaped = escape(description)
-        val withPhotos = PHOTO_TOKEN.replace(escaped) { match ->
-            val index = match.groupValues[1].toIntOrNull()?.minus(1) ?: return@replace ""
-            val width = widthClass(match.groupValues[2])
-            bodyImageUrls.getOrNull(index)
-                ?.let { """</p><img class="body-photo$width" src="${escape(it)}" alt="" loading="lazy" /><p class="greeting">""" }
-                ?: ""
+        val out = StringBuilder()
+        // 같은 정렬이 이어지는 동안은 한 문단으로 묶고 줄만 바꾼다 — 줄마다 문단을 열면 간격이 벌어진다.
+        var open: String? = null
+        fun close() {
+            if (open != null) out.append("</p>")
+            open = null
         }
+        fun openWith(cls: String) {
+            if (open == cls) out.append("<br />") else { close(); out.append("""<p class="$cls">"""); open = cls }
+        }
+
+        for (raw in description.split("\n")) {
+            val centered = CENTER_TOKEN.containsMatchIn(raw)
+            val cls = if (centered) "greeting center" else "greeting"
+            val escaped = escape(CENTER_TOKEN.replace(raw, ""))
+            openWith(cls)
+            // 사진은 문단을 끊고 들어간다. 끊은 뒤에는 같은 정렬로 다시 연다.
+            val withPhotos = PHOTO_TOKEN.replace(escaped) { match ->
+                val index = match.groupValues[1].toIntOrNull()?.minus(1) ?: return@replace ""
+                val width = widthClass(match.groupValues[2])
+                bodyImageUrls.getOrNull(index)
+                    ?.let { """</p><img class="body-photo$width" src="${escape(it)}" alt="" loading="lazy" /><p class="$cls">""" }
+                    ?: ""
+            }
+            out.append(withPhotos)
+        }
+        close()
+
         // 사진이 끼어든 자리에 빈 문단이 남는다 — 문단을 열고 닫는 방식이라 어쩔 수 없이 생긴다.
-        return """<p class="greeting">${withPhotos.replace("\n", "<br />")}</p>"""
-            .replace("""<p class="greeting"><br /></p>""", "")
-            .replace("""<p class="greeting"></p>""", "")
+        return out.toString()
+            .replace(Regex("""<p class="greeting( center)?"><br /></p>"""), "")
+            .replace(Regex("""<p class="greeting( center)?"></p>"""), "")
     }
 
     private fun gallery(coverUrls: List<String>): String {
@@ -298,6 +327,8 @@ ${head.prependIndent("        ")}
             한 음절이 홀로 떨어진다. 청첩장다움은 정렬이 아니라 눈썹의 자간·숫자 날짜·여백이 낸다.
           */
           .greeting { margin:36px 0 0; font-size:15.5px; line-height:1.9; letter-spacing:-0.2px; text-align:left; }
+          /* 글쓴이가 가운데로 세운 줄 — 머리줄과 맺는 한 줄이 여기 온다. */
+          .greeting.center { text-align:center; }
           /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다(폭을 정하지 않았을 때의 모양). */
           .body-photo { display:block; width:calc(100% + 48px); margin:24px -24px; border-radius:0;
                         object-fit:cover; background:var(--line); }
