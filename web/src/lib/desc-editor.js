@@ -13,6 +13,7 @@
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
+import { BubbleMenu } from '@tiptap/extension-bubble-menu';
 import { ImageResize } from 'tiptap-extension-resize-image';
 
 /**
@@ -43,7 +44,7 @@ const styleFor = (pct) => `width: ${pct}%; height: auto; cursor: pointer;`;
  * @param {(files: File[]) => void} o.onFiles  사진 파일이 들어왔을 때 (업로드는 부르는 쪽 몫)
  * @param {number} o.maxImages
  */
-export function createDescEditor({ mount, onChange, onFiles, maxImages = 10 }) {
+export function createDescEditor({ mount, onChange, onFiles, bubble, maxImages = 10 }) {
   // 다시 그리는 중에 또 불려 들어오지 않게 — 붙임(snap)이 자기 자신을 부르면 멈추지 않는다.
   let snapping = false;
 
@@ -68,6 +69,20 @@ export function createDescEditor({ mount, onChange, onFiles, maxImages = 10 }) {
        * 오른쪽 정렬은 초대장에서 쓸 일이 없어 열지 않았다 — 저장할 수 있는 것만 준다.
        */
       TextAlign.configure({ types: ['paragraph'], alignments: ['left', 'center'], defaultAlignment: 'left' }),
+      /*
+       * 고른 자리에 떠오르는 툴바 — 블로그 편집기들이 하는 방식이다.
+       *
+       * 툴바를 칸 맨 위에만 두면 글이 길어질수록 쓰던 자리에서 멀어진다. 아래에서 한 줄을
+       * 고르고 정렬을 바꾸려고 맨 위까지 올라갔다 내려오는 건, 고친 자리를 다시 찾아야 한다는 뜻이다.
+       */
+      ...(bubble
+        ? [BubbleMenu.configure({
+            element: bubble,
+            updateDelay: 100,
+            // 글자를 고른 동안에만 뜬다. 사진을 골랐을 때는 사진 자신의 손잡이가 이미 떠 있다.
+            shouldShow: ({ editor: e, from, to }) => from !== to && !e.isActive('imageResize'),
+          })]
+        : []),
       ImageResize.configure({ inline: false, allowBase64: false }),
     ],
     editorProps: {

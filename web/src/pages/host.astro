@@ -106,6 +106,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
                   class="rich"
                   data-placeholder="어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.&#10;&#10;줄을 짧게 끊으면 초대장에서 읽기 좋아요."
                 ></div>
+                <!-- 고른 자리에 떠오르는 툴바. 위치는 편집기가 잡는다(BubbleMenu). -->
+                <div class="bubble" id="descBubble">
+                  <button type="button" class="chip" id="bubbleCenter">가운데</button>
+                </div>
                 <div class="editor-foot">
                   <em>사진은 글 위로 끌어다 놓거나 붙여넣으면 그 자리에 들어가요. 사진을 누르면 크기를 잡아끌 수 있어요.</em>
                   <b id="descCount">0 / 1000</b>
@@ -334,6 +338,25 @@ import { API_BASE, SITE_URL } from '../lib/site';
     el.className = bad ? 'msg bad' : 'msg';
   };
 
+  /**
+   * 누른 버튼이 기다림을 진다.
+   *
+   * 전면 스피너는 이미 열두 곳에서 걷어냈다 — 기다림은 **모르는 것**에만 건다. 저장은 내가
+   * 누른 결과라 어디를 봐야 하는지 이미 알고 있으니, 그 자리에서 돌면 된다. 화면을 덮으면
+   * 옆에 적어둔 값이 안 보이고, 아래 한 줄로만 말하면 눌렀는지조차 알기 어렵다.
+   *
+   * 되돌리는 함수를 준다 — 성공이든 실패든 반드시 되돌려야 버튼이 잠긴 채 남지 않는다.
+   * 잠그는 것은 덤이 아니라 목적이기도 하다. 저장이 두 번 눌리면 모임이 둘 열린다.
+   */
+  function pending(btn, label) {
+    if (!btn) return () => {};
+    const html = btn.innerHTML;
+    const was = btn.disabled;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="spin" aria-hidden="true"></i>${esc(label)}`;
+    return () => { btn.innerHTML = html; btn.disabled = was; };
+  }
+
   const view = (name) => {
     for (const v of ['list', 'detail', 'new']) $(`v-${v}`).hidden = v !== name;
   };
@@ -515,9 +538,9 @@ import { API_BASE, SITE_URL } from '../lib/site';
       </div>
       ${m.status !== 'DONE' && m.status !== 'CANCELED' && !completable ? `<p class="hint">${completeBlockedWhy}</p>` : ''}`;
 
-    for (const b of $('detail').querySelectorAll('[data-confirm]')) b.onclick = () => act(b.dataset.confirm, 'confirm');
-    for (const b of $('detail').querySelectorAll('[data-decline]')) b.onclick = () => act(b.dataset.decline, 'decline');
-    for (const b of $('detail').querySelectorAll('[data-hosting]')) b.onclick = () => hosting(b.dataset.hosting);
+    for (const b of $('detail').querySelectorAll('[data-confirm]')) b.onclick = () => act(b.dataset.confirm, 'confirm', b);
+    for (const b of $('detail').querySelectorAll('[data-decline]')) b.onclick = () => act(b.dataset.decline, 'decline', b);
+    for (const b of $('detail').querySelectorAll('[data-hosting]')) b.onclick = () => hosting(b.dataset.hosting, b);
     const edit = $('editBtn');
     if (edit) edit.onclick = () => openForm(current);
     const copy = $('copyBtn');
@@ -528,20 +551,23 @@ import { API_BASE, SITE_URL } from '../lib/site';
     };
   }
 
-  async function act(applicationId, what) {
+  async function act(applicationId, what, btn) {
     if (what === 'decline' && !confirm('이 신청을 거절할까요?')) return;
+    const done = pending(btn, what === 'confirm' ? '확정하는 중' : '거절하는 중');
     try {
       await api(`/meetups/applications/${applicationId}/${what}`, { method: 'POST' });
       const id = current.meetupId;
       await loadList();
       openDetail(id);
       say(what === 'confirm' ? '확정했어요. 오픈채팅에서도 알려주세요.' : '거절했어요.');
-    } catch (e) { say(e.message, true); }
+    } catch (e) { done(); say(e.message, true); }
+    // 성공하면 목록을 다시 그려 버튼 자체가 사라지므로 되돌릴 것이 없다.
   }
 
   const HOSTING_ASK = { close: '모집을 마감할까요?', reopen: '모집을 다시 열까요?', complete: '개최를 완료로 표시할까요?', cancel: '모임을 취소할까요? 신청한 분들에게 알림이 갑니다.' };
-  async function hosting(what) {
+  async function hosting(what, btn) {
     if (!confirm(HOSTING_ASK[what])) return;
+    const done = pending(btn, '바꾸는 중');
     try {
       await api(`/meetups/${current.meetupId}/hosting/${what}`, { method: 'POST' });
       const id = current.meetupId;
@@ -549,7 +575,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       const still = meetups.find((m) => m.meetupId === id);
       if (still) openDetail(id); else view('list');
       say('바꿨어요.');
-    } catch (e) { say(e.message, true); }
+    } catch (e) { done(); say(e.message, true); }
   }
 
   // ── 미리보기 ────────────────────────────────────────────
@@ -737,6 +763,22 @@ import { API_BASE, SITE_URL } from '../lib/site';
    *
    * 탭을 직접 누를 때와, 새 모임 폼에 적는 동안에만 유지한다. 그 둘은 같은 대상을 계속 보는 일이다.
    */
+  /**
+   * 적는 동안의 미리보기 — 글자마다 다시 그리지 않는다.
+   *
+   * 폰 화면은 innerHTML을 통째로 갈아끼우는 방식이라, 한 글자에 한 번씩 그리면 사진이
+   * 매번 새로 걸리고 보던 자리가 맨 위로 튕긴다. 손이 멈춘 뒤에 한 번만 그리면
+   * 눈에는 즉시로 보이면서 그 두 가지가 사라진다.
+   */
+  let previewTimer = null;
+  function schedulePreview() {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+      previewTimer = null;
+      if (!$('v-new').hidden) preview(draftFromForm(), true);
+    }, 180);
+  }
+
   function preview(m, keepTab) {
     $('previewTabs').hidden = !m;
     if (!m) return;
@@ -744,6 +786,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
       previewView = 'card';
       for (const o of $('previewTabs').querySelectorAll('.tab')) o.classList.toggle('on', o.dataset.view === 'card');
     }
+    // 다시 그려도 보던 자리에 그대로 있게 한다 — 적는 중에 화면이 맨 위로 튕기지 않는다.
+    const keepScroll = $('screen').scrollTop;
+    const restore = () => { $('screen').scrollTop = keepScroll; };
+
     const d = new Date(m.meetAt);
     const feeLabel = m.feeFemale != null && m.feeFemale !== m.fee
       ? `남 ${won(m.fee)}원 · 여 ${m.feeFemale > 0 ? `${won(m.feeFemale)}원` : '무료'}`
@@ -780,6 +826,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
           </div>
         </div>
         ${appTabBar()}`;
+      restore();
       return;
     }
 
@@ -789,6 +836,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       $('phoneNote').textContent = '링크를 받은 사람이 보는 바로 그 초대장이에요.';
       $('screen').innerHTML = `<iframe src="${SITE_URL}/m/${m.meetupId}" title="초대장 미리보기"></iframe>`;
       fitIframe($('screen').firstChild);
+      restore();
       return;
     }
     $('phoneNote').textContent = '아직 만들기 전이라 폼의 값으로 그려본 모습이에요.';
@@ -809,6 +857,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
           </div>
         </div>
       </div>`;
+    restore();
   }
 
   // ── 개설·수정 ───────────────────────────────────────────
@@ -916,11 +965,19 @@ import { API_BASE, SITE_URL } from '../lib/site';
    */
   const BODY_IMAGE_MAX = 10;
 
+  /*
+   * 떠오르는 툴바는 숨을 때 DOM에서 아예 빠진다(BubbleMenu가 element.remove()를 부른다).
+   * 그래서 쓸 때마다 id로 찾으면 숨어 있는 동안 null이 된다 — 요소를 미리 붙잡아 둔다.
+   */
+  const bubbleEl = $('descBubble');
+  const centerChips = [$('descCenter'), bubbleEl.querySelector('#bubbleCenter')];
+
   const desc = createDescEditor({
     mount: $('f-desc'),
+    bubble: bubbleEl,
     maxImages: BODY_IMAGE_MAX,
     onFiles: (files) => uploadBodyImages(files),
-    onChange: () => { syncDesc(); if (!$('v-new').hidden) preview(draftFromForm(), true); },
+    onChange: () => { syncDesc(); schedulePreview(); },
   });
 
   // 개발 서버에서만 열리는 손잡이 — 편집기의 왕복(평문 ↔ 문서)을 브라우저에서 직접 확인할 때 쓴다.
@@ -949,8 +1006,23 @@ import { API_BASE, SITE_URL } from '../lib/site';
    * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 그래서 전체가 아니라 줄 단위이고,
    * 쓰는 사람이 머리줄이나 맺는 한 줄에만 건다. 지금 줄이 가운데인지는 단추가 켜져서 말해준다.
    */
-  $('descCenter').onclick = () => { desc.toggleCenter(); syncCenterChip(); };
-  function syncCenterChip() { $('descCenter').classList.toggle('on', desc.isCentered()); }
+  /*
+   * 단추를 눌러도 편집기가 포커스를 잃지 않게 한다.
+   *
+   * 이게 없으면 여러 줄을 고른 뒤 '가운데'를 눌렀을 때 아무 일도 일어나지 않는다 —
+   * mousedown 순간 브라우저가 편집기에서 포커스를 걷어가면서 고른 범위가 무너지기 때문이다.
+   * 눌러도 안 먹는 단추만큼 사람을 지치게 하는 건 없다.
+   */
+  for (const b of [...document.querySelectorAll('.console .editor-tools button'), ...centerChips]) {
+    b.addEventListener('mousedown', (e) => e.preventDefault());
+  }
+
+  const toggleCenter = () => { desc.toggleCenter(); syncCenterChip(); };
+  for (const b of centerChips) b.onclick = toggleCenter;
+  function syncCenterChip() {
+    const on = desc.isCentered();
+    for (const b of centerChips) b.classList.toggle('on', on);
+  }
   desc.onSelection(syncCenterChip);
 
   /**
@@ -1136,7 +1208,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
 
   // 적는 동안 오른쪽이 따라 바뀐다 — 다 만들고 나서 "잘렸네"를 알면 늦다.
   for (const id of ['f-title', 'f-date', 'f-time', 'f-place']) {
-    $(id).addEventListener('input', () => { if (!$('v-new').hidden) preview(draftFromForm(), true); });
+    $(id).addEventListener('input', schedulePreview);
   }
 
   /**
@@ -1292,8 +1364,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
       kakaoLink: $('f-kakao').value.trim(),
     };
     const editing = editingId;
+    // 기다림은 아래 한 줄이 아니라 누른 버튼이 진다. 잠기니 두 번 눌려 모임이 둘 열리는 일도 없다.
+    const done = pending($('saveBtn'), editing ? '저장하는 중' : '여는 중');
+    say('');
     try {
-      say(editing ? '저장하는 중…' : '여는 중…');
       await api(editing ? `/meetups/${editing}` : '/meetups', { method: editing ? 'PUT' : 'POST', body });
       await loadList();
       if (editing) {
@@ -1303,7 +1377,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
         say('모임을 열었어요. 초대장 링크를 나눠보세요.');
       }
       editingId = null;
-    } catch (e) { say(e.message, true); }
+    } catch (e) { say(e.message, true); } finally { done(); }
   };
 
   if (token) {
@@ -1421,6 +1495,36 @@ import { API_BASE, SITE_URL } from '../lib/site';
   }
   .console .chip:hover { color: var(--ink); border-color: var(--ink); }
   .console .chip.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  /*
+    고른 자리에 떠오르는 툴바.
+
+    위치는 편집기(BubbleMenu)가 잡으므로 여기서는 모양만 정한다. 처음에는 보이지 않아야
+    하는데 display:none으로 감추면 자리를 잴 수 없어 첫 등장이 엉뚱한 곳에 뜬다 —
+    그래서 visibility로 감춘다.
+  */
+  .console .bubble {
+    position: absolute; top: 0; left: 0; visibility: hidden; z-index: 30;
+    display: flex; gap: 4px; padding: 5px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 45%, transparent);
+  }
+  .console .bubble .chip { border-color: transparent; }
+
+  /*
+    기다리는 버튼 — 도는 자리는 누른 그 자리다.
+    움직임을 줄이도록 설정한 사람에게는 천천히 돈다(멈추면 기다리는 중인지 알 수 없다).
+  */
+  .console .btn .spin, .console .chip .spin {
+    display: inline-block; width: 13px; height: 13px; margin-right: 7px; vertical-align: -2px;
+    border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;
+    animation: console-spin 0.7s linear infinite;
+  }
+  @keyframes console-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .console .btn .spin, .console .chip .spin { animation-duration: 2.4s; }
+  }
+  .console .btn:disabled, .console .chip:disabled { opacity: 0.72; cursor: default; }
 
   /* 주소 칸 — 입력과 '주소 찾기'를 한 줄에. 좁아지면 버튼이 아래로 내려간다. */
   .console .addr-row { display: flex; gap: 8px; align-items: stretch; }
