@@ -14,8 +14,6 @@ import { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
-import { BubbleMenu } from '@tiptap/extension-bubble-menu';
-import { FloatingMenu } from '@tiptap/extension-floating-menu';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { ImageResize } from 'tiptap-extension-resize-image';
 
@@ -47,7 +45,7 @@ const styleFor = (pct) => `width: ${pct}%; height: auto; cursor: pointer;`;
  * @param {(files: File[]) => void} o.onFiles  사진 파일이 들어왔을 때 (업로드는 부르는 쪽 몫)
  * @param {number} o.maxImages
  */
-export function createDescEditor({ mount, onChange, onFiles, bubble, insertBar, imageBar, placeholder, maxImages = 10 }) {
+export function createDescEditor({ mount, onChange, onFiles, placeholder, maxImages = 10 }) {
   // 다시 그리는 중에 또 불려 들어오지 않게 — 붙임(snap)이 자기 자신을 부르면 멈추지 않는다.
   let snapping = false;
 
@@ -72,55 +70,17 @@ export function createDescEditor({ mount, onChange, onFiles, bubble, insertBar, 
        * 오른쪽 정렬은 초대장에서 쓸 일이 없어 열지 않았다 — 저장할 수 있는 것만 준다.
        */
       TextAlign.configure({ types: ['paragraph'], alignments: ['left', 'center'], defaultAlignment: 'left' }),
-      Placeholder.configure({ placeholder: placeholder ?? '' }),
-
       /*
-       * 상시 툴바를 두지 않는다.
+       * 안내 문구는 **글이 통째로 비었을 때만** 보여준다.
        *
-       * Medium·Ghost·Notion·브런치가 모두 같은 구조다 — 쓰는 동안에는 아무것도 떠 있지 않고,
-       * **지금 할 수 있는 일**만 그 자리에 나타난다. 칸 위에 단추를 늘어놓으면 글이 길어질수록
-       * 손에서 멀어지고, 무엇이 무엇에 걸리는지도 알 수 없다("이 정렬은 어디에 적용되지?").
-       *
-       * 그래서 셋으로 나눈다.
-       *   빈 줄에 커서  → 넣기 단추 (Medium의 +)
-       *   글자를 고름   → 꾸미기 툴바
-       *   사진을 고름   → 크기 단추
+       * 줄마다 보여주면 글 한가운데 빈 줄에 커서를 둘 때마다 "어떤 자리인지…"가 끼어든다.
+       * 쓰는 사람에게는 자기가 쓴 글 사이에 회색 문장이 하나 생긴 것처럼 보인다.
        */
-      ...(insertBar
-        ? [FloatingMenu.configure({
-            element: insertBar,
-            pluginKey: 'insertMenu',
-            /*
-             * 글 왼쪽 여백에 세운다 — Medium·Ghost의 '+' 자리다.
-             *
-             * 줄 위에 겹쳐 두면 그 줄의 안내 문구를 덮어버린다. 커서가 놓인 줄에 뜨는 물건이라
-             * 하필 항상 겹친다. 바깥으로 빼면 글을 가리지 않으면서 "이 줄에 넣는다"는 것도 말한다.
-             */
-            options: { placement: 'left-start', offset: 10, flip: false, shift: false },
-            // 빈 줄에서만. 글이 있는 줄에 뜨면 읽는 것을 가린다.
-            shouldShow: ({ state }) => {
-              const { $from, empty } = state.selection;
-              return empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
-            },
-          })]
-        : []),
-      ...(bubble
-        ? [BubbleMenu.configure({
-            element: bubble,
-            pluginKey: 'textMenu',
-            updateDelay: 100,
-            shouldShow: ({ editor: e, from, to }) => from !== to && !e.isActive('imageResize'),
-          })]
-        : []),
-      ...(imageBar
-        ? [BubbleMenu.configure({
-            element: imageBar,
-            pluginKey: 'imageMenu',
-            updateDelay: 0,
-            // 사진을 고르면 크기를 숫자로 고른다. 끌어서 맞추는 것보다 빠르고, 무엇이 지금 크기인지도 보인다.
-            shouldShow: ({ editor: e }) => e.isActive('imageResize'),
-          })]
-        : []),
+      Placeholder.configure({
+        placeholder: placeholder ?? '',
+        // 글이 통째로 비었을 때만 이 클래스가 붙는다. CSS가 그때만 그린다.
+        emptyEditorClass: 'is-editor-empty',
+      }),
       ImageResize.configure({ inline: false, allowBase64: false }),
     ],
     editorProps: {

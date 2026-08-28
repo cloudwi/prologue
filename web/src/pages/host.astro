@@ -124,37 +124,41 @@ import { API_BASE, SITE_URL } from '../lib/site';
 
                 빈 줄에 커서 → 넣기 / 글자를 고름 → 꾸미기 / 사진을 고름 → 크기.
               -->
+              <!--
+                소개 칸 — 툴바 하나가 위에 붙어 따라온다.
+
+                떠오르는 메뉴 셋(빈 줄의 '+', 고른 자리의 꾸미기, 사진 곁의 크기)을 걷어냈다.
+                Medium·Notion의 방식이지만 그 도구들은 **매일 글 쓰는 사람**을 위한 것이다.
+                모임장은 한 달에 한 번 들어와 소개 하나를 쓴다. 그런 사람에게는 배울 기회가
+                없는 숨은 단추보다 늘 보이는 단추가 낫다.
+
+                처음 상단 툴바가 불편했던 이유는 둘이었다 — 안 먹혔고(포커스를 뺏겼다), 글이
+                길어지면 멀어졌다. 앞의 것은 고쳤고, 뒤의 것은 툴바를 붙여 따라오게 해서 없앴다.
+
+                자리는 하나뿐이고 내용만 바뀐다. 사진을 고르면 그 자리에 크기 단추가 온다 —
+                단추가 여기저기서 튀어나오지 않으니 어디를 볼지 헤매지 않는다.
+              -->
               <div class="field editor">
                 <div class="editor-head"><span>소개</span></div>
+                <div class="editor-bar" id="descBar">
+                  <button type="button" class="chip" id="insertPhoto">사진 넣기</button>
+                  <span class="bar-sep" aria-hidden="true"></span>
+                  <span class="bar-group" id="textTools">
+                    <button type="button" class="chip" id="alignCenter">가운데</button>
+                    <button type="button" class="chip" id="insertDot">가운뎃점 ·</button>
+                  </span>
+                  <span class="bar-group" id="imageTools" hidden>
+                    <em class="bar-label">사진 크기</em>
+                    <button type="button" class="chip" data-w="25">25%</button>
+                    <button type="button" class="chip" data-w="50">50%</button>
+                    <button type="button" class="chip" data-w="75">75%</button>
+                    <button type="button" class="chip" data-w="100">100%</button>
+                  </span>
+                </div>
                 <div id="f-desc" class="rich"></div>
                 <input id="f-bodyImage" type="file" accept="image/*" multiple hidden />
-
-                <!--
-                  빈 줄에 커서가 놓였을 때 왼쪽 여백에 서는 '+'. Medium·Ghost가 하는 그것이다.
-                  접혀 있을 땐 글을 가리지 않고, 누르면 그때만 펼쳐진다 — 여백을 조금만 쓰면서도
-                  "여기에 넣을 수 있다"를 말한다.
-                -->
-                <div class="floater insert" id="descInsert">
-                  <button type="button" class="round" id="insertToggle" aria-label="넣기" aria-expanded="false">+</button>
-                  <button type="button" class="chip" id="insertPhoto" hidden>사진</button>
-                  <button type="button" class="chip" id="insertDot" hidden>가운뎃점 ·</button>
-                </div>
-
-                <!-- 글자를 골랐을 때. -->
-                <div class="floater" id="descBubble">
-                  <button type="button" class="chip" id="bubbleCenter">가운데</button>
-                </div>
-
-                <!-- 사진을 골랐을 때. 끌어서 맞추는 것보다 빠르고, 지금 크기가 무엇인지도 보인다. -->
-                <div class="floater" id="descImageBar">
-                  <button type="button" class="chip" data-w="25">25%</button>
-                  <button type="button" class="chip" data-w="50">50%</button>
-                  <button type="button" class="chip" data-w="75">75%</button>
-                  <button type="button" class="chip" data-w="100">100%</button>
-                </div>
-
                 <div class="editor-foot">
-                  <em>사진은 글 위로 끌어다 놓거나 붙여넣으면 그 자리에 들어가요.</em>
+                  <em>사진은 글 위로 끌어다 놓거나 붙여넣어도 돼요.</em>
                   <b id="descCount">0 / 1000</b>
                 </div>
               </div>
@@ -1010,22 +1014,14 @@ import { API_BASE, SITE_URL } from '../lib/site';
    */
   const BODY_IMAGE_MAX = 10;
 
-  /*
-   * 떠오르는 자리들은 숨을 때 DOM에서 아예 빠진다(BubbleMenu·FloatingMenu가 element.remove()를
-   * 부른다). 그래서 쓸 때마다 id로 찾으면 숨어 있는 동안 null이 된다 — 요소를 미리 붙잡아 둔다.
-   */
-  const insertBar = $('descInsert');
-  const bubbleEl = $('descBubble');
-  const imageBar = $('descImageBar');
-  const centerChip = bubbleEl.querySelector('#bubbleCenter');
-  const widthChips = [...imageBar.querySelectorAll('[data-w]')];
-  const floaterButtons = [...insertBar.querySelectorAll('button'), centerChip, ...widthChips]; // 세울 때는 아직 DOM에 있다
+  const bar = $('descBar');
+  const textTools = $('textTools');
+  const imageTools = $('imageTools');
+  const alignChip = $('alignCenter');
+  const widthChips = [...imageTools.querySelectorAll('[data-w]')];
 
   const desc = createDescEditor({
     mount: $('f-desc'),
-    bubble: bubbleEl,
-    insertBar,
-    imageBar,
     placeholder: '어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.',
     maxImages: BODY_IMAGE_MAX,
     onFiles: (files) => uploadBodyImages(files),
@@ -1042,7 +1038,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
     $('descCount').textContent = `${text.length} / 1000`;
     // 넘치면 저장에서 막히므로 그 전에 눈으로 알려준다.
     $('descCount').classList.toggle('over', text.length > 1000);
-    syncFloaters();
+    syncBar();
   }
 
   /*
@@ -1050,56 +1046,39 @@ import { API_BASE, SITE_URL } from '../lib/site';
    *
    * 이게 없으면 여러 줄을 고른 뒤 '가운데'를 눌렀을 때 아무 일도 일어나지 않는다 —
    * mousedown 순간 브라우저가 편집기에서 포커스를 걷어가면서 고른 범위가 무너지기 때문이다.
-   * 눌러도 안 먹는 단추만큼 사람을 지치게 하는 건 없다.
    */
-  for (const b of floaterButtons) b.addEventListener('mousedown', (e) => e.preventDefault());
+  for (const b of bar.querySelectorAll('button')) b.addEventListener('mousedown', (e) => e.preventDefault());
 
-  /** 떠 있는 단추들이 지금 상태를 말하게 한다 — 눌러보지 않고도 무엇이 걸려 있는지 보이도록. */
-  function syncFloaters() {
-    centerChip.classList.toggle('on', desc.isCentered());
+  /**
+   * 툴바는 자리가 하나고 내용만 바뀐다.
+   *
+   * 사진을 고르면 글자 도구 대신 크기 도구가 온다. 단추가 여기저기서 튀어나오지 않으니
+   * 무엇을 하려면 어디를 봐야 하는지 헤맬 일이 없다.
+   */
+  function syncBar() {
+    const onImage = desc.isImageSelected();
+    textTools.hidden = onImage;
+    imageTools.hidden = !onImage;
+    alignChip.classList.toggle('on', desc.isCentered());
     const w = desc.imageWidth();
     for (const b of widthChips) b.classList.toggle('on', Number(b.dataset.w) === w);
   }
-  desc.onSelection(syncFloaters);
+  desc.onSelection(syncBar);
 
   /*
    * 가운데 정렬 — 고른 줄에만 건다.
    *
-   * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 그래서 글 전체가 아니라 줄
-   * 단위이고, 쓰는 사람이 머리줄이나 맺는 한 줄에만 건다.
+   * 긴 문단을 가운데로 두면 줄 끝이 들쭉날쭉해져 읽기 어렵다. 머리줄이나 맺는 한 줄에만
+   * 쓰라는 뜻으로 줄 단위로 걸린다.
    */
-  centerChip.onclick = () => { desc.toggleCenter(); syncFloaters(); };
-
-  /* 사진 크기 — 끌어서 맞출 수도 있지만, 숫자로 고르는 쪽이 빠르고 지금 크기도 보인다. */
-  for (const b of widthChips) b.onclick = () => { desc.setImageWidth(Number(b.dataset.w)); syncFloaters(); };
+  alignChip.onclick = () => { desc.toggleCenter(); syncBar(); };
+  for (const b of widthChips) b.onclick = () => { desc.setImageWidth(Number(b.dataset.w)); syncBar(); };
 
   /**
-   * 소개 안에 놓는 사진.
-   *
-   * 글 위로 끌어다 놓거나(handleDrop), 붙여넣거나(handlePaste), 빈 줄의 '사진'으로 고른다.
-   * 어느 길로 오든 올린 뒤 커서 자리에 그림으로 앉는다.
+   * 소개 안에 놓는 사진 — 끌어다 놓거나, 붙여넣거나, 이 단추로 고른다.
    */
-  /*
-   * '+'는 접혀 있다가 누를 때만 펼친다 — 글을 가리는 시간을 최소로 둔다.
-   *
-   * 이 안의 단추들도 떠오르는 자리에 들어 있어, 숨는 순간 DOM에서 함께 빠진다. 그래서 여기서도
-   * id로 찾지 않고 참조로 붙잡는다(같은 함정을 두 번 밟았다).
-   */
-  const insertToggle = insertBar.querySelector('#insertToggle');
-  const insertPhoto = insertBar.querySelector('#insertPhoto');
-  const insertDot = insertBar.querySelector('#insertDot');
-  const insertItems = [insertPhoto, insertDot];
-  const setInsertOpen = (open) => {
-    insertBar.classList.toggle('open', open);
-    insertToggle.setAttribute('aria-expanded', String(open));
-    for (const b of insertItems) b.hidden = !open;
-  };
-  const closeInsert = () => setInsertOpen(false);
-  insertToggle.onclick = () => setInsertOpen(!insertBar.classList.contains('open'));
-  insertPhoto.onclick = () => { closeInsert(); $('f-bodyImage').click(); };
-  insertDot.onclick = () => { closeInsert(); desc.insertText(' · '); };
-  // 커서가 옮겨가면 접는다 — 펼친 채로 따라다니면 그게 곧 상시 툴바다.
-  desc.onSelection(closeInsert);
+  $('insertPhoto').onclick = () => $('f-bodyImage').click();
+  $('insertDot').onclick = () => desc.insertText(' · ');
   $('f-bodyImage').onchange = (e) => { uploadBodyImages([...e.target.files]); e.target.value = ''; };
 
   async function uploadBodyImages(files) {
@@ -1573,35 +1552,24 @@ import { API_BASE, SITE_URL } from '../lib/site';
     그래서 visibility로 감춘다.
   */
   /*
-    떠오르는 자리 셋(넣기·꾸미기·크기)은 같은 모양을 쓴다 — 생김새가 다르면 서로 다른
-    물건으로 읽히지만, 실은 "지금 할 수 있는 일"이라는 한 가지다.
+    소개 툴바 — 붙어서 따라온다.
 
-    처음에는 보이지 않아야 하는데 display:none으로 감추면 자리를 잴 수 없어 첫 등장이
-    엉뚱한 곳에 뜬다 — 그래서 visibility로 감춘다. 위치는 편집기가 잡는다.
-  */
-  .console .floater {
-    position: absolute; top: 0; left: 0; visibility: hidden; z-index: 30;
-    display: flex; gap: 4px; padding: 5px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow) 45%, transparent);
-  }
-  .console .floater .chip { border-color: transparent; }
-  .console .floater .chip:hover { background: var(--sunken); }
-  /*
-    '+'는 늘 왼쪽 여백에 선다.
+    글이 길어지면 칸 위의 단추는 화면 밖으로 밀려난다. 아래에서 한 줄을 고치려고 맨 위까지
+    올라갔다 내려오면 고친 자리를 다시 찾아야 한다. 붙여두면 늘 손 닿는 곳에 있다.
 
-    편집기는 커서 자리를 기준으로 띄워주는데, 가운데 정렬된 줄에서는 커서가 한가운데라
-    '+'도 글 한복판으로 온다(그리고 그 줄의 안내 문구를 덮는다). 세로 위치만 편집기에
-    맡기고 가로는 우리가 고정한다 — 인라인 스타일을 이기려면 !important가 필요하다.
+    자리는 하나고 내용만 바뀐다(글자 도구 ↔ 사진 크기).
   */
-  .console .floater.insert { padding: 4px; left: 8px !important; }
-  .console .floater .round {
-    width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%;
-    background: transparent; color: var(--muted); font: inherit; font-size: 1.05rem; line-height: 1;
-    cursor: pointer; transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  .console .editor-bar {
+    position: sticky; top: 76px; z-index: 5;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    padding: 8px; margin-bottom: -1px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
   }
-  .console .floater .round:hover { background: var(--sunken); color: var(--ink); }
-  .console .floater.open .round { transform: rotate(45deg); color: var(--ink); }
+  .console .bar-group { display: flex; align-items: center; gap: 6px; }
+  .console .bar-group[hidden] { display: none; }
+  .console .bar-sep { width: 1px; height: 18px; background: var(--border); }
+  .console .bar-label { font-style: normal; color: var(--muted); font-size: 0.78rem; padding-left: 2px; }
 
   /*
     기다리는 버튼 — 도는 자리는 누른 그 자리다.
@@ -1656,9 +1624,9 @@ import { API_BASE, SITE_URL } from '../lib/site';
     쓰는 사람이 알 바가 아니다.
   */
   .console .rich {
-    /* 왼쪽을 넉넉히 비운다 — 빈 줄의 '넣기'가 글을 가리지 않고 그 옆에 설 자리다. */
-    position: relative; min-height: 220px; padding: 12px 14px 12px 52px;
-    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    position: relative; min-height: 220px; padding: 12px 14px;
+    border-radius: 0 0 12px 12px;
+    border: 1px solid var(--border); background: var(--surface);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .console .rich:focus-within {
@@ -1669,10 +1637,12 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .rich .ProseMirror p { margin: 0; min-height: 1.8em; }
   .console .rich .ProseMirror p[style*="center"] { text-align: center; }
   /*
-    빈 줄마다 안내가 비쳐 보인다(Placeholder 확장). 예전에는 칸 전체가 비었을 때만 보여줬는데,
-    줄 단위로 보여주면 "여기에 이어 쓰면 된다"는 것도 함께 말해준다.
+    안내 문구는 **글이 통째로 비었을 때만** 보여준다.
+
+    줄마다 보여주면 글 한가운데 빈 줄에 커서를 둘 때마다 "어떤 자리인지…"가 끼어든다.
+    쓰는 사람에게는 자기가 쓴 글 사이에 회색 문장이 하나 생긴 것처럼 보인다.
   */
-  .console .rich .ProseMirror p.is-empty::before {
+  .console .rich .ProseMirror p.is-editor-empty::before {
     content: attr(data-placeholder); float: left; height: 0;
     color: var(--muted); pointer-events: none;
   }
