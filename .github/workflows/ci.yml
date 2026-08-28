@@ -67,7 +67,7 @@ jobs:
         run: npm test -- --ci
 
   web:
-    name: 웹 빌드
+    name: 웹 빌드·테스트
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -79,6 +79,9 @@ jobs:
       - name: 의존성 설치
         working-directory: web
         run: npm ci
+      - name: 테스트
+        working-directory: web
+        run: npm test
       - name: 빌드
         working-directory: web
         run: npm run build
