@@ -24,7 +24,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   <section class="console">
     <div class="wide">
       <!-- 로그인 — 앱과 같은 이메일 인증코드. 이 서비스에 비밀번호는 없다. -->
-      <div class="gate" id="gate">
+      <div class="gate" id="gate" hidden>
         <div class="gate-card">
           <h1>모임 열기</h1>
           <p class="lead">모임을 만들고, 신청한 사람을 확인하고, 오픈채팅으로 안내하는 자리예요.</p>
@@ -38,6 +38,31 @@ import { API_BASE, SITE_URL } from '../lib/site';
           <p class="hint" id="loginHint">가입하실 때 쓰신 이메일을 넣어주세요.</p>
         </div>
       </div>
+
+      <!--
+        토큰을 확인하는 동안의 자리.
+
+        예전에는 토큰이 **있기만 하면** 콘솔을 먼저 열고 그다음에 확인했다. 확인이 실패해야
+        뒤늦게 로그아웃되니, 만료된 토큰으로 들어온 사람에게 남의 자리가 잠깐 보였다.
+        이제 확인이 끝나기 전에는 어느 쪽도 열지 않는다.
+      -->
+      <div class="gate" id="checking" hidden>
+        <div class="gate-card">
+          <p class="lead" style="margin:0">로그인을 확인하는 중이에요…</p>
+        </div>
+      </div>
+
+      <!--
+        무엇을 열지는 **그리는 순간** 정한다. 이 판단을 번들 스크립트로 미루면 그 사이에
+        브라우저가 한 번 그리고, 그 한 번이 곧 번쩍임이다. 그래서 여기만 인라인으로 둔다.
+      -->
+      <script is:inline>
+        (function () {
+          var t = null;
+          try { t = localStorage.getItem('prologue.host.token'); } catch (e) { /* 사생활 보호 모드 */ }
+          document.getElementById(t ? 'checking' : 'gate').hidden = false;
+        })();
+      </script>
 
       <!-- 콘솔 본체 -->
       <div class="split" id="app" hidden>
@@ -375,6 +400,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
     token = '';
+    $('checking').hidden = true;
     $('gate').hidden = false;
     $('app').hidden = true;
   }
@@ -400,9 +426,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
       const r = await api('/auth/email/verify', { method: 'POST', body: { email, code } });
       token = r.accessToken;
       localStorage.setItem(TOKEN_KEY, token);
+      // 여기도 목록을 받은 뒤에 연다 — 첫 화면이 빈 콘솔이 아니라 내 모임이어야 한다.
+      await loadList();
       $('gate').hidden = true;
       $('app').hidden = false;
-      await loadList();
     } catch (e) {
       alert(e.message);
     }
@@ -1381,9 +1408,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
   };
 
   if (token) {
-    $('gate').hidden = true;
-    $('app').hidden = false;
-    loadList().catch(() => logout());
+    // 목록을 받아오는 데 성공해야 토큰이 살아 있다는 뜻이다. 그때 비로소 연다.
+    loadList()
+      .then(() => { $('checking').hidden = true; $('app').hidden = false; })
+      .catch(() => logout());
   }
 </script>
 
