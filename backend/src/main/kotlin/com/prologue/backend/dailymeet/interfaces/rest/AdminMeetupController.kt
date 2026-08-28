@@ -33,6 +33,20 @@ class AdminMeetupController(
     fun reject(@PathVariable meetupId: UUID, @RequestBody request: RejectRequest) =
         meetupService.rejectMeetup(meetupId, request.reason)
 
+    /**
+     * 후기 심사 — 승인. 이때 비로소 앱의 '지난 모임'과 초대장에 실린다.
+     *
+     * 모임 본문 심사와 따로 도는 이유: 끝난 모임을 심사 대기로 되돌릴 수는 없다.
+     * 개최된 사실은 심사할 것이 아니고, 심사할 것은 그 뒤에 붙는 글이다.
+     */
+    @PostMapping("/{meetupId}/recap/approve")
+    fun approveRecap(@PathVariable meetupId: UUID) = meetupService.approveRecap(meetupId)
+
+    /** 후기 심사 — 반려. 사유는 필수다. */
+    @PostMapping("/{meetupId}/recap/reject")
+    fun rejectRecap(@PathVariable meetupId: UUID, @RequestBody request: RejectRequest) =
+        meetupService.rejectRecap(meetupId, request.reason)
+
     /** 강제 취소 — 신청자에게 취소 푸시가 간다. 기록은 남는다. */
     @PostMapping("/{meetupId}/cancel")
     fun cancel(@PathVariable meetupId: UUID) = meetupService.adminCancelMeetup(meetupId)

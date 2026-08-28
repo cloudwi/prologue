@@ -4,6 +4,7 @@ import com.prologue.backend.dailymeet.domain.model.Meetup
 import com.prologue.backend.dailymeet.domain.model.MeetupApplication
 import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
 import com.prologue.backend.dailymeet.domain.model.MeetupStatus
+import com.prologue.backend.dailymeet.domain.model.RecapStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupFollowRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
@@ -76,6 +77,10 @@ class MeetupPersistenceAdapter(
             status = status.name,
             reviewNote = reviewNote,
             createdAt = createdAt,
+            recap = recap,
+            recapImageUrls = recapImageUrls.joinToString(",").ifBlank { null },
+            recapStatus = recapStatus.name,
+            recapReviewNote = recapReviewNote,
         )
 
     private fun MeetupJpaEntity.toDomain(): Meetup =
@@ -111,6 +116,10 @@ class MeetupPersistenceAdapter(
             status = MeetupStatus.valueOf(status),
             reviewNote = reviewNote,
             createdAt = createdAt,
+            recap = recap,
+            recapImageUrls = recapImageUrls?.split(',')?.filter { it.isNotBlank() } ?: emptyList(),
+            recapStatus = RecapStatus.valueOf(recapStatus),
+            recapReviewNote = recapReviewNote,
         )
 }
 

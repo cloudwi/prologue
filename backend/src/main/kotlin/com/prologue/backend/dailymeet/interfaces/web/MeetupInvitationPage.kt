@@ -125,6 +125,7 @@ object MeetupInvitationPage {
                     ${row("참석 조건", conditionLabel(v))}
                     ${row("남은 자리", seatsValue(v))}
                   </dl>
+                  ${recap(v)}
                   <a class="cta" href="${escape(deepLink)}" id="open">앱에서 초대장 열기</a>
                   <p class="note">프롤로그 앱에서 신청할 수 있어요. 앱이 없다면 아래에서 받아주세요.</p>
                   <p class="stores">
@@ -300,6 +301,26 @@ object MeetupInvitationPage {
             .replace(Regex("""<p class="greeting( center| right)?"></p>"""), "")
     }
 
+    /**
+     * 후기 — 모임이 끝난 뒤에 붙는 글.
+     *
+     * 정보 표 **아래**에 둔다. 초대장을 처음 여는 사람이 알고 싶은 건 언제·어디서·얼마이고,
+     * 후기는 그 다음이다. 지난 모임의 초대장을 다시 여는 사람에게는 반대 순서가 맞겠지만,
+     * 링크는 대개 열리기 전에 돈다.
+     *
+     * 조판은 소개 글과 같은 함수를 쓴다 — 같은 문법으로 저장되므로 다르게 그릴 이유가 없다.
+     * 승인되지 않은 후기는 애초에 [MeetupInvitationView]에 담기지 않는다.
+     */
+    private fun recap(v: MeetupInvitationView): String {
+        if (v.recap == null && v.recapImageUrls.isEmpty()) return ""
+        return """
+            <section class="recap">
+              <p class="eyebrow">그날의 기록</p>
+              ${greeting(v.recap, v.recapImageUrls)}
+            </section>
+        """.trimIndent()
+    }
+
     private fun gallery(coverUrls: List<String>): String {
         val rest = coverUrls.drop(1)
         if (rest.isEmpty()) return ""
@@ -372,6 +393,15 @@ ${head.prependIndent("        ")}
           .body-photo.w25 { width:25%; }
           .body-photo.w50 { width:50%; }
           .body-photo.w75 { width:75%; }
+          /*
+            후기 — 정보 표 아래에 선 하나로 갈라 놓는다.
+
+            같은 카드 안이지만 다른 시간의 글이다. 위는 "오세요"이고 여기는 "이랬어요"다.
+            그 경계가 없으면 지난 모임의 후기가 모집 문구처럼 읽힌다.
+          */
+          .recap { margin:36px -24px 0; padding:28px 24px 0; border-top:1px solid var(--line); }
+          .recap .eyebrow { margin:0; }
+          .recap .greeting { margin-top:18px; }
           /* 사진 여러 장 — 옆으로 밀어 본다. 카드 밖으로 흘러나가게 두면 폭이 넉넉해 보인다. */
           .gallery { display:flex; gap:8px; margin:36px -24px 0; padding:0 24px; overflow-x:auto;
                      scroll-snap-type:x mandatory; scrollbar-width:none; }

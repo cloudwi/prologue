@@ -5,6 +5,7 @@ import com.prologue.backend.dailymeet.domain.model.Meetup
 import com.prologue.backend.dailymeet.domain.model.MeetupApplication
 import com.prologue.backend.dailymeet.domain.model.MeetupApplicationStatus
 import com.prologue.backend.dailymeet.domain.model.MeetupStatus
+import com.prologue.backend.dailymeet.domain.model.RecapStatus
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupFollowRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
@@ -69,6 +70,19 @@ data class MeetupView(
     val occurrenceTotal: Int = 1,
     /** 내가 이 모임을 따라가는지 — 다음 회차가 열리면 알림을 받는다. */
     val following: Boolean = false,
+    /*
+     * 표시가 살아 있는 소개 글과 그 사진들 — 새 앱만 읽는다.
+     *
+     * [description]은 지금까지처럼 표시를 걷어낸 평문이다. 그걸 바꾸면 스토어에 나가 있는
+     * 판의 화면에 "[사진1]"이 글자로 남는다. 그래서 자리를 하나 더 만든다:
+     * 아는 앱은 [descriptionRich]와 [bodyImageUrls]로 사진을 제자리에 그리고,
+     * 모르는 앱은 이 필드를 못 본 채 어제와 똑같이 동작한다. 가산적 변경이다.
+     */
+    val descriptionRich: String? = null,
+    val bodyImageUrls: List<String> = emptyList(),
+    /** 후기 — 승인된 것만 담긴다. 글의 `[사진N]` 표시가 [recapImageUrls]를 가리킨다. */
+    val recap: String? = null,
+    val recapImageUrls: List<String> = emptyList(),
 )
 
 /** 확정 참가자 한 명 — 모임 프로필로 이어진다. */
@@ -139,6 +153,11 @@ data class AdminMeetupView(
     val placeAddress: String?,
     val kakaoLink: String,
     val reviewNote: String?,
+    /** 후기 심사에 필요한 것들 — 글과 사진을 읽어보지 않고는 승인할 수 없다. */
+    val recap: String? = null,
+    val recapImageUrls: List<String> = emptyList(),
+    val recapStatus: String = "NONE",
+    val recapReviewNote: String? = null,
     val createdAt: Instant,
 )
 
@@ -149,6 +168,18 @@ data class MeetupHistoryView(
     val place: String,
     val confirmedCount: Int,
     val hostNickname: String?,
+    /*
+     * 후기 — 승인된 것만. 여기까지 오는 것이 이 기능의 목적이다.
+     *
+     * 지금까지 지난 모임은 "열리긴 했다"는 한 줄이었다. 손들지 말지 고민하는 사람이 알고 싶은 건
+     * 가면 무엇을 하게 되는가인데, 그건 숫자가 아니라 그날의 글과 사진에만 있다.
+     *
+     * 모두 가산적이다 — 모르는 앱은 지금까지처럼 한 줄만 그린다.
+     */
+    val meetupId: UUID? = null,
+    val recap: String? = null,
+    val recapImageUrls: List<String> = emptyList(),
+    val coverUrls: List<String> = emptyList(),
 )
 
 /** 모임장 콘솔의 신청자 한 줄. */
@@ -197,6 +228,11 @@ data class HostMeetupView(
     val status: String,
     /** 반려됐다면 그 사유 — 모임장이 무엇을 고쳐야 하는지 알아야 한다. */
     val reviewNote: String?,
+    /** 후기와 그 심사 상태 — 개최 완료된 모임에서만 뜻이 있다. */
+    val recap: String? = null,
+    val recapImageUrls: List<String> = emptyList(),
+    val recapStatus: String = "NONE",
+    val recapReviewNote: String? = null,
     val confirmedCount: Int,
     val applications: List<HostApplicationView>,
     /** 회차 묶음 — 앱의 '다음 회차 열기'가 이 값을 그대로 넘겨 회차를 잇는다. */
@@ -243,6 +279,14 @@ data class MeetupInvitationView(
     val occurrenceTotal: Int,
     /** 아직 신청을 받는지 — 마감·취소·지난 모임이면 false. */
     val open: Boolean,
+    /**
+     * 후기 — 승인된 것만 담긴다.
+     *
+     * 초대장은 링크만 알면 누구나 열 수 있는 페이지다. 그래서 심사를 통과하지 않은 글은
+     * 여기 실리지 않는다. 소개와 같은 표시 문법이라 조판도 같은 함수를 쓴다.
+     */
+    val recap: String? = null,
+    val recapImageUrls: List<String> = emptyList(),
 )
 
 /**
@@ -356,6 +400,11 @@ class MeetupService(
                 meetupId = requireNotNull(m.id),
                 title = m.title,
                 description = descriptionForApp(m.description),
+                // 아는 앱만 읽는 자리 — 표시가 살아 있는 원문과 그 사진들.
+                descriptionRich = m.description,
+                bodyImageUrls = m.bodyImageUrls,
+                recap = m.takeIf { it.hasPublicRecap() }?.recap,
+                recapImageUrls = if (m.hasPublicRecap()) m.recapImageUrls else emptyList(),
                 meetAt = m.meetAt,
                 place = m.place,
                 placeUrl = m.placeUrl,
@@ -452,6 +501,8 @@ class MeetupService(
             occurrence = siblings.indexOfFirst { it.id == m.id }.let { if (it < 0) siblings.size else it } + 1,
             occurrenceTotal = maxOf(siblings.size, 1),
             open = m.status == MeetupStatus.OPEN && m.meetAt.isAfter(Instant.now()),
+            recap = m.takeIf { it.hasPublicRecap() }?.recap,
+            recapImageUrls = if (m.hasPublicRecap()) m.recapImageUrls else emptyList(),
         )
     }
 
@@ -515,6 +566,10 @@ class MeetupService(
                 place = m.place,
                 confirmedCount = confirmed[m.id] ?: 0,
                 hostNickname = memberQueryService.findProfile(m.hostAccountId)?.nickname,
+                meetupId = m.id,
+                recap = m.takeIf { it.hasPublicRecap() }?.recap,
+                recapImageUrls = if (m.hasPublicRecap()) m.recapImageUrls else emptyList(),
+                coverUrls = m.coverUrls,
             )
         }
     }
@@ -745,6 +800,10 @@ class MeetupService(
                 kakaoLink = m.kakaoLink,
                 status = m.status.name,
                 reviewNote = m.reviewNote,
+                recap = m.recap,
+                recapImageUrls = m.recapImageUrls,
+                recapStatus = m.recapStatus.name,
+                recapReviewNote = m.recapReviewNote,
                 seriesId = m.seriesId,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },
                 applications = applications.map { app ->
@@ -857,6 +916,10 @@ class MeetupService(
             placeAddress = m.placeAddress,
             kakaoLink = m.kakaoLink,
             reviewNote = m.reviewNote,
+            recap = m.recap,
+            recapImageUrls = m.recapImageUrls,
+            recapStatus = m.recapStatus.name,
+            recapReviewNote = m.recapReviewNote,
             createdAt = m.createdAt,
         )
     }
@@ -879,6 +942,35 @@ class MeetupService(
     fun rejectMeetup(meetupId: UUID, reason: String) {
         val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
         meetup.reject(reason)
+        meetupRepository.save(meetup)
+    }
+
+    /**
+     * 후기 쓰기 — 개최 완료된 내 모임에.
+     *
+     * 저장하면 심사로 들어간다. 모임 본문과 같은 규칙이다 — 승인은 그때 읽은 그 글에 준 것이라,
+     * 승인 뒤에 통째로 바꿔치기할 수 있으면 심사가 형식이 된다.
+     */
+    @Transactional
+    fun writeRecap(hostAccountId: UUID, meetupId: UUID, recap: String?, recapImageUrls: List<String>) {
+        val meetup = owned(hostAccountId, meetupId)
+        meetup.writeRecap(recap, recapImageUrls)
+        meetupRepository.save(meetup)
+    }
+
+    /** 후기 심사 — 승인. 이때 비로소 앱과 초대장에 실린다. */
+    @Transactional
+    fun approveRecap(meetupId: UUID) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        meetup.approveRecap()
+        meetupRepository.save(meetup)
+    }
+
+    /** 후기 심사 — 반려. 사유를 남겨야 모임장이 무엇을 고칠지 안다. */
+    @Transactional
+    fun rejectRecap(meetupId: UUID, reason: String) {
+        val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
+        meetup.rejectRecap(reason)
         meetupRepository.save(meetup)
     }
 

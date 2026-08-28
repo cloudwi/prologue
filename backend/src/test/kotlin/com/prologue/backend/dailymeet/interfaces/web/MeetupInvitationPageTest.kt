@@ -34,6 +34,8 @@ class MeetupInvitationPageTest {
         occurrence: Int = 1,
         occurrenceTotal: Int = 1,
         open: Boolean = true,
+        recap: String? = null,
+        recapImageUrls: List<String> = emptyList(),
         hostNickname: String? = "지연",
         genderLimit: String? = null,
         minAgeMale: Int? = null,
@@ -67,6 +69,8 @@ class MeetupInvitationPageTest {
         occurrence = occurrence,
         occurrenceTotal = occurrenceTotal,
         open = open,
+        recap = recap,
+        recapImageUrls = recapImageUrls,
     )
 
     @Test
@@ -200,6 +204,61 @@ class MeetupInvitationPageTest {
 
         assertFalse(out.contains("height=\"600\""))
         assertFalse(out.contains("0x600"))
+    }
+
+    /*
+     * 후기 — 모임이 끝난 뒤에 붙는 글.
+     *
+     * 소개와 같은 문법으로 저장되므로 같은 조판을 탄다. 여기서 확인하는 것은 "따로 선 자리에,
+     * 소개와 섞이지 않게" 붙는가이다. 위는 "오세요"이고 아래는 "이랬어요"인데 그 경계가 없으면
+     * 지난 모임의 후기가 모집 문구처럼 읽힌다.
+     */
+    @Test
+    fun `후기가 있으면 따로 선 자리에 붙는다`() {
+        val out = html(view(recap = "여덟 분이 오셨어요.\n다음에도 이렇게 하려고요."))
+
+        assertContains(out, """<section class="recap">""")
+        assertContains(out, "그날의 기록")
+        assertContains(out, "여덟 분이 오셨어요.")
+    }
+
+    @Test
+    fun `후기가 없으면 그 자리가 통째로 없다 — 빈 제목만 남으면 안 된다`() {
+        val out = html(view())
+
+        // CSS의 .recap 규칙은 늘 실려 있다 — 없어야 하는 건 그 자리(마크업)다.
+        assertFalse(out.contains("""<section class="recap">"""))
+        assertFalse(out.contains("그날의 기록"))
+    }
+
+    @Test
+    fun `후기 안의 사진 표시도 소개와 같은 규칙으로 그려진다`() {
+        val out = html(
+            view(
+                recap = "그날 상은 이랬어요.\n[사진1:75:1200x900]",
+                recapImageUrls = listOf("https://cdn.example.com/r1.jpg"),
+            ),
+        )
+
+        assertContains(out, """<img class="body-photo w75"""")
+        assertContains(out, """ width="1200" height="900"""")
+        assertFalse(out.contains("[사진1"))
+    }
+
+    @Test
+    fun `사진만 있는 후기도 자리를 얻는다`() {
+        val out = html(view(recap = "[사진1]", recapImageUrls = listOf("https://cdn.example.com/r1.jpg")))
+
+        assertContains(out, """<section class="recap">""")
+        assertContains(out, "https://cdn.example.com/r1.jpg")
+    }
+
+    @Test
+    fun `후기도 그대로 태그가 되지 못한다`() {
+        val out = html(view(recap = "<script>alert(1)</script>"))
+
+        assertFalse(out.contains("<script>alert(1)</script>"))
+        assertContains(out, "&lt;script&gt;")
     }
 
     @Test

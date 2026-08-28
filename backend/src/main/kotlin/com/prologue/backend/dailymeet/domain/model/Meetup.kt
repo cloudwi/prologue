@@ -17,6 +17,17 @@ import java.util.UUID
 enum class MeetupStatus { PENDING, REJECTED, OPEN, CLOSED, DONE, CANCELED }
 
 /**
+ * 후기의 상태 — 모임 상태와 따로 돈다.
+ *
+ * 끝난 모임을 심사 대기로 되돌릴 수는 없다. 개최된 사실은 심사할 것이 아니고, 심사할 것은
+ * 그 뒤에 붙는 글이다. 그래서 [MeetupStatus]와 나란히 두 번째 상태를 둔다.
+ *
+ * [NONE]은 아직 쓰지 않았다는 뜻이고, 후기를 지우면 다시 여기로 돌아온다.
+ * 고쳐 쓰면 [PENDING]이 된다 — 승인은 그때 읽은 그 글에 준 것이다.
+ */
+enum class RecapStatus { NONE, PENDING, APPROVED, REJECTED }
+
+/**
  * 오프라인 모임 — 모임장이 웹 콘솔(/host)에서 만들고, 회원이 앱에서 신청한다.
  *
  * 우리는 돈을 만지지 않는다. 참가비 입금과 자리 배분은 모임장의 카카오 오픈채팅에서
@@ -89,6 +100,17 @@ class Meetup private constructor(
     status: MeetupStatus,
     reviewNote: String?,
     val createdAt: Instant,
+    /*
+     * 후기는 생성자 뒤쪽에 둔다.
+     *
+     * 앞에 끼워 넣으면 create·update·reconstitute의 자리 인자가 전부 밀린다. 뒤에 기본값과
+     * 함께 두면 지금 있는 호출은 한 글자도 바뀌지 않는다 — 후기가 없던 시절의 모임은
+     * 그대로 후기가 없는 모임이 된다.
+     */
+    recap: String? = null,
+    recapImageUrls: List<String> = emptyList(),
+    recapStatus: RecapStatus = RecapStatus.NONE,
+    recapReviewNote: String? = null,
 ) {
     var status: MeetupStatus = status
         private set
@@ -129,6 +151,71 @@ class Meetup private constructor(
         status = MeetupStatus.PENDING
         reviewNote = null
     }
+
+    /**
+     * 모임 후기 — 끝난 뒤에 남기는 기록.
+     *
+     * 소개와 같은 평문+표시 문법이다(`[사진1]`, `[사진1:50:1200x900]`). 그래서 콘솔의 편집기도
+     * 초대장의 조판도 그대로 쓴다. 표시가 가리키는 사진은 [recapImageUrls]에 담긴다.
+     */
+    var recap: String? = recap
+        private set
+    var recapImageUrls: List<String> = recapImageUrls
+        private set
+    var recapStatus: RecapStatus = recapStatus
+        private set
+    var recapReviewNote: String? = recapReviewNote
+        private set
+
+    /**
+     * 후기를 쓰거나 고친다.
+     *
+     * **개최 완료된 모임에만** 쓸 수 있다. 열리지도 않은 모임의 후기는 후기가 아니라 예고이고,
+     * 그건 소개 글이 할 일이다.
+     *
+     * 쓰면 심사로 들어간다. 고쳐 써도 마찬가지다 — 승인은 그때 읽은 그 글에 준 것이라,
+     * 승인 뒤에 통째로 바꿔치기할 수 있으면 심사는 형식이 된다. 모임 본문과 같은 규칙이다.
+     *
+     * 글도 사진도 비우면 후기를 지운 것이다. 심사 대기로 남겨두면 볼 것이 없는 줄이
+     * 운영자의 심사 목록에 영원히 남는다.
+     */
+    fun writeRecap(text: String?, imageUrls: List<String>) {
+        if (status != MeetupStatus.DONE) {
+            throw DailyMeetException("개최 완료로 남긴 모임에만 후기를 쓸 수 있어요")
+        }
+        val clean = text?.trim()?.ifBlank { null }
+        if ((clean?.length ?: 0) > RECAP_MAX) throw DailyMeetException("후기는 ${RECAP_MAX}자 이하여야 해요")
+        val images = imageUrls.map { it.trim() }.filter { it.isNotBlank() }
+        if (images.size > BODY_IMAGE_MAX) throw DailyMeetException("후기 사진은 ${BODY_IMAGE_MAX}장까지예요")
+        if (images.any { !it.startsWith("https://") || it.length > 500 }) {
+            throw DailyMeetException("후기 사진 주소가 올바르지 않아요")
+        }
+        recap = clean
+        recapImageUrls = images
+        recapStatus = if (clean == null && images.isEmpty()) RecapStatus.NONE else RecapStatus.PENDING
+        recapReviewNote = null
+    }
+
+    /** 후기 승인 — 이제야 앱과 초대장에 실린다. */
+    fun approveRecap() {
+        if (recapStatus != RecapStatus.PENDING) throw DailyMeetException("심사 중인 후기만 승인할 수 있어요")
+        recapStatus = RecapStatus.APPROVED
+        recapReviewNote = null
+    }
+
+    /** 후기 반려 — 사유를 반드시 남긴다. 무엇을 고쳐야 하는지 모르면 같은 글이 그대로 다시 올라온다. */
+    fun rejectRecap(reason: String) {
+        if (recapStatus != RecapStatus.PENDING) throw DailyMeetException("심사 중인 후기만 반려할 수 있어요")
+        val clean = reason.trim()
+        if (clean.isBlank()) throw DailyMeetException("반려 사유를 적어주세요")
+        if (clean.length > REVIEW_NOTE_MAX) throw DailyMeetException("반려 사유는 ${REVIEW_NOTE_MAX}자 이하여야 해요")
+        recapStatus = RecapStatus.REJECTED
+        recapReviewNote = clean
+    }
+
+    /** 남에게 보여도 되는 후기인가 — 승인됐고, 보여줄 것이 있는가. */
+    fun hasPublicRecap(): Boolean =
+        recapStatus == RecapStatus.APPROVED && (recap != null || recapImageUrls.isNotEmpty())
 
     /** 모집을 닫는다 — 자리가 다 찼거나 모임장이 그만 받기로 했을 때. 신청만 막히고 확정은 계속할 수 있다. */
     fun close() {
@@ -237,6 +324,9 @@ class Meetup private constructor(
         /** 대기 줄의 최대 길이 — 이보다 길면 기다림이 아니라 방치다. */
         private const val WAITLIST_MAX = 200
         private const val REVIEW_NOTE_MAX = 300
+
+        /** 후기 글의 최대 길이 — 소개와 같다. 읽는 자리도, 조판도 같으니 길이만 다를 이유가 없다. */
+        private const val RECAP_MAX = 1000
 
         fun create(
             hostAccountId: UUID,
@@ -412,11 +502,16 @@ class Meetup private constructor(
             status: MeetupStatus,
             reviewNote: String? = null,
             createdAt: Instant,
+            recap: String? = null,
+            recapImageUrls: List<String> = emptyList(),
+            recapStatus: RecapStatus = RecapStatus.NONE,
+            recapReviewNote: String? = null,
         ): Meetup = Meetup(
             id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
             capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
             requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, status, reviewNote, createdAt,
+            recap, recapImageUrls, recapStatus, recapReviewNote,
         )
 
         /**

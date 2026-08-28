@@ -290,6 +290,28 @@ class MeetupController(
         meetupService.complete(UUID.fromString(authentication.name), parseId(meetupId))
     }
 
+    /**
+     * 후기 쓰기 — 개최 완료로 남긴 내 모임에.
+     *
+     * 소개와 같은 평문+표시 문법이라 본문 형태가 같다. 저장하면 심사로 들어가고,
+     * 승인 전에는 앱에도 초대장에도 실리지 않는다.
+     */
+    data class RecapRequest(val recap: String?, val recapImageUrls: List<String> = emptyList())
+
+    @org.springframework.web.bind.annotation.PutMapping("/{meetupId}/recap")
+    fun writeRecap(
+        authentication: Authentication,
+        @PathVariable meetupId: String,
+        @RequestBody request: RecapRequest,
+    ) {
+        meetupService.writeRecap(
+            UUID.fromString(authentication.name),
+            parseId(meetupId),
+            request.recap,
+            request.recapImageUrls,
+        )
+    }
+
     /** 모임 취소 — 신청자(신청·확정)에게 취소 푸시가 간다. */
     @PostMapping("/{meetupId}/hosting/cancel")
     fun cancelHosting(authentication: Authentication, @PathVariable meetupId: String) {

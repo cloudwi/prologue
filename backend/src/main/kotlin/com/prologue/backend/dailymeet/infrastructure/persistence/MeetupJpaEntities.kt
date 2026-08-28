@@ -114,6 +114,21 @@ class MeetupJpaEntity(
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
+
+    /** 후기 — 개최 완료 뒤에 모임장이 남기는 글. 소개와 같은 평문+표시 문법이다. */
+    @Column(name = "recap", columnDefinition = "text")
+    var recap: String? = null,
+
+    /** 후기 사진 — 쉼표로 이어 붙인다(커버·소개 사진과 같은 방식). */
+    @Column(name = "recap_image_urls", columnDefinition = "text")
+    var recapImageUrls: String? = null,
+
+    /** NONE|PENDING|APPROVED|REJECTED — 승인된 후기만 공개된다. 모임의 status와 따로 돈다. */
+    @Column(name = "recap_status", nullable = false, length = 20)
+    var recapStatus: String = "NONE",
+
+    @Column(name = "recap_review_note", length = 300)
+    var recapReviewNote: String? = null,
 )
 
 @Entity
