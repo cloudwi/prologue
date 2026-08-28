@@ -67,7 +67,9 @@ const baseJsonLd = [
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex, nofollow" /> : <meta name="robots" content="index, follow, max-image-preview:large" />}
     <link rel="canonical" href={canonicalUrl} />
-    <meta name="theme-color" content="#f6f8fa" />
+    {/* 주소창 색도 테마를 따라간다 — 하나만 두면 다크에서 위쪽만 하얗게 남는다. */}
+    <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101418" media="(prefers-color-scheme: dark)" />
     <meta name="apple-itunes-app" content={`app-id=${APPLE_APP_ID}`} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
