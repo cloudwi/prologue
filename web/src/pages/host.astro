@@ -82,37 +82,32 @@ import { API_BASE, SITE_URL } from '../lib/site';
                 <div id="coverPreview" class="covers"></div>
               </div>
               <label class="field"><span>모임 이름 *</span><input id="f-title" maxlength="80" placeholder="밑줄 모임 · 서로서가" /></label>
+              <!--
+                소개 칸은 이제 편집기다. 사진이 글자들 사이에 실제 그림으로 앉고, 누르면
+                잡아끌어 크기를 바꾼다. 저장되는 것은 여전히 평문과 [사진N] 표시뿐이라
+                초대장도 앱도 어제 읽던 것을 그대로 읽는다(web/src/lib/desc-editor.js).
+
+                아래에 있던 '소개 안에 넣을 사진' 목록은 없앴다. 그 목록은 글이 사진을
+                보여줄 수 없어서 있던 것이다 — 번호를 대조할 일이 사라지면 목록도 사라진다.
+              -->
               <div class="field editor">
                 <div class="editor-head">
                   <span>소개</span>
                   <div class="editor-tools">
+                    <button type="button" class="chip" id="descPhoto">사진 넣기</button>
                     <button type="button" class="chip" data-insert="blank">한 줄 띄우기</button>
                     <button type="button" class="chip" data-insert="dot">가운뎃점 ·</button>
-                  </div>
-                </div>
-                <textarea id="f-desc" rows="10" maxlength="1000"
-                  placeholder="어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.&#10;&#10;줄을 짧게 끊으면 초대장에서 읽기 좋아요."></textarea>
-                <div class="editor-foot">
-                  <em>사진은 글 위로 끌어다 놓으면 그 자리에 들어가요. 줄바꿈은 초대장에 그대로 나와요.</em>
-                  <b id="descCount">0 / 1000</b>
-                </div>
-
-                <!--
-                  글 사이에 놓는 사진. 커버와 나눠 둔 이유는 쓰임이 달라서다 — 커버는 표지고,
-                  이쪽은 "이 서점에서 만나요" 처럼 글의 흐름 속에 놓여야 뜻이 사는 사진이다.
-                  한 목록에 섞으면 무엇이 카드의 얼굴이 될지 모임장이 알 수 없다.
-                -->
-                <div class="body-photos">
-                  <div class="editor-head">
-                    <span>소개 안에 넣을 사진 <em>글 사이에 놓여요</em></span>
-                    <em class="hint" id="bodyCount">0 / 10장</em>
-                  </div>
-                  <label class="dropzone slim" id="bodyDrop">
                     <input id="f-bodyImage" type="file" accept="image/*" multiple hidden />
-                    <b>사진을 끌어다 놓거나 눌러서 고르세요</b>
-                    <span>글 위로 바로 끌어다 놓아도 돼요. 여기에 올린 뒤 ‘넣기’를 눌러도 되고요.</span>
-                  </label>
-                  <div id="bodyPreview" class="covers"></div>
+                  </div>
+                </div>
+                <div
+                  id="f-desc"
+                  class="rich"
+                  data-placeholder="어떤 자리인지, 어떤 분이 오면 좋을지 적어주세요.&#10;&#10;줄을 짧게 끊으면 초대장에서 읽기 좋아요."
+                ></div>
+                <div class="editor-foot">
+                  <em>사진은 글 위로 끌어다 놓거나 붙여넣으면 그 자리에 들어가요. 사진을 누르면 크기를 잡아끌 수 있어요.</em>
+                  <b id="descCount">0 / 1000</b>
                 </div>
               </div>
               <div class="grid2">
@@ -309,7 +304,17 @@ import { API_BASE, SITE_URL } from '../lib/site';
   </section>
 </Base>
 
-<script is:inline define:vars={{ API_BASE, SITE_URL }}>
+<!--
+  설정값은 JSON 한 조각으로 넘긴다. define:vars는 인라인 스크립트에서만 되는데,
+  인라인 스크립트는 번들을 거치지 않아 npm 패키지를 import할 수 없다 — 편집기가 필요해진 순간
+  둘 중 하나를 골라야 했고, 값 세 개를 옮기는 쪽이 싸다.
+-->
+<script type="application/json" id="host-config" set:html={JSON.stringify({ API_BASE, SITE_URL })} />
+
+<script>
+  import { createDescEditor } from '../lib/desc-editor.js';
+
+  const { API_BASE, SITE_URL } = JSON.parse(document.getElementById('host-config').textContent);
   const $ = (id) => document.getElementById(id);
   const TOKEN_KEY = 'prologue.host.token';
   let token = localStorage.getItem(TOKEN_KEY) || '';
@@ -664,7 +669,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
     return {
       meetupId: null,
       title: $('f-title').value.trim() || '모임 이름',
-      description: $('f-desc').value.trim(),
+      description: desc.getText().trim(),
       meetAt: date && time ? `${date}T${time}:00+09:00` : new Date().toISOString(),
       place: $('f-place').value.trim() || '장소',
       capacity: Number($('f-capacity').value) || 8,
@@ -770,16 +775,13 @@ import { API_BASE, SITE_URL } from '../lib/site';
    * 한쪽만 고쳐지는 날이 온다 — 실제로 서버는 생성과 수정이 같은 본문을 받는다.
    */
   let editingId = null;
-  /** 소개 안에 넣는 사진들. 커버(covers)와 따로 센다. */
-  let bodyImages = [];
-
   /** 폼 열기. [m]을 주면 그 모임을 채워 넣고 수정 모드가 된다. */
   function openForm(m) {
     editingId = m?.meetupId ?? null;
     covers = m?.coverUrls ? [...m.coverUrls] : [];
-    bodyImages = m?.bodyImageUrls ? [...m.bodyImageUrls] : [];
     renderCovers();
-    renderBodyImages();
+    // 글과 사진은 한 몸이다 — 표시가 가리키는 사진이 같이 와야 그림으로 앉는다.
+    desc.setContent(m?.description ?? '', m?.bodyImageUrls ?? []);
 
     const d = m ? new Date(m.meetAt) : null;
     const pad = (n) => String(n).padStart(2, '0');
@@ -789,7 +791,6 @@ import { API_BASE, SITE_URL } from '../lib/site';
       : (m?.place ?? '');
     const set = (id, v) => { $(id).value = v; };
     set('f-title', m?.title ?? '');
-    set('f-desc', m?.description ?? '');
     set('f-date', d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '');
     set('f-time', d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '');
     set('f-address', m?.placeAddress ?? '');
@@ -868,24 +869,56 @@ import { API_BASE, SITE_URL } from '../lib/site';
    * 대신 이 글이 실제로 어떻게 읽히는지를 돕는다 — 남은 글자 수, 내용만큼 자라는 높이,
    * 그리고 자주 쓰는 두 가지 삽입. 진짜 미리보기는 오른쪽 폰이 이미 맡고 있다.
    */
-  const descBox = $('f-desc');
+  const BODY_IMAGE_MAX = 10;
+
+  const desc = createDescEditor({
+    mount: $('f-desc'),
+    maxImages: BODY_IMAGE_MAX,
+    onFiles: (files) => uploadBodyImages(files),
+    onChange: () => { syncDesc(); if (!$('v-new').hidden) preview(draftFromForm(), true); },
+  });
+
+  // 개발 서버에서만 열리는 손잡이 — 편집기의 왕복(평문 ↔ 문서)을 브라우저에서 직접 확인할 때 쓴다.
+  if (import.meta.env.DEV) window.__desc = desc;
+
   function syncDesc() {
-    $('descCount').textContent = `${descBox.value.length} / 1000`;
-    // 내용만큼 자란다 — 스크롤바 안에서 긴 글을 쓰면 전체 흐름이 보이지 않는다.
-    descBox.style.height = 'auto';
-    descBox.style.height = `${Math.max(descBox.scrollHeight, 220)}px`;
+    const text = desc.getText();
+    $('descCount').textContent = `${text.length} / 1000`;
+    // 넘치면 저장에서 막히므로 그 전에 눈으로 알려준다.
+    $('descCount').classList.toggle('over', text.length > 1000);
+    // 빈 편집기에는 안내 문구가 비쳐 보인다 — 커서만 깜빡이는 흰 칸은 무엇을 적으라는 말이 없다.
+    $('f-desc').classList.toggle('is-empty', text.trim() === '');
   }
-  descBox.addEventListener('input', syncDesc);
+
   for (const b of document.querySelectorAll('.console [data-insert]')) {
-    b.onclick = () => {
-      const text = b.dataset.insert === 'blank' ? '\n\n' : ' · ';
-      const at = descBox.selectionStart ?? descBox.value.length;
-      const end = descBox.selectionEnd ?? at;
-      descBox.value = descBox.value.slice(0, at) + text + descBox.value.slice(end);
-      descBox.focus();
-      descBox.setSelectionRange(at + text.length, at + text.length);
-      descBox.dispatchEvent(new Event('input', { bubbles: true }));
-    };
+    b.onclick = () => desc.insertText(b.dataset.insert === 'blank' ? '\n\n' : ' · ');
+  }
+
+  /**
+   * 소개 안에 놓는 사진.
+   *
+   * 글 위로 끌어다 놓거나(handleDrop), 붙여넣거나(handlePaste), 이 단추로 고른다. 어느 길로
+   * 오든 올린 뒤 커서 자리에 그림으로 앉는다 — 올려놓고 다시 '넣기'를 누르던 두 걸음이 없어졌다.
+   */
+  $('descPhoto').onclick = () => $('f-bodyImage').click();
+  $('f-bodyImage').onchange = (e) => { uploadBodyImages([...e.target.files]); e.target.value = ''; };
+
+  async function uploadBodyImages(files) {
+    const room = desc.roomForImages();
+    if (room <= 0) return say(`소개 사진은 ${BODY_IMAGE_MAX}장까지예요.`, true);
+    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
+    if (!picked.length) return;
+    if (files.length > picked.length) say(`${BODY_IMAGE_MAX}장까지만 올렸어요.`);
+    say('사진을 올리는 중…');
+    try {
+      for (const file of picked) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
+        desc.insertImage(r.url);
+      }
+      say(picked.length > 1 ? `사진 ${picked.length}장을 글에 놓았어요.` : '사진을 글에 놓았어요.');
+    } catch (err) { say(err.message, true); }
   }
 
   /*
@@ -1043,7 +1076,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
   $('f-jobVerified').addEventListener('change', () => { syncCond(); preview(draftFromForm(), true); });
 
   // 적는 동안 오른쪽이 따라 바뀐다 — 다 만들고 나서 "잘렸네"를 알면 늦다.
-  for (const id of ['f-title', 'f-desc', 'f-date', 'f-time', 'f-place']) {
+  for (const id of ['f-title', 'f-date', 'f-time', 'f-place']) {
     $(id).addEventListener('input', () => { if (!$('v-new').hidden) preview(draftFromForm(), true); });
   }
 
@@ -1054,8 +1087,6 @@ import { API_BASE, SITE_URL } from '../lib/site';
    * 되고 지우지도 옮기지도 못했다 — 잘못 고른 사진 하나 때문에 모임을 다시 만들 수는 없다.
    */
   const COVER_MAX = 3;
-  /** 소개 글 사이에 놓는 사진 — 커버와 쓰임이 달라 따로 센다. */
-  const BODY_IMAGE_MAX = 10;
 
   function renderCovers() {
     $('coverCount').textContent = `${covers.length} / ${COVER_MAX}장`;
@@ -1106,147 +1137,6 @@ import { API_BASE, SITE_URL } from '../lib/site';
   }
 
   $('f-cover').onchange = (e) => { uploadCovers([...e.target.files]); e.target.value = ''; };
-
-  /**
-   * 소개 안에 넣는 사진.
-   *
-   * 글에는 `[사진1]` 같은 표시만 들어가고 실제 사진은 이 목록에 담긴다. 서식 편집기를 만들지
-   * 않은 이유가 이것이다 — 글은 여전히 평문이라 저장 형식이 그대로고, 초대장이 표시를 보고
-   * 그 자리에 사진을 그린다. 남의 HTML이 끼어들 자리가 없다.
-   */
-  function renderBodyImages() {
-    $('bodyCount').textContent = `${bodyImages.length} / ${BODY_IMAGE_MAX}장`;
-    $('bodyPreview').innerHTML = bodyImages
-      .map(
-        (u, i) => `<div class="cover-item">
-          <img src="${esc(u)}" alt="" />
-          <em class="cover-badge plain">사진${i + 1}</em>
-          <div class="cover-actions">
-            <button type="button" data-put="${i}" title="글에 넣기">넣기</button>
-            <button type="button" data-delbody="${i}" title="빼기">&times;</button>
-          </div>
-        </div>`,
-      )
-      .join('');
-    for (const b of $('bodyPreview').querySelectorAll('[data-delbody]')) {
-      b.onclick = () => {
-        const i = Number(b.dataset.delbody);
-        bodyImages.splice(i, 1);
-        // 뒤 사진들의 번호가 하나씩 당겨진다 — 글에 적힌 표시도 함께 옮겨야 딴 사진을 가리키지 않는다.
-        descBox.value = descBox.value.replace(/\[사진(\d+)]/g, (m, n) => {
-          const k = Number(n) - 1;
-          if (k === i) return '';
-          return k > i ? `[사진${k}]` : m;
-        });
-        renderBodyImages();
-        syncDesc();
-        preview(draftFromForm(), true);
-      };
-    }
-    for (const b of $('bodyPreview').querySelectorAll('[data-put]')) {
-      b.onclick = () => {
-        const n = Number(b.dataset.put) + 1;
-        const token = `\n[사진${n}]\n`;
-        const at = descBox.selectionStart ?? descBox.value.length;
-        const end = descBox.selectionEnd ?? at;
-        descBox.value = descBox.value.slice(0, at) + token + descBox.value.slice(end);
-        descBox.focus();
-        descBox.setSelectionRange(at + token.length, at + token.length);
-        descBox.dispatchEvent(new Event('input', { bubbles: true }));
-        say(`글에 [사진${n}]을 넣었어요.`);
-      };
-    }
-  }
-
-  async function uploadBodyImages(files) {
-    const room = BODY_IMAGE_MAX - bodyImages.length;
-    if (room <= 0) return say(`소개 사진은 ${BODY_IMAGE_MAX}장까지예요.`, true);
-    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
-    if (!picked.length) return;
-    say('사진을 올리는 중…');
-    try {
-      for (const file of picked) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
-        bodyImages.push(r.url);
-        renderBodyImages();
-      }
-      say('올렸어요. ‘넣기’를 누르면 글의 커서 자리에 들어가요.');
-    } catch (err) { say(err.message, true); }
-  }
-
-  $('f-bodyImage').onchange = (e) => { uploadBodyImages([...e.target.files]); e.target.value = ''; };
-  const bodyZone = $('bodyDrop');
-  for (const type of ['dragenter', 'dragover']) {
-    bodyZone.addEventListener(type, (e) => { e.preventDefault(); bodyZone.classList.add('on'); });
-  }
-  for (const type of ['dragleave', 'drop']) bodyZone.addEventListener(type, () => bodyZone.classList.remove('on'));
-  bodyZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadBodyImages([...(e.dataTransfer?.files ?? [])]);
-  });
-
-  /**
-   * 소개 칸에 바로 떨어뜨린다.
-   *
-   * 올리고 나서 '넣기'를 누르는 두 걸음은 쓰는 사람 머릿속에서 한 걸음이다 — "여기에 이 사진".
-   * 그래서 글 칸 자체가 사진을 받는다. 표시는 떨어뜨린 글자 자리에 들어가므로 어디에 놓을지는
-   * 손이 정하고, 저장되는 것은 여전히 평문과 [사진N] 표시뿐이다.
-   */
-  function caretFromPoint(el, x, y) {
-    // 이름이 브라우저마다 다르고, textarea 안쪽을 짚지 못하는 판도 있다 — 그때는 커서 자리로.
-    for (const at of [document.caretPositionFromPoint?.(x, y)?.offset, document.caretRangeFromPoint?.(x, y)?.startOffset]) {
-      if (Number.isInteger(at) && at >= 0 && at <= el.value.length) return at;
-    }
-    return el.selectionStart ?? el.value.length;
-  }
-
-  async function dropIntoDesc(files, at) {
-    const room = BODY_IMAGE_MAX - bodyImages.length;
-    if (room <= 0) return say(`소개 사진은 ${BODY_IMAGE_MAX}장까지예요.`, true);
-    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
-    if (!picked.length) return;
-    if (files.length > picked.length) say(`${BODY_IMAGE_MAX}장까지만 올렸어요.`);
-    say('사진을 올리는 중…');
-    let cursor = Math.min(Math.max(at, 0), descBox.value.length);
-    try {
-      for (const file of picked) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
-        bodyImages.push(r.url);
-        renderBodyImages();
-        // 문장 한가운데 떨어뜨려도 사진이 글을 자르지 않게, 앞뒤로 줄을 세운다.
-        const token = `${cursor > 0 && descBox.value[cursor - 1] !== '\n' ? '\n' : ''}[사진${bodyImages.length}]\n`;
-        descBox.value = descBox.value.slice(0, cursor) + token + descBox.value.slice(cursor);
-        cursor += token.length;
-      }
-      descBox.focus();
-      descBox.setSelectionRange(cursor, cursor);
-      syncDesc();
-      preview(draftFromForm(), true);
-      say(picked.length > 1 ? `사진 ${picked.length}장을 글에 놓았어요.` : '사진을 글에 놓았어요.');
-    } catch (err) { say(err.message, true); }
-  }
-
-  for (const type of ['dragenter', 'dragover']) {
-    descBox.addEventListener(type, (e) => {
-      // 글자를 끄는 것은 브라우저가 하던 대로 둔다 — 우리가 맡는 것은 파일뿐이다.
-      if (![...(e.dataTransfer?.types ?? [])].includes('Files')) return;
-      e.preventDefault();
-      descBox.classList.add('on');
-    });
-  }
-  for (const type of ['dragleave', 'dragend', 'drop']) {
-    descBox.addEventListener(type, () => descBox.classList.remove('on'));
-  }
-  descBox.addEventListener('drop', (e) => {
-    const files = [...(e.dataTransfer?.files ?? [])];
-    if (!files.length) return;
-    e.preventDefault();
-    dropIntoDesc(files, caretFromPoint(descBox, e.clientX, e.clientY));
-  });
 
   // 끌어다 놓기 — 파일 탐색기를 여는 수고를 던다.
   const zone = $('dropzone');
@@ -1339,7 +1229,7 @@ import { API_BASE, SITE_URL } from '../lib/site';
       requireJobVerified: d.requireJobVerified,
       ...conditionPayload(),
       coverUrls: covers,
-      bodyImageUrls: bodyImages,
+      bodyImageUrls: desc.getImages(),
       kakaoLink: $('f-kakao').value.trim(),
     };
     const editing = editingId;
@@ -1505,8 +1395,30 @@ import { API_BASE, SITE_URL } from '../lib/site';
   */
   .addr-embed { height: min(460px, 60vh); }
   .addr-embed iframe { display: block; width: 100%; height: 100%; border: 0; }
-  .console .editor textarea { min-height: 220px; line-height: 1.8; resize: vertical; }
-  .console .editor textarea.on { border-color: var(--terracotta); background: var(--paper); }
+  /*
+    소개 편집기 — 겉모습은 다른 입력 칸들과 같아야 한다. 안이 contenteditable이라는 건
+    쓰는 사람이 알 바가 아니다.
+  */
+  .console .rich {
+    position: relative; min-height: 220px; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .console .rich:focus-within {
+    border-color: var(--terracotta);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--terracotta) 18%, transparent);
+  }
+  .console .rich .ProseMirror { outline: none; line-height: 1.8; white-space: pre-wrap; }
+  .console .rich .ProseMirror p { margin: 0; min-height: 1.8em; }
+  /* 빈 칸에는 안내가 비쳐 보인다 — 커서만 깜빡이는 흰 칸은 무엇을 적으라는 말이 없다. */
+  .console .rich.is-empty::before {
+    content: attr(data-placeholder); position: absolute; top: 12px; left: 14px; right: 14px;
+    white-space: pre-wrap; color: var(--muted); pointer-events: none;
+  }
+  /* 글 사이의 사진 — 초대장에서처럼 문단과 문단 사이에 자리를 갖는다. */
+  .console .rich img { display: block; max-width: 100%; height: auto; border-radius: 10px; margin: 12px 0; }
+  /* 넘친 글자 수는 붉게 — 저장에서 막히기 전에 알아야 한다. */
+  .console .editor-foot b.over { color: var(--terracotta-strong); }
   .console .editor-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .console .editor-foot em { font-style: normal; color: var(--muted); font-size: 0.82rem; }
   .console .editor-foot b { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; font-weight: 600; }

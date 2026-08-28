@@ -11,6 +11,11 @@
   "dependencies": {
     "@astrojs/rss": "^4.0.12",
     "@astrojs/sitemap": "^3.7.3",
-    "astro": "^5.14.8"
+    "@tiptap/core": "^3.30.5",
+    "@tiptap/extension-image": "^3.30.5",
+    "@tiptap/pm": "^3.30.5",
+    "@tiptap/starter-kit": "^3.30.5",
+    "astro": "^5.14.8",
+    "tiptap-extension-resize-image": "^1.4.6"
   }
 }
