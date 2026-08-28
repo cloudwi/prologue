@@ -15,6 +15,12 @@ services:
     # 정적 사이트는 유저가 방금 만든 모임의 페이지를 미리 구워둘 수 없다. 그렇다고 앱이 api.prologue.day를
     # 공유하게 두면 그 주소가 앱 바이너리에 박혀 영영 못 옮긴다 — 그래서 대문은 prologue.day로 두고 여기서 넘긴다.
     routes:
+      # 공개 모임 목록 — 검색에 걸리라고 만든 페이지. 백엔드가 그린다(모임은 배포 때 굽는
+      # 정적 사이트로는 담을 수 없다). 주소는 /meetups지만 백엔드에서는 /m이다 —
+      # api.prologue.day/meetups는 이미 JSON API의 자리라서.
+      - type: rewrite
+        source: /meetups
+        destination: https://api.prologue.day/m
       - type: rewrite
         source: /m/*
         destination: https://api.prologue.day/m/*

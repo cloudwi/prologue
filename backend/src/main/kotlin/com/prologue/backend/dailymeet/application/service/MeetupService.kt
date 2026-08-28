@@ -403,6 +403,18 @@ class MeetupService(
      * 인증이 없다. 대신 **id를 아는 사람만** 볼 수 있다(UUID는 찍어서 맞힐 수 없다) —
      * 모임장이 링크를 건넨 범위가 곧 공개 범위다. 없는 모임이면 null을 돌려 404를 그리게 한다.
      */
+    /**
+     * 공개 모임 목록 — 검색 엔진과 링크를 받은 사람이 보는 웹 페이지의 재료.
+     *
+     * 담기는 것은 초대장과 같다(참가자도, 오픈채팅 링크도 없다). **승인된 모임만** 실린다 —
+     * 심사를 통과하지 않은 자리가 검색에 걸리면 심사가 무의미해진다.
+     */
+    @Transactional(readOnly = true)
+    fun publicUpcoming(): List<MeetupInvitationView> =
+        meetupRepository.findUpcoming(Instant.now())
+            .filter { it.status == MeetupStatus.OPEN }
+            .mapNotNull { invitation(requireNotNull(it.id)) }
+
     @Transactional(readOnly = true)
     fun invitation(meetupId: UUID): MeetupInvitationView? {
         val m = meetupRepository.findById(meetupId) ?: return null

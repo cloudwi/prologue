@@ -56,7 +56,7 @@ class SecurityConfig(
                 // 앱은 403을 세션 만료로 읽어 토큰을 지우므로, 오타 하나가 "로그아웃"으로 둔갑한다.
                 it.requestMatchers("/error").permitAll()
                 it.requestMatchers("/auth/**", "/actuator/health", "/app-config").permitAll()
-                it.requestMatchers("/m/*").permitAll()
+                it.requestMatchers("/m", "/m/*").permitAll()
                 // 모임 목록·지난 모임은 가입 전에도 읽힌다. 읽기만이고, 손드는 건 여전히 회원의 일이다.
                 // 참가자 프로필(/meetups/members/*)은 열지 않는다 — 사진과 나이는 아무나 볼 것이 아니다.
                 it.requestMatchers(HttpMethod.GET, "/meetups", "/meetups/history").permitAll()

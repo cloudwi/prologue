@@ -295,7 +295,7 @@ object MeetupInvitationPage {
         .replace("'", "&#39;")
 
     /** 앱과 같은 팔레트(constants/theme.ts) — 차가운 중성 회색 바탕에 테라코타 하나. 다크 모드도 따라간다. */
-    private fun page(title: String, head: String, body: String): String = """
+    internal fun page(title: String, head: String, body: String): String = """
         <!doctype html>
         <html lang="ko">
         <head>
