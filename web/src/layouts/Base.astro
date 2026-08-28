@@ -67,6 +67,11 @@ const baseJsonLd = [
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex, nofollow" /> : <meta name="robots" content="index, follow, max-image-preview:large" />}
     <link rel="canonical" href={canonicalUrl} />
+    {/*
+      구글 서치 콘솔 소유 확인(2026-08-28). 확인이 끝난 뒤에도 지우면 안 된다 —
+      구글은 주기적으로 다시 확인하고, 사라지면 속성이 풀려 색인 보고가 끊긴다.
+    */}
+    <meta name="google-site-verification" content="hJ5AsTBDGWIwHlPls9X_wPvC8fPKQU3Jq8RQQnV74bU" />
     {/* 주소창 색도 테마를 따라간다 — 하나만 두면 다크에서 위쪽만 하얗게 남는다. */}
     <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#101418" media="(prefers-color-scheme: dark)" />
