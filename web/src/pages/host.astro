@@ -1333,11 +1333,11 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .split { display: grid; grid-template-columns: minmax(0, 1fr) 468px; gap: 32px; align-items: start; }
   .console .split[hidden] { display: none; }
   .console .pane { min-width: 0; }
-  .console .pane-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .console .pane-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
   .console .pane-head h1 { font-size: 1.5rem; }
   .console .head-actions { display: flex; gap: 8px; flex-shrink: 0; }
   .console .lead { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
-  .console .back { background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 0 0 16px; }
+  .console .back { background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 0 0 22px; }
 
   /* 목록 카드 */
   /* 앱과 같은 구조 — 회색 바탕 위에 흰 카드. 바탕과 같은 색이면 카드가 카드로 보이지 않는다. */
@@ -1359,10 +1359,10 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .tag.warn { background: var(--terracotta-strong); color: var(--on-point); }
 
   /* 상세 */
-  .console .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .console .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
   .console .stat { padding: 18px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; text-align: center; }
   .console .stat b { display: block; font-size: 1.75rem; line-height: 1.2; color: var(--terracotta-strong); font-variant-numeric: tabular-nums; }
-  .console .stat span { display: block; margin-top: 4px; color: var(--muted); font-size: 0.85rem; }
+  .console .stat span { display: block; margin-top: 6px; color: var(--muted); font-size: 0.85rem; }
   /*
    * 카카오 노랑은 우리 팔레트에 없는 색이다. 그래도 쓰는 이유는 이게 장식이 아니라 표지판이기
    * 때문이다 — 여기를 누르면 카카오로 간다는 걸 색이 먼저 말한다. 대신 브랜드 규격(#FEE500,
@@ -1381,20 +1381,20 @@ import { API_BASE, SITE_URL } from '../lib/site';
     mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 1C5.9 1 1 4.9 1 9.7c0 3.1 2 5.8 5.1 7.3-.2.8-.8 2.9-.9 3.4-.1.6.2.6.5.4.2-.1 3.2-2.2 4.5-3.1.6.1 1.2.1 1.8.1 6.1 0 11-3.9 11-8.7S18.1 1 12 1z'/%3E%3C/svg%3E");
   }
   /* 구획 이름 — 눈썹 글자로 작게. 신청자 목록이 길어져도 어디가 어디인지 잡힌다. */
-  .console h3 { margin: 28px 0 10px; font-family: var(--sans); font-size: 0.78rem; font-weight: 700; letter-spacing: 1.5px; color: var(--terracotta-strong); text-transform: uppercase; }
+  .console h3 { margin: 36px 0 12px; font-family: var(--sans); font-size: 0.78rem; font-weight: 700; letter-spacing: 1.5px; color: var(--terracotta-strong); text-transform: uppercase; }
   .console h3.quiet { color: var(--muted); }
-  .console .person { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; margin-bottom: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+  .console .person { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px; margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
   .console .person strong { display: block; font-size: 1rem; }
-  .console .person .meta { margin-top: 2px; }
+  .console .person .meta { margin-top: 4px; }
   .console .seal { font-style: normal; margin-left: 7px; padding: 2px 8px; border-radius: 999px; background: var(--terracotta); color: var(--on-point); font-size: 0.72rem; }
   .console .done { color: var(--terracotta-strong); font-weight: 700; font-size: 0.9rem; }
   /* 초대장 링크 — 자리를 채우는 유일한 손이라 서랍 속이 아니라 눈에 띄는 면에 둔다. */
-  .console .share { margin-top: 28px; display: grid; gap: 8px; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+  .console .share { margin-top: 34px; display: grid; gap: 10px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
   .console .share input { font-size: 0.85rem; background: var(--paper); }
   .console .row { display: flex; gap: 8px; align-items: center; }
   .console .row.wrap { flex-wrap: wrap; }
-  .console .row.gap { margin-top: 22px; }
-  .console .blank { padding: 40px 20px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; display: grid; gap: 6px; }
+  .console .row.gap { margin-top: 30px; }
+  .console .blank { padding: 44px 20px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; display: grid; gap: 8px; }
   .console .blank strong { font-size: 1.05rem; }
   .console .blank span { color: var(--muted); font-size: 0.9rem; }
 
@@ -1572,7 +1572,16 @@ import { API_BASE, SITE_URL } from '../lib/site';
   .console .btn.ghost:hover { opacity: 1; border-color: var(--ink); }
   .console .btn.danger { color: var(--terracotta-strong); }
   .console .btn.danger:hover { border-color: var(--terracotta); }
-  .console .hint { color: var(--muted); font-size: 0.88rem; }
+  .console .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.65; }
+  /*
+    안내 문구는 앞 덩어리에 달라붙어 있었다 — 전역 `* { margin: 0 }` 탓에 <p>의 여백이
+    없어서, 노란 버튼 바로 밑에 글자가 붙어 한 덩어리로 읽혔다. 무엇에 대한 설명인지는
+    붙어 있어서가 아니라 순서가 말해준다. 한 칸 띄우면 둘 다 읽힌다.
+  */
+  .console .kakao + .hint,
+  .console .row + .hint,
+  .console .row.wrap + .hint { margin-top: 12px; }
+  .console .hint + .blank { margin-top: 20px; }
   .console .msg { margin-top: 18px; font-weight: 600; }
   .console .msg[hidden] { display: none; }
   .console .msg.bad { color: var(--terracotta-strong); }
