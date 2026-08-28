@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import { JobBadge } from '@/components/job-badge';
 import { PhotoPager } from '@/components/photo-pager';
+import { RichText } from '@/components/rich-text';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { conditionLabel, feeLabel, type Meetup } from '@/lib/meetups';
 import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
@@ -91,9 +92,15 @@ export function MeetupInvitation({
 
       {/* 3) 모시는 글 + 여는 사람 — 인사말 아래 이름이 오는 청첩장의 순서. */}
       <Section eyebrow="GREETING" title="모시는 글" c={c}>
-        {meetup.description ? (
-          <Text style={[styles.greeting, { color: c.text }]}>{meetup.description}</Text>
-        ) : null}
+        {/*
+          표시가 살아 있는 원문이 오면 그걸로 그린다 — 사진이 글 사이에 놓인다.
+          옛 서버(또는 표시가 없는 글)는 description만 오므로 그때는 지금까지처럼 글만 그린다.
+        */}
+        <RichText
+          text={meetup.descriptionRich ?? meetup.description}
+          images={meetup.bodyImageUrls ?? []}
+          c={c}
+        />
         <Pressable
           onPress={onPressHost}
           disabled={onPressHost == null}
@@ -173,7 +180,20 @@ export function MeetupInvitation({
         </Section>
       )}
 
-      {/* 8) RSVP — 청첩장의 마지막 장. 내 상태에 따라 한 가지 할 일만. */}
+      {/*
+        8) 후기 — 끝난 모임에만 붙는다.
+
+        RSVP 앞에 둔다. 지난 모임의 초대장을 여는 사람에게 마지막에 남을 말은 "이랬어요"가
+        아니라 "다음에 만나요"여야 한다. 승인된 후기만 서버가 내려보내므로 여기서는
+        있는지만 본다.
+      */}
+      {meetup.recap || meetup.recapImageUrls?.length ? (
+        <Section eyebrow="AFTER" title="그날의 기록" c={c}>
+          <RichText text={meetup.recap} images={meetup.recapImageUrls ?? []} c={c} />
+        </Section>
+      ) : null}
+
+      {/* 9) RSVP — 청첩장의 마지막 장. 내 상태에 따라 한 가지 할 일만. */}
       <Section eyebrow="RSVP" title={rsvpTitle(meetup)} c={c}>
         <View style={styles.rsvp}>
           {meetup.isMine ? (
@@ -391,7 +411,6 @@ const styles = StyleSheet.create({
   sectionEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 3 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 8, marginBottom: 20 },
 
-  greeting: { fontSize: 16, lineHeight: 29, textAlign: 'center', paddingHorizontal: 8 },
   hostBlock: { alignItems: 'center', marginTop: 28 },
   hostCaption: { fontSize: 12.5, letterSpacing: 2, marginBottom: 8 },
   hostName: { fontSize: 19, fontWeight: '700' },

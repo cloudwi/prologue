@@ -18,6 +18,8 @@ import { track } from '@/lib/analytics';
 import { getJobStatus } from '@/lib/job';
 import { getMyProfile } from '@/lib/member';
 import { feeLabel, getMeetupHistory, getMeetups, type Meetup } from '@/lib/meetups';
+import { RichText } from '@/components/rich-text';
+import { plainText } from '@/lib/rich-text';
 import { thumbUrl } from '@/lib/image';
 
 /**
@@ -115,6 +117,8 @@ export default function MeetupsScreen() {
   const insets = useSafeAreaInsets();
 
   const [historyOpen, setHistoryOpen] = useState(false);
+  /** 펼쳐 놓은 후기 하나 — 여러 개를 동시에 펴면 목록이 아니라 글이 된다. */
+  const [recapOpen, setRecapOpen] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'APPLIED' | 'MINE'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
@@ -441,24 +445,55 @@ export default function MeetupsScreen() {
                 </Pressable>
                 {historyOpen && (
                   <View style={[styles.historyCard, { backgroundColor: c.backgroundElement }]}>
-                    {history.map((h, i) => (
-                      <View
-                        key={`${h.title}-${h.meetAt}`}
-                        style={[
-                          styles.historyRow,
-                          i < history.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-                        ]}
-                      >
-                        <View style={styles.flex}>
-                          <Text style={[styles.historyTitle, { color: c.text }]}>{h.title}</Text>
-                          <Text style={[styles.historyMeta, { color: c.textSecondary }]}>
-                            {new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' }).format(new Date(h.meetAt))} · {h.place} ·{' '}
-                            {h.hostNickname ?? ''}
-                          </Text>
+                    {history.map((h, i) => {
+                      /*
+                       * 후기가 있는 줄은 펼칠 수 있다.
+                       *
+                       * "N명 참여"는 열리긴 했다는 사실일 뿐이다. 손들지 말지 고민하는 사람이
+                       * 알고 싶은 건 가면 무엇을 하게 되는가인데, 그건 그날의 글과 사진에만 있다.
+                       * 그래서 후기가 있는 줄에만 열쇠를 준다 — 눌러도 아무 일 없는 줄은 만들지 않는다.
+                       */
+                      const key = h.meetupId ?? `${h.title}-${h.meetAt}`;
+                      const hasRecap = Boolean(h.recap || h.recapImageUrls?.length);
+                      const open = hasRecap && recapOpen === key;
+                      return (
+                        <View
+                          key={key}
+                          style={[
+                            i < history.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+                          ]}
+                        >
+                          <Pressable
+                            onPress={hasRecap ? () => setRecapOpen(open ? null : key) : undefined}
+                            disabled={!hasRecap}
+                            accessibilityRole={hasRecap ? 'button' : undefined}
+                            style={styles.historyRow}
+                          >
+                            <View style={styles.flex}>
+                              <Text style={[styles.historyTitle, { color: c.text }]}>{h.title}</Text>
+                              <Text style={[styles.historyMeta, { color: c.textSecondary }]}>
+                                {new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' }).format(new Date(h.meetAt))} · {h.place} ·{' '}
+                                {h.hostNickname ?? ''}
+                              </Text>
+                            </View>
+                            <Text style={[styles.historyCount, { color: c.primaryStrong }]}>{h.confirmedCount}명 참여</Text>
+                            {hasRecap && (
+                              <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color={c.textSecondary} />
+                            )}
+                          </Pressable>
+                          {hasRecap && !open && (
+                            <Text numberOfLines={1} style={[styles.historyPeek, { color: c.textSecondary }]}>
+                              후기 · {plainText(h.recap) || `사진 ${h.recapImageUrls?.length ?? 0}장`}
+                            </Text>
+                          )}
+                          {open && (
+                            <View style={styles.historyRecap}>
+                              <RichText text={h.recap} images={h.recapImageUrls ?? []} c={c} size="small" />
+                            </View>
+                          )}
                         </View>
-                        <Text style={[styles.historyCount, { color: c.primaryStrong }]}>{h.confirmedCount}명 참여</Text>
-                      </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 )}
               </View>
@@ -653,6 +688,9 @@ const styles = StyleSheet.create({
   historyCard: { borderRadius: Radius.lg, paddingHorizontal: 16 },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
   historyTitle: { fontSize: 15.5, fontWeight: '700' },
+  /** 접힌 줄에 붙는 한 줄 — 눌러볼 것이 있다는 사실 자체를 말해준다. */
+  historyPeek: { fontSize: 13, paddingBottom: 12, paddingRight: 24 },
+  historyRecap: { paddingBottom: 16 },
   historyMeta: { fontSize: 13, marginTop: 2 },
   guestInvite: { marginTop: 28, marginHorizontal: 20, padding: 20, borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg },
   guestInviteTitle: { fontSize: 17, fontWeight: '700' },

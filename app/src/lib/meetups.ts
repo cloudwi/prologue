@@ -12,6 +12,20 @@ export type Meetup = {
   meetupId: string;
   title: string;
   description: string | null;
+  /**
+   * 표시가 살아 있는 소개 글 — `[사진1]`이 [bodyImageUrls]의 첫 장을 가리킨다.
+   *
+   * [description]과 따로 오는 이유: 서버는 표시를 모르는 옛 앱을 위해 [description]에서
+   * 표시를 걷어내 보낸다. 그 자리를 바꾸면 스토어에 나가 있는 판의 화면에 "[사진1]"이
+   * 글자로 남는다. 그래서 아는 앱만 읽는 자리를 따로 뒀다.
+   *
+   * 구버전 서버는 안 내려주므로 없으면 [description]을 그대로 쓴다.
+   */
+  descriptionRich?: string | null;
+  bodyImageUrls?: string[];
+  /** 후기 — 승인된 것만. 글의 표시가 [recapImageUrls]를 가리킨다. */
+  recap?: string | null;
+  recapImageUrls?: string[];
   meetAt: string;
   place: string;
   /** 지도 링크(구버전 데이터) — 새 데이터는 placeAddress로 링크를 만든다. */
@@ -102,6 +116,19 @@ export type MeetupHistory = {
   place: string;
   confirmedCount: number;
   hostNickname: string | null;
+  /**
+   * 후기 — 모임장이 끝난 뒤에 남긴 글. 운영자가 승인한 것만 내려온다.
+   *
+   * "N명 참여"는 열리긴 했다는 사실일 뿐이다. 손들지 말지 고민하는 사람이 알고 싶은 것 —
+   * 가면 무엇을 하게 되는가 — 은 그날의 글과 사진에만 있다.
+   *
+   * 글에 `[사진1]` 같은 표시가 들어 있고 [recapImageUrls]의 N번째를 가리킨다(rich-text.ts).
+   * 구버전 서버는 안 내려주므로 optional이다.
+   */
+  meetupId?: string | null;
+  recap?: string | null;
+  recapImageUrls?: string[];
+  coverUrls?: string[];
 };
 
 export type MeetupBoard = {
