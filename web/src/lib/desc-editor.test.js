@@ -211,3 +211,62 @@ describe('원본 크기', () => {
     expect(roundTrip(text, [PHOTO])).toBe(text);
   });
 });
+
+/*
+ * 올라가는 중인 사진 — 자리에 먼저 앉고 주소는 나중에 갈아 끼운다.
+ *
+ * 여기가 틀리면 blob: 주소가 그대로 저장되고, 초대장에는 **영영 뜨지 않는 사진**이 걸린다.
+ * 저장한 사람 눈에는 한참 뒤에야 보이는 종류의 고장이다.
+ */
+describe('올라가는 중인 사진', () => {
+  const LOCAL = 'blob:https://prologue.day/abc-123';
+
+  it('아직 올라가는 중인 사진이 있으면 그렇다고 말한다', () => {
+    const e = make();
+    e.setContent('', []);
+    e.insertImage(LOCAL);
+    expect(e.hasPendingImages()).toBe(true);
+    e.replaceImage(LOCAL, PHOTO);
+    expect(e.hasPendingImages()).toBe(false);
+  });
+
+  it('주소만 갈아 끼우고 폭은 건드리지 않는다', () => {
+    const e = make();
+    e.setContent('[사진1:50]', [LOCAL]);
+    e.replaceImage(LOCAL, PHOTO);
+    expect(e.getText()).toBe('[사진1:50]');
+    expect(e.getImages()).toEqual([PHOTO]);
+  });
+
+  it('알아둔 원본 크기도 새 주소로 따라간다', () => {
+    const e = make();
+    e.setContent('[사진1:75:1200x1115]', [LOCAL]);
+    e.replaceImage(LOCAL, PHOTO);
+    expect(e.getText()).toBe('[사진1:75:1200x1115]');
+    expect(e.getImages()).toEqual([PHOTO]);
+  });
+
+  it('올리지 못한 사진은 자리에서 걷어내고 글은 남긴다', () => {
+    const e = make();
+    e.setContent('앞 줄\n[사진1]\n뒤 줄', [LOCAL]);
+    expect(e.removeImage(LOCAL)).toBe(true);
+    expect(e.getText()).toBe('앞 줄\n뒤 줄');
+    expect(e.getImages()).toEqual([]);
+  });
+
+  it('없는 사진을 걷어내라고 해도 글은 그대로다', () => {
+    const e = make();
+    e.setContent('그냥 글', []);
+    expect(e.removeImage(LOCAL)).toBe(false);
+    expect(e.getText()).toBe('그냥 글');
+  });
+
+  it('같은 사진이 두 번 놓여 있어도 둘 다 갈아 끼운다', () => {
+    const e = make();
+    e.setContent('[사진1]\n사이\n[사진1]', [LOCAL]);
+    e.replaceImage(LOCAL, PHOTO);
+    expect(e.hasPendingImages()).toBe(false);
+    expect(e.getText()).toBe('[사진1]\n사이\n[사진1]');
+    expect(e.getImages()).toEqual([PHOTO]);
+  });
+});

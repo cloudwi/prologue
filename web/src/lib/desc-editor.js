@@ -274,6 +274,51 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
         attrs: { src, containerStyle: styleFor(100) },
       }).run();
     },
+    /**
+     * 올리는 중이던 사진을 올라간 사진으로 바꿔 끼운다.
+     *
+     * 자리는 그대로 두고 주소만 갈아 끼우는 게 핵심이다. 지웠다 다시 넣으면 커서가 튀고
+     * 폭도 초기화되며, 그 사이에 글을 쓰고 있던 사람은 자기 글이 흔들리는 것을 본다.
+     * 알아둔 원본 크기도 새 주소로 옮긴다 — 그 사진은 그 사진이다.
+     */
+    replaceImage(from, to) {
+      const size = sizes.get(from);
+      if (size) sizes.set(to, size);
+      sizes.delete(from);
+
+      const tr = editor.state.tr;
+      let hit = false;
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'imageResize' || node.attrs.src !== from) return;
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: to });
+        hit = true;
+      });
+      if (hit) editor.view.dispatch(tr);
+      return hit;
+    },
+
+    /** 올리지 못한 사진을 자리에서 걷어낸다 — 뜨지 않을 그림이 남아 있는 게 더 나쁘다. */
+    removeImage(src) {
+      const tr = editor.state.tr;
+      const spots = [];
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'imageResize' && node.attrs.src === src) spots.push({ pos, size: node.nodeSize });
+      });
+      // 뒤에서부터 지운다 — 앞을 먼저 지우면 뒤 위치가 밀린다.
+      for (const s of spots.reverse()) tr.delete(s.pos, s.pos + s.size);
+      if (spots.length) editor.view.dispatch(tr);
+      sizes.delete(src);
+      return spots.length > 0;
+    },
+
+    /**
+     * 아직 올라가는 중인 사진이 있는가.
+     *
+     * 올리는 중인 사진의 주소는 이 브라우저 안에서만 뜻이 있는 blob: 주소다. 그대로 저장하면
+     * 서버에는 열리지 않는 주소가 남고, 초대장에는 깨진 사진이 걸린다. 저장을 막는 근거다.
+     */
+    hasPendingImages: () => serialize().images.some((src) => src.startsWith('blob:')),
+
     insertText(text) { editor.chain().focus().insertContent(text).run(); },
     /** 고른 줄의 정렬을 정한다 — 'left' | 'center' | 'right'. */
     setAlign(where) { editor.chain().focus().setTextAlign(where).run(); },
