@@ -319,9 +319,28 @@ class MeetupService(
      */
     @Transactional(readOnly = true)
     fun upcoming(accountId: UUID?): List<MeetupView> {
-        val meetups = meetupRepository.findUpcoming(Instant.now())
+        val now = Instant.now()
         val mine = accountId?.let { applicationRepository.findAllByApplicant(it).associateBy { a -> a.meetupId } }
             ?: emptyMap()
+
+        /*
+         * 목록은 승인된 모임만 담는다. 다만 **이미 손든 자리는 예외**다.
+         *
+         * 모임장이 내용을 고치면 다시 심사로 돌아가는데(승인은 그때 읽은 그 글에 준 것이다),
+         * 그때 목록에서까지 사라지면 확정까지 받은 사람 눈에는 모임이 취소된 것으로 보인다.
+         * 심사는 **새로 발견되는 것**을 막는 문이지 이미 한 약속을 지우는 장치가 아니다.
+         * 신청 상태와 오픈채팅 링크는 그대로 두고, 새 신청만 막힌다(open=false).
+         */
+        val listed = meetupRepository.findUpcoming(now)
+        val known = listed.mapNotNull { it.id }.toSet()
+        val alsoMine = mine
+            // 신청을 물린 사람에게는 보일 이유가 없다 — 약속이 남아 있는 사람만이다.
+            .filterValues { it.status == MeetupApplicationStatus.APPLIED || it.status == MeetupApplicationStatus.CONFIRMED }
+            .keys
+            .filter { it !in known }
+            .mapNotNull { meetupRepository.findById(it) }
+            .filter { it.status == MeetupStatus.PENDING && it.meetAt.isAfter(now) }
+        val meetups = (listed + alsoMine).sortedBy { it.meetAt }
         // 목록이 모임 수만큼 되묻지 않도록 한 번에 읽는다.
         val followed = accountId?.let { followRepository.findSeriesIdsByAccount(it) } ?: emptySet()
         val seriesCounts = mutableMapOf<UUID, List<Meetup>>()

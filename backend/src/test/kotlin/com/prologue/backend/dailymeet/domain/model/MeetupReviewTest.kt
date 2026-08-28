@@ -122,6 +122,18 @@ class MeetupReviewTest {
     }
 
     @Test
+    fun `심사로 돌아가면 새 신청은 막힌다 — 다만 이미 손든 사람의 약속은 서비스가 따로 지킨다`() {
+        val m = create()
+        m.approve()
+        m.sendBackToReview()
+
+        // 이 모임은 목록의 '모집 중'에서 빠진다. 이미 신청한 사람에게만 MeetupService.upcoming이
+        // 따로 실어 보여준다 — 도메인은 문을 닫는 것까지만 안다.
+        assertEquals(MeetupStatus.PENDING, m.status)
+        assertEquals(false, m.isOpen())
+    }
+
+    @Test
     fun `반려된 모임도 고쳐서 다시 올리면 심사로 간다`() {
         val m = create()
         m.reject("소개가 너무 짧아요")
