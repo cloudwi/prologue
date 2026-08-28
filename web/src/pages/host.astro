@@ -881,11 +881,13 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
       const cls = 'inv-desc' + (aligned ? (aligned[1] === '가운데' ? ' center' : ' right') : '');
       const text = esc(aligned ? raw.slice(aligned[0].length) : raw);
       openWith(cls);
-      out.push(text.replace(/\[사진(\d+)(?::(\d+))?]/g, (_, n, w) => {
+      out.push(text.replace(/\[사진(\d+)(?::(\d+))?(?::(\d+)x(\d+))?]/g, (_, n, w, pw, ph) => {
         const url = bodyImageUrls?.[Number(n) - 1];
         if (!url) return '';
         const photoCls = sized.has(w) ? `inv-photo w${w}` : 'inv-photo';
-        return `</p><img class="${photoCls}" src="${esc(url)}" alt="" /><p class="${cls}">`;
+        // 원본 크기를 알면 미리보기에서도 자리를 먼저 잡는다 — 서버 조판과 같은 규칙이다.
+        const size = pw && ph ? ` width="${Number(pw)}" height="${Number(ph)}"` : '';
+        return `</p><img class="${photoCls}" src="${esc(url)}"${size} alt="" /><p class="${cls}">`;
       }));
     }
     close();
@@ -2083,7 +2085,7 @@ import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
   .console .inv-desc.center { text-align: center; }
   .console .inv-desc.right { text-align: right; }
   /* 글 사이의 사진 — 초대장(MeetupInvitationPage)의 .body-photo와 같은 규칙이다. */
-  .console .inv-photo { display: block; width: calc(100% + 48px); margin: 18px -24px; object-fit: cover; }
+  .console .inv-photo { display: block; width: calc(100% + 48px); height: auto; margin: 18px -24px; object-fit: cover; }
   .console .inv-photo.w25, .console .inv-photo.w50, .console .inv-photo.w75 {
     margin: 18px auto; border-radius: 10px; }
   .console .inv-photo.w25 { width: 25%; }

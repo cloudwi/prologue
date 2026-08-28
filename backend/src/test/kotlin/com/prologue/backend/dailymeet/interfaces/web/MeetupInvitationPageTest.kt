@@ -162,6 +162,46 @@ class MeetupInvitationPageTest {
         assertFalse(out.contains("w63"))
     }
 
+    /*
+     * 원본 크기 — 사진이 오기 전에 자리를 잡아두라는 숫자다.
+     *
+     * 이게 없으면 사진이 뜨는 순간 아래 글이 통째로 밀린다(레이아웃 시프트). 사람 눈에는
+     * "읽던 줄이 도망가는" 것으로 보이고, 검색 점수에도 그대로 깎인다.
+     */
+    @Test
+    fun `원본 크기가 붙으면 width height로 자리를 잡아둔다`() {
+        val out = html(
+            view(
+                description = "[사진1:100:1200x1115]",
+                bodyImageUrls = listOf("https://cdn.example.com/body.jpg"),
+            ),
+        )
+
+        assertContains(out, """ width="1200" height="1115"""")
+        assertFalse(out.contains("1200x1115")) // 표시가 글자로 남으면 안 된다
+    }
+
+    @Test
+    fun `폭과 크기가 같이 붙어도 둘 다 산다`() {
+        val out = html(
+            view(description = "[사진1:50:800x600]", bodyImageUrls = listOf("https://cdn.example.com/body.jpg")),
+        )
+
+        assertContains(out, """<img class="body-photo w50"""")
+        assertContains(out, """ width="800" height="600"""")
+    }
+
+    @Test
+    fun `말이 안 되는 크기는 속성 없이 지나간다`() {
+        // 0이나 몇 만 픽셀로 자리를 잡으면 안 잡느니만 못하다 — 엉뚱한 크기로 밀린다.
+        val out = html(
+            view(description = "[사진1:50:0x600]", bodyImageUrls = listOf("https://cdn.example.com/body.jpg")),
+        )
+
+        assertFalse(out.contains("height=\"600\""))
+        assertFalse(out.contains("0x600"))
+    }
+
     @Test
     fun `가리키는 사진이 없는 표시는 조용히 지운다`() {
         // 사진을 지웠거나 오타를 냈을 때 — 화면에 [사진3]이 글자로 남는 것보다 없는 편이 낫다.

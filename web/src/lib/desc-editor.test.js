@@ -165,3 +165,49 @@ describe('정렬과 크기', () => {
     expect(e.getText()).toBe('글만 있다');
   });
 });
+
+/*
+ * 원본 크기 — 사진이 도착하기 전에 자리를 잡아두라고 초대장에 알려주는 숫자다.
+ *
+ * jsdom은 사진을 실제로 받아오지 않아 naturalWidth가 늘 0이다. 그래서 여기서 확인하는 것은
+ * "화면에서 읽어낸 크기"가 아니라 **불러온 글에 적혀 있던 크기가 저장할 때 살아남는가**이다.
+ * 사진이 아직 안 떴을 때 저장하면 크기가 조용히 사라지던 자리라 이쪽이 더 중요하다.
+ */
+describe('원본 크기', () => {
+  it('크기가 적힌 표시를 그대로 돌려준다', () => {
+    expect(roundTrip('[사진1:100:1200x1115]', [PHOTO])).toBe('[사진1:100:1200x1115]');
+  });
+
+  it('폭과 크기가 같이 붙어도 왕복한다', () => {
+    expect(roundTrip('[사진1:50:800x600]', [PHOTO])).toBe('[사진1:50:800x600]');
+  });
+
+  it('크기를 알면 폭이 100이어도 폭을 적는다 — 자리를 비우면 크기가 폭으로 읽힌다', () => {
+    const e = make();
+    e.setContent('[사진1:100:1200x1115]', [PHOTO]);
+    expect(e.getText()).not.toBe('[사진1:1200x1115]');
+  });
+
+  it('크기가 없던 시절의 표시는 크기 없이 그대로 나간다', () => {
+    expect(roundTrip('[사진1]', [PHOTO])).toBe('[사진1]');
+    expect(roundTrip('[사진1:50]', [PHOTO])).toBe('[사진1:50]');
+  });
+
+  it('말이 안 되는 크기는 버린다', () => {
+    expect(roundTrip('[사진1:50:0x600]', [PHOTO])).toBe('[사진1:50]');
+    expect(roundTrip('[사진1:50:99999x600]', [PHOTO])).toBe('[사진1:50]');
+  });
+
+  it('폭을 바꿔도 크기는 남는다', () => {
+    const e = make();
+    e.setContent('[사진1:100:1200x1115]', [PHOTO]);
+    e.focus();
+    e.setImageWidth(50);
+    expect(e.getText()).toBe('[사진1:50:1200x1115]');
+  });
+
+  it('글 사이에 끼어도 앞뒤 줄을 건드리지 않는다', () => {
+    const text = '앞 줄\n[사진1:75:1200x1115]\n뒤 줄';
+    expect(roundTrip(text, [PHOTO])).toBe(text);
+  });
+});

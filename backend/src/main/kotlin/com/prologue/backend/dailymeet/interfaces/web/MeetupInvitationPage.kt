@@ -26,8 +26,29 @@ object MeetupInvitationPage {
      *
      * 폭을 붙일 수 있다: `[사진1:50]`은 카드 폭의 절반. 폭이 없으면 지금까지처럼
      * 카드 밖으로 흘려 꽉 채운다 — 그래서 폭이 없던 시절의 글이 그대로 보인다.
+     *
+     * 뒤에 원본 크기가 더 붙을 수 있다: `[사진1:100:1200x1115]`. 이걸 아는 이유는 하나다 —
+     * 사진이 도착하기 전에 자리를 잡아둬야 글이 밀리지 않는다(레이아웃 시프트). 브라우저는
+     * width/height 속성만으로 비율을 계산해 빈 상자를 먼저 그려준다.
+     *
+     * 크기를 **URL 쿼리에 붙이지 않은** 이유가 있다. 앱의 thumbUrl이 `${'$'}url?width=…`로 이어
+     * 붙이는데, URL에 이미 `?`가 있으면 `…jpg?w=1200&h=1115?width=260`이 되어 리사이즈가
+     * 통째로 깨진다. 이미 스토어에 나간 판은 고칠 수 없다. 표시에 실으면 URL은 그대로다.
      */
-    private val PHOTO_TOKEN = Regex("""\[사진(\d+)(?::(\d+))?]""")
+    private val PHOTO_TOKEN = Regex("""\[사진(\d+)(?::(\d+))?(?::(\d+)x(\d+))?]""")
+
+    /**
+     * 원본 크기 → `width`/`height` 속성. 둘 다 있고 말이 될 때만 내보낸다.
+     *
+     * 숫자가 터무니없으면(0이거나 몇 만 픽셀) 자리를 잘못 잡아 오히려 더 크게 밀린다.
+     * 그럴 바엔 속성 없이 지금까지처럼 두는 게 낫다.
+     */
+    private fun sizeAttrs(w: String, h: String): String {
+        val width = w.toIntOrNull() ?: return ""
+        val height = h.toIntOrNull() ?: return ""
+        if (width !in 1..20000 || height !in 1..20000) return ""
+        return """ width="$width" height="$height""""
+    }
 
     /**
      * 폭은 네 칸뿐이다 — 25·50·75·100.
@@ -264,8 +285,9 @@ object MeetupInvitationPage {
             val withPhotos = PHOTO_TOKEN.replace(escaped) { match ->
                 val index = match.groupValues[1].toIntOrNull()?.minus(1) ?: return@replace ""
                 val width = widthClass(match.groupValues[2])
+                val size = sizeAttrs(match.groupValues[3], match.groupValues[4])
                 bodyImageUrls.getOrNull(index)
-                    ?.let { """</p><img class="body-photo$width" src="${escape(it)}" alt="" loading="lazy" /><p class="$cls">""" }
+                    ?.let { """</p><img class="body-photo$width" src="${escape(it)}"$size alt="" loading="lazy" /><p class="$cls">""" }
                     ?: ""
             }
             out.append(withPhotos)
@@ -335,8 +357,14 @@ ${head.prependIndent("        ")}
           /* 글쓴이가 세운 줄 — 머리줄과 맺는 한 줄이 여기 온다. 기본은 왼쪽이라 클래스가 없다. */
           .greeting.center { text-align:center; }
           .greeting.right { text-align:right; }
-          /* 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다(폭을 정하지 않았을 때의 모양). */
-          .body-photo { display:block; width:calc(100% + 48px); margin:24px -24px; border-radius:0;
+          /*
+           * 글 사이의 사진 — 카드 밖으로 흘려 폭을 넉넉히 쓴다(폭을 정하지 않았을 때의 모양).
+           *
+           * height는 auto여야 한다. 표시에 원본 크기가 실려 있으면 브라우저가 width/height
+           * 속성으로 비율을 계산해 사진이 도착하기 전에 상자를 잡아주는데, 여기서 height를
+           * 못박으면 그 계산이 통째로 무시된다 — 글이 밀리는 이유가 다시 생긴다.
+           */
+          .body-photo { display:block; width:calc(100% + 48px); height:auto; margin:24px -24px; border-radius:0;
                         object-fit:cover; background:var(--line); }
           /* 폭을 정한 사진은 카드 안으로 들어와 가운데 선다 — 흘려보낼 이유가 없으니 모서리도 둥글다. */
           .body-photo.w25, .body-photo.w50, .body-photo.w75 {

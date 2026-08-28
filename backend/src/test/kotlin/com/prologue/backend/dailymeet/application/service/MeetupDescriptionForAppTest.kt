@@ -52,4 +52,20 @@ class MeetupDescriptionForAppTest {
     fun `표시를 닮았을 뿐인 글자는 남는다 — 사람이 쓴 말을 지우면 안 된다`() {
         assertEquals("[사진]과 [사진 1] 이야기", stripPhotoTokens("[사진]과 [사진 1] 이야기"))
     }
+
+    /*
+     * 표시에 원본 크기가 붙어도 앱은 그것을 몰라야 한다.
+     *
+     * 문법이 자랄 때마다 여기가 같이 자라지 않으면, 새 모양이 앱 화면에 "[사진1:100:1200x1115]"
+     * 라는 글자로 샌다. 스토어에 이미 나간 판은 고칠 수 없으므로 서버가 막는 수밖에 없다.
+     */
+    @Test
+    fun `원본 크기가 붙은 표시도 걷어낸다`() {
+        assertEquals("앞\n\n뒤", stripPhotoTokens("앞\n[사진1:100:1200x1115]\n뒤"))
+    }
+
+    @Test
+    fun `크기만 붙어도 걷어낸다`() {
+        assertNull(stripPhotoTokens("[사진1:50:800x600]"))
+    }
 }

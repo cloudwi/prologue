@@ -2,7 +2,8 @@
  * 모임 소개 글 편집기.
  *
  * 화면에서는 사진이 글자들 사이에 실제 그림으로 앉아 있고 잡아끌어 크기를 바꾼다. 그런데
- * **저장되는 것은 여전히 평문이다** — `[사진1]`, 폭을 정했으면 `[사진1:50]`. 초대장과 서버는
+ * **저장되는 것은 여전히 평문이다** — `[사진1]`, 폭을 정했으면 `[사진1:50]`, 원본 크기까지
+ * 알면 `[사진1:50:1200x1115]`. 뒤로 갈수록 붙기만 하고 앞의 모양은 그대로다. 초대장과 서버는
  * 어제 읽던 것을 그대로 읽고, 지금 스토어에 있는 앱도 달라진 것을 모른다. 편집기를 바꾸는
  * 일과 저장 형식을 바꾸는 일은 다른 일이고, 여기서는 앞의 것만 한다.
  *
@@ -37,6 +38,9 @@ function widthFromStyle(style, hostWidth) {
 }
 
 const styleFor = (pct) => `width: ${pct}%; height: auto; cursor: pointer;`;
+
+/** 원본 크기가 말이 되는지 — 0이거나 몇 만 픽셀이면 자리를 잘못 잡아 오히려 더 밀린다. */
+const sane = (n) => Number.isInteger(n) && n >= 1 && n <= 20000;
 
 /**
  * @param {object} o
@@ -153,9 +157,26 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
     snapping = false;
   }
 
+  /**
+   * 사진 주소 → 원본 픽셀 크기.
+   *
+   * 편집기에 실제로 그려진 <img>에서 읽는다. 아직 안 받아온 사진은 naturalWidth가 0이라
+   * 그 순간에는 알 수 없는데, 한 번 알아낸 값을 여기 적어두면 다음 저장 때 다시 쓴다.
+   * 불러온 글에 이미 크기가 적혀 있었다면 그것도 여기 들어간다 — 사진이 화면에 뜨기 전에
+   * 저장해도 크기가 사라지지 않게.
+   */
+  const sizes = new Map();
+
+  function learnSizes() {
+    for (const img of editor.view.dom.querySelectorAll('img')) {
+      if (sane(img.naturalWidth) && sane(img.naturalHeight)) sizes.set(img.src, [img.naturalWidth, img.naturalHeight]);
+    }
+  }
+
   /** 문서 → 평문과 사진 목록. 같은 사진을 두 번 써도 목록에는 한 번만 담는다. */
   function serialize() {
     const hostWidth = editor.view.dom.clientWidth;
+    learnSizes();
     const images = [];
     const lines = [];
     editor.state.doc.forEach((node) => {
@@ -165,7 +186,17 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
         let i = images.indexOf(src);
         if (i === -1) i = images.push(src) - 1;
         const pct = nearest(widthFromStyle(node.attrs.containerStyle, hostWidth));
-        lines.push(pct === 100 ? `[사진${i + 1}]` : `[사진${i + 1}:${pct}]`);
+        /*
+         * 원본 크기를 아는 사진은 표시에 실어 보낸다 — 초대장이 사진 도착 전에 자리를
+         * 잡아두는 근거가 이것뿐이다. 크기를 적으려면 폭 자리가 비어 있으면 안 되므로
+         * 이때는 100도 적는다(`[사진1:100:1200x1115]`).
+         */
+        const size = sizes.get(src);
+        lines.push(
+          size ? `[사진${i + 1}:${pct}:${size[0]}x${size[1]}]`
+            : pct === 100 ? `[사진${i + 1}]`
+              : `[사진${i + 1}:${pct}]`,
+        );
         return;
       }
       let line = '';
@@ -188,10 +219,13 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
   function parse(text, images) {
     const content = [];
     for (const line of String(text ?? '').split('\n')) {
-      const m = /^\[사진(\d+)(?::(\d+))?]$/.exec(line.trim());
+      const m = /^\[사진(\d+)(?::(\d+))?(?::(\d+)x(\d+))?]$/.exec(line.trim());
       if (m) {
         const src = images?.[Number(m[1]) - 1];
         if (src) {
+          const w = Number(m[3]);
+          const h = Number(m[4]);
+          if (sane(w) && sane(h)) sizes.set(src, [w, h]);
           content.push({
             type: 'imageResize',
             attrs: { src, containerStyle: styleFor(nearest(Number(m[2]) || 100)) },
@@ -220,6 +254,21 @@ export function createDescEditor({ mount, onChange, onFiles, placeholder, maxIma
       onChange();
     },
     insertImage(src) {
+      /*
+       * 방금 올린 사진의 원본 크기를 따로 물어본다.
+       *
+       * 편집기에 놓인 <img>에서 읽어도 되지만, 그건 사진이 다 받아진 **뒤에야** 0이 아니다.
+       * 놓자마자 저장하면 크기 없이 나가고, 초대장은 그 사진 앞에서 다시 밀린다.
+       * 답이 오면 onChange로 미리보기까지 다시 그린다.
+       */
+      const probe = new Image();
+      probe.onload = () => {
+        if (!sane(probe.naturalWidth) || !sane(probe.naturalHeight)) return;
+        sizes.set(src, [probe.naturalWidth, probe.naturalHeight]);
+        onChange();
+      };
+      probe.src = src;
+
       editor.chain().focus().insertContent({
         type: 'imageResize',
         attrs: { src, containerStyle: styleFor(100) },
