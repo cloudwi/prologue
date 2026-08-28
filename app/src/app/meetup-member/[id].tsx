@@ -99,9 +99,17 @@ export default function MeetupMemberScreen() {
              */}
             {profile.photoUrl ? (
               <Image
-                source={{ uri: thumbUrl(profile.photoUrl, 200) }}
+                source={{ uri: thumbUrl(profile.photoUrl, 260) }}
                 style={[styles.photo, { backgroundColor: c.backgroundSelected }]}
-                contentFit="cover"
+                /*
+                 * 잘라내지 않고 줄여서 넣는다.
+                 *
+                 * cover는 4:5 자리를 꽉 채우는 대신 사진의 바깥을 잘라낸다. 편지함의 봉투처럼
+                 * 조각으로 스쳐 지나가는 자리라면 그게 맞지만, 여기는 "이 사람이 누구인가"를
+                 * 보러 들어온 화면이다. 전신 사진이나 가로 사진이 허리께만 남으면 얼굴을 보러
+                 * 온 사람에게 아무것도 주지 못한다.
+                 */
+                contentFit="contain"
                 transition={150}
               />
             ) : (
@@ -110,7 +118,15 @@ export default function MeetupMemberScreen() {
             <View style={styles.flex}>
               <View style={styles.nameRow}>
                 <Text style={[styles.nickname, { color: c.text }]}>{profile.nickname ?? '(알 수 없음)'}</Text>
-                {profile.jobVerified && <JobBadge c={c} domain={profile.jobDomain} />}
+                {/*
+                  모임장에게는 직장 인증을 달지 않는다.
+
+                  나이·성별을 뺀 것과 같은 이유다 — 운영자에게 매칭의 잣대를 대지 않는다.
+                  여기서 봐야 할 것은 이 사람이 어떤 자리를 몇 번 열었는가이고, 그건 아래
+                  '개최한 모임'이 말한다. 참가자 프로필에서는 그대로 둔다. 함께 앉을 사람이
+                  누구인지는 안전의 문제라 신호가 하나라도 더 필요하다.
+                */}
+                {!asHost && profile.jobVerified && <JobBadge c={c} domain={profile.jobDomain} />}
               </View>
               {meta ? <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text> : null}
             </View>
@@ -196,7 +212,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48 },
 
   card: { borderRadius: Radius.lg, padding: 16, marginBottom: 8 },
-  photo: { width: 64, height: 80, borderRadius: Radius.sm },
+  photo: { width: 76, height: 95, borderRadius: Radius.sm },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nickname: { fontSize: 19, fontWeight: '700' },
