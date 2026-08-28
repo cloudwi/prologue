@@ -10,9 +10,10 @@ const { size = 'md' } = Astro.props;
 
 <div class:list={['store-links', size]}>
   <a href={APP_STORE_URL} rel="noopener" target="_blank" aria-label="App Store에서 프롤로그 다운로드">
-    <img src="/badges/app-store.svg" alt="App Store에서 다운로드" />
+    <!-- 치수를 적어 자리를 미리 잡는다 — 없으면 배지가 뜰 때 아래 글이 밀린다(CLS). -->
+    <img src="/badges/app-store.svg" alt="App Store에서 다운로드" width="130" height="40" />
   </a>
   <a href={PLAY_STORE_URL} rel="noopener" target="_blank" aria-label="Google Play에서 프롤로그 다운로드">
-    <img src="/badges/google-play.png" alt="Google Play에서 다운로드" />
+    <img src="/badges/google-play.png" alt="Google Play에서 다운로드" width="135" height="40" />
   </a>
 </div>
