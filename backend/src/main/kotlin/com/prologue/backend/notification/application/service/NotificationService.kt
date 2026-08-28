@@ -102,6 +102,23 @@ class NotificationService(
         ),
     )
 
+    /**
+     * 모임의 **언제·어디서**가 바뀌었다 — 확정까지 한 사람에게는 이게 제일 중요한 정보다.
+     *
+     * 소개 글이나 사진이 바뀐 것까지 알리지는 않는다. 사람을 움직이게 하는 변경만 알린다 —
+     * 알림이 잦아지면 정작 중요한 것도 안 읽는다.
+     */
+    @Async
+    @Transactional(readOnly = true)
+    fun meetupChanged(applicantAccountId: UUID, meetupTitle: String, what: String) = notify(
+        applicantAccountId,
+        PushMessage(
+            title = "모임 정보가 바뀌었어요",
+            body = "'$meetupTitle' — $what 확인해 주세요.",
+            data = mapOf("screen" to "meetups"),
+        ),
+    )
+
     /** 이레가 지나도록 열리지 않아 회수된 편지 — 보낸 사람에게 환급 사실을 알린다. */
     @Async
     @Transactional(readOnly = true)

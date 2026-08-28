@@ -640,6 +640,28 @@ class MeetupService(
                 requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink,
             ),
         )
+
+        /*
+         * 언제·어디서가 바뀌었으면 이미 손든 사람에게 알린다.
+         *
+         * 확정까지 한 사람은 그 날짜에 그 자리로 갈 계획을 세워 뒀다. 앱을 다시 열어야만
+         * 알 수 있게 두면, 바뀐 줄 모르고 옛 장소로 가는 사람이 생긴다.
+         *
+         * 소개 글이나 사진이 바뀐 것까지 알리지는 않는다 — 알림이 잦아지면 정작 중요한
+         * 것도 안 읽는다. 사람을 움직이게 하는 변경만이다.
+         */
+        val movedTime = existing.meetAt != meetAt
+        val movedPlace = existing.place != place.trim()
+        if (movedTime || movedPlace) {
+            val what = when {
+                movedTime && movedPlace -> "날짜와 장소가 바뀌었어요."
+                movedTime -> "날짜가 바뀌었어요."
+                else -> "장소가 바뀌었어요."
+            }
+            applicationRepository.findAllByMeetup(meetupId)
+                .filter { it.status == MeetupApplicationStatus.APPLIED || it.status == MeetupApplicationStatus.CONFIRMED }
+                .forEach { notificationService.meetupChanged(it.applicantAccountId, existing.title, what) }
+        }
     }
 
     /** 참가 조건 검사 — 프로필의 성별·나이·키로 문 앞에서 거른다. 내 성별의 기준만 본다. */
