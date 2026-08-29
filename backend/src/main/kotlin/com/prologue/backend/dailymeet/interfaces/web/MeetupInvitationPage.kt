@@ -351,13 +351,28 @@ object MeetupInvitationPage {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${escape(title)}</title>
 ${head.prependIndent("        ")}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+        <!--
+          본문 글씨는 Pretendard — prologue.day의 나머지와 같은 글씨다.
+
+          그동안 이 페이지만 시스템 기본체로 나갔다. font-family에 "Pretendard"가 적혀는
+          있었지만 불러오지 않았고, 그나마도 -apple-system 뒤에 있어서 애플 기기에서는
+          영영 차례가 오지 않았다. 링크로 열린 초대장과 사이트가 다른 글씨로 보였다는 뜻이고,
+          콘솔의 미리보기는 이 페이지를 그대로 끼우므로 거기서도 어긋났다.
+
+          동적 서브셋 판을 쓴다 — 한글은 글자 수가 많아 통짜로 받으면 무겁고, 이 판은 쓰는
+          글자만 골라 받는다. 못 받아 오면 아래 폴백이 그대로 받는다.
+        -->
+        <link rel="stylesheet"
+              href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
         <style>
           :root { --bg:#F6F8FA; --card:#FFFFFF; --sunken:#F3F6F9; --text:#1B2126; --muted:#69747E; --line:#E3E8EE; --point:#D9694C; --on-point:#fff; }
           @media (prefers-color-scheme: dark) {
             :root { --bg:#101418; --card:#181D22; --sunken:#1F252B; --text:#EAEFF4; --muted:#96A1AC; --line:#28303A; --point:#E07A5C; --on-point:#101418; }
           }
           * { box-sizing: border-box; }
-          body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",system-ui,sans-serif;
+          body { margin:0; background:var(--bg); color:var(--text);
+                 font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
                  display:flex; justify-content:center; padding:24px 16px 48px; }
           .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:20px; overflow:hidden;
                   padding:0 24px 32px; text-align:center; }

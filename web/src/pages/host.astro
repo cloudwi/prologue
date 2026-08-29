@@ -335,8 +335,16 @@ import RichField from '../components/RichField.astro';
           <div class="preview-head">
             <span id="previewLabel">참여자에게 보이는 화면</span>
             <div class="tabs" id="previewTabs" hidden>
+              <!--
+                탭 이름은 **그리는 것의 이름**이어야 한다.
+
+                오른쪽은 '모임 상세'라고 적혀 있었지만 실제로 그리는 건 링크로 열리는 웹 초대장이다.
+                앱의 모임 상세는 조판이 다르다 — 달력·오시는 길·함께하는 사람들·RSVP가 차례로 서고,
+                글과 사진은 그중 '모시는 글' 한 칸에 들어간다. 이름이 어긋나면 모임장은 자기가 맞춘
+                모양이 앱에서 그대로 나올 거라고 믿게 되고, 그 믿음은 앱을 열어봐야 깨진다.
+              -->
               <button class="tab on" data-view="card">모임 탭</button>
-              <button class="tab" data-view="detail">모임 상세</button>
+              <button class="tab" data-view="detail">초대장</button>
             </div>
           </div>
           <!-- 랜딩의 목업(.phone)은 장식이라 일부러 기울어 있다. 여기 것은 자로 재는 도구라
@@ -1091,16 +1099,16 @@ import RichField from '../components/RichField.astro';
       return;
     }
 
-    $('previewLabel').textContent = '앱 · 모임 상세 (초대장)';
+    $('previewLabel').textContent = '웹 · 초대장';
     if (m.meetupId) {
       // 이미 연 모임은 서버가 그리는 진짜 초대장을 그대로 끼운다 — 흉내가 아니라 그 페이지다.
-      $('phoneNote').textContent = '링크를 받은 사람이 보는 바로 그 초대장이에요.';
+      $('phoneNote').textContent = '링크를 받은 사람이 보는 바로 그 초대장이에요. 앱의 모임 상세는 조판이 조금 달라요.';
       $('screen').innerHTML = `<iframe src="${SITE_URL}/m/${m.meetupId}" title="초대장 미리보기"></iframe>`;
       fitIframe($('screen').firstChild);
       restore();
       return;
     }
-    $('phoneNote').textContent = '아직 만들기 전이라 폼의 값으로 그려본 모습이에요.';
+    $('phoneNote').textContent = '아직 만들기 전이라 폼의 값으로 그려본 초대장이에요. 앱의 모임 상세는 조판이 조금 달라요.';
     $('screen').innerHTML = `
       <div class="inv">
         ${m.coverUrls?.[0] ? `<img class="inv-cover" src="${esc(m.coverUrls[0])}" alt="" />` : '<div class="app-cover-blank tall">커버 사진이 없어요</div>'}
