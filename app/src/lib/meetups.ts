@@ -183,12 +183,25 @@ export async function cancelMeetup(meetupId: string): Promise<void> {
 // ── 표시 헬퍼 — 목록 카드와 상세가 같은 문구를 쓴다 ──
 
 /** 참가비 표시 — 성별별 요금이 있으면 나눠서 보여준다. */
-export function feeLabel(m: Pick<Meetup, 'fee' | 'feeFemale'>): string {
+/**
+ * 표 안에 넣을 값 — 라벨을 되풀이하지 않는다.
+ *
+ * '참가비' 칸에 "참가비 30,000원"이 들어가면 같은 말을 두 번 하는 셈이다. 초대장의 안내
+ * 카드가 그렇게 나가고 있었다. 그런데 목록 카드에는 라벨이 없으니 "30,000원"만으로는
+ * 무슨 숫자인지 알 수 없다 — 그래서 값과 한 줄짜리 문구를 갈라 둔다.
+ * 서버(MeetupInvitationPage.feeValue/feeLabel)와 같은 규칙이다.
+ */
+export function feeValue(m: Pick<Meetup, 'fee' | 'feeFemale'>): string {
   const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
   if (m.feeFemale != null && m.feeFemale !== m.fee) {
     return `남 ${m.fee > 0 ? won(m.fee) : '무료'} · 여 ${m.feeFemale > 0 ? won(m.feeFemale) : '무료'}`;
   }
-  return m.fee > 0 ? `참가비 ${won(m.fee)}` : '무료';
+  return m.fee > 0 ? won(m.fee) : '무료';
+}
+
+export function feeLabel(m: Pick<Meetup, 'fee' | 'feeFemale'>): string {
+  const value = feeValue(m);
+  return m.fee > 0 && (m.feeFemale == null || m.feeFemale === m.fee) ? `참가비 ${value}` : value;
 }
 
 /** 한 성별의 조건 요약 — "25~39세·175cm+" 꼴. 없으면 null. */

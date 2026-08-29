@@ -78,6 +78,14 @@ describe('장소 가르기', () => {
     });
   });
 
+  it('주소가 앞에 붙지 않은 채로 저장된 모임은 place가 통째로 이름이다', () => {
+    // 콘솔은 상세만 place에 넣고 주소를 따로 보낸다. 그때 이름이 사라지면 안 된다.
+    expect(venueOf({ place: '서울시청 시민청 지하 1층', placeAddress: '서울 중구 세종대로 110' })).toEqual({
+      name: '서울시청 시민청 지하 1층',
+      address: '서울 중구 세종대로 110',
+    });
+  });
+
   it('상세가 없으면 이름은 비운다 — 주소를 이름 자리에 두 번 쓰지 않는다', () => {
     expect(venueOf({ place: '서울 서초구 언남길 49', placeAddress: '서울 서초구 언남길 49' })).toEqual({
       name: null,

@@ -14,7 +14,14 @@ export const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 /** 장소 이름과 주소를 가른다 — place는 "주소 · 상세" 꼴로 저장된다. */
 export function venueOf(m: Pick<Meetup, 'place' | 'placeAddress'>): { name: string | null; address: string | null } {
   if (!m.placeAddress) return { name: m.place, address: null };
-  const detail = m.place.startsWith(m.placeAddress) ? m.place.slice(m.placeAddress.length).replace(/^ · /, '') : '';
+  /*
+   * 주소가 앞에 붙지 않은 채로 저장된 모임도 있다 — 콘솔은 상세만 place에 넣고 주소를
+   * 따로 보낸다. 그때 이름을 빈 문자열로 떨어뜨리면 '오시는 길'에 주소만 남고 가게 이름이
+   * 사라진다. 앞에 붙어 있으면 떼고, 아니면 place가 통째로 상세다(서버의 placeName과 같은 규칙).
+   */
+  const detail = m.place.startsWith(m.placeAddress)
+    ? m.place.slice(m.placeAddress.length).replace(/^ · /, '')
+    : m.place;
   return { name: detail || null, address: m.placeAddress };
 }
 

@@ -6,7 +6,7 @@ import { JobBadge } from '@/components/job-badge';
 import { PhotoPager } from '@/components/photo-pager';
 import { RichText } from '@/components/rich-text';
 import { Radius, type ThemeColors } from '@/constants/theme';
-import { conditionLabel, feeLabel, type Meetup } from '@/lib/meetups';
+import { conditionLabel, feeValue, type Meetup } from '@/lib/meetups';
 import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
 
 /**
@@ -148,7 +148,7 @@ export function MeetupInvitation({
       {/* 6) 안내 — 참가비·조건을 카드 한 장에. 청첩장의 '마음 전하실 곳' 자리. */}
       <Section eyebrow="INFORMATION" title="안내" c={c}>
         <View style={[styles.infoCard, { backgroundColor: c.backgroundElement }]}>
-          <InfoRow label="참가비" value={feeLabel(meetup)} c={c} />
+          <InfoRow label="참가비" value={feeValue(meetup)} c={c} />
           {conditionLabel(meetup) ? <InfoRow label="참석 조건" value={conditionLabel(meetup)!} c={c} /> : null}
           <InfoRow label="정원" value={`${meetup.capacity}명 · 확정 ${meetup.confirmedCount}명`} c={c} last />
           {isPaid && (
