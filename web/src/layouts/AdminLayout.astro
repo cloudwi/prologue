@@ -16,6 +16,7 @@ const tabs = tabsProp ?? [
   { href: '/admin/meetups', label: '모임' },
   { href: '/admin/members', label: '회원' },
   { href: '/admin/ink', label: '잉크' },
+  { href: '/admin/settings', label: '앱 설정' },
 ];
 ---
 
@@ -453,6 +454,31 @@ const tabs = tabsProp ?? [
         outline: 2px solid color-mix(in srgb, var(--terracotta) 45%, transparent);
         outline-offset: 0;
         border-color: var(--terracotta);
+      }
+      /* 줄 안에서 값을 고치는 칸 — 설정 화면처럼 한 줄에 입력과 버튼이 같이 서는 자리. */
+      .admin-input {
+        height: 36px;
+        padding: 0 12px;
+        font-size: 14px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--surface);
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+      .admin-input:focus {
+        outline: 2px solid color-mix(in srgb, var(--terracotta) 45%, transparent);
+        border-color: var(--terracotta);
+      }
+      /* 화면 맨 위의 주의 문구 — 누르기 전에 읽어야 하는 것. */
+      .admin-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13.5px;
+        line-height: 1.7;
+      }
+      .admin-note strong {
+        color: var(--ink);
       }
       .admin-search {
         margin: 0 0 14px;
