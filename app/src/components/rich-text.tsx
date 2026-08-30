@@ -75,7 +75,15 @@ export function RichText({ text, images = [], c, size = 'body', onPressImage }: 
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: 14 },
+  /*
+   * 폭을 못 박는다.
+   *
+   * 이 덩이가 놓이는 절(Section)이 alignItems:'center'라, 폭을 주지 않으면 여기가 **글자
+   * 길이만큼 쪼그라든다.** 그러면 75%로 놓은 사진이 화면의 75%가 아니라 '가장 긴 문장의
+   * 75%'가 되고(440 폭에서 294px여야 할 사진이 172px로 나왔다), 왼쪽·오른쪽 정렬도
+   * 아무 일을 하지 않는다 — 정렬할 빈자리가 없기 때문이다.
+   */
+  wrap: { width: '100%', alignItems: 'center', gap: 14 },
   /*
    * 글 한 덩이는 폭을 다 쓴다.
    *
