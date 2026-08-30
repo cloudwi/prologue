@@ -1,0 +1,88 @@
+{
+  "expo": {
+    "name": "프롤로그",
+    "slug": "prologue",
+    "version": "1.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "prologue",
+    "userInterfaceStyle": "automatic",
+    "updates": {
+      "url": "https://u.expo.dev/2ea86b1c-287c-4acd-96a0-a5768eba7752"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "ios": {
+      "bundleIdentifier": "day.prologue.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "ko",
+        "CFBundleLocalizations": [
+          "ko"
+        ]
+      }
+    },
+    "android": {
+      "package": "day.prologue.app",
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#F6F8FA",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "imageWidth": 200,
+          "backgroundColor": "#F6F8FA",
+          "dark": {
+            "image": "./assets/images/splash-dark.png",
+            "backgroundColor": "#101418"
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "프로필 사진을 등록하기 위해 사진 접근 권한이 필요해요.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-iap",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "prologue-4k",
+          "project": "prologue-app"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2ea86b1c-287c-4acd-96a0-a5768eba7752"
+      }
+    }
+  }
+}
