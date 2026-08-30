@@ -24,5 +24,14 @@ const RENDER_PATH = '/storage/v1/render/image/public/';
 export function thumbUrl(url: string | null | undefined, width: number): string | undefined {
   if (!url) return undefined;
   if (!url.includes(OBJECT_PATH)) return url;
-  return `${url.replace(OBJECT_PATH, RENDER_PATH)}?width=${width}&quality=70`;
+  /*
+   * resize=contain이 없으면 **줄이는 게 아니라 자른다.**
+   *
+   * Supabase의 기본 모드는 cover다. 폭만 주면 높이를 원본 그대로 두고 가운데를 세로로 오려낸다 —
+   * 1856×2304 그림에 width=600을 주면 600×2304가 돌아온다. 소개 글에 넣은 일러스트가 앱에서만
+   * 가운데 띠만 보였던 이유이고, 잘라낸 만큼 용량도 오히려 더 컸다(1.25MB → 513KB).
+   *
+   * 자르는 일은 화면이 한다(contentFit). 서버는 비율대로 줄이기만 하면 된다.
+   */
+  return `${url.replace(OBJECT_PATH, RENDER_PATH)}?width=${width}&resize=contain&quality=70`;
 }
