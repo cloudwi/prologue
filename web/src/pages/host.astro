@@ -2543,10 +2543,18 @@ import RichField from '../components/RichField.astro';
   .console .ap-info-row b { font-size: 15px; font-weight: 600; text-align: right; }
   .console .ap-info-hint { font-size: 12.5px; line-height: 18px; padding: 2px 0 14px; color: var(--scr-muted); text-align: left; }
 
-  .console .ap-rsvp { display: grid; gap: 16px; justify-items: center; }
+  /*
+   * RSVP — 앱의 rsvp는 width:'100%' + alignItems:'center'이고, 그 안의 큰 버튼만
+   * alignSelf:'stretch'로 폭을 꽉 채운다.
+   *
+   * 그리드에 justify-items:center로 옮겨 적었더니 버튼이 글자 크기로 쪼그라들었다.
+   * 거기에 radius 999px이 걸려 알약이 아니라 **동그라미**가 됐다. 축이 다른 두 규칙을
+   * 옮겨 적을 때 흔한 사고라, 앱과 같은 방식(세로 flex + stretch)으로 되돌린다.
+   */
+  .console .ap-rsvp { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
   .console .ap-note { font-size: 14.5px; line-height: 22px; color: var(--scr-muted); padding: 0 8px; }
   .console .ap-big {
-    align-self: stretch; height: 52px; border-radius: 999px;
+    align-self: stretch; flex: 0 0 auto; height: 52px; border-radius: 999px;
     display: flex; align-items: center; justify-content: center;
     background: var(--scr-point); color: var(--scr-on-point); font-size: 16px; font-weight: 700;
   }
