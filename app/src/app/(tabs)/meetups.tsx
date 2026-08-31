@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 
-import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
+import { BottomTabInset, Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { useSession } from '@/lib/session';
@@ -211,7 +211,6 @@ export default function MeetupsScreen() {
           <View style={styles.content}>
             <View style={styles.header}>
               <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
-              <Text style={[styles.subtitle, { color: c.textSecondary }]}>오프라인에서 만나는 작은 모임</Text>
             </View>
             <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonSearch} />
             {/* 모임 카드 — 사진이 위를 꽉 채우고 그 아래에 제목·한 줄 정보·칩이 온다. */}
@@ -238,13 +237,12 @@ export default function MeetupsScreen() {
               <RefreshControl refreshing={boardQuery.isRefetching} onRefresh={refresh} tintColor={c.textSecondary} />
             }
           >
+            {/*
+              * 부제는 뺐다(2026-08-31) — "가까운 날짜의 모임부터 보여드려요"는 목록이 이미
+              * 보여주는 사실이고, "오프라인에서 만나는 작은 모임"은 탭 이름의 되풀이였다.
+              */}
             <View style={styles.header}>
-              <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
-              </View>
-              <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-                {meetups.length > 0 ? '가까운 날짜의 모임부터 보여드려요' : '오프라인에서 만나는 작은 모임'}
-              </Text>
+              <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
             </View>
 
             {/* 검색과 필터 — 모임이 늘면 '내 것'부터 찾게 된다. */}
@@ -315,9 +313,7 @@ export default function MeetupsScreen() {
               <Animated.View entering={FadeInDown.duration(380)} style={[styles.emptyCard, { backgroundColor: c.backgroundElement }]}>
                 <Image source={require('@/assets/images/brand-mark.png')} style={styles.emptyMark} contentFit="contain" />
                 <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>준비 중인 모임이 없어요</Text>
-                <Text style={[styles.emptyText, { color: c.textSecondary }]}>
-                  새 모임이 열리면 여기에 도착해요.
-                </Text>
+                <Text style={[styles.emptyText, { color: c.textSecondary }]}>새 모임이 열리면 여기에 도착해요</Text>
                 {/* 열 수 없는 사람에게 '첫 모임 열기'는 막다른 길이다 — 버튼 자체를 그리지 않는다. */}
               </Animated.View>
             ) : visible.length === 0 ? (
@@ -386,7 +382,7 @@ export default function MeetupsScreen() {
                       {dateFmt.format(new Date(m.meetAt))} · {m.place}
                     </Text>
                     <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
-                      {feeLabel(m)} · 확정 {m.confirmedCount}/{m.capacity}명
+                      {feeLabel(m)} · {m.confirmedCount}/{m.capacity}명
                     </Text>
 
                     {/*
@@ -423,7 +419,7 @@ export default function MeetupsScreen() {
                   프롤로그는 소개팅 앱이기도 해요
                 </Text>
                 <Text style={[styles.guestInviteBody, { color: c.textSecondary }]}>
-                  하루에 한 사람, 같은 질문에 답한 사람이 소개돼요.{'\n'}지금 둘러보는 모임은 가입 없이도 계속 볼 수 있어요.
+                  하루에 한 사람, 같은 질문에 답한 사람이 소개돼요.
                 </Text>
                 <Text style={[styles.guestInviteCta, { color: c.primaryStrong }]}>프롤로그 시작하기 ›</Text>
               </Pressable>
@@ -437,7 +433,7 @@ export default function MeetupsScreen() {
                   hitSlop={6}
                   style={styles.sectionHead}
                 >
-                  <Text style={[styles.sectionEyebrow, { color: c.primaryStrong }]}>지난 모임</Text>
+                  <Text style={[styles.sectionEyebrow, { color: c.text }]}>지난 모임</Text>
                   <View style={styles.sectionToggle}>
                     <Text style={[styles.sectionCount, { color: c.textSecondary }]}>{history.length}</Text>
                     <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={15} color={c.textSecondary} />
@@ -585,10 +581,8 @@ export default function MeetupsScreen() {
             <View style={[styles.checkbox, { borderColor: c.border }, eligibleOnly && { backgroundColor: c.primary, borderColor: c.primary }]}>
               {eligibleOnly && <Text style={[styles.checkboxMark, { color: c.primaryText }]}>✓</Text>}
             </View>
-            <View style={styles.flex}>
-              <Text style={[styles.checkLabel, { color: c.text }]}>신청 가능한 모임만</Text>
-              <Text style={[styles.checkHint, { color: c.textSecondary }]}>모집 중이고, 나이·성별·키·직장인증 조건에 맞는 모임만 보여요</Text>
-            </View>
+            {/* 라벨만 둔다 — 조건을 다시 나열하면 필터가 설명서가 된다. */}
+            <Text style={[styles.checkLabel, styles.flex, { color: c.text }]}>신청 가능한 모임만</Text>
           </Pressable>
 
           <View style={styles.sheetFoot}>
@@ -618,8 +612,6 @@ export default function MeetupsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  skeletonSub: { marginTop: 10 },
   skeletonSearch: { marginTop: 18 },
   skeletonCardBody: { padding: 18 },
   skeletonCardMeta: { marginTop: 10 },
@@ -628,79 +620,71 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8 },
 
   header: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 18 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.3 },
-  subtitle: { fontSize: 14.5, marginTop: 4 },
-  hostBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 36, paddingLeft: 12, paddingRight: 15, borderRadius: Radius.pill },
-  hostBtnText: { fontSize: 14, fontWeight: '700' },
-  manageLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 10, alignSelf: 'flex-start' },
-  manageLinkText: { fontSize: 14, fontWeight: '700' },
+  title: { ...Type.display },
 
   card: { borderRadius: Radius.lg, padding: 18, marginBottom: 12 },
   cardClip: { padding: 0, overflow: 'hidden' },
   cardCover: { width: '100%', aspectRatio: 16 / 9 },
   cardBody: { padding: 18 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  cardTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
+  cardTitle: { ...Type.title, flexShrink: 1 },
   cardTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   coverTile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   coverTileEmoji: { fontSize: 20 },
   statusChip: { height: 24, paddingHorizontal: 10, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  statusChipText: { fontSize: 12.5, fontWeight: '700' },
-  cardMeta: { fontSize: 14, marginTop: 5 },
+  statusChipText: { ...Type.caption, fontWeight: '600' },
+  cardMeta: { ...Type.caption, marginTop: 5 },
   filterArea: { marginBottom: 14, gap: 10 },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderRadius: Radius.pill, paddingHorizontal: 14 },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  searchInput: { ...Type.body, flex: 1, paddingVertical: 0 },
   filterChips: { flexDirection: 'row', gap: 8 },
   searchRow: { flexDirection: 'row', gap: 8 },
   filterBtn: { width: 42, height: 42, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   filterBadge: { position: 'absolute', top: -3, right: -3, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  filterBadgeText: { fontSize: 10, fontWeight: '800' },
+  filterBadgeText: { fontSize: 10, lineHeight: 13, fontWeight: '600' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 34 },
-  sheetTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
-  sheetLabel: { fontSize: 13.5, fontWeight: '700', marginTop: 14, marginBottom: 8 },
+  sheetTitle: { ...Type.title, marginBottom: 6 },
+  sheetLabel: { ...Type.caption, fontWeight: '600', marginTop: 14, marginBottom: 8 },
   sheetLabelRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   calendar: { borderRadius: 12, overflow: 'hidden' },
   segment: { flexDirection: 'row', borderRadius: 12, padding: 4, minHeight: 44 },
   segmentItem: { flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  segmentText: { fontSize: 14 },
-  segmentTextActive: { fontWeight: '700' },
-  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 18 },
+  segmentText: { ...Type.label, fontWeight: '400' },
+  segmentTextActive: { fontWeight: '600' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
   checkbox: { width: 21, height: 21, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkboxMark: { fontSize: 13, fontWeight: '800' },
-  checkLabel: { fontSize: 15, fontWeight: '600' },
-  checkHint: { fontSize: 12.5, marginTop: 2, lineHeight: 17 },
+  checkboxMark: { fontSize: 13, lineHeight: 16, fontWeight: '600' },
+  checkLabel: { ...Type.body, fontWeight: '600' },
   sheetFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22 },
-  resetText: { fontSize: 14.5, textDecorationLine: 'underline' },
+  resetText: { ...Type.label, fontWeight: '400', textDecorationLine: 'underline' },
   applyBtn2: { height: 46, paddingHorizontal: 28, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   filterChip: { height: 32, paddingHorizontal: 13, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   regionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  filterChipText: { fontSize: 13.5, fontWeight: '700' },
+  filterChipText: { ...Type.caption, fontWeight: '600' },
 
-  applyBtnText: { fontSize: 15.5, fontWeight: '700' },
+  applyBtnText: { ...Type.button },
 
   section: { marginTop: 14, marginBottom: 26 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 10 },
-  sectionEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
+  sectionEyebrow: { ...Type.label },
   sectionToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionCount: { fontSize: 13.5, fontWeight: '600' },
+  sectionCount: { ...Type.caption, fontWeight: '600' },
   historyCard: { borderRadius: Radius.lg, paddingHorizontal: 16 },
   historyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
-  historyTitle: { fontSize: 15.5, fontWeight: '700' },
+  historyTitle: { ...Type.body, fontWeight: '600' },
   /** 접힌 줄에 붙는 한 줄 — 눌러볼 것이 있다는 사실 자체를 말해준다. */
-  historyPeek: { fontSize: 13, paddingBottom: 12, paddingRight: 24 },
+  historyPeek: { ...Type.caption, paddingBottom: 12, paddingRight: 24 },
   historyRecap: { paddingBottom: 16 },
-  historyMeta: { fontSize: 13, marginTop: 2 },
+  historyMeta: { ...Type.caption, marginTop: 2 },
   guestInvite: { marginTop: 28, marginHorizontal: 20, padding: 20, borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg },
-  guestInviteTitle: { fontSize: 17, fontWeight: '700' },
-  guestInviteBody: { fontSize: 14, lineHeight: 22, marginTop: 8 },
-  guestInviteCta: { fontSize: 14.5, fontWeight: '700', marginTop: 14 },
-  historyCount: { fontSize: 13.5, fontWeight: '700' },
+  guestInviteTitle: { ...Type.title },
+  guestInviteBody: { ...Type.body, marginTop: 8 },
+  guestInviteCta: { ...Type.label, marginTop: 14 },
+  historyCount: { ...Type.caption, fontWeight: '600' },
 
   emptyCard: { borderRadius: Radius.lg, alignItems: 'center', paddingVertical: 40, paddingHorizontal: 28 },
   emptyMark: { width: 54, height: 40, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  emptyText: { fontSize: 14.5, lineHeight: 22, textAlign: 'center', marginTop: 8 },
-  emptyHostBtn: { height: 44, paddingHorizontal: 26, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  emptyTitle: { ...Type.title, textAlign: 'center' },
+  emptyText: { ...Type.body, textAlign: 'center', marginTop: 8 },
 });

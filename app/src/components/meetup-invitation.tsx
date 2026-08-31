@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { JobBadge } from '@/components/job-badge';
 import { PhotoPager } from '@/components/photo-pager';
 import { RichText } from '@/components/rich-text';
-import { Radius, type ThemeColors } from '@/constants/theme';
+import { Radius, Type, type ThemeColors } from '@/constants/theme';
 import { conditionLabel, feeValue, type Meetup } from '@/lib/meetups';
 import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeRangeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
 
@@ -154,7 +154,7 @@ export function MeetupInvitation({
           {isPaid && (
             // 결제 로드맵 사전 고지 — 지금은 이체, 향후 앱 결제 전환(2026-08-24 결정).
             <Text style={[styles.infoHint, { color: c.textSecondary }]}>
-              참가비는 오픈채팅에서 모임장에게 직접 보내요. 앱에서 결제하는 방식을 준비하고 있어요.
+              참가비는 오픈채팅에서 모임장에게 직접 보내요.
             </Text>
           )}
         </View>
@@ -198,19 +198,17 @@ export function MeetupInvitation({
         <View style={styles.rsvp}>
           {meetup.isMine ? (
             <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>
-              {"내가 여는 모임이에요. 신청자 확인과 수정은 오른쪽 위 '관리'에서 해요."}
+              {"신청자 확인과 수정은 오른쪽 위 '관리'에서 해요."}
             </Text>
           ) : meetup.myStatus === 'CONFIRMED' ? (
             <>
-              <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>
-                자리가 확정됐어요. 당일 안내는 오픈채팅에서 이어져요.
-              </Text>
+              <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>당일 안내는 오픈채팅에서 이어져요.</Text>
               {meetup.kakaoLink && <BigButton label="오픈채팅 열기" onPress={() => onOpenKakao?.(meetup.kakaoLink!)} c={c} />}
             </>
           ) : meetup.myStatus === 'APPLIED' ? (
             <>
               <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>
-                참석 의사를 전했어요. 오픈채팅에서 인사를 남기면 모임장이 자리를 확정해 드려요.
+                오픈채팅에 인사를 남기면 모임장이 자리를 확정해요.
               </Text>
               {meetup.kakaoLink && <BigButton label="오픈채팅 열기" onPress={() => onOpenKakao?.(meetup.kakaoLink!)} c={c} />}
               <Pressable onPress={onCancel} hitSlop={8} disabled={busy} style={styles.cancelWrap}>
@@ -218,17 +216,17 @@ export function MeetupInvitation({
               </Pressable>
             </>
           ) : meetup.myStatus === 'DECLINED' ? (
-            <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>이번에는 함께하지 못했어요. 다음 모임에서 만나요.</Text>
+            <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>이번에는 함께하지 못했어요.</Text>
           ) : meetup.status === 'OPEN' ? (
             <>
               <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>
                 {remaining > 0 ? `자리가 ${remaining}개 남았어요. ` : ''}
-                신청하면 모임장의 오픈채팅이 열리고, 모임장이 확인하면 자리가 확정돼요.
+                신청하면 오픈채팅이 열려요.
               </Text>
               <BigButton label="참석할게요" onPress={() => onApply?.()} c={c} disabled={busy} primary />
             </>
           ) : (
-            <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>모집이 마감됐어요. 다음 모임을 기다려 주세요.</Text>
+            <Text style={[styles.rsvpNote, { color: c.textSecondary }]}>다음 모임을 기다려 주세요.</Text>
           )}
         </View>
       </Section>
@@ -400,57 +398,57 @@ const styles = StyleSheet.create({
   // ── 표지 ──
   headline: { alignItems: 'center', paddingTop: 36, paddingHorizontal: 32 },
   eyebrow: { fontSize: 11.5, fontWeight: '600', letterSpacing: 4 },
-  occurrence: { fontSize: 13, fontWeight: '700', marginTop: 10, letterSpacing: 0.3 },
+  occurrence: { ...Type.caption, fontWeight: '600', marginTop: 10, letterSpacing: 0.3 },
   title: { fontSize: 26, fontWeight: '700', textAlign: 'center', lineHeight: 36, marginTop: 14, letterSpacing: -0.3 },
   // 숫자 날짜 — 가늘고 넓게. 청첩장에서 제목 다음으로 큰 글자.
   dateNumerals: { fontSize: 22, fontWeight: '300', letterSpacing: 3, marginTop: 18, fontVariant: ['tabular-nums'] },
-  dateWords: { fontSize: 14, marginTop: 8, letterSpacing: 0.3, textAlign: 'center' },
+  dateWords: { ...Type.label, fontWeight: '400', marginTop: 8, letterSpacing: 0.3, textAlign: 'center' },
 
   // ── 절 ──
   section: { alignItems: 'center', paddingHorizontal: 24, marginTop: 56 },
   sectionEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 3 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 8, marginBottom: 20 },
+  sectionTitle: { ...Type.title, marginTop: 8, marginBottom: 20 },
 
   hostBlock: { alignItems: 'center', marginTop: 28 },
-  hostCaption: { fontSize: 12.5, letterSpacing: 2, marginBottom: 8 },
-  hostName: { fontSize: 19, fontWeight: '700' },
-  hostMeta: { fontSize: 13, marginTop: 5 },
+  hostCaption: { ...Type.caption, letterSpacing: 2, marginBottom: 8 },
+  hostName: { ...Type.title },
+  hostMeta: { ...Type.caption, marginTop: 5 },
 
   // ── 달력 ──
   calendar: { width: '100%', maxWidth: 320, gap: 4 },
   calRow: { flexDirection: 'row' },
   calCell: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' },
   calHead: { fontSize: 12, fontWeight: '600' },
-  calDay: { fontSize: 15 },
+  calDay: { ...Type.body },
   calMark: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  dday: { fontSize: 15, fontWeight: '600', marginTop: 22 },
+  dday: { ...Type.button, marginTop: 22 },
 
   // ── 오시는 길 ──
-  venueName: { fontSize: 19, fontWeight: '700', textAlign: 'center' },
-  venueAddress: { fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 21 },
+  venueName: { ...Type.title, textAlign: 'center' },
+  venueAddress: { ...Type.body, marginTop: 8, textAlign: 'center' },
   mapRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 16, borderRadius: Radius.pill, borderWidth: 1 },
-  mapBtnText: { fontSize: 14, fontWeight: '600' },
+  mapBtnText: { ...Type.label },
 
   // ── 안내 카드 ──
   infoCard: { width: '100%', borderRadius: Radius.lg, paddingHorizontal: 20, paddingVertical: 4 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingVertical: 14 },
-  infoLabel: { fontSize: 14, flexShrink: 0 },
-  infoValue: { fontSize: 15, fontWeight: '600', textAlign: 'right', flexShrink: 1 },
-  infoHint: { fontSize: 12.5, lineHeight: 18, paddingBottom: 14, paddingTop: 2 },
+  infoLabel: { ...Type.body, flexShrink: 0 },
+  infoValue: { ...Type.body, fontWeight: '600', textAlign: 'right', flexShrink: 1 },
+  infoHint: { ...Type.caption, paddingBottom: 14, paddingTop: 2 },
 
   // ── 함께하는 사람들 ──
   participantWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
   participantChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, height: 34, paddingHorizontal: 14, borderRadius: Radius.pill },
-  participantName: { fontSize: 14, fontWeight: '600' },
+  participantName: { ...Type.label },
 
   // ── RSVP ──
   rsvp: { width: '100%', alignItems: 'center', gap: 16 },
-  rsvpNote: { fontSize: 14.5, lineHeight: 22, textAlign: 'center', paddingHorizontal: 8 },
+  rsvpNote: { ...Type.body, textAlign: 'center', paddingHorizontal: 8 },
   bigBtn: { alignSelf: 'stretch', height: 52, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  bigBtnText: { fontSize: 16, fontWeight: '700' },
+  bigBtnText: { ...Type.button, fontSize: 16 },
   cancelWrap: { marginTop: -4 },
-  cancelLink: { fontSize: 14, textDecorationLine: 'underline' },
+  cancelLink: { ...Type.label, fontWeight: '400', textDecorationLine: 'underline' },
 
   // 전하기·따라가기 — 테두리 알약. 둘 다 있으면 한 줄에 서고, 좁으면 아래로 접힌다.
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: 24, marginTop: 40 },
@@ -458,6 +456,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     height: 44, paddingHorizontal: 20, borderRadius: Radius.pill, borderWidth: 1,
   },
-  pillText: { fontSize: 14.5, fontWeight: '700' },
+  pillText: { ...Type.label },
   closing: { fontSize: 12, textAlign: 'center', marginTop: 48, letterSpacing: 0.5 },
 });
