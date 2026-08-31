@@ -76,6 +76,34 @@ export const Fonts = Platform.select({
 });
 
 /**
+ * 타이포 스케일 — 화면마다 글자 크기를 새로 정하지 않기 위한 일곱 단계.
+ *
+ * 예전에는 12.5·13·13.5·14·14.5·15·15.5·16·17·17.5·18·19가 한 화면에 섞여 있었다.
+ * 반 픽셀씩 다른 크기는 "다른 글자"가 아니라 "어긋난 글자"로 읽혀, 카드와 카드가
+ * 서로 다른 앱에서 온 것처럼 보이게 한다. 굵기도 같은 이유로 셋만 쓴다 —
+ * 700은 화면에 하나(display)뿐이고, 강조는 600, 나머지는 기본 굵기다.
+ * (800은 쓰지 않는다. 굵기 차가 크면 화면이 소리를 지른다.)
+ *
+ * 쓰는 법: `title: { ...Type.title }`처럼 펼쳐 쓰고, 색은 그 자리에서 얹는다.
+ */
+export const Type = {
+  /** 화면 제목·오늘의 질문 — 한 화면에 하나. */
+  display: { fontSize: 26, lineHeight: 36, fontWeight: '700', letterSpacing: -0.4 },
+  /** 카드 제목·시트 제목. */
+  title: { fontSize: 18, lineHeight: 25, fontWeight: '600', letterSpacing: -0.2 },
+  /** 문단으로 읽는 글 — 답변·후기처럼 글이 주인공인 자리. */
+  read: { fontSize: 17, lineHeight: 27 },
+  /** 본문·입력칸. */
+  body: { fontSize: 15, lineHeight: 22 },
+  /** 버튼 글자. */
+  button: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  /** 링크·라벨. */
+  label: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  /** 보조 정보·눈썹·칩. */
+  caption: { fontSize: 13, lineHeight: 18 },
+} as const;
+
+/**
  * 라운드 스케일. 각진 사각형이 투박해 보여 네 단계로 통일한다.
  * (아직 예전 숫자를 직접 쓰는 화면이 남아 있다 — 손대는 파일부터 이 토큰으로 옮긴다)
  */
