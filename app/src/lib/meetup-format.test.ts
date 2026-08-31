@@ -1,4 +1,4 @@
-import { ddayLabel, mapQuery, meetupShareText, meetupShareUrl, numeralDate, timeLabel, venueOf, weekdayLabel } from './meetup-format';
+import { ddayLabel, mapQuery, meetupShareText, meetupShareUrl, numeralDate, timeLabel, timeRangeLabel, venueOf, weekdayLabel } from './meetup-format';
 import type { Meetup } from './meetups';
 
 /**
@@ -10,6 +10,26 @@ describe('숫자 날짜', () => {
   it('월·일을 두 자리로 맞춘다 — 자간이 고르게', () => {
     expect(numeralDate(new Date(2026, 8, 26))).toBe('2026. 09. 26');
     expect(numeralDate(new Date(2026, 11, 3))).toBe('2026. 12. 03');
+  });
+});
+
+describe('끝나는 시각', () => {
+  it('정하지 않은 모임은 시작 시각만 말한다', () => {
+    expect(timeRangeLabel(new Date(2026, 8, 26, 18, 0))).toBe('오후 6:00');
+    expect(timeRangeLabel(new Date(2026, 8, 26, 18, 0), null)).toBe('오후 6:00');
+  });
+
+  it('같은 오전/오후 안에서는 되풀이하지 않는다', () => {
+    expect(timeRangeLabel(new Date(2026, 8, 26, 18, 0), 120)).toBe('오후 6:00 – 8시');
+    expect(timeRangeLabel(new Date(2026, 8, 26, 18, 0), 90)).toBe('오후 6:00 – 7:30시');
+  });
+
+  it('오전에서 오후로 넘어가면 다시 적는다 — 안 적으면 같은 시각처럼 읽힌다', () => {
+    expect(timeRangeLabel(new Date(2026, 8, 26, 11, 0), 120)).toBe('오전 11:00 – 오후 1시');
+  });
+
+  it('자정을 넘기면 다음 날이라고 말한다', () => {
+    expect(timeRangeLabel(new Date(2026, 8, 26, 23, 0), 120)).toBe('오후 11:00 – 다음 날 오전 1시');
   });
 });
 

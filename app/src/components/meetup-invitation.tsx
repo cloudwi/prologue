@@ -7,7 +7,7 @@ import { PhotoPager } from '@/components/photo-pager';
 import { RichText } from '@/components/rich-text';
 import { Radius, type ThemeColors } from '@/constants/theme';
 import { conditionLabel, feeValue, type Meetup } from '@/lib/meetups';
-import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
+import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeRangeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
 
 /**
  * 모임 초대장 — 상세 화면과 모임 열기의 미리보기가 같은 것을 그린다.
@@ -85,7 +85,7 @@ export function MeetupInvitation({
         <Text style={[styles.title, { color: c.text }]}>{meetup.title}</Text>
         <Text style={[styles.dateNumerals, { color: c.text }]}>{numeralDate(meetDate)}</Text>
         <Text style={[styles.dateWords, { color: c.textSecondary }]}>
-          {weekdayLabel(meetDate)} {timeLabel(meetDate)}
+          {weekdayLabel(meetDate)} {timeRangeLabel(meetDate, meetup.durationMinutes)}
           {venue.name ? ` · ${venue.name}` : ''}
         </Text>
       </View>

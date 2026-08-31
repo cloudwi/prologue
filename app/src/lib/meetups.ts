@@ -27,6 +27,11 @@ export type Meetup = {
   recap?: string | null;
   recapImageUrls?: string[];
   meetAt: string;
+  /**
+   * 모임 소요 시간(분). 없으면 정하지 않은 모임 — 시작 시각만 보여준다.
+   * 끝나는 시각을 서버가 따로 주지 않는 이유는 백엔드 Meetup.durationMinutes에 적혀 있다.
+   */
+  durationMinutes?: number | null;
   place: string;
   /** 지도 링크(구버전 데이터) — 새 데이터는 placeAddress로 링크를 만든다. */
   placeUrl: string | null;

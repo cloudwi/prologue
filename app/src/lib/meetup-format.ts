@@ -57,6 +57,33 @@ export function timeLabel(d: Date): string {
 }
 
 /**
+ * "오후 6:00 – 8시" — 끝나는 시각까지 붙인 판.
+ *
+ * 처음 가는 자리에서 가장 먼저 계산하는 것이 "몇 시에 끝나지"다. 정하지 않은 모임은
+ * 지금까지처럼 시작 시각만 말한다.
+ *
+ * 오전/오후는 **넘어갈 때만** 다시 적는다. 매번 적으면 같은 말이 두 번이고,
+ * 한 번도 안 적으면 밤 11시에 시작한 모임이 11시에 끝난 것처럼 읽힌다.
+ * 날짜를 넘기면 그것도 말한다 — 다음 날 새벽 한 시는 오늘 한 시가 아니다.
+ *
+ * 서버(MeetupInvitationPage.whenLine)·콘솔 미리보기와 같은 규칙이다.
+ * 한쪽만 고치면 초대장이 두 얼굴이 된다.
+ */
+export function timeRangeLabel(start: Date, durationMinutes?: number | null): string {
+  const head = timeLabel(start);
+  if (!durationMinutes) return head;
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  const crossedDay = end.toDateString() !== start.toDateString();
+  const sameHalf = !crossedDay && (start.getHours() < 12) === (end.getHours() < 12);
+  const hours = end.getHours();
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  const minute = end.getMinutes() === 0 ? '' : `:${String(end.getMinutes()).padStart(2, '0')}`;
+  const ampm = hours < 12 ? '오전' : '오후';
+  const prefix = crossedDay ? `다음 날 ${ampm} ` : sameHalf ? '' : `${ampm} `;
+  return `${head} – ${prefix}${hour12}${minute}시`;
+}
+
+/**
  * 며칠 남았는지 — 청첩장의 "결혼식이 N일 남았습니다" 줄.
  *
  * 시각이 아니라 **날짜**로 센다. 오늘 밤 11시에 열리는 모임도 "오늘"이고,
@@ -102,7 +129,7 @@ export function meetupShareText(m: Meetup, now: Date = new Date()): string {
   if ((m.occurrenceTotal ?? 1) > 1) head.push(`${m.occurrence ?? 1}번째 만남`);
 
   const body = [
-    `${numeralDate(meetAt)} (${WEEKDAYS[meetAt.getDay()]}) ${timeLabel(meetAt)}`,
+    `${numeralDate(meetAt)} (${WEEKDAYS[meetAt.getDay()]}) ${timeRangeLabel(meetAt, m.durationMinutes)}`,
     [venue.name, venue.address].filter(Boolean).join(' · ') || null,
     feeLabel(m),
     conditionLabel(m),
