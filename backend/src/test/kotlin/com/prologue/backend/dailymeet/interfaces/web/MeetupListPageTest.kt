@@ -21,6 +21,7 @@ class MeetupListPageTest {
         fee: Int = 35000,
         placeName: String? = "1층 파란지붕 서로서가",
         placeAddress: String? = "서울 서초구 언남길 49",
+        coverUrls: List<String> = listOf("https://cdn.example.com/cover.jpg"),
     ) = MeetupInvitationView(
         meetupId = UUID.fromString("11111111-2222-3333-4444-555555555555"),
         title = title,
@@ -40,7 +41,7 @@ class MeetupListPageTest {
         minHeightMaleCm = null,
         minHeightFemaleCm = null,
         requireJobVerified = false,
-        coverUrls = listOf("https://cdn.example.com/cover.jpg"),
+        coverUrls = coverUrls,
         bodyImageUrls = emptyList(),
         hostNickname = "자상한구름",
         occurrence = 1,
@@ -95,6 +96,16 @@ class MeetupListPageTest {
 
         assertContains(out, "지금은 열린 모임이 없어요")
         assertFalse(out.contains(""""@type": "Event""""))
+    }
+
+    /** 76x95px로 보이는 썸네일에 원본을 내려받을 이유가 없다 — 목록은 모임이 늘수록 무거워진다. */
+    @Test
+    fun `줄 썸네일은 작게 줄여 받는다`() {
+        val stored = "https://x.supabase.co/storage/v1/object/public/profile-photos/a/b"
+        val out = html(listOf(view(coverUrls = listOf(stored))))
+
+        assertContains(out, "/storage/v1/render/image/public/profile-photos/a/b?width=240&amp;resize=contain")
+        assertFalse(out.contains("/storage/v1/object/public/"))
     }
 
     @Test

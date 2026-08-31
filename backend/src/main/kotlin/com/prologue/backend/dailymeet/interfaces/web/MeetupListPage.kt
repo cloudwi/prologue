@@ -100,7 +100,7 @@ object MeetupListPage {
         val place = listOfNotNull(v.placeName, v.placeAddress).joinToString(" · ")
         return """
             <a class="row" href="$web/m/${v.meetupId}">
-              ${v.coverUrls.firstOrNull()?.let { """<img src="${escape(it)}" alt="" loading="lazy" />""" } ?: ""}
+              ${v.coverUrls.firstOrNull()?.let { """<img src="${escape(ImageUrl.thumb(it, ImageUrl.ROW))}" alt="" loading="lazy" />""" } ?: ""}
               <div class="row-body">
                 <div class="row-title">${escape(v.title)}</div>
                 <div class="row-date">${escape(numeralDate(v.meetAt))} · ${escape(whenLine(v.meetAt))}</div>

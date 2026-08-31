@@ -109,7 +109,7 @@ object MeetupInvitationPage {
             """.trimIndent(),
             body = """
                 <main class="card">
-                  ${v.coverUrls.firstOrNull()?.let { """<img class="cover" src="${escape(it)}" alt="" />""" } ?: ""}
+                  ${v.coverUrls.firstOrNull()?.let { """<img class="cover" src="${escape(ImageUrl.thumb(it, ImageUrl.COVER))}" alt="" />""" } ?: ""}
                   <p class="eyebrow">INVITATION</p>
                   ${if (v.occurrenceTotal > 1) """<p class="occurrence">${v.occurrence}번째 만남</p>""" else ""}
                   <h1>${escape(v.title)}</h1>
@@ -287,8 +287,10 @@ object MeetupInvitationPage {
                 val index = match.groupValues[1].toIntOrNull()?.minus(1) ?: return@replace ""
                 val width = widthClass(match.groupValues[2])
                 val size = sizeAttrs(match.groupValues[3], match.groupValues[4])
+                // 꽉 찬 사진은 카드 폭까지 커지고, 폭을 정한 사진은 그 안에 머문다 — 받아올 크기도 그만큼 갈린다.
+                val thumbWidth = if (width.isEmpty()) ImageUrl.COVER else ImageUrl.INLINE
                 bodyImageUrls.getOrNull(index)
-                    ?.let { """</p><img class="body-photo$width" src="${escape(it)}"$size alt="" loading="lazy" /><p class="$cls">""" }
+                    ?.let { """</p><img class="body-photo$width" src="${escape(ImageUrl.thumb(it, thumbWidth))}"$size alt="" loading="lazy" /><p class="$cls">""" }
                     ?: ""
             }
             out.append(withPhotos)
@@ -324,7 +326,7 @@ object MeetupInvitationPage {
     private fun gallery(coverUrls: List<String>): String {
         val rest = coverUrls.drop(1)
         if (rest.isEmpty()) return ""
-        val items = rest.joinToString("") { """<img src="${escape(it)}" alt="" loading="lazy" />""" }
+        val items = rest.joinToString("") { """<img src="${escape(ImageUrl.thumb(it, ImageUrl.INLINE))}" alt="" loading="lazy" />""" }
         return """<div class="gallery">$items</div>"""
     }
 

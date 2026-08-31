@@ -401,6 +401,21 @@ import RichField from '../components/RichField.astro';
   let canCreate = true;
 
   const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  /*
+   * 미리보기 사진 — 화면에 필요한 크기만 받아온다.
+   *
+   * 서버의 ImageUrl.thumb과 같은 규칙이다. 미리보기가 원본을 받으면 콘솔에서만 1.9MB짜리
+   * 그림이 매 글자마다 다시 그려지고, 무엇보다 **모임장이 보는 초대장과 회원이 보는 초대장이
+   * 다른 파일이 된다** — 미리보기의 뜻이 거기 있는데.
+   *
+   * 올라가는 중인 blob: 주소는 우리 저장소 주소가 아니라서 손대지 않고 지나간다.
+   */
+  const OBJECT_PATH = '/storage/v1/object/public/';
+  const thumb = (url, width) => {
+    if (!url || !url.includes(OBJECT_PATH) || url.includes('?')) return url;
+    return `${url.replace(OBJECT_PATH, '/storage/v1/render/image/public/')}?width=${width}&resize=contain&quality=70`;
+  };
   const won = (n) => Number(n || 0).toLocaleString('ko-KR');
 
   const say = (t, bad = false) => {
@@ -1041,7 +1056,7 @@ import RichField from '../components/RichField.astro';
         const photoCls = sized.has(w) ? `inv-photo w${w}` : 'inv-photo';
         // 원본 크기를 알면 미리보기에서도 자리를 먼저 잡는다 — 서버 조판과 같은 규칙이다.
         const size = pw && ph ? ` width="${Number(pw)}" height="${Number(ph)}"` : '';
-        return `</p><img class="${photoCls}" src="${esc(url)}"${size} alt="" /><p class="${cls}">`;
+        return `</p><img class="${photoCls}" src="${esc(thumb(url, sized.has(w) ? 600 : 900))}"${size} alt="" /><p class="${cls}">`;
       }));
     }
     close();
@@ -1075,7 +1090,7 @@ import RichField from '../components/RichField.astro';
 
     return `
       ${m.coverUrls?.[0]
-        ? `<img class="ap-cover" src="${esc(m.coverUrls[0])}" alt="" />`
+        ? `<img class="ap-cover" src="${esc(thumb(m.coverUrls[0], 900))}" alt="" />`
         : '<div class="ap-cover blank">커버 사진이 없어요</div>'}
 
       <div class="ap-headline">
@@ -1244,7 +1259,7 @@ import RichField from '../components/RichField.astro';
         </div>
         <div class="app-chips"><em class="on">전체 1</em></div>
         <div class="app-card">
-          ${m.coverUrls?.[0] ? `<img src="${esc(m.coverUrls[0])}" alt="" />` : '<div class="app-cover-blank">커버 사진이 없어요</div>'}
+          ${m.coverUrls?.[0] ? `<img src="${esc(thumb(m.coverUrls[0], 600))}" alt="" />` : '<div class="app-cover-blank">커버 사진이 없어요</div>'}
           <div class="app-card-body">
             <div class="app-card-head">
               <div class="app-title">${esc(m.title)}</div>
@@ -1279,7 +1294,7 @@ import RichField from '../components/RichField.astro';
     $('phoneNote').textContent = '아직 만들기 전이라 폼의 값으로 그려본 초대장이에요. 앱의 모임 상세는 조판이 조금 달라요.';
     $('screen').innerHTML = `
       <div class="inv">
-        ${m.coverUrls?.[0] ? `<img class="inv-cover" src="${esc(m.coverUrls[0])}" alt="" />` : '<div class="app-cover-blank tall">커버 사진이 없어요</div>'}
+        ${m.coverUrls?.[0] ? `<img class="inv-cover" src="${esc(thumb(m.coverUrls[0], 900))}" alt="" />` : '<div class="app-cover-blank tall">커버 사진이 없어요</div>'}
         <div class="inv-body">
           <div class="inv-title">${esc(m.title)}</div>
           <div class="inv-date">${numeral(d)}</div>

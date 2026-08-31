@@ -355,6 +355,28 @@ class MeetupInvitationPageTest {
         assertEquals("무료", MeetupInvitationPage.feeLabel(view(fee = 0)))
     }
 
+    /**
+     * 커버도 본문 사진도 원본 주소로 나가면 안 된다 — 모임장이 올린 1.9MB 그림이
+     * 링크를 연 사람에게 통째로 날아간다(2026-08-31에 실제로 그랬다).
+     * 꽉 찬 사진과 폭을 정한 사진은 화면에서 크기가 다르니 받아오는 크기도 갈린다.
+     */
+    @Test
+    fun `사진은 화면 크기에 맞춰 줄여 받는다`() {
+        val stored = "https://x.supabase.co/storage/v1/object/public/profile-photos/a/b"
+        val out = html(
+            view(
+                coverUrls = listOf(stored, stored),
+                description = "[사진1]\n[사진2:75:800x1200]",
+                bodyImageUrls = listOf(stored, stored),
+            ),
+        )
+        assertFalse(out.contains("""src="$stored""""), "원본 주소를 그대로 내보내고 있다")
+        assertContains(out, "/storage/v1/render/image/public/profile-photos/a/b?width=900&amp;resize=contain")
+        assertContains(out, "/storage/v1/render/image/public/profile-photos/a/b?width=600&amp;resize=contain")
+        // 미리보기(og:image)만 원본이다 — 크롤러는 WebP를 받지 않는 곳이 있고, 한 번만 가져간다.
+        assertContains(out, """<meta property="og:image" content="$stored" />""")
+    }
+
     @Test
     fun `없는 모임은 사과 대신 다음 모임으로 보낸다`() {
         val out = MeetupInvitationPage.notFound("https://prologue.day")
