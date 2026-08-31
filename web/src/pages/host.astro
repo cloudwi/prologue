@@ -411,6 +411,44 @@ import RichField from '../components/RichField.astro';
    *
    * 올라가는 중인 blob: 주소는 우리 저장소 주소가 아니라서 손대지 않고 지나간다.
    */
+  /**
+   * 올리기 전에 줄인다 — 긴 변 1600px + JPEG 재인코딩.
+   *
+   * 앱은 진작 이러고 있었다(app/src/lib/photo.ts). **콘솔만 폰 사진 원본을 그대로 보내고
+   * 있었다** — 3~8MB짜리가 한국에서 싱가포르(Render)까지 가고, 서버는 그 바이트를 다시
+   * Base64로 부풀려 Vision 검수에 보내고, 통과하면 또 Supabase로 올린다. 한 장을 세 번
+   * 나르는 셈이라 몇십 초가 걸렸고, 화면에는 아무것도 안 떠서 오류로 보였다(2026-08-31).
+   *
+   * 실패하면 원본을 그대로 돌려준다 — **축소는 최적화지 업로드의 전제 조건이 아니다.**
+   * HEIC처럼 브라우저가 못 여는 형식은 여기서 조용히 지나가고, 서버가 안내 문구로 돌려보낸다.
+   */
+  const MAX_DIMENSION = 1600;
+  const JPEG_QUALITY = 0.82;
+
+  async function shrinkForUpload(file) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+      // 이미 작은 JPEG는 손대지 않는다 — 다시 구우면 얻는 것 없이 화질만 잃는다.
+      if (scale === 1 && file.type === 'image/jpeg') { bitmap.close?.(); return file; }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      const ctx = canvas.getContext('2d');
+      // 투명한 자리는 JPEG에서 검게 앉는다. 흰 바탕을 먼저 깔아야 알파가 있는 PNG도 멀쩡하다.
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close?.();
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', JPEG_QUALITY));
+      // 줄인 것이 더 크면(단색 도형 PNG가 그렇다) 원본이 낫다.
+      if (!blob || blob.size >= file.size) return file;
+      return new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
+    } catch {
+      return file;
+    }
+  }
+
   const OBJECT_PATH = '/storage/v1/object/public/';
   const thumb = (url, width) => {
     if (!url || !url.includes(OBJECT_PATH) || url.includes('?')) return url;
@@ -1533,7 +1571,7 @@ import RichField from '../components/RichField.astro';
       try {
         for (const job of jobs) {
           const fd = new FormData();
-          fd.append('file', job.file);
+          fd.append('file', await shrinkForUpload(job.file));
           try {
             const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
             editor.replaceImage(job.local, r.url);
@@ -1764,7 +1802,7 @@ import RichField from '../components/RichField.astro';
     $('coverCount').textContent = `${covers.length} / ${COVER_MAX}장`;
     $('coverPreview').innerHTML = covers
       .map(
-        (u, i) => `<div class="cover-item">
+        (u, i) => `<div class="cover-item${u.startsWith('blob:') ? ' pending' : ''}">
           <img src="${esc(u)}" alt="" />
           ${i === 0 ? '<em class="cover-badge">대표</em>' : ''}
           <div class="cover-actions">
@@ -1788,25 +1826,69 @@ import RichField from '../components/RichField.astro';
     }
   }
 
+  /**
+   * 커버 업로드 — 고른 즉시 그 자리에 앉히고, 여러 장은 동시에 올린다.
+   *
+   * 여기가 본문 사진(`upload`)과 달랐다. 본문은 blob: 주소로 먼저 그려두고 다 올라가면
+   * 주소만 갈아 끼우는데, **커버는 다 올라간 뒤에야 renderCovers를 불렀다.** 드롭존은
+   * 그대로고 미리보기는 비어 있으니, 누른 사람은 자기가 뭘 하긴 한 건지도 몰랐다.
+   * 게다가 한 장씩 차례로 기다려서 세 장이면 세 배였다. 둘 다 여기서 끝낸다.
+   *
+   * blob: 주소는 이 브라우저 안에서만 뜻이 있다. 그대로 저장되면 초대장에 영영 뜨지 않는
+   * 사진이 걸리므로, 다 올라갈 때까지 저장을 막는다(setCoversUploading + 저장 직전 확인).
+   */
   async function uploadCovers(files) {
     const room = COVER_MAX - covers.length;
     if (room <= 0) return say(`사진은 ${COVER_MAX}장까지예요.`, true);
     const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, room);
     if (!picked.length) return;
     if (files.length > picked.length) say(`${COVER_MAX}장까지만 올렸어요.`);
-    say('사진을 올리는 중…');
-    try {
-      for (const file of picked) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
-        covers.push(r.url);
-        renderCovers();
-      }
-      say(`사진 ${covers.length}장을 올렸어요.`);
-      preview(draftFromForm(), true);
-    } catch (err) { say(err.message, true); }
+
+    const jobs = picked.map((file) => {
+      const local = URL.createObjectURL(file);
+      covers.push(local);
+      return { file, local };
+    });
+    const redraw = () => { renderCovers(); preview(draftFromForm(), true); };
+    redraw();
+    setCoversUploading(true);
+    say(jobs.length > 1 ? `사진 ${jobs.length}장을 올리는 중…` : '사진을 올리는 중…');
+
+    let failure = null;
+    await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          const fd = new FormData();
+          fd.append('file', await shrinkForUpload(job.file));
+          const r = await api('/meetups/cover', { method: 'POST', body: fd, raw: true });
+          // 자리는 그때그때 다시 찾는다 — 다른 장이 먼저 실패해 빠지면 번호가 밀린다.
+          const at = covers.indexOf(job.local);
+          if (at >= 0) covers[at] = r.url;
+        } catch (err) {
+          // 올라가지 못한 자리는 걷어낸다 — 뜨지 않을 사진이 남아 있는 게 더 나쁘다.
+          const at = covers.indexOf(job.local);
+          if (at >= 0) covers.splice(at, 1);
+          failure = err;
+        } finally {
+          URL.revokeObjectURL(job.local);
+        }
+      }),
+    );
+
+    setCoversUploading(false);
+    redraw();
+    if (failure) say(failure.message, true);
+    else say(`사진 ${covers.length}장을 올렸어요.`);
   }
+
+  /** 올라가는 동안은 저장을 막는다 — blob: 주소가 서버로 넘어가면 초대장이 깨진다. */
+  function setCoversUploading(on) {
+    $('saveBtn').disabled = on;
+    $('dropzone').classList.toggle('busy', on);
+  }
+
+  /** 아직 이 브라우저 안에만 있는 사진이 남았는지. 저장 직전에 데이터 쪽에서 한 번 더 본다. */
+  const coversPending = () => covers.some((u) => u.startsWith('blob:'));
 
   $('f-cover').onchange = (e) => { uploadCovers([...e.target.files]); e.target.value = ''; };
 
@@ -1892,6 +1974,7 @@ import RichField from '../components/RichField.astro';
      * 영영 뜨지 않는 사진이 걸리는데, 그건 저장한 사람 눈에도 한참 뒤에야 보인다.
      */
     if (desc.hasPendingImages()) return say('사진을 다 올린 뒤에 저장해 주세요', true);
+    if (coversPending()) return say('커버 사진을 다 올린 뒤에 저장해 주세요', true);
     // 서버는 생성과 수정이 같은 본문을 받는다 — 다른 것은 주소와 방식뿐이다.
     const body = {
       title: d.title,
@@ -2110,7 +2193,8 @@ import RichField from '../components/RichField.astro';
   }
   @keyframes console-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) {
-    .console .btn .spin, .console .chip .spin { animation-duration: 2.4s; }
+    .console .btn .spin, .console .chip .spin,
+    .console .cover-item.pending::after { animation-duration: 2.4s; }
   }
   .console .btn:disabled, .console .chip:disabled { opacity: 0.72; cursor: default; }
 
@@ -2276,6 +2360,14 @@ import RichField from '../components/RichField.astro';
   .console .covers:empty { display: none; }
   .console .cover-item { position: relative; width: 116px; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; }
   .console .cover-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* 올라가는 중 — 흐리게 앉아 있으면 "무언가 되고 있다"가 한눈에 보인다. 본문 사진과 같은 신호다. */
+  .console .cover-item.pending img { opacity: 0.5; filter: blur(1.5px); }
+  .console .cover-item.pending::after {
+    content: ''; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px;
+    border: 2px solid var(--line); border-top-color: var(--terracotta); border-radius: 50%;
+    animation: console-spin 0.7s linear infinite;
+  }
+  .console .dropzone.busy { opacity: 0.6; pointer-events: none; }
   /* 첫 장이 초대장의 표지이자 카드의 얼굴이다 — 그 사실을 사진 위에 적어둔다. */
   .console .cover-badge {
     position: absolute; left: 6px; bottom: 6px; padding: 2px 8px; border-radius: 999px;
