@@ -25,11 +25,23 @@ type Props = {
   size?: 'body' | 'small';
   /** 사진을 누르면 크게 본다. 넘기지 않으면 누를 수 없다. */
   onPressImage?: (url: string, index: number) => void;
+  /**
+   * 접어서 보여줄 줄 수. 주면 **첫 글덩이까지만** 그리고 그 글을 이 줄 수로 자른다.
+   * 호스트가 쓰는 글은 길이를 정해줄 수 없어서, 펼치기 전에는 자리를 정해놓고 받는다.
+   */
+  maxLines?: number;
 };
 
-export function RichText({ text, images = [], c, size = 'body', onPressImage }: Props) {
-  const blocks = parseRich(text, images);
-  if (!blocks.length) return null;
+export function RichText({ text, images = [], c, size = 'body', onPressImage, maxLines }: Props) {
+  const all = parseRich(text, images);
+  if (!all.length) return null;
+
+  /*
+   * 접힌 상태에서는 첫 글덩이까지만 그린다.
+   * 높이로 자르면 사진이 반쯤 잘려 보기 흉하다 — 글줄 경계에서 끊는 편이 깔끔하다.
+   */
+  const limitAt = maxLines == null ? -1 : Math.max(0, all.findIndex((b) => b.kind === 'text'));
+  const blocks = maxLines == null ? all : all.slice(0, limitAt + 1);
 
   const type = size === 'small' ? styles.small : styles.body;
   /*
@@ -45,7 +57,11 @@ export function RichText({ text, images = [], c, size = 'body', onPressImage }: 
       {blocks.map((b, i) => {
         if (b.kind === 'text') {
           return (
-            <Text key={i} style={[type, { color: c.text, textAlign: b.align }]}>
+            <Text
+              key={i}
+              numberOfLines={maxLines != null && i === limitAt ? maxLines : undefined}
+              style={[type, { color: c.text, textAlign: b.align }]}
+            >
               {b.text}
             </Text>
           );
