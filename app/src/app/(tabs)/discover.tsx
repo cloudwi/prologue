@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -15,11 +15,18 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { JobBadge } from '@/components/job-badge';
 import { Avatar } from '@/components/avatar';
-import { BottomTabInset, Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { BottomTabInset, Fonts, Radius, Type, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
 import { answerToday, getPastPeers, getPeers, getToday, type Peer } from '@/lib/daily';
 import { getInkBalance } from '@/lib/ink';
@@ -230,14 +237,12 @@ function DiscoverBoard() {
               <View style={styles.topRow}>
                 <Skeleton c={c} width={92} height={14} />
               </View>
-              <Skeleton c={c} width={64} height={12} />
-              <SkeletonLines c={c} lines={2} lineHeight={26} gap={12} style={styles.skeletonQuestion} />
-              <Skeleton c={c} height={52} radius={Radius.md} style={styles.skeletonEntry} />
+              <SkeletonLines c={c} lines={2} lineHeight={28} gap={12} />
+              <Skeleton c={c} height={60} radius={Radius.lg} style={styles.skeletonEntry} />
             </View>
             <View style={styles.peerSection}>
               <View style={styles.peerHeader}>
-                <Skeleton c={c} width={72} height={13} />
-                <Skeleton c={c} width={104} height={13} />
+                <Skeleton c={c} width={72} height={14} />
               </View>
               <Skeleton c={c} height={260} radius={Radius.lg} />
             </View>
@@ -267,7 +272,7 @@ function DiscoverBoard() {
             >
               {/* 잉크 잔액 칩은 뺐다 — 잔액은 지갑에서만, 모자라면 그 순간 충전으로 보낸다(유저 결정 2026-08-24). */}
               <View style={styles.topRow}>
-                <Text style={[styles.dateCaption, { color: c.primaryStrong }]}>{todayCaption()}</Text>
+                <Text style={[styles.dateCaption, { color: c.textSecondary }]}>{todayCaption()}</Text>
                 {/*
                  * 잉크 잔액 — 결정을 재촉하지 않는 자리에만 둔다.
                  * 편지를 쓸지 말지 정하는 순간의 '(남은 잉크 N)'은 산수를 앞세우지만,
@@ -287,26 +292,16 @@ function DiscoverBoard() {
                   </Pressable>
                 )}
               </View>
-              <Text style={[styles.questionEyebrow, { color: c.textSecondary }]}>오늘의 질문</Text>
+              {/*
+                * 눈썹("오늘의 질문")은 뺐다 — 날짜 캡션이 이미 '오늘'을 말하고, 물음표로 끝나는 큰 글자가
+                * 질문이라는 걸 말한다. 같은 말을 두 번 하는 줄은 화면을 설명서로 만든다.
+                */}
               <Text style={[styles.question, { color: c.text, fontFamily: Fonts.serif }]}>{today?.content}</Text>
 
               {isEditing ? (
                 editorOpen ? (
-                  /*
-                   * 답변 종이 — 쓰는 모습이 저장 후 읽는 모습과 같다.
-                   * 표지 위에 흰 종이 한 장을 올리고, 그 안에서 왼쪽 테라코타 선 + 인용체로 쓴다.
-                   * 카운터·취소·저장은 종이 아래 한 줄에 모아 "폼"이 아니라 "한 장"으로 읽히게 한다.
-                   */
-                  <View
-                    style={[
-                      styles.sheet,
-                      { backgroundColor: c.backgroundElement },
-                      // 종이가 표지 위에 떠 있다 — 라이트는 그림자로, 그림자가 안 보이는 다크는 경계선 하나로.
-                      isDark ? { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border } : styles.sheetShadow,
-                    ]}
-                  >
+                  <AnswerSheet c={c} isDark={isDark}>
                     <View style={styles.sheetBody}>
-                      <View style={[styles.myAnswerRule, { backgroundColor: c.primary }]} />
                       <TextInput
                         value={draft}
                         onChangeText={setTyped}
@@ -321,80 +316,89 @@ function DiscoverBoard() {
                         style={[styles.input, { color: c.text, fontFamily: Fonts.serif }]}
                       />
                     </View>
-                    <View style={[styles.sheetFoot, { borderTopColor: c.border }]}>
+                    {/* 최소 분량까지 차오르는 선 — 규칙을 읽히는 대신 보이게 한다. */}
+                    <MinProgress length={draft.trim().length} c={c} />
+                    <View style={styles.sheetFoot}>
                       <AnswerCounter length={draft.trim().length} c={c} />
-                      <View style={styles.editorActions}>
+                      <View style={styles.rowActions}>
                         <Pressable onPress={cancelEdit} disabled={submitting} style={styles.cancel} hitSlop={6}>
-                          <Text style={{ color: c.textSecondary, fontSize: 15, fontWeight: '600' }}>취소</Text>
+                          <Text style={[styles.link, { color: c.textSecondary }]}>취소</Text>
                         </Pressable>
                         <Pressable
                           onPress={submit}
                           disabled={draft.trim().length < ANSWER_MIN || submitting}
-                          style={[styles.submit, { backgroundColor: c.primary, opacity: draft.trim().length < ANSWER_MIN || submitting ? 0.4 : 1 }]}
+                          style={[
+                            styles.submit,
+                            { backgroundColor: c.primary, opacity: draft.trim().length < ANSWER_MIN || submitting ? 0.35 : 1 },
+                          ]}
                         >
                           <Text style={[styles.submitText, { color: c.primaryText }]}>
-                            {submitting ? '저장 중...' : today?.answered ? '수정 완료' : '답변 남기기'}
+                            {submitting ? '저장 중' : today?.answered ? '수정 완료' : '남기기'}
                           </Text>
                         </Pressable>
                       </View>
                     </View>
-                  </View>
+                  </AnswerSheet>
                 ) : (
-                  // 입구 한 줄 — 빈 입력칸과 버튼이 늘 떠 있으면 화면이 폼처럼 보인다.
+                  /*
+                   * 입구 — 빈 입력칸과 버튼이 늘 떠 있으면 화면이 폼으로 읽힌다.
+                   * 대신 답이 놓일 자리에 **빈 종이 한 장**을 미리 깔아둔다(저장 후와 같은 면·같은 그림자).
+                   * 누르면 그 종이가 그 자리에서 펼쳐진다 — 새 화면으로 넘어가지 않는다.
+                   */
                   <Pressable
                     onPress={() => setComposing(true)}
                     accessibilityRole="button"
-                    style={({ pressed }) => [styles.composeEntry, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.7 : 1 }]}
+                    accessibilityLabel="오늘의 질문에 답 쓰기"
+                    style={({ pressed }) => [
+                      styles.composeEntry,
+                      { backgroundColor: c.backgroundElement },
+                      isDark ? { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border } : styles.sheetShadow,
+                      pressed && styles.composeEntryPressed,
+                    ]}
                   >
+                    <View style={[styles.composeIcon, { backgroundColor: c.primary + '1F' }]}>
+                      <Ionicons name="pencil" size={15} color={c.primaryStrong} />
+                    </View>
                     <Text style={[styles.composeEntryText, { color: c.textSecondary }]}>답을 적어보세요</Text>
-                    <Ionicons name="arrow-forward" size={16} color={c.primaryStrong} />
                   </Pressable>
                 )
               ) : (
-                <View style={styles.myAnswerBlock}>
-                  <View style={[styles.myAnswerRule, { backgroundColor: c.primary }]} />
-                  <View style={styles.flex}>
-                    <Text
-                      style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}
-                      numberOfLines={answerExpanded ? undefined : 4}
-                    >
-                      {today?.myAnswer}
+                <AnswerSheet c={c} isDark={isDark}>
+                  <Text
+                    style={[styles.myAnswerText, { color: c.text, fontFamily: Fonts.serif }]}
+                    numberOfLines={answerExpanded ? undefined : 5}
+                  >
+                    {today?.myAnswer}
+                  </Text>
+                  {(today?.myAnswer?.length ?? 0) > 120 && (
+                    <Pressable onPress={() => setAnswerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
+                      <Text style={[styles.link, { color: c.primaryStrong }]}>{answerExpanded ? '접기' : '더보기'}</Text>
+                    </Pressable>
+                  )}
+                  <View style={[styles.sheetFoot, styles.sheetFootRule, { borderTopColor: c.border }]}>
+                    <Text style={[styles.answeredTag, { color: c.textSecondary }]}>
+                      오늘 답변했어요{inkEarnedNote ? ` · 잉크 +${inkEarnedNote}` : ''}
                     </Text>
-                    {(today?.myAnswer?.length ?? 0) > 100 && (
-                      <Pressable onPress={() => setAnswerExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                        <Text style={{ color: c.primaryStrong, fontSize: 14, fontWeight: '600' }}>
-                          {answerExpanded ? '접기' : '더보기'}
-                        </Text>
+                    <View style={styles.rowActions}>
+                      <Pressable onPress={startEdit} hitSlop={8}>
+                        <Text style={[styles.link, { color: c.textSecondary }]}>수정</Text>
                       </Pressable>
-                    )}
-                    <View style={styles.answerActions}>
-                      <Text style={[styles.answeredTag, { color: c.primaryStrong }]}>
-                        ✓ 오늘 답변했어요{inkEarnedNote ? ` · 잉크 +${inkEarnedNote}` : ''}
-                      </Text>
-                      <View style={styles.answerLinks}>
-                        <Pressable onPress={startEdit} hitSlop={8}>
-                          <Text style={[styles.answerLink, { color: c.textSecondary }]}>수정</Text>
-                        </Pressable>
-                        <Text style={[styles.answerLinkDot, { color: c.textSecondary }]}>·</Text>
-                        <Pressable onPress={promoteToProfile} hitSlop={8}>
-                          <Text style={[styles.answerLink, { color: c.textSecondary }]}>프로필에 올리기</Text>
-                        </Pressable>
-                      </View>
+                      <Pressable onPress={promoteToProfile} hitSlop={8}>
+                        <Text style={[styles.link, { color: c.primaryStrong }]}>프로필에 올리기</Text>
+                      </Pressable>
                     </View>
                   </View>
-                </View>
+                </AnswerSheet>
               )}
             </Animated.View>
 
             {/* 오늘의 상대 — 하루 한 사람. 도착한 편지처럼, 크게 한 장. */}
             {/* 쓰는 동안은 아래를 흐린다 — 입력칸을 꾸미는 대신 주변을 가라앉혀 "지금은 쓰는 시간"을 만든다. */}
             <View style={[styles.peerSection, editorOpen && styles.dimmed]} pointerEvents={editorOpen ? 'none' : 'auto'}>
+              {/* 부제는 뺐다 — "답을 남기면 새로 도착해요"는 바로 아래 카드가 이미 말한다. */}
               <View style={styles.peerHeader}>
-                <Text style={[styles.peerEyebrow, { color: c.primaryStrong }]}>
+                <Text style={[styles.peerEyebrow, { color: c.text }]}>
                   {carriedOver ? '지난번에 만난 사람' : '오늘의 상대'}
-                </Text>
-                <Text style={[styles.peerSub, { color: c.textSecondary }]}>
-                  {carriedOver ? '답을 남기면 새로 도착해요' : '답을 남기면, 한 사람'}
                 </Text>
               </View>
 
@@ -408,23 +412,17 @@ function DiscoverBoard() {
                   <PeerCarousel peers={peersData!.peers} question={null} c={c} />
                   <Pressable onPress={() => setComposing(true)} hitSlop={8} style={styles.carryPrompt}>
                     <Text style={[styles.carryPromptText, { color: c.primaryStrong }]}>
-                      오늘의 질문에 답하고 새로운 사람 만나기 →
+                      답하고 새로운 사람 만나기 →
                     </Text>
                   </Pressable>
                 </>
               ) : !peersData || !peersData.answerUnlocked ? (
                 // 답을 남겨야 상대가 온다 — "후보가 없다"와 다른 상황이라 문구를 나눈다
-                <EmptyPeer
-                  c={c}
-                  title="답을 남기면 오늘의 한 사람이 도착해요"
-                  body="오늘의 질문에 답을 쓰는 순간, 질문에 답한 한 사람이 여기에 도착해요."
-                  action="답 쓰러 가기"
-                  onAction={() => setComposing(true)}
-                />
+                <EmptyPeer c={c} title="답을 남기면 오늘의 한 사람이 도착해요" action="답 쓰러 가기" onAction={() => setComposing(true)} />
               ) : peersData.peers.length === 0 ? (
                 // 하루 한 명이라 후보가 없는 날이 생긴다. 서버는 조회할 때마다 빈자리를 채우므로
                 // "오늘은 끝"이 아니라 "아직"이라는 걸 알려준다 — 저녁에 답한 사람이 생기면 그때 소개된다.
-                <EmptyPeer c={c} title="오늘은 아직 인연이 닿지 않았어요" body="새로 답을 남긴 분이 생기면 바로 소개해 드릴게요." />
+                <EmptyPeer c={c} title="오늘은 아직 인연이 닿지 않았어요" body="답을 남긴 분이 생기면 바로 소개해 드릴게요." />
               ) : (
                 <PeerCarousel peers={peersData.peers} question={today?.content ?? null} c={c} />
               )}
@@ -467,28 +465,75 @@ function DiscoverBoard() {
 }
 
 /**
- * 소개할 사람이 없을 때 — 빈 화면 대신 다음 행동 하나를 건넨다.
- * 답을 아직 안 썼으면 그 사이 할 일을 같이 알려준다.
+ * 답변 종이 — 쓰는 모습과 저장 후 읽는 모습이 **같은 한 장**이다.
+ *
+ * 예전에는 글 왼쪽에 테라코타 세로선을 세워 '내 목소리'를 표시했는데, 입력칸 왼쪽의
+ * 굵은 세로 막대는 거대한 커서로 읽혀 "어디에 쓰는 거냐"는 말을 들었다(2026-08-31).
+ * 표시는 종이 자체가 한다 — 선은 없앴다.
  */
-/**
- * 답변 종이 아래 안내 한 줄.
- * 비어 있을 땐 규칙을, 모자랄 땐 "앞으로 몇 자"를, 넘겼으면 글자 수만 조용히 보여준다.
- * "15자 이상 · 3/300"처럼 숫자를 두 개 나란히 두면 폼 검증 메시지처럼 읽힌다.
- */
-function AnswerCounter({ length, c }: { length: number; c: ThemeColors }) {
-  if (length === 0) {
-    return <Text style={[styles.counter, { color: c.textSecondary }]}>{ANSWER_MIN}자부터 남길 수 있어요</Text>;
-  }
-  if (length < ANSWER_MIN) {
-    return <Text style={[styles.counter, { color: c.primaryStrong, fontWeight: '600' }]}>앞으로 {ANSWER_MIN - length}자</Text>;
-  }
+function AnswerSheet({ c, isDark, children }: { c: ThemeColors; isDark: boolean; children: ReactNode }) {
   return (
-    <Text style={[styles.counter, { color: length >= ANSWER_MAX - 20 ? c.primaryStrong : c.textSecondary }]}>
-      {length}/{ANSWER_MAX}
-    </Text>
+    <Animated.View
+      entering={FadeInDown.duration(240)}
+      style={[
+        styles.sheet,
+        { backgroundColor: c.backgroundElement },
+        // 종이가 표지 위에 떠 있다 — 라이트는 그림자로, 그림자가 안 보이는 다크는 경계선 하나로.
+        isDark ? { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border } : styles.sheetShadow,
+      ]}
+    >
+      {children}
+    </Animated.View>
   );
 }
 
+/**
+ * 최소 분량까지 차오르는 선.
+ *
+ * "10자부터 남길 수 있어요"를 읽게 하는 대신, 종이 아래 선이 차오르는 걸 보게 한다.
+ * 다 차면 선은 사라진다 — 더 알려줄 게 없어서다. 그 자리에서 저장 버튼이 켜진다.
+ */
+function MinProgress({ length, c }: { length: number; c: ThemeColors }) {
+  const ratio = Math.min(1, length / ANSWER_MIN);
+  const fill = useSharedValue(ratio);
+  const reached = useRef(ratio >= 1);
+
+  useEffect(() => {
+    fill.value = withTiming(ratio, { duration: 200 });
+    // 문턱을 넘는 순간에만 한 번 — 글자마다 울리면 앱이 수다스러워진다.
+    if (ratio >= 1 && !reached.current) haptics.select();
+    reached.current = ratio >= 1;
+  }, [ratio, fill]);
+
+  const animated = useAnimatedStyle(() => ({
+    width: `${fill.value * 100}%`,
+    opacity: interpolate(fill.value, [0, 0.85, 1], [1, 1, 0]),
+  }));
+
+  return (
+    <View style={[styles.progressTrack, { backgroundColor: c.border }]}>
+      <Animated.View style={[styles.progressFill, { backgroundColor: c.primary }, animated]} />
+    </View>
+  );
+}
+
+/**
+ * 종이 아래 왼쪽 한 줄. 차오르는 선이 진행을 이미 말하므로 글자는 최소한만 남긴다.
+ * 숫자를 두 개 나란히 두지 않는다 — 상한이 가까울 때만 분수로 바꾼다.
+ */
+function AnswerCounter({ length, c }: { length: number; c: ThemeColors }) {
+  const text =
+    length < ANSWER_MIN
+      ? length === 0
+        ? `${ANSWER_MIN}자부터`
+        : `앞으로 ${ANSWER_MIN - length}자`
+      : length > ANSWER_MAX - 40
+        ? `${length}/${ANSWER_MAX}`
+        : `${length}자`;
+  return <Text style={[styles.counter, { color: c.textSecondary }]}>{text}</Text>;
+}
+
+/** 소개할 사람이 없을 때 — 설명 대신 다음 행동 하나를 건넨다. */
 function EmptyPeer({
   c,
   title,
@@ -498,7 +543,7 @@ function EmptyPeer({
 }: {
   c: ThemeColors;
   title: string;
-  body: string;
+  body?: string;
   action?: string;
   onAction?: () => void;
 }) {
@@ -506,7 +551,7 @@ function EmptyPeer({
     <View style={[styles.peerCard, styles.emptyCard, { backgroundColor: c.backgroundElement }]}>
       <Image source={require('@/assets/images/brand-mark.png')} style={styles.emptyMark} contentFit="contain" />
       <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>{title}</Text>
-      <Text style={[styles.emptyBody, { color: c.textSecondary }]}>{body}</Text>
+      {body ? <Text style={[styles.emptyBody, { color: c.textSecondary }]}>{body}</Text> : null}
       {action && onAction ? (
         <Pressable onPress={onAction} hitSlop={8} style={styles.emptyAction}>
           <Text style={[styles.emptyActionText, { color: c.primaryStrong }]}>{action} →</Text>
@@ -601,7 +646,7 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
                 </Text>
                 {(peer.peerAnswer?.length ?? 0) > 140 && (
                   <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} style={styles.moreBtn}>
-                    <Text style={{ color: c.primaryStrong, fontSize: 14, fontWeight: '600' }}>{expanded ? '접기' : '더보기'}</Text>
+                    <Text style={[styles.link, { color: c.primaryStrong }]}>{expanded ? '접기' : '더보기'}</Text>
                   </Pressable>
                 )}
               </>
@@ -668,7 +713,7 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
           <View style={styles.peerChips}>
             {keywords.map((k) => (
               <View key={k} style={[styles.peerChip, { borderColor: c.border }]}>
-                <Text style={{ color: c.textSecondary, fontSize: 13 }}>{k}</Text>
+                <Text style={[styles.peerChipText, { color: c.textSecondary }]}>{k}</Text>
               </View>
             ))}
           </View>
@@ -681,103 +726,99 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingTop: 8 }, // 아래 여백은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
-  // 첫 로딩 자리 표시 — 실제 조판(질문 27/38, 입구 52)과 같은 자리에 놓는다.
-  skeletonQuestion: { marginTop: 8 },
-  skeletonEntry: { marginTop: 22 },
+  skeletonEntry: { marginTop: 24 },
 
   // ── 오늘의 표지 ──
   // 화면 가장자리까지 면을 내어 "카드"가 아니라 "표지"로 읽히게 한다. 색은 테라코타 8% 한 겹뿐.
-  cover: { marginHorizontal: -20, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 26, borderBottomLeftRadius: Radius.lg + 8, borderBottomRightRadius: Radius.lg + 8 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 },
-  dateCaption: { fontSize: 13.5, fontWeight: '700', letterSpacing: 0.3 },
+  cover: {
+    marginHorizontal: -20,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 28,
+    borderBottomLeftRadius: Radius.lg + 8,
+    borderBottomRightRadius: Radius.lg + 8,
+  },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  // 날짜는 회색으로 둔다 — 테라코타는 누를 수 있는 것에만.
+  dateCaption: { ...Type.caption, fontWeight: '600' },
   inkChip: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 26, paddingHorizontal: 9, borderRadius: Radius.pill },
-  inkChipText: { fontSize: 13.5, fontWeight: '700' },
-  questionEyebrow: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, marginBottom: 8 },
-  // 질문이 곧 헤더 — 크게, 왼쪽 정렬, 줄 간격 넉넉히.
-  question: { fontSize: 27, fontWeight: '700', lineHeight: 38, letterSpacing: -0.3 },
+  inkChipText: { ...Type.caption, fontWeight: '600' },
+  // 질문이 곧 헤더 — 화면에서 700 굵기를 쓰는 유일한 자리.
+  question: { ...Type.display },
 
-  composeEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, height: 52, paddingHorizontal: 18, borderRadius: Radius.md },
-  composeEntryText: { fontSize: 16 },
-  // 답변 종이 — 표지 위 흰 면 한 장. 글줄은 저장 후의 내 답(17.5/27)과 같은 리듬.
-  sheet: { marginTop: 20, borderRadius: Radius.lg, paddingTop: 18, paddingHorizontal: 20 }, // overflow hidden 금지 — iOS에서 그림자가 잘린다
+  // ── 답변 ──
+  // 입구 — 답이 놓일 자리에 미리 깔아둔 빈 종이.
+  composeEntry: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 24, height: 60, paddingHorizontal: 18, borderRadius: Radius.lg },
+  composeEntryPressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+  composeIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  composeEntryText: { ...Type.body },
+  // 답변 종이 — 쓸 때도 읽을 때도 같은 한 장. overflow hidden 금지(iOS에서 그림자가 잘린다).
+  sheet: { marginTop: 24, borderRadius: Radius.lg, paddingTop: 18, paddingHorizontal: 20 },
   sheetShadow: { shadowColor: '#1B2126', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
-  sheetBody: { flexDirection: 'row', gap: 14, paddingBottom: 12 },
-  input: { flex: 1, minHeight: 27 * 4, fontSize: 17.5, lineHeight: 27, padding: 0, paddingTop: 0, textAlignVertical: 'top' },
-  sheetFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: 12 },
-  editorActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  counter: { fontSize: 13.5 },
+  sheetBody: { paddingBottom: 14 },
+  input: { ...Type.read, minHeight: 27 * 4, padding: 0, paddingTop: 0, textAlignVertical: 'top' },
+  progressTrack: { height: 2, marginHorizontal: -20, overflow: 'hidden' },
+  progressFill: { height: 2 },
+  sheetFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, paddingVertical: 12 },
+  sheetFootRule: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14 },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  counter: { ...Type.caption },
   cancel: { padding: 4 },
-  submit: { height: 38, paddingHorizontal: 16, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  submitText: { fontSize: 15, fontWeight: '700' },
-
-  // 내 답 — 질문 아래 인용처럼. 왼쪽 테라코타 선 한 줄이 "내 목소리"라는 표시.
-  myAnswerBlock: { flexDirection: 'row', marginTop: 20, gap: 14 },
-  myAnswerRule: { width: 2, borderRadius: 1, marginTop: 4, marginBottom: 4 },
-  myAnswerText: { fontSize: 17.5, lineHeight: 27 },
+  submit: { height: 40, paddingHorizontal: 18, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  submitText: { ...Type.button },
+  myAnswerText: { ...Type.read },
   moreBtn: { marginTop: 8, alignSelf: 'flex-start' },
-  answerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, flexWrap: 'wrap', gap: 6 },
-  answeredTag: { fontSize: 13.5, fontWeight: '700' },
-  answerLinks: { flexDirection: 'row', alignItems: 'center' },
-  answerLink: { fontSize: 14, fontWeight: '600' },
-  answerLinkDot: { marginHorizontal: 7, fontSize: 14 },
+  answeredTag: { ...Type.caption, fontWeight: '600' },
+  /** 누를 수 있는 글자는 전부 이 하나 — 수정·더보기·취소가 서로 다른 크기였다. */
+  link: { ...Type.label },
 
   // ── 오늘의 상대 ──
-  peerSection: { marginTop: 30 },
+  peerSection: { marginTop: 32 },
   dimmed: { opacity: 0.35 },
-  peerHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14, paddingHorizontal: 2 },
-  peerEyebrow: { fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
-  peerSub: { fontSize: 13.5 },
+  peerHeader: { marginBottom: 12, paddingHorizontal: 2 },
+  peerEyebrow: { ...Type.label },
   // 카드가 화면 가장자리 밑으로 흐르게 좌우 패딩을 상쇄한다 — 옆 카드가 살짝 보이는 게 넘길 수 있다는 신호.
   carouselScroll: { marginHorizontal: -20, overflow: 'visible' },
   carouselContent: { paddingHorizontal: 20, gap: 12 },
   peerCard: { borderRadius: Radius.lg, overflow: 'hidden' },
   peerJobBadge: { marginTop: 6 },
   peerAnswerBlock: { padding: 20, paddingBottom: 18 },
-  peerAnswerQuestion: { fontSize: 13.5, lineHeight: 19, marginBottom: 8 },
-  peerAnswer: { fontSize: 18, lineHeight: 27, fontWeight: '500' },
-  // 가려진 답변의 스켈레톤 — 글줄(lineHeight 27)과 같은 간격으로 세 줄.
-  maskPanel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 26,
-    borderRadius: 14,
-  },
-  revealHintText: { fontSize: 14.5, fontWeight: '700' },
+  peerAnswerQuestion: { ...Type.caption, marginBottom: 8 },
+  peerAnswer: { ...Type.read },
+  maskPanel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 26, borderRadius: Radius.sm + 2 },
+  revealHintText: { ...Type.label },
   // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
   peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
   photoBadge: { position: 'absolute', right: 10, bottom: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.pill, opacity: 0.92 },
-  photoBadgeText: { fontSize: 12, fontWeight: '700' },
+  photoBadgeText: { ...Type.caption, fontWeight: '600' },
   peerBody: { padding: 18, paddingTop: 16 },
   peerHead: { flexDirection: 'row', alignItems: 'center' },
-  peerHeadBody: { flex: 1, marginLeft: 0 },
-  peerName: { fontSize: 19, fontWeight: '700' },
-  peerMeta: { fontSize: 14, marginTop: 2 },
+  peerHeadBody: { flex: 1 },
+  peerName: { ...Type.title },
+  peerMeta: { ...Type.caption, marginTop: 2 },
   detailCta: { height: 34, paddingHorizontal: 14, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  detailCtaText: { fontSize: 14, fontWeight: '700' },
-  peerBio: { fontSize: 15, lineHeight: 22, marginTop: 12 },
+  detailCtaText: { ...Type.label },
+  peerBio: { ...Type.body, marginTop: 12 },
   peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   peerChip: { paddingHorizontal: 10, height: 26, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  peerChipText: { ...Type.caption },
 
-  // 기다림·빈 상태 — 박스 대신 마크 한 점과 문장.
-  // 빈 상태 카드 — 상대 카드와 같은 면 위에 마크 하나와 두 줄.
+  // 빈 상태 — 상대 카드와 같은 면 위에 마크 하나와 한 줄.
   emptyCard: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 28 },
   emptyMark: { width: 54, height: 40, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center', lineHeight: 26 },
-  emptyBody: { fontSize: 14.5, textAlign: 'center', lineHeight: 22, marginTop: 8 },
+  emptyTitle: { ...Type.title, textAlign: 'center' },
+  emptyBody: { ...Type.body, textAlign: 'center', marginTop: 8 },
   emptyAction: { marginTop: 14, padding: 4 },
-  emptyActionText: { fontSize: 15, fontWeight: '700' },
+  emptyActionText: { ...Type.button },
   // 이월된 카드 아래 한 줄 — 다음 행동 하나.
   carryPrompt: { alignSelf: 'center', marginTop: 14, padding: 4 },
-  carryPromptText: { fontSize: 15, fontWeight: '700' },
+  carryPromptText: { ...Type.button },
 
   // 지난 상대 — 한 줄 링크.
   pastEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 26, paddingVertical: 8 },
   pastFaces: { flexDirection: 'row' },
   pastFace: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   pastFaceOverlap: { marginLeft: -8 },
-  pastEntryLabel: { fontSize: 14.5, fontWeight: '600' },
+  pastEntryLabel: { ...Type.label },
 });
