@@ -111,6 +111,14 @@ class Meetup private constructor(
     recapImageUrls: List<String> = emptyList(),
     recapStatus: RecapStatus = RecapStatus.NONE,
     recapReviewNote: String? = null,
+    /**
+     * 모임 소요 시간(분). null이면 정하지 않은 것 — 시작 시각만 보여준다.
+     *
+     * 끝나는 시각을 따로 받지 않는다. 모임장은 "두 시간"으로 생각하지 "여덟 시"로 생각하지
+     * 않고, 날짜·시간을 두 번 받으면 종료가 시작보다 앞선 모임이라는 있을 수 없는 상태가
+     * 생긴다. 보여줄 때 더하면 되고, 자정을 넘겨도 계산이 알아서 처리한다.
+     */
+    val durationMinutes: Int? = null,
 ) {
     var status: MeetupStatus = status
         private set
@@ -323,6 +331,10 @@ class Meetup private constructor(
 
         /** 대기 줄의 최대 길이 — 이보다 길면 기다림이 아니라 방치다. */
         private const val WAITLIST_MAX = 200
+
+        /** 모임 소요 시간의 범위 — 30분보다 짧거나 12시간보다 긴 자리는 오타에 가깝다. */
+        private const val DURATION_MIN = 30
+        private const val DURATION_MAX = 12 * 60
         private const val REVIEW_NOTE_MAX = 300
 
         /** 후기 글의 최대 길이 — 소개와 같다. 읽는 자리도, 조판도 같으니 길이만 다를 이유가 없다. */
@@ -358,6 +370,8 @@ class Meetup private constructor(
             /** 이어 여는 회차면 그 모임의 seriesId. null이면 새 모임(자기 혼자짜리 회차). */
             seriesId: UUID? = null,
             now: Instant = Instant.now(),
+            /** 소요 시간(분). 안 주면 정하지 않은 모임 — 옛 앱은 보내지 않는다(가산적 변경). */
+            durationMinutes: Int? = null,
         ): Meetup {
             val cleanTitle = title.trim()
             if (cleanTitle.isBlank()) throw DailyMeetException("모임 이름을 적어주세요")
@@ -401,6 +415,9 @@ class Meetup private constructor(
                 throw DailyMeetException("소개 사진 주소가 올바르지 않아요")
             }
             if (meetAt.isBefore(now)) throw DailyMeetException("모임 일시는 미래여야 해요")
+            if (durationMinutes != null && (durationMinutes < DURATION_MIN || durationMinutes > DURATION_MAX)) {
+                throw DailyMeetException("모임 시간은 ${DURATION_MIN}분에서 ${DURATION_MAX / 60}시간 사이로 정해주세요")
+            }
             val cleanLink = kakaoLink.trim()
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
             if (!cleanLink.startsWith("https://")) throw DailyMeetException("카카오 오픈채팅 링크(https://)를 넣어주세요")
@@ -412,6 +429,7 @@ class Meetup private constructor(
                 requireJobVerified, cleanEmoji, cleanColor, cleanCovers, cleanBodyImages, cleanLink,
                 // 새 모임은 언제나 심사부터 — 승인 전에는 목록에 실리지 않는다.
                 MeetupStatus.PENDING, null, now,
+                durationMinutes = durationMinutes,
             )
         }
 
@@ -446,6 +464,7 @@ class Meetup private constructor(
             coverUrls: List<String>,
             bodyImageUrls: List<String> = emptyList(),
             kakaoLink: String,
+            durationMinutes: Int? = null,
         ): Meetup {
             if (existing.status == MeetupStatus.DONE || existing.status == MeetupStatus.CANCELED) {
                 throw DailyMeetException("끝난 모임은 수정할 수 없어요")
@@ -455,6 +474,7 @@ class Meetup private constructor(
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink,
+                durationMinutes = durationMinutes,
             )
             return Meetup(
                 // 수정은 회차를 옮기지 않는다 — 회차를 잇는 건 '다시 열기'뿐이다.
@@ -467,6 +487,7 @@ class Meetup private constructor(
                 fresh.requireJobVerified, fresh.emoji, fresh.color, fresh.coverUrls, fresh.bodyImageUrls,
                 // 고친 모임은 다시 심사를 받는다 — 승인은 그때 읽은 그 글에 준 것이다.
                 fresh.kakaoLink, MeetupStatus.PENDING, null, existing.createdAt,
+                durationMinutes = fresh.durationMinutes,
             )
         }
 
@@ -506,12 +527,13 @@ class Meetup private constructor(
             recapImageUrls: List<String> = emptyList(),
             recapStatus: RecapStatus = RecapStatus.NONE,
             recapReviewNote: String? = null,
+            durationMinutes: Int? = null,
         ): Meetup = Meetup(
             id, seriesId, hostAccountId, title, description, meetAt, place, placeUrl, placeAddress,
             capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
             minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
             requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, status, reviewNote, createdAt,
-            recap, recapImageUrls, recapStatus, recapReviewNote,
+            recap, recapImageUrls, recapStatus, recapReviewNote, durationMinutes,
         )
 
         /**

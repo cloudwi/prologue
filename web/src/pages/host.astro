@@ -155,6 +155,22 @@ import RichField from '../components/RichField.astro';
               <div class="grid2">
                 <label class="field"><span>날짜 *</span><input id="f-date" type="date" /></label>
                 <label class="field"><span>시간 *</span><input id="f-time" type="time" step="900" /></label>
+                <!--
+                  끝나는 시각이 아니라 소요 시간을 묻는다. 모임장은 "두 시간"으로 생각하지
+                  "여덟 시"로 생각하지 않고, 날짜·시간을 두 번 받으면 그만큼 틀릴 자리가 는다.
+                  '정하지 않음'을 남겨두는 이유는, 아직 안 정한 것과 두 시간인 것이 다르기 때문이다.
+                -->
+                <label class="field"><span>몇 시간</span>
+                  <select id="f-duration">
+                    <option value="">정하지 않음</option>
+                    <option value="60">1시간</option>
+                    <option value="90">1시간 30분</option>
+                    <option value="120" selected>2시간</option>
+                    <option value="150">2시간 30분</option>
+                    <option value="180">3시간</option>
+                    <option value="240">4시간</option>
+                  </select>
+                </label>
               </div>
               <!--
                 주소는 손으로 적게 두지 않는다. 초대장의 지도와 길찾기가 이 문자열 하나에
@@ -675,6 +691,22 @@ import RichField from '../components/RichField.astro';
     return `${h < 12 ? '오전' : '오후'} ${h % 12 === 0 ? 12 : h % 12}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
   const numeral = (d) => `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
+  /*
+   * "오후 6:00 – 8시" — 서버(MeetupInvitationPage.whenLine)와 같은 규칙이다.
+   * 오전/오후는 넘어갈 때만 다시 적고, 날짜를 넘기면 그것도 말한다.
+   */
+  const untilLabel = (start, minutes) => {
+    if (!minutes) return '';
+    const end = new Date(start.getTime() + minutes * 60000);
+    const crossedDay = end.toDateString() !== start.toDateString();
+    const sameHalf = !crossedDay && (start.getHours() < 12) === (end.getHours() < 12);
+    const h = end.getHours();
+    const ampm = h < 12 ? '오전' : '오후';
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    const minute = end.getMinutes() === 0 ? '' : `:${String(end.getMinutes()).padStart(2, '0')}`;
+    const head = crossedDay ? `다음 날 ${ampm} ` : sameHalf ? '' : `${ampm} `;
+    return ` – ${head}${hour12}${minute}시`;
+  };
   /*
    * 아래 넷은 앱(meetup-format.ts·meetups.ts)의 같은 이름 함수를 그대로 옮긴 것이다.
    *
@@ -1274,6 +1306,7 @@ import RichField from '../components/RichField.astro';
       title: $('f-title').value.trim() || '모임 이름',
       description: desc.getText().trim(),
       meetAt: date && time ? `${date}T${time}:00+09:00` : new Date().toISOString(),
+      durationMinutes: Number($('f-duration').value) || null,
       place: $('f-place').value.trim() || '장소',
       placeAddress: $('f-address').value.trim() || null,
       capacity: Number($('f-capacity').value) || 8,
@@ -1397,7 +1430,7 @@ import RichField from '../components/RichField.astro';
         <div class="inv-body">
           <div class="inv-title">${esc(m.title)}</div>
           <div class="inv-date">${numeral(d)}</div>
-          <div class="inv-meta">${'일월화수목금토'[d.getDay()]}요일 ${tf(d)}</div>
+          <div class="inv-meta">${'일월화수목금토'[d.getDay()]}요일 ${tf(d)}${untilLabel(d, m.durationMinutes)}</div>
           <div class="inv-dday">${dday(d)}</div>
           ${greetingHtml(m.description, m.bodyImageUrls)}
           <div class="inv-info">
@@ -1442,6 +1475,8 @@ import RichField from '../components/RichField.astro';
     set('f-title', m?.title ?? '');
     set('f-date', d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '');
     set('f-time', d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '');
+    // 정한 적 없는 모임은 '정하지 않음'으로 — 기본값 2시간을 슬쩍 끼워 넣으면 없던 약속이 생긴다.
+    set('f-duration', m ? (m.durationMinutes ?? '') : 120);
     set('f-address', m?.placeAddress ?? '');
     set('f-place', detail);
     set('f-capacity', m?.capacity ?? 8);
@@ -1847,7 +1882,7 @@ import RichField from '../components/RichField.astro';
   $('f-jobVerified').addEventListener('change', () => { syncCond(); preview(draftFromForm(), true); });
 
   // 적는 동안 오른쪽이 따라 바뀐다 — 다 만들고 나서 "잘렸네"를 알면 늦다.
-  for (const id of ['f-title', 'f-date', 'f-time', 'f-place']) {
+  for (const id of ['f-title', 'f-date', 'f-time', 'f-duration', 'f-place']) {
     $(id).addEventListener('input', schedulePreview);
   }
 
@@ -2041,6 +2076,7 @@ import RichField from '../components/RichField.astro';
       title: d.title,
       description: d.description || null,
       meetAt: d.meetAt,
+      durationMinutes: d.durationMinutes,
       place: d.place,
       placeAddress: $('f-address').value.trim() || null,
       capacity: d.capacity,

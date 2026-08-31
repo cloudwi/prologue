@@ -103,7 +103,7 @@ object MeetupListPage {
               ${v.coverUrls.firstOrNull()?.let { """<img src="${escape(ImageUrl.thumb(it, ImageUrl.ROW))}" alt="" loading="lazy" />""" } ?: ""}
               <div class="row-body">
                 <div class="row-title">${escape(v.title)}</div>
-                <div class="row-date">${escape(numeralDate(v.meetAt))} · ${escape(whenLine(v.meetAt))}</div>
+                <div class="row-date">${escape(numeralDate(v.meetAt))} · ${escape(whenLine(v))}</div>
                 <div class="row-meta">${escape(place)}</div>
                 <div class="row-meta">${escape(feeValue(v))} · ${escape(seatsValue(v))}</div>
               </div>
@@ -124,6 +124,12 @@ object MeetupListPage {
         if (meetups.isEmpty()) return ""
         val items = meetups.joinToString(",") { v ->
             val start = v.meetAt.atZone(SEOUL).format(ISO_LOCAL)
+            // endDate는 구글 이벤트 데이터의 권장 항목이다. 모르는 모임에는 적지 않는다 —
+            // 없는 것보다 나쁜 것이 틀린 것이다.
+            val end = v.durationMinutes
+                ?.let { v.meetAt.plusSeconds(it * 60L).atZone(SEOUL).format(ISO_LOCAL) }
+                ?.let { """"endDate": "$it",""" }
+                ?: ""
             val place = listOfNotNull(v.placeName, v.placeAddress).joinToString(" · ")
             """
             {
@@ -131,6 +137,7 @@ object MeetupListPage {
               "@type": "Event",
               "name": "${json(v.title)}",
               "startDate": "$start",
+              $end
               "eventStatus": "https://schema.org/EventScheduled",
               "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
               "url": "$web/m/${v.meetupId}",

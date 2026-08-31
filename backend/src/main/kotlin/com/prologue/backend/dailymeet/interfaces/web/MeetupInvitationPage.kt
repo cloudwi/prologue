@@ -114,7 +114,7 @@ object MeetupInvitationPage {
                   ${if (v.occurrenceTotal > 1) """<p class="occurrence">${v.occurrence}번째 만남</p>""" else ""}
                   <h1>${escape(v.title)}</h1>
                   <p class="date">${escape(numeralDate(v.meetAt))}</p>
-                  <p class="when">${escape(whenLine(v.meetAt))}</p>
+                  <p class="when">${escape(whenLine(v))}</p>
                   ${greeting(v.description, v.bodyImageUrls)}
                   ${gallery(v.coverUrls)}
                   <dl class="info">
@@ -169,7 +169,7 @@ object MeetupInvitationPage {
      * 링크를 받은 사람이 갈지 말지 정하는 데 필요한 것만: 언제·어디서·얼마·자리.
      */
     internal fun ogDescription(v: MeetupInvitationView): String = listOfNotNull(
-        whenLine(v.meetAt),
+        whenLine(v),
         v.placeName ?: v.placeAddress,
         feeLabel(v),
         seatsLabel(v),
@@ -179,6 +179,34 @@ object MeetupInvitationPage {
 
     internal fun numeralDate(at: Instant): String =
         at.atZone(SEOUL).let { String.format(Locale.KOREA, "%d. %02d. %02d", it.year, it.monthValue, it.dayOfMonth) }
+
+    /**
+     * 끝나는 시각까지 — "9월 26일 (토) 오후 6시 – 8시".
+     *
+     * 소요 시간을 정하지 않은 모임은 지금까지처럼 시작 시각만 말한다. 처음 가는 자리에서
+     * 가장 먼저 계산하는 것이 "몇 시에 끝나지"라서, 아는 모임은 알려주는 편이 낫다.
+     *
+     * 오전/오후는 **넘어갈 때만** 다시 적는다("오후 6시 – 8시" vs "오전 11시 – 오후 1시").
+     * 매번 적으면 같은 말이 두 번이고, 안 적으면 밤 11시에 시작한 모임이 11시에 끝난 것처럼 읽힌다.
+     * 날짜를 넘기면 그것도 말한다 — 다음 날 새벽 한 시는 오늘 한 시가 아니다.
+     */
+    internal fun whenLine(v: MeetupInvitationView): String {
+        val start = whenLine(v.meetAt)
+        val minutes = v.durationMinutes ?: return start
+        val from = v.meetAt.atZone(SEOUL)
+        val to = v.meetAt.plusSeconds(minutes * 60L).atZone(SEOUL)
+        val crossedDay = from.toLocalDate() != to.toLocalDate()
+        val sameHalf = !crossedDay && (from.hour < 12) == (to.hour < 12)
+        val hour12 = if (to.hour % 12 == 0) 12 else to.hour % 12
+        val ampm = if (to.hour < 12) "오전" else "오후"
+        val minute = if (to.minute == 0) "" else String.format(Locale.KOREA, ":%02d", to.minute)
+        val head = when {
+            crossedDay -> "다음 날 $ampm "
+            sameHalf -> ""
+            else -> "$ampm "
+        }
+        return "$start – $head$hour12${minute}시"
+    }
 
     internal fun whenLine(at: Instant): String {
         val t = at.atZone(SEOUL)

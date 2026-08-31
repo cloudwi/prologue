@@ -68,6 +68,11 @@ data class MeetupView(
     val occurrence: Int = 1,
     /** 이 회차 묶음의 전체 만남 수 — 2 이상이면 앱이 "3번째 만남"을 그린다. */
     val occurrenceTotal: Int = 1,
+    /**
+     * 모임 소요 시간(분). null이면 정하지 않은 모임 — 시작 시각만 보여준다.
+     * 끝나는 시각은 meetAt에 더해서 만든다.
+     */
+    val durationMinutes: Int? = null,
     /** 내가 이 모임을 따라가는지 — 다음 회차가 열리면 알림을 받는다. */
     val following: Boolean = false,
     /*
@@ -237,6 +242,11 @@ data class HostMeetupView(
     val applications: List<HostApplicationView>,
     /** 회차 묶음 — 앱의 '다음 회차 열기'가 이 값을 그대로 넘겨 회차를 잇는다. */
     val seriesId: UUID? = null,
+    /**
+     * 모임 소요 시간(분). null이면 정하지 않은 모임 — 시작 시각만 보여준다.
+     * 끝나는 시각은 meetAt에 더해서 만든다.
+     */
+    val durationMinutes: Int? = null,
 )
 
 /**
@@ -287,6 +297,11 @@ data class MeetupInvitationView(
      */
     val recap: String? = null,
     val recapImageUrls: List<String> = emptyList(),
+    /**
+     * 모임 소요 시간(분). null이면 정하지 않은 모임 — 시작 시각만 보여준다.
+     * 끝나는 시각은 meetAt에 더해서 만든다.
+     */
+    val durationMinutes: Int? = null,
 )
 
 /**
@@ -406,6 +421,7 @@ class MeetupService(
                 recap = m.takeIf { it.hasPublicRecap() }?.recap,
                 recapImageUrls = if (m.hasPublicRecap()) m.recapImageUrls else emptyList(),
                 meetAt = m.meetAt,
+                durationMinutes = m.durationMinutes,
                 place = m.place,
                 placeUrl = m.placeUrl,
                 placeAddress = m.placeAddress,
@@ -481,6 +497,7 @@ class MeetupService(
             title = m.title,
             description = m.description,
             meetAt = m.meetAt,
+            durationMinutes = m.durationMinutes,
             placeName = placeName,
             placeAddress = m.placeAddress,
             capacity = m.capacity,
@@ -644,6 +661,8 @@ class MeetupService(
         kakaoLink: String,
         /** 이어 여는 회차면 그 모임의 seriesId. 내가 연 모임의 회차만 이을 수 있다. */
         seriesId: UUID? = null,
+        /** 소요 시간(분). null이면 정하지 않은 모임 — 옛 앱은 보내지 않는다. */
+        durationMinutes: Int? = null,
     ): UUID {
         // 서버가 막아야 실효가 있다 — 앱은 버튼을 숨길 뿐이고, 옛 앱과 직접 호출은 여기서 걸린다.
         if (!hostPolicy.canHost(hostAccountId)) {
@@ -659,6 +678,7 @@ class MeetupService(
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink, seriesId,
+                durationMinutes = durationMinutes,
             ),
         )
         // 이어 여는 회차면 따라가던 사람들에게 알린다 — 이게 '다시 참여하고 싶다'는 마음이 돌아오는 길이다.
@@ -700,6 +720,7 @@ class MeetupService(
         coverUrls: List<String>,
         bodyImageUrls: List<String> = emptyList(),
         kakaoLink: String,
+        durationMinutes: Int? = null,
     ) {
         val existing = owned(hostAccountId, meetupId)
         meetupRepository.save(
@@ -708,6 +729,7 @@ class MeetupService(
                 capacity, capacityMale, capacityFemale, waitlistCapacity, fee, feeFemale, genderLimit,
                 minAgeMale, maxAgeMale, minAgeFemale, maxAgeFemale, minHeightMaleCm, minHeightFemaleCm,
                 requireJobVerified, emoji, color, coverUrls, bodyImageUrls, kakaoLink,
+                durationMinutes = durationMinutes,
             ),
         )
 
@@ -774,6 +796,7 @@ class MeetupService(
             HostMeetupView(
                 meetupId = requireNotNull(m.id),
                 title = m.title,
+                durationMinutes = m.durationMinutes,
                 description = m.description,
                 meetAt = m.meetAt,
                 place = m.place,

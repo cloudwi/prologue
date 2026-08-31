@@ -113,6 +113,11 @@ class MeetupController(
          * 없으면 새 모임 — 자기 혼자짜리 회차로 시작한다.
          */
         val seriesId: String? = null,
+        /**
+         * 모임 소요 시간(분, 선택). 안 보내면 정하지 않은 모임 — 시작 시각만 보인다.
+         * 끝나는 시각을 받지 않는 이유는 도메인(Meetup.durationMinutes)에 적어뒀다.
+         */
+        val durationMinutes: Int? = null,
     )
 
     data class CreateMeetupResponse(val meetupId: String)
@@ -209,6 +214,7 @@ class MeetupController(
             bodyImageUrls = request.bodyImageUrls,
             kakaoLink = request.kakaoLink,
             seriesId = request.seriesId?.let { parseId(it) },
+            durationMinutes = request.durationMinutes,
         )
         return CreateMeetupResponse(id.toString())
     }
@@ -254,6 +260,7 @@ class MeetupController(
             coverUrls = request.coverUrls,
             bodyImageUrls = request.bodyImageUrls,
             kakaoLink = request.kakaoLink,
+            durationMinutes = request.durationMinutes,
         )
     }
 

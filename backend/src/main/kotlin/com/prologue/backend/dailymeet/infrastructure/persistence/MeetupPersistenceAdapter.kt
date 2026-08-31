@@ -81,6 +81,7 @@ class MeetupPersistenceAdapter(
             recapImageUrls = recapImageUrls.joinToString(",").ifBlank { null },
             recapStatus = recapStatus.name,
             recapReviewNote = recapReviewNote,
+            durationMinutes = durationMinutes,
         )
 
     private fun MeetupJpaEntity.toDomain(): Meetup =
@@ -120,6 +121,7 @@ class MeetupPersistenceAdapter(
             recapImageUrls = recapImageUrls?.split(',')?.filter { it.isNotBlank() } ?: emptyList(),
             recapStatus = RecapStatus.valueOf(recapStatus),
             recapReviewNote = recapReviewNote,
+            durationMinutes = durationMinutes,
         )
 }
 

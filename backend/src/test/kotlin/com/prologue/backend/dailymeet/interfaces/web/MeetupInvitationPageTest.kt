@@ -36,6 +36,7 @@ class MeetupInvitationPageTest {
         open: Boolean = true,
         recap: String? = null,
         recapImageUrls: List<String> = emptyList(),
+        durationMinutes: Int? = null,
         hostNickname: String? = "지연",
         genderLimit: String? = null,
         minAgeMale: Int? = null,
@@ -68,6 +69,7 @@ class MeetupInvitationPageTest {
         hostNickname = hostNickname,
         occurrence = occurrence,
         occurrenceTotal = occurrenceTotal,
+        durationMinutes = durationMinutes,
         open = open,
         recap = recap,
         recapImageUrls = recapImageUrls,
@@ -353,6 +355,34 @@ class MeetupInvitationPageTest {
     fun `참가비가 성별로 다르면 나눠 적는다`() {
         assertEquals("남 70,000원 · 여 무료", MeetupInvitationPage.feeLabel(view(fee = 70_000, feeFemale = 0)))
         assertEquals("무료", MeetupInvitationPage.feeLabel(view(fee = 0)))
+    }
+
+    /**
+     * "몇 시에 끝나지"는 처음 가는 자리에서 가장 먼저 계산하는 것이다.
+     *
+     * 오전/오후를 매번 적으면 같은 말이 두 번이고, 한 번도 안 적으면 밤 11시에 시작한 모임이
+     * 11시에 끝난 것처럼 읽힌다. 그 경계와 자정 넘김을 못 박는다.
+     */
+    @Test
+    fun `끝나는 시각을 붙여 말한다`() {
+        val at = ZonedDateTime.of(2026, 9, 26, 18, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant()
+        assertEquals("9월 26일 (토) 오후 6시 – 8시", MeetupInvitationPage.whenLine(view(meetAt = at, durationMinutes = 120)))
+        // 정하지 않은 모임은 지금까지처럼 시작 시각만 말한다.
+        assertEquals("9월 26일 (토) 오후 6시", MeetupInvitationPage.whenLine(view(meetAt = at)))
+        // 분이 남으면 함께 적는다.
+        assertEquals("9월 26일 (토) 오후 6시 – 7:30시", MeetupInvitationPage.whenLine(view(meetAt = at, durationMinutes = 90)))
+    }
+
+    @Test
+    fun `오전에서 오후로 넘어가면 다시 적는다`() {
+        val morning = ZonedDateTime.of(2026, 9, 26, 11, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant()
+        assertEquals("9월 26일 (토) 오전 11시 – 오후 1시", MeetupInvitationPage.whenLine(view(meetAt = morning, durationMinutes = 120)))
+    }
+
+    @Test
+    fun `자정을 넘기면 다음 날이라고 말한다`() {
+        val night = ZonedDateTime.of(2026, 9, 26, 23, 0, 0, 0, ZoneId.of("Asia/Seoul")).toInstant()
+        assertEquals("9월 26일 (토) 오후 11시 – 다음 날 오전 1시", MeetupInvitationPage.whenLine(view(meetAt = night, durationMinutes = 120)))
     }
 
     /**

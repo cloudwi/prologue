@@ -129,6 +129,10 @@ class MeetupJpaEntity(
 
     @Column(name = "recap_review_note", length = 300)
     var recapReviewNote: String? = null,
+
+    /** 모임 소요 시간(분). null이면 정하지 않음 — 시작 시각만 보여준다. */
+    @Column(name = "duration_minutes")
+    val durationMinutes: Int? = null,
 )
 
 @Entity
