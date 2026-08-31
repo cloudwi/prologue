@@ -392,7 +392,55 @@ import RichField from '../components/RichField.astro';
   const { API_BASE, SITE_URL, CONTACT_EMAIL } = JSON.parse(document.getElementById('host-config').textContent);
   const $ = (id) => document.getElementById(id);
   const TOKEN_KEY = 'prologue.host.token';
+  /*
+   * 액세스 토큰은 30분짜리다(application.yaml: access-token-expiry).
+   *
+   * 콘솔은 그동안 **이것만 저장하고 리프레시 토큰은 버리고 있었다.** 그래서 30분이 지나면
+   * 다음 요청에서 401이 나고 곧장 로그아웃됐다 — 새로고침해서 풀린 게 아니라 이미 풀려
+   * 있던 것이 그때 보인 것이고, 더 나쁘게는 **소개 글을 한참 쓰다 저장을 누른 순간**에도
+   * 같은 일이 났다. 쓰던 글을 안고 로그인 화면으로 튕기는 셈이다(2026-08-31).
+   *
+   * 서버는 처음부터 토큰 쌍을 내려주고 /auth/refresh도 열려 있었다(TokenController).
+   * 앱은 이미 그렇게 쓰고 있다(app/src/lib/api.ts) — 콘솔만 안 쓰고 있었다.
+   */
+  const REFRESH_KEY = 'prologue.host.refresh';
   let token = localStorage.getItem(TOKEN_KEY) || '';
+  let refreshToken = localStorage.getItem(REFRESH_KEY) || '';
+
+  function saveTokens(access, refresh) {
+    token = access || '';
+    localStorage.setItem(TOKEN_KEY, token);
+    // 재발급은 토큰을 굴린다(rotation). 새로 받은 것을 안 넣어두면 다음 재발급이 실패한다.
+    if (refresh) {
+      refreshToken = refresh;
+      localStorage.setItem(REFRESH_KEY, refresh);
+    }
+  }
+
+  /** 진행 중인 재발급. 여러 요청이 동시에 만료를 만나도 재발급은 한 번만 나간다. */
+  let refreshing = null;
+
+  function refreshTokens() {
+    refreshing ??= (async () => {
+      try {
+        if (!refreshToken) return false;
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        saveTokens(data.accessToken, data.refreshToken);
+        return true;
+      } catch {
+        return false; // 네트워크 실패 — 원래 요청의 에러가 그대로 사용자에게 간다
+      } finally {
+        refreshing = null;
+      }
+    })();
+    return refreshing;
+  }
   let meetups = [];
   let current = null;
   let covers = [];
@@ -486,10 +534,22 @@ import RichField from '../components/RichField.astro';
     for (const v of ['list', 'detail', 'new', 'recap']) $(`v-${v}`).hidden = v !== name;
   };
 
+  /**
+   * 만료(401)를 만나면 재발급하고 원래 요청을 **한 번만** 다시 보낸다.
+   *
+   * 본문은 한 번 읽으면 끝이라(FormData·문자열 모두) 보내는 일을 함수로 감싸 두 번 만든다.
+   * 재발급까지 실패해야 비로소 로그아웃이다 — 30분마다 쫓아내지 않는 것이 이 함수의 일이다.
+   */
   async function api(path, { method = 'GET', body, raw } = {}) {
-    const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-    if (body && !raw) headers['Content-Type'] = 'application/json';
-    const res = await fetch(`${API_BASE}${path}`, { method, headers, body: raw ? body : body ? JSON.stringify(body) : undefined });
+    const send = () => {
+      const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+      if (body && !raw) headers['Content-Type'] = 'application/json';
+      return fetch(`${API_BASE}${path}`, { method, headers, body: raw ? body : body ? JSON.stringify(body) : undefined });
+    };
+
+    let res = await send();
+    if (res.status === 401 && (await refreshTokens())) res = await send();
+
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (res.status === 401) { logout(); throw new Error('다시 로그인해 주세요'); }
@@ -499,7 +559,9 @@ import RichField from '../components/RichField.astro';
 
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     token = '';
+    refreshToken = '';
     $('checking').hidden = true;
     $('gate').hidden = false;
     $('app').hidden = true;
@@ -590,8 +652,7 @@ import RichField from '../components/RichField.astro';
       const code = $('code').value.trim();
       if (!code) return alert('인증코드를 넣어주세요');
       const r = await api('/auth/email/verify', { method: 'POST', body: { email, code } });
-      token = r.accessToken;
-      localStorage.setItem(TOKEN_KEY, token);
+      saveTokens(r.accessToken, r.refreshToken);
       // 여기도 목록을 받은 뒤에 연다 — 첫 화면이 빈 콘솔이 아니라 내 모임이어야 한다.
       await loadList();
       $('gate').hidden = true;
