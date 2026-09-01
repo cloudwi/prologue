@@ -152,25 +152,29 @@ import RichField from '../components/RichField.astro';
                 단추가 여기저기서 튀어나오지 않으니 어디를 볼지 헤매지 않는다.
               -->
               <RichField label="소개" id="desc" />
+              <!--
+                시각은 "18:00 ~ 20:00"으로 받는다.
+
+                처음엔 소요 시간("2시간")을 물었다. 모임장은 그렇게 생각한다고 봤는데, 정작
+                적으러 와서는 초대장에 쓸 문장("여섯 시에 만나 여덟 시에 헤어져요")을 그대로
+                옮기려 한다 — 그때마다 머릿속에서 뺄셈을 시켜야 했다. 손님이 읽는 것도 끝나는
+                **시각**이지 소요 시간이 아니다. 물음과 답이 같은 말을 쓰게 둔다.
+
+                저장은 그대로 소요 시간(durationMinutes)이다 — 종료가 시작보다 앞선 모임이라는
+                있을 수 없는 상태를 애초에 못 만들게 하는 것이 서버 쪽 이유고, 자정을 넘기는
+                모임은 여기서 하루를 더해 되돌린다(0시 넘어 끝나는 자리가 실제로 있다).
+                끝나는 시각을 비워두면 '정하지 않음' — 아직 안 정한 것과 두 시간인 것은 다르다.
+              -->
               <div class="grid2">
                 <label class="field"><span>날짜 *</span><input id="f-date" type="date" /></label>
-                <label class="field"><span>시간 *</span><input id="f-time" type="time" step="900" /></label>
-                <!--
-                  끝나는 시각이 아니라 소요 시간을 묻는다. 모임장은 "두 시간"으로 생각하지
-                  "여덟 시"로 생각하지 않고, 날짜·시간을 두 번 받으면 그만큼 틀릴 자리가 는다.
-                  '정하지 않음'을 남겨두는 이유는, 아직 안 정한 것과 두 시간인 것이 다르기 때문이다.
-                -->
-                <label class="field"><span>몇 시간</span>
-                  <select id="f-duration">
-                    <option value="">정하지 않음</option>
-                    <option value="60">1시간</option>
-                    <option value="90">1시간 30분</option>
-                    <option value="120" selected>2시간</option>
-                    <option value="150">2시간 30분</option>
-                    <option value="180">3시간</option>
-                    <option value="240">4시간</option>
-                  </select>
-                </label>
+                <div class="field">
+                  <span>시간 * <em>끝나는 시각까지 정하면 손님이 약속을 잡을 수 있어요</em></span>
+                  <div class="time-row">
+                    <input id="f-time" type="time" step="900" aria-label="시작 시각" />
+                    <em>~</em>
+                    <input id="f-end" type="time" step="900" aria-label="끝나는 시각" />
+                  </div>
+                </div>
               </div>
               <!--
                 주소는 손으로 적게 두지 않는다. 초대장의 지도와 길찾기가 이 문자열 하나에
@@ -692,7 +696,8 @@ import RichField from '../components/RichField.astro';
   };
   const numeral = (d) => `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`;
   /*
-   * "오후 6:00 – 8시" — 서버(MeetupInvitationPage.whenLine)와 같은 규칙이다.
+   * " – 8시" — 시작 시각 뒤에 붙이는 꼬리. 서버(MeetupInvitationPage.whenLine)·앱
+   * (meetup-format.ts untilSuffix)과 같은 규칙이다. 정하지 않은 모임에는 빈 문자열.
    * 오전/오후는 넘어갈 때만 다시 적고, 날짜를 넘기면 그것도 말한다.
    */
   const untilLabel = (start, minutes) => {
@@ -795,7 +800,7 @@ import RichField from '../components/RichField.astro';
             ${m.coverUrls?.[0] ? `<img class="thumb" src="${esc(m.coverUrls[0])}" alt="" />` : '<div class="thumb blank-thumb"></div>'}
             <div class="card-body">
               <strong>${esc(m.title)}</strong>
-              <span class="meta">${dfLong.format(d)} ${tf(d)} · ${esc(m.place)}</span>
+              <span class="meta">${dfLong.format(d)} ${tf(d)}${untilLabel(d, m.durationMinutes)} · ${esc(m.place)}</span>
               <span class="tags">
                 <em class="tag ${m.status === 'OPEN' ? 'on' : ''}">${STATUS[m.status] || m.status}</em>
                 <em class="tag">확정 ${m.confirmedCount}/${m.capacity}</em>
@@ -820,7 +825,7 @@ import RichField from '../components/RichField.astro';
     if (!current) return;
     $('paneTitle').textContent = current.title;
     const d = new Date(current.meetAt);
-    $('paneLead').textContent = `${dfLong.format(d)} ${tf(d)} · ${current.place}`;
+    $('paneLead').textContent = `${dfLong.format(d)} ${tf(d)}${untilLabel(d, current.durationMinutes)} · ${current.place}`;
     renderDetail();
     view('detail');
     preview(current);
@@ -1228,7 +1233,7 @@ import RichField from '../components/RichField.astro';
         <div class="ap-eyebrow wide">INVITATION</div>
         <div class="ap-name">${esc(m.title)}</div>
         <div class="ap-numerals">${numeral(d)}</div>
-        <div class="ap-words">${weekdayLabel(d)} ${tf(d)}${venue.name ? ` · ${esc(venue.name)}` : ''}</div>
+        <div class="ap-words">${weekdayLabel(d)} ${tf(d)}${untilLabel(d, m.durationMinutes)}${venue.name ? ` · ${esc(venue.name)}` : ''}</div>
       </div>
 
       ${section('GREETING', '모시는 글', `
@@ -1298,6 +1303,21 @@ import RichField from '../components/RichField.astro';
     return `<div class="ap-cal">${head}${body}</div>`;
   }
 
+  /**
+   * 시작·종료 시각 → 소요 시간(분). 화면은 시각으로 묻고 서버는 길이로 받는다.
+   *
+   * 종료가 시작보다 앞서면 자정을 넘긴 것으로 본다 — 22:00 ~ 01:00은 세 시간이다.
+   * 둘 중 하나라도 비면 '정하지 않음'(null).
+   */
+  const MIN_DURATION = 30, MAX_DURATION = 12 * 60; // 서버(Meetup.DURATION_MIN/MAX)와 같은 값
+  function durationFromForm() {
+    const start = $('f-time').value, end = $('f-end').value;
+    if (!start || !end) return null;
+    const mins = (v) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5));
+    const diff = mins(end) - mins(start);
+    return diff > 0 ? diff : diff + 24 * 60;
+  }
+
   /** 폼으로 만든 가짜 모임 — 아직 저장 전이라 서버에 물어볼 수 없다. */
   function draftFromForm() {
     const date = $('f-date').value, time = $('f-time').value;
@@ -1306,7 +1326,7 @@ import RichField from '../components/RichField.astro';
       title: $('f-title').value.trim() || '모임 이름',
       description: desc.getText().trim(),
       meetAt: date && time ? `${date}T${time}:00+09:00` : new Date().toISOString(),
-      durationMinutes: Number($('f-duration').value) || null,
+      durationMinutes: durationFromForm(),
       place: $('f-place').value.trim() || '장소',
       placeAddress: $('f-address').value.trim() || null,
       capacity: Number($('f-capacity').value) || 8,
@@ -1397,7 +1417,7 @@ import RichField from '../components/RichField.astro';
               <div class="app-title">${esc(m.title)}</div>
               <em class="app-chip">모집 중</em>
             </div>
-            <div class="app-meta">${dfLong.format(d)} ${tf(d)} · ${esc(m.place)}</div>
+            <div class="app-meta">${dfLong.format(d)} ${tf(d)}${untilLabel(d, m.durationMinutes)} · ${esc(m.place)}</div>
             <div class="app-meta">${feeLabel} · 확정 ${m.confirmedCount || 0}/${m.capacity || 0}명</div>
           </div>
         </div>
@@ -1475,8 +1495,10 @@ import RichField from '../components/RichField.astro';
     set('f-title', m?.title ?? '');
     set('f-date', d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '');
     set('f-time', d ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : '');
-    // 정한 적 없는 모임은 '정하지 않음'으로 — 기본값 2시간을 슬쩍 끼워 넣으면 없던 약속이 생긴다.
-    set('f-duration', m ? (m.durationMinutes ?? '') : 120);
+    // 저장은 길이로 하고 화면은 시각으로 보여준다 — 여기서 되돌린다.
+    // 정한 적 없는 모임은 빈 칸으로 — 기본값 두 시간을 슬쩍 끼워 넣으면 없던 약속이 생긴다.
+    const endAt = d && m?.durationMinutes ? new Date(d.getTime() + m.durationMinutes * 60000) : null;
+    set('f-end', endAt ? `${pad(endAt.getHours())}:${pad(endAt.getMinutes())}` : '');
     set('f-address', m?.placeAddress ?? '');
     set('f-place', detail);
     set('f-capacity', m?.capacity ?? 8);
@@ -1882,9 +1904,23 @@ import RichField from '../components/RichField.astro';
   $('f-jobVerified').addEventListener('change', () => { syncCond(); preview(draftFromForm(), true); });
 
   // 적는 동안 오른쪽이 따라 바뀐다 — 다 만들고 나서 "잘렸네"를 알면 늦다.
-  for (const id of ['f-title', 'f-date', 'f-time', 'f-duration', 'f-place']) {
+  for (const id of ['f-title', 'f-date', 'f-time', 'f-end', 'f-place']) {
     $(id).addEventListener('input', schedulePreview);
   }
+
+  /*
+   * 시작 시각을 적으면 끝나는 시각의 초안(+2시간)이 따라 들어온다 — 캘린더들이 하는 그대로다.
+   * 대부분의 모임이 두 시간이라 그 자리에서 지우는 일이 드물고, 틀렸다면 눈에 보이는 값이라
+   * 고치면 된다. 이미 적어둔 값은 덮지 않고, **수정 중인 모임에는 손대지 않는다** —
+   * 정한 적 없는 모임에 없던 약속을 끼워 넣는 꼴이 되기 때문이다.
+   */
+  $('f-time').addEventListener('input', () => {
+    const start = $('f-time').value;
+    if (editingId || $('f-end').value || !/^\d{2}:\d{2}$/.test(start)) return;
+    const [h, mi] = start.split(':').map(Number);
+    $('f-end').value = `${String((h + 2) % 24).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+    schedulePreview();
+  });
 
   /**
    * 커버 사진 — 올리고, 지우고, 순서를 바꾼다.
@@ -2069,6 +2105,9 @@ import RichField from '../components/RichField.astro';
      * 잠금은 화면의 약속이고 이건 데이터의 약속이다. blob: 주소가 서버로 넘어가면 초대장에
      * 영영 뜨지 않는 사진이 걸리는데, 그건 저장한 사람 눈에도 한참 뒤에야 보인다.
      */
+    if (d.durationMinutes != null && (d.durationMinutes < MIN_DURATION || d.durationMinutes > MAX_DURATION)) {
+      return say(`끝나는 시각은 시작보다 ${MIN_DURATION}분 뒤부터 ${MAX_DURATION / 60}시간 뒤까지로 정해주세요`, true);
+    }
     if (desc.hasPendingImages()) return say('사진을 다 올린 뒤에 저장해 주세요', true);
     if (coversPending()) return say('커버 사진을 다 올린 뒤에 저장해 주세요', true);
     // 서버는 생성과 수정이 같은 본문을 받는다 — 다른 것은 주소와 방식뿐이다.
@@ -2204,6 +2243,10 @@ import RichField from '../components/RichField.astro';
   /* 폼 */
   .console .form { display: grid; gap: 16px; }
   .console .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* 두 시각은 한 칸처럼 읽혀야 한다 — 물결 하나가 "부터 까지"를 대신한다. */
+  .console .time-row { display: flex; align-items: center; gap: 8px; }
+  .console .time-row input { flex: 1 1 0; min-width: 0; }
+  .console .time-row em { font-style: normal; font-size: 0.95rem; color: var(--muted); }
   .console .field { display: grid; gap: 6px; font-size: 0.93rem; }
   .console .field span { font-weight: 600; }
   .console .field em { font-style: normal; font-weight: 400; color: var(--muted); font-size: 0.84rem; }
