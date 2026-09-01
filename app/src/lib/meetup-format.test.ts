@@ -1,4 +1,4 @@
-import { ddayLabel, mapQuery, meetupShareText, meetupShareUrl, numeralDate, timeLabel, timeRangeLabel, venueOf, weekdayLabel } from './meetup-format';
+import { ddayLabel, mapQuery, meetupShareText, meetupShareUrl, numeralDate, timeLabel, timeRangeLabel, untilSuffix, venueOf, weekdayLabel } from './meetup-format';
 import type { Meetup } from './meetups';
 
 /**
@@ -30,6 +30,21 @@ describe('끝나는 시각', () => {
 
   it('자정을 넘기면 다음 날이라고 말한다', () => {
     expect(timeRangeLabel(new Date(2026, 8, 26, 23, 0), 120)).toBe('오후 11:00 – 다음 날 오전 1시');
+  });
+
+  /*
+   * 목록 카드는 시작 시각을 Intl로 적는다("9월 26일 (토) 오후 6:00"). 그래서 꼬리만 따로
+   * 붙일 수 있어야 한다 — 카드가 자기 계산을 시작하면 같은 모임이 화면마다 다르게 끝난다.
+   */
+  it('꼬리만 떼어 써도 같은 문구가 된다 — 목록 카드가 붙여 쓴다', () => {
+    const start = new Date(2026, 8, 26, 18, 0);
+    expect(untilSuffix(start, 120)).toBe(' – 8시');
+    expect(timeLabel(start) + untilSuffix(start, 120)).toBe(timeRangeLabel(start, 120));
+  });
+
+  it('정하지 않은 모임에는 아무것도 안 붙는다', () => {
+    expect(untilSuffix(new Date(2026, 8, 26, 18, 0), null)).toBe('');
+    expect(untilSuffix(new Date(2026, 8, 26, 18, 0), 0)).toBe('');
   });
 });
 

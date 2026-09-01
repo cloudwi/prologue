@@ -57,21 +57,21 @@ export function timeLabel(d: Date): string {
 }
 
 /**
- * "오후 6:00 – 8시" — 끝나는 시각까지 붙인 판.
+ * " – 8시" — 끝나는 시각만 떼어낸 꼬리. 정하지 않은 모임에는 빈 문자열.
  *
- * 처음 가는 자리에서 가장 먼저 계산하는 것이 "몇 시에 끝나지"다. 정하지 않은 모임은
- * 지금까지처럼 시작 시각만 말한다.
+ * 시작 시각을 어떻게 적었든(초대장은 "오후 6:00", 목록 카드는 Intl이 만든 "9월 26일 (토)
+ * 오후 6:00") 뒤에 그대로 붙일 수 있게 꼬리만 따로 뒀다. 두 자리가 각자 계산하기 시작하면
+ * 같은 모임이 화면마다 다른 시각에 끝난다.
  *
  * 오전/오후는 **넘어갈 때만** 다시 적는다. 매번 적으면 같은 말이 두 번이고,
  * 한 번도 안 적으면 밤 11시에 시작한 모임이 11시에 끝난 것처럼 읽힌다.
  * 날짜를 넘기면 그것도 말한다 — 다음 날 새벽 한 시는 오늘 한 시가 아니다.
  *
- * 서버(MeetupInvitationPage.whenLine)·콘솔 미리보기와 같은 규칙이다.
+ * 서버(MeetupInvitationPage.whenLine)·콘솔 미리보기(host.astro untilLabel)와 같은 규칙이다.
  * 한쪽만 고치면 초대장이 두 얼굴이 된다.
  */
-export function timeRangeLabel(start: Date, durationMinutes?: number | null): string {
-  const head = timeLabel(start);
-  if (!durationMinutes) return head;
+export function untilSuffix(start: Date, durationMinutes?: number | null): string {
+  if (!durationMinutes) return '';
   const end = new Date(start.getTime() + durationMinutes * 60_000);
   const crossedDay = end.toDateString() !== start.toDateString();
   const sameHalf = !crossedDay && (start.getHours() < 12) === (end.getHours() < 12);
@@ -80,7 +80,17 @@ export function timeRangeLabel(start: Date, durationMinutes?: number | null): st
   const minute = end.getMinutes() === 0 ? '' : `:${String(end.getMinutes()).padStart(2, '0')}`;
   const ampm = hours < 12 ? '오전' : '오후';
   const prefix = crossedDay ? `다음 날 ${ampm} ` : sameHalf ? '' : `${ampm} `;
-  return `${head} – ${prefix}${hour12}${minute}시`;
+  return ` – ${prefix}${hour12}${minute}시`;
+}
+
+/**
+ * "오후 6:00 – 8시" — 끝나는 시각까지 붙인 판.
+ *
+ * 처음 가는 자리에서 가장 먼저 계산하는 것이 "몇 시에 끝나지"다. 정하지 않은 모임은
+ * 지금까지처럼 시작 시각만 말한다.
+ */
+export function timeRangeLabel(start: Date, durationMinutes?: number | null): string {
+  return timeLabel(start) + untilSuffix(start, durationMinutes);
 }
 
 /**

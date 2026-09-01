@@ -18,6 +18,7 @@ import { track } from '@/lib/analytics';
 import { getJobStatus } from '@/lib/job';
 import { getMyProfile } from '@/lib/member';
 import { feeLabel, getMeetupHistory, getMeetups, type Meetup } from '@/lib/meetups';
+import { untilSuffix } from '@/lib/meetup-format';
 import { RichText } from '@/components/rich-text';
 import { plainText } from '@/lib/rich-text';
 import { thumbUrl } from '@/lib/image';
@@ -378,8 +379,13 @@ export default function MeetupsScreen() {
                       )}
                     </View>
 
+                    {/*
+                      * 끝나는 시각까지 — 카드에서 이미 "몇 시에 끝나지"가 풀려야 상세로 들어온다.
+                      * 상세·초대장(timeRangeLabel)과 같은 꼬리를 쓴다. 정하지 않은 모임엔 안 붙는다.
+                      */}
                     <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
-                      {dateFmt.format(new Date(m.meetAt))} · {m.place}
+                      {dateFmt.format(new Date(m.meetAt))}
+                      {untilSuffix(new Date(m.meetAt), m.durationMinutes)} · {m.place}
                     </Text>
                     <Text style={[styles.cardMeta, { color: c.textSecondary }]}>
                       {feeLabel(m)} · {m.confirmedCount}/{m.capacity}명
