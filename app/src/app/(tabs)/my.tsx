@@ -20,7 +20,6 @@ import { resetAnalytics } from '@/lib/analytics';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
-import { POLITICAL_LABELS, RELIGION_LABELS } from '@/constants/profile';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep, profileTags } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
@@ -274,22 +273,11 @@ function MyHub() {
           />
           <Row label="사진" value={`${photos.length}장`} onPress={() => router.push('/my/edit-photos')} c={c} />
           <Row label="기본 정보" onPress={() => router.push('/my/edit-basic')} c={c} />
-          <Row label="상세 소개" onPress={() => router.push('/my/edit-detail')} c={c} />
+          {/* 키·취미·관심사·장점에 담배·술·만남 빈도·종교·정치까지 한자리에 모았다. */}
+          <Row label="상세 소개" value={factsLabel(profile)} onPress={() => router.push('/my/edit-detail')} c={c} />
           <Row label="프로필 문답" onPress={() => router.push('/my/letters')} c={c} />
           {/* 취향 카드는 프로필의 일부다 — 겹치는 선택이 상대 카드에 "둘 다 이걸 골랐어요"로 걸린다. */}
-          <Row label="취향 카드" onPress={() => router.push('/taste-cards')} c={c} />
-          {/*
-           * 종교·정치 성향은 민감정보라 상세 프로필과 화면을 나눈다 — 동의 안내가 다른 항목들
-           * 사이에 끼면 읽히지 않는다. 비워둔 게 기본이라 값 자리는 '선택'으로 둔다.
-           */}
-          <Row label="생활 습관" value={lifestyleLabel(profile)} onPress={() => router.push('/my/lifestyle')} c={c} />
-          <Row
-            label="종교·정치 성향"
-            value={beliefsLabel(profile)}
-            onPress={() => router.push('/my/beliefs')}
-            c={c}
-          />
-          <Row label="상대에게 보이는 화면" onPress={() => router.push('/my/preview')} c={c} last />
+          <Row label="취향 카드" onPress={() => router.push('/taste-cards')} c={c} last />
         </Section>
 
         {/* 기록 — 프로필과 별개의 내 서랍. 상대에게 보이지 않는 본인 전용 목록이라 프로필 카드에 섞지 않는다. */}
@@ -393,25 +381,19 @@ function Section({ title, c, children }: { title: string; c: ThemeColors; childr
 }
 
 /**
- * 종교·정치 성향 줄에 붙는 현재 값. 안 적었으면 '선택'이라고만 둔다 —
- * '없음'이라고 쓰면 안 적은 것이 아니라 '무교'라고 답한 것처럼 읽힌다.
+ * 상세 소개 줄에 붙는 현재 값 — 한 줄로 답한 항목들을 프로필에 붙는 태그 그대로 요약한다.
+ * 안 적었으면 '선택'이다. '없음'이라고 쓰면 안 적은 것이 아니라 '무교'라고 답한 것처럼 읽힌다.
+ * 줄 하나에 다 넣으면 이름이 밀리므로 앞의 둘만 보여준다.
  */
-/** 생활 습관 줄의 현재 값 — 고른 것만 짧은 태그로. 프로필에 붙는 말과 같은 말이다. */
-function lifestyleLabel(profile: MemberProfile | null): string {
+function factsLabel(profile: MemberProfile | null): string {
   const tags = profileTags({
     smoking: profile?.smoking,
     drinking: profile?.drinking,
     meetFrequency: profile?.meetFrequency,
+    religion: profile?.religion,
+    politicalLeaning: profile?.politicalLeaning,
   });
-  return tags.length > 0 ? tags.join(' · ') : '선택';
-}
-
-function beliefsLabel(profile: MemberProfile | null): string {
-  const parts = [
-    profile?.religion ? RELIGION_LABELS[profile.religion] : null,
-    profile?.politicalLeaning ? POLITICAL_LABELS[profile.politicalLeaning] : null,
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : '선택';
+  return tags.length > 0 ? tags.slice(0, 2).join(' · ') : '선택';
 }
 
 function Row({

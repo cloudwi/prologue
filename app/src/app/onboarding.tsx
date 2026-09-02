@@ -21,18 +21,20 @@ import { HeightPicker } from '@/components/height-picker';
 import { KeywordChips } from '@/components/keyword-chips';
 import { PhotoCropModal } from '@/components/photo-crop';
 import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/photo-grid';
+import { EMPTY_FACTS, hasBeliefs, ProfileFactsFields, type ProfileFacts } from '@/components/profile-facts';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { track } from '@/lib/analytics';
 import { koreanManAge, parseBirthDigits } from '@/lib/birth-date';
 import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/lib/phone';
 import { toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
+import { LEGAL_VERSION } from '@/constants/legal';
 import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import { Fonts, type ThemeColors } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearConsent, getConsent } from '@/lib/consent';
 import { getLetterQuestions, writeLetter, LETTER_MIN_LENGTH, LETTER_MAX_LENGTH, type LetterQuestion } from '@/lib/letters';
-import { completeOnboarding, type Gender } from '@/lib/member';
+import { completeOnboarding, updateBeliefs, updateLifestyle, type Gender } from '@/lib/member';
 import { SESSION_QUERY_KEY } from '@/lib/session';
 import { uploadPhoto } from '@/lib/photo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -115,6 +117,13 @@ export default function OnboardingScreen() {
   // 자르기를 기다리는 사진 줄 — 고른 순서대로 한 장씩 4:5 창을 거쳐 photos로 들어간다.
   const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
+  /**
+   * 한 줄로 답하는 항목들 — 담배·술·만나는 빈도·종교·정치.
+   * 가입할 때 한자리에서 받는다(유저 결정 2026-09-02) — 나중에 MY에서 찾아 들어가는 사람은 드물다.
+   * 저장 경로는 프로필과 다르므로(전체 덮어쓰기에 실을 수 없다) 제출 때 따로 보낸다.
+   */
+  const [facts, setFacts] = useState<ProfileFacts>(EMPTY_FACTS);
+  const [factsConsent, setFactsConsent] = useState(false);
   // 필수 문답 — 질문 하나를 골라 답하면 프로필 문답으로 올라간다. 프로필이 빈 채 시작하지 않게.
   const [letterQuestions, setLetterQuestions] = useState<LetterQuestion[]>([]);
   const [letterIndex, setLetterIndex] = useState(0);
@@ -399,10 +408,38 @@ export default function OnboardingScreen() {
     {
       key: 'strengths',
       title: '나의 장점을 골라주세요',
-      subtitle: '마지막이에요! 자세히 채울수록 매칭 확률이 올라가요.',
+      subtitle: `최대 ${KEYWORD_MAX}개까지 고를 수 있어요.`,
       optional: true,
       filled: extra.strengths.length > 0,
       content: <KeywordChips options={STRENGTHS} selected={extra.strengths} onChange={(v) => patchExtra({ strengths: v })} c={c} max={KEYWORD_MAX} />,
+    },
+    {
+      /*
+       * 한 줄로 답하는 것들을 한 화면에 모은다. 흩어 놓으면 나중에 찾아 들어가는 사람이 드물고,
+       * 이 다섯은 "만나기 전에 알았으면" 소리가 가장 많이 나오는 항목이라 비어 있으면 손해가 크다.
+       * 그래도 전부 선택이다 — 건너뛰기로 넘어갈 수 있다.
+       */
+      key: 'facts',
+      title: '이런 것도 알려주실래요?',
+      subtitle: '마지막이에요! 고른 것만 프로필에 작은 태그로 붙어요.',
+      optional: true,
+      filled:
+        facts.smoking != null ||
+        facts.drinking != null ||
+        facts.meetFrequency != null ||
+        hasBeliefs(facts),
+      // 신념을 골랐다면 동의 없이는 넘어가지 못한다 — 서버가 막는 것을 화면이 먼저 말해준다.
+      valid: !hasBeliefs(facts) || factsConsent,
+      content: (
+        <ProfileFactsFields
+          value={facts}
+          onChange={(patch) => setFacts((prev) => ({ ...prev, ...patch }))}
+          consented={false}
+          consentChecked={factsConsent}
+          onConsentChange={setFactsConsent}
+          c={c}
+        />
+      ),
     },
   ];
 
@@ -501,8 +538,35 @@ export default function OnboardingScreen() {
     if (submitting) return;
     setSubmitting(true);
     const ok = await saveProfile();
+    // 한 줄 항목들은 프로필과 길이 다르다(전체 덮어쓰기에 실을 수 없다). 여기서 실패해도
+    // 가입 자체는 이미 끝났으므로 흐름을 세우지 않는다 — MY에서 다시 채울 수 있다.
+    await saveFacts();
     setSubmitting(false);
     if (ok) done();
+  }
+
+  /** 담배·술·만나는 빈도·종교·정치를 저장한다. 아무것도 안 골랐으면 부르지 않는다. */
+  async function saveFacts() {
+    const lifestylePicked = facts.smoking != null || facts.drinking != null || facts.meetFrequency != null;
+    try {
+      if (lifestylePicked) {
+        await updateLifestyle({
+          smoking: facts.smoking,
+          drinking: facts.drinking,
+          meetFrequency: facts.meetFrequency,
+        });
+      }
+      if (hasBeliefs(facts) && factsConsent) {
+        await updateBeliefs({
+          religion: facts.religion,
+          politicalLeaning: facts.politicalLeaning,
+          consent: true,
+          legalVersion: LEGAL_VERSION,
+        });
+      }
+    } catch {
+      // 조용히 넘어간다 — 프로필은 이미 저장됐고, 이 항목들은 언제든 다시 채울 수 있다.
+    }
   }
 
   function startOptional() {
