@@ -45,6 +45,9 @@ class TasteRewardJpaEntity(
 interface TasteRewardJpaRepository : JpaRepository<TasteRewardJpaEntity, TasteRewardId> {
     @Query("select r from TasteRewardJpaEntity r where r.id.accountId = :accountId and r.grantedAt is null order by r.id.milestone asc")
     fun findPending(@Param("accountId") accountId: UUID): List<TasteRewardJpaEntity>
+
+    @Query("select count(r) from TasteRewardJpaEntity r where r.id.accountId = :accountId and r.createdAt >= :since")
+    fun countSince(@Param("accountId") accountId: UUID, @Param("since") since: Instant): Long
 }
 
 @Repository
@@ -65,6 +68,8 @@ class TasteRewardPersistenceAdapter(
     }
 
     override fun pendingCount(accountId: UUID): Int = jpa.findPending(accountId).size
+
+    override fun claimedSince(accountId: UUID, since: Instant): Int = jpa.countSince(accountId, since).toInt()
 
     @Transactional
     override fun markGranted(accountId: UUID, count: Int) {

@@ -61,6 +61,15 @@ class TasteRewardPersistenceAdapterIT : PostgresRepositoryTest() {
     }
 
     @Test
+    fun `오늘 적립한 표만 하루치로 센다`() {
+        // 하루 상한을 재는 자 — 어제 받은 표까지 세면 오늘 아무것도 못 받는다.
+        rewards.claimIfNew(me, 10)
+
+        assertEquals(1, rewards.claimedSince(me, java.time.Instant.now().minusSeconds(60)))
+        assertEquals(0, rewards.claimedSince(me, java.time.Instant.now().plusSeconds(60)))
+    }
+
+    @Test
     fun `남의 표는 내 것이 아니다`() {
         rewards.claimIfNew(someoneElse, 10)
 

@@ -11,8 +11,14 @@ import java.util.UUID
  * 그건 보상이 아니다.
  */
 interface TasteRewardRepository {
-    /** 새 이정표면 true(한 장 적립), 이미 받은 이정표면 false. 판정은 유니크 제약이 한다. */
+    /** 새 지점이면 true(한 장 적립), 이미 받은 지점이면 false. 판정은 유니크 제약이 한다. */
     fun claimIfNew(accountId: UUID, milestone: Int): Boolean
+
+    /**
+     * [since] 이후에 적립한 표의 수 — 하루치 상한([TasteReward.DAILY_LIMIT])을 재는 자.
+     * 되풀이되는 보상이라 상한이 없으면 하루에 백 장을 넘겨 열 명을 받아 갈 수 있다.
+     */
+    fun claimedSince(accountId: UUID, since: java.time.Instant): Int
 
     /** 아직 소개로 바뀌지 않은 표의 수. */
     fun pendingCount(accountId: UUID): Int

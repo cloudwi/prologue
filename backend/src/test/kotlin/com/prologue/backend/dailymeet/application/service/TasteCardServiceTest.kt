@@ -23,7 +23,10 @@ class TasteCardServiceTest {
 
     private val cardRepository = mockk<TasteCardRepository>()
     private val choiceRepository = mockk<TasteChoiceRepository>()
-    private val rewardRepository = mockk<TasteRewardRepository> { every { claimIfNew(any(), any()) } returns true }
+    private val rewardRepository = mockk<TasteRewardRepository> {
+        every { claimIfNew(any(), any()) } returns true
+        every { claimedSince(any(), any()) } returns 0 // 오늘 아직 안 받은 상태
+    }
     private val service = TasteCardService(cardRepository, choiceRepository, rewardRepository)
 
     private val accountId = UUID.randomUUID()
@@ -134,6 +137,19 @@ class TasteCardServiceTest {
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1L, TasteOption.A))
+
+        assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
+        verify(exactly = 0) { rewardRepository.claimIfNew(any(), any()) }
+    }
+
+    @Test
+    fun `하루에 한 번을 넘겨 받지는 못한다`() {
+        // 되풀이되는 보상이라 상한이 없으면 하루에 백 장을 넘겨 열 명을 받아 갈 수 있다.
+        every { cardRepository.findAllOrdered() } returns cards
+        every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
+        every { choiceRepository.save(any()) } answers { firstArg() }
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(20) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimedSince(accountId, any()) } returns 1 // 오늘 이미 한 번 받았다
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
         verify(exactly = 0) { rewardRepository.claimIfNew(any(), any()) }

@@ -5,6 +5,7 @@ import com.prologue.backend.dailymeet.domain.model.TasteAffinity
 import com.prologue.backend.dailymeet.domain.model.TasteCard
 import com.prologue.backend.dailymeet.domain.model.TasteChoice
 import com.prologue.backend.dailymeet.domain.model.TasteOption
+import com.prologue.backend.dailymeet.domain.model.ServiceDay
 import com.prologue.backend.dailymeet.domain.model.TasteReward
 import com.prologue.backend.dailymeet.domain.repository.TasteCardRepository
 import com.prologue.backend.dailymeet.domain.repository.TasteChoiceRepository
@@ -20,8 +21,8 @@ import java.util.UUID
  * 오늘의 문답([DailyAnswerService])이 하루 한 번의 글이라면, 이쪽은 언제든 몇 장이든 넘길 수 있는
  * 더미다. 가입 직후 백지 앞에 세워지는 대신 카드 몇 장을 넘기며 시작할 수 있게 하려고 만들었다.
  *
- * **잉크는 주지 않는다.** 보상은 재화가 아니라 사람이다 — 정해진 장수를 넘기면 오늘의 상대가
- * 한 명 더 온다([TasteReward]). 잉크로 주면 카드가 재화를 캐는 자리가 되고, 값싼 잉크가
+ * **잉크는 주지 않는다.** 보상은 재화가 아니라 사람이다 — [TasteReward.EVERY]장마다 오늘의
+ * 상대가 한 명 더 오고, 하루에 한 번까지다. 잉크로 주면 카드가 재화를 캐는 자리가 되고, 값싼 잉크가
  * 글의 값어치까지 함께 끌어내린다. 카드가 돌려주는 다른 몫은 **더 맞는 상대**다
  * ([TasteAffinity]가 매칭 점수에 실린다) — 둘 다 결국 사람이라는 점이 이 기능의 결이다.
  *
@@ -65,7 +66,12 @@ class TasteCardService(
         val milestone = TasteReward.milestoneAt(answered)
         // 표만 적립한다. 그 표를 실제 소개로 바꾸는 일은 소개를 아는 쪽의 몫이다
         // (PeerMatchingService.consumeExtraReveals) — 여기서 부르면 두 서비스가 서로를 참조한다.
-        val claimed = milestone != null && tasteRewardRepository.claimIfNew(accountId, milestone)
+        //
+        // 하루치 상한을 먼저 본다. 되풀이되는 보상이라 상한이 없으면 하루에 백 장을 넘겨
+        // 열 명을 받아 갈 수 있고, 그건 얕은 후보 풀을 하루 만에 비우는 일이다.
+        val claimed = milestone != null &&
+            tasteRewardRepository.claimedSince(accountId, ServiceDay.startOfToday()) < TasteReward.DAILY_LIMIT &&
+            tasteRewardRepository.claimIfNew(accountId, milestone)
         return TasteDeckProgress(answered = answered, total = cards.size, milestoneReached = claimed)
     }
 

@@ -7,16 +7,24 @@ import kotlin.test.assertNull
 class TasteRewardTest {
 
     @Test
-    fun `정해진 장수에서만 소개가 한 명 늘어난다`() {
+    fun `열 장마다 보상 지점이 온다`() {
         assertEquals(10, TasteReward.milestoneAt(10))
-        assertEquals(100, TasteReward.milestoneAt(100))
+        assertEquals(20, TasteReward.milestoneAt(20))
+        assertEquals(250, TasteReward.milestoneAt(250))
         assertNull(TasteReward.milestoneAt(11))
         assertNull(TasteReward.milestoneAt(1))
     }
 
     @Test
-    fun `평생 받을 수 있는 추가 소개는 네 번뿐이다`() {
-        // 파밍이 성립하지 않는 근거가 이 유한함이다 — 카드를 다 넘겨도 네 번이 끝이다.
-        assertEquals(4, TasteReward.TOTAL)
+    fun `더미가 늘어도 규칙은 그대로 이어진다`() {
+        // 끝이 있는 이정표(10·30·60·100)를 쓰다가 되풀이되는 규칙으로 바꿨다 —
+        // 운영이 카드를 계속 붓기 때문에 끝을 못 박으면 오래 쓴 사람에게 남는 게 없다.
+        assertEquals(1000, TasteReward.milestoneAt(1000))
+    }
+
+    @Test
+    fun `한 장도 안 넘긴 상태는 보상 지점이 아니다`() {
+        // 0 % 10 == 0이라 무심코 통과시키면 카드를 고르지도 않고 상대를 받는다.
+        assertNull(TasteReward.milestoneAt(0))
     }
 }
