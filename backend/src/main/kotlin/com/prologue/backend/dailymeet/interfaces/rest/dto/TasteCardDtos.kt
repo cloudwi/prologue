@@ -37,10 +37,15 @@ data class TasteChoiceRequest(
     val note: String? = null,
 )
 
-data class TasteProgressResponse(val answered: Int, val total: Int) {
+data class TasteProgressResponse(
+    val answered: Int,
+    val total: Int,
+    /** 이번에 이정표를 밟아 고인 잉크. 대개 0이고, 0보다 크면 화면이 알려준다. */
+    val inkEarned: Int,
+) {
     companion object {
         fun from(progress: TasteDeckProgress): TasteProgressResponse =
-            TasteProgressResponse(progress.answered, progress.total)
+            TasteProgressResponse(progress.answered, progress.total, progress.inkEarned)
     }
 }
 

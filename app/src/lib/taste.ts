@@ -28,7 +28,12 @@ export async function getTasteDeck(limit?: number): Promise<TasteDeck> {
   return authedRequest<TasteDeck>('GET', limit ? `/taste-cards?limit=${limit}` : '/taste-cards');
 }
 
-export type TasteProgress = { answered: number; total: number };
+export type TasteProgress = {
+  answered: number;
+  total: number;
+  /** 이번 선택으로 이정표를 밟아 고인 잉크. 대개 0이고, 0보다 크면 화면이 알려준다. */
+  inkEarned: number;
+};
 
 /**
  * 카드 한 장을 고른다 (POST /taste-cards/{id}/choice).

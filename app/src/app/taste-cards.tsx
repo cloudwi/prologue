@@ -39,6 +39,9 @@ import { chooseTaste, getTasteDeck, TASTE_NOTE_MAX, type TasteCard, type TasteDe
  */
 const HOLD_MS = 260;
 
+/** 잉크 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
+const REWARD_SHOWN_MS = 2600;
+
 export default function TasteCardsScreen() {
   const c = useTheme();
   const router = useRouter();
@@ -52,6 +55,8 @@ export default function TasteCardsScreen() {
   const [saving, setSaving] = useState(false);
   /** 방금 고른 쪽 — 카드가 넘어가기 전 잠깐 색이 차오르는 자리. */
   const [chosen, setChosen] = useState<TasteOption | null>(null);
+  /** 방금 고인 잉크. 이정표를 밟은 순간에만 값이 생기고, 몇 초 뒤 사라진다. */
+  const [reward, setReward] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -91,6 +96,13 @@ export default function TasteCardsScreen() {
       active = false;
     };
   }, [apply]);
+
+  // 배지는 잠깐 떠 있다 사라진다 — 계속 붙어 있으면 그게 진행 표시가 된다.
+  useEffect(() => {
+    if (reward == null) return;
+    const timer = setTimeout(() => setReward(null), REWARD_SHOWN_MS);
+    return () => clearTimeout(timer);
+  }, [reward]);
 
   const card = cards[index];
   /**
@@ -139,10 +151,18 @@ export default function TasteCardsScreen() {
     haptics.select();
     const noted = note.trim().length > 0;
     const saved = chooseTaste(card.id, option, note.trim() || undefined)
-      .then(() => track('taste_card_chosen', { noted }))
+      .then((progress) => {
+        track('taste_card_chosen', { noted });
+        return progress.inkEarned;
+      })
       // 한 장이 저장되지 않았다고 흐름을 세우지는 않는다 — 조용히 다음 장으로 간다.
-      .catch(() => undefined);
-    await Promise.all([saved, new Promise((resolve) => setTimeout(resolve, HOLD_MS))]);
+      .catch(() => 0);
+    const [earned] = await Promise.all([saved, new Promise((resolve) => setTimeout(resolve, HOLD_MS))]);
+    // 이정표는 예고 없이 온다 — 남은 장수를 안 보여주기로 했으니, 받는 순간에만 말한다.
+    if (earned > 0) {
+      haptics.success();
+      setReward(earned);
+    }
     advance();
     setSaving(false);
   }
@@ -155,6 +175,16 @@ export default function TasteCardsScreen() {
             {isIntro ? '나중에 하기' : '닫기'}
           </Text>
         </Pressable>
+        {reward != null && (
+          <Animated.View
+            entering={ZoomIn.duration(220)}
+            exiting={FadeOut.duration(200)}
+            style={[styles.reward, { backgroundColor: c.primary }]}
+          >
+            <Ionicons name="water" size={13} color={c.primaryText} />
+            <Text style={[styles.rewardText, { color: c.primaryText }]}>잉크 +{reward}</Text>
+          </Animated.View>
+        )}
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -288,6 +318,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   headerButton: { paddingVertical: 4 },
   headerAction: { ...Type.label },
+  reward: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.pill },
+  rewardText: { ...Type.caption, fontWeight: '700' },
 
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
   intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },

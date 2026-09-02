@@ -82,11 +82,15 @@ export function inkReasonLabel(reason: string): string {
       return '잉크 충전';
     case 'PROFILE_UNLOCK':
       return '프로필 다시 보기';
+    case 'ANSWER_UNLOCK':
+      return '잠긴 답 열기';
     case 'MAIL_RECALL':
       return '편지 회수 환급';
     case 'REFERRAL':
       return '친구 초대';
     default:
+      // 취향 카드 이정표는 사유에 장수가 붙는다(TASTE_10). 몇 장째였는지는 알릴 이유가 없어 뭉갠다.
+      if (reason.startsWith('TASTE_')) return '취향 카드';
       return '잉크 변동';
   }
 }

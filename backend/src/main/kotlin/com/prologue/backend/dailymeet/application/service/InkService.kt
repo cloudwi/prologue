@@ -3,6 +3,7 @@ package com.prologue.backend.dailymeet.application.service
 import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.InkWallet
 import com.prologue.backend.dailymeet.domain.model.ServiceDay
+import com.prologue.backend.dailymeet.domain.model.TasteReward
 import com.prologue.backend.dailymeet.domain.repository.InkLedgerRepository
 import com.prologue.backend.dailymeet.domain.repository.InkWalletRepository
 import org.springframework.stereotype.Service
@@ -73,6 +74,24 @@ class InkService(
         if (last != null && !last.isBefore(todayStart)) return 0
         grantTo(accountId, InkPrice.DAILY_ANSWER, REASON_ANSWER)
         return InkPrice.DAILY_ANSWER
+    }
+
+    /**
+     * 취향 카드 이정표 보상 — [TasteReward]가 정한 장수에 이르면 한 번만 지급한다.
+     *
+     * 판정은 원장이 한다(그 이정표 사유의 기록이 이미 있는가). 카드를 다시 고르면 장수는
+     * 늘지 않으므로 같은 이정표를 두 번 밟을 일도 없지만, 같은 순간에 두 요청이 들어와도
+     * 한 번만 나가야 해서 사유별로 기록을 확인한다.
+     *
+     * @return 이번에 고인 잉크. 이정표가 아니거나 이미 받았으면 0.
+     */
+    @Transactional
+    fun rewardTasteMilestone(accountId: UUID, answeredCount: Int): Int {
+        val amount = TasteReward.of(answeredCount) ?: return 0
+        val reason = TasteReward.reasonOf(answeredCount)
+        if (ledgerRepository.latestAt(accountId, reason) != null) return 0
+        grantTo(accountId, amount, reason)
+        return amount
     }
 
     private fun walletOf(accountId: UUID): InkWallet =

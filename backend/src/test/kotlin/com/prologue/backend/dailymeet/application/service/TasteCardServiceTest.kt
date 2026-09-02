@@ -20,7 +20,8 @@ class TasteCardServiceTest {
 
     private val cardRepository = mockk<TasteCardRepository>()
     private val choiceRepository = mockk<TasteChoiceRepository>()
-    private val service = TasteCardService(cardRepository, choiceRepository)
+    private val inkService = mockk<InkService> { every { rewardTasteMilestone(any(), any()) } returns 0 }
+    private val service = TasteCardService(cardRepository, choiceRepository, inkService)
 
     private val accountId = UUID.randomUUID()
     private val peerAccountId = UUID.randomUUID()
@@ -108,5 +109,29 @@ class TasteCardServiceTest {
         every { choiceRepository.findAllByAccountId(accountId) } returns emptyList()
 
         assertTrue(service.sharedWith(accountId, peerAccountId).isEmpty())
+    }
+
+    @Test
+    fun `이정표에 이르면 잉크가 함께 돌아온다`() {
+        // 카드가 손에 아무것도 쥐여주지 않으면 두 번 넘길 이유가 없다.
+        every { cardRepository.findAllOrdered() } returns cards
+        every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
+        every { choiceRepository.save(any()) } answers { firstArg() }
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
+        every { inkService.rewardTasteMilestone(accountId, 10) } returns 2
+
+        val progress = service.choose(accountId, 1L, TasteOption.A, null)
+
+        assertEquals(2, progress.inkEarned)
+    }
+
+    @Test
+    fun `이정표가 아니면 잉크는 0이다`() {
+        every { cardRepository.findAllOrdered() } returns cards
+        every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
+        every { choiceRepository.save(any()) } answers { firstArg() }
+        every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1L, TasteOption.A))
+
+        assertEquals(0, service.choose(accountId, 1L, TasteOption.A, null).inkEarned)
     }
 }

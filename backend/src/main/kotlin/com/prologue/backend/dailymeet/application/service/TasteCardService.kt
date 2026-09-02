@@ -18,9 +18,10 @@ import java.util.UUID
  * 오늘의 문답([DailyAnswerService])이 하루 한 번의 글이라면, 이쪽은 언제든 몇 장이든 넘길 수 있는
  * 더미다. 가입 직후 백지 앞에 세워지는 대신 카드 몇 장을 넘기며 시작할 수 있게 하려고 만들었다.
  *
- * **잉크는 주지 않는다.** 잉크는 이 앱의 공급(서술형 답)에 대한 보상이다. 탭 한 번에 잉크가 고이면
- * 아무도 쓰지 않게 되고, 그러면 읽을 것이 없어 만날 이유도 사라진다.
- * 카드가 돌려주는 것은 잉크가 아니라 **더 맞는 상대**다([TasteAffinity]가 매칭 점수에 실린다).
+ * **장당 잉크는 주지 않는다.** 탭 한 번에 잉크가 붙으면 그게 이 앱에서 가장 값싼 잉크가 되고,
+ * 글을 쓰는 일이 바보짓이 된다. 대신 한 계정에 한 번뿐인 이정표로 준다([TasteReward]) —
+ * 총량이 묶여 있어 파밍이 안 되면서도, 넘기다 보면 한 번씩 툭 떨어져 손에 남는 것이 생긴다.
+ * 카드가 돌려주는 더 큰 몫은 여전히 **더 맞는 상대**다([TasteAffinity]가 매칭 점수에 실린다).
  *
  * 소개를 여는 열쇠도 여전히 서술형 답이다 — "쓰면 만난다"는 리듬은 카드가 건드리지 않는다.
  */
@@ -28,6 +29,7 @@ import java.util.UUID
 class TasteCardService(
     private val tasteCardRepository: TasteCardRepository,
     private val tasteChoiceRepository: TasteChoiceRepository,
+    private val inkService: InkService,
 ) {
     /**
      * 아직 안 고른 카드 한 묶음.
@@ -56,9 +58,13 @@ class TasteCardService(
         val choice = existing?.apply { revise(option, note) }
             ?: TasteChoice.choose(accountId, cardId, option, note)
         tasteChoiceRepository.save(choice)
-        // 방금 고른 것까지 세어 돌려준다 — 화면의 진행 표시가 한 장씩 밀리지 않게.
+        // 방금 고른 것까지 세어 이정표를 판정한다 — 한 장 밀리면 보상도 한 장 늦게 온다.
         val answered = tasteChoiceRepository.findAllByAccountId(accountId).size
-        return TasteDeckProgress(answered = answered, total = cards.size)
+        return TasteDeckProgress(
+            answered = answered,
+            total = cards.size,
+            inkEarned = inkService.rewardTasteMilestone(accountId, answered),
+        )
     }
 
     /** 내가 고른 카드 전부 — 최근에 고른 순. 본인 전용 기록. */
@@ -155,7 +161,8 @@ data class TasteCardView(
     val myNote: String?,
 )
 
-data class TasteDeckProgress(val answered: Int, val total: Int)
+/** 한 장을 고른 결과. [inkEarned]는 이번에 이정표를 밟아 고인 잉크(대개 0). */
+data class TasteDeckProgress(val answered: Int, val total: Int, val inkEarned: Int = 0)
 
 /** 내가 고른 카드 하나 — 물음과 내가 고른 쪽, 덧붙인 한 줄. */
 data class MyTasteView(
