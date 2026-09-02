@@ -37,6 +37,7 @@ export function ProfileInvitation({
   photoUrls,
   letters,
   keywords,
+  tags,
   sharedTastes,
   seed,
   c,
@@ -56,6 +57,13 @@ export function ProfileInvitation({
   photoUrls: string[];
   letters: InvitationLetter[];
   keywords: string[];
+  /**
+   * 한 줄짜리 사실들 — 흡연·음주·만나는 빈도·종교·정치 성향([profileTags]).
+   *
+   * 편지 본문으로 늘어놓으면 프로필이 설문지가 된다. 표지 바로 아래 작은 태그로 묶어
+   * 훑고 지나갈 수 있게 하고, 지면은 그 사람이 직접 쓴 글에 내준다.
+   */
+  tags?: string[];
   /**
    * 나와 똑같이 고른 취향 카드 — 상대 프로필에서만 넘긴다(내 미리보기에는 겹칠 상대가 없다).
    * 자기소개는 다들 비슷한 말을 적지만, 이건 같은 물음에 둘이 같은 쪽을 골랐다는 사실이라
@@ -103,6 +111,16 @@ export function ProfileInvitation({
           </View>
         )}
       </View>
+
+      {tags && tags.length > 0 && (
+        <View style={styles.tagWrap}>
+          {tags.map((tag) => (
+            <View key={tag} style={[styles.tag, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+              <Text style={{ color: c.textSecondary, fontSize: 12.5 }}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {keywords.length > 0 && (
         <View style={styles.chipWrap}>
@@ -272,6 +290,9 @@ const styles = StyleSheet.create({
   unlockButton: { alignSelf: 'center', marginTop: 14, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 18, paddingVertical: 9 },
   unlockLabel: { fontSize: 14, fontWeight: '600' },
 
+  // 사실 태그 — 키워드 칩보다 한 단계 작고 조용하다. 훑는 정보지 읽는 정보가 아니다.
+  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, paddingHorizontal: 28, marginTop: 14 },
+  tag: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: StyleSheet.hairlineWidth },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
   skeletonLines: { width: '100%', marginTop: 14 },

@@ -10,6 +10,11 @@ export type Gender = 'MALE' | 'FEMALE';
  * 저장은 프로필 PUT이 아니라 전용 경로로만 한다([updateBeliefs]) — 프로필 저장은 전체 덮어쓰기라
  * 이 항목을 모르는 화면이 저장 한 번으로 지워버리기 때문이다.
  */
+/** 생활 습관 — 민감정보가 아니지만 저장 경로는 프로필과 분리돼 있다([updateLifestyle]). */
+export type Smoking = 'NONE' | 'QUITTING' | 'SOMETIMES' | 'REGULAR';
+export type Drinking = 'NONE' | 'RARELY' | 'SOMETIMES' | 'OFTEN';
+export type MeetFrequency = 'ONCE' | 'TWO_TO_THREE' | 'FOUR_PLUS' | 'FLEXIBLE';
+
 export type Religion = 'NONE' | 'CHRISTIAN' | 'CATHOLIC' | 'BUDDHIST' | 'WON_BUDDHIST' | 'ISLAM' | 'OTHER';
 
 export type PoliticalLeaning =
@@ -76,7 +81,30 @@ export type MemberProfile = Required<
   /** 종교·정치 성향(민감정보). 안 적었으면 null. 수정은 my/beliefs 화면에서만. */
   religion: Religion | null;
   politicalLeaning: PoliticalLeaning | null;
+  /** 생활 습관. 안 골랐으면 null. 수정은 my/lifestyle 화면에서만. */
+  smoking: Smoking | null;
+  drinking: Drinking | null;
+  meetFrequency: MeetFrequency | null;
 };
+
+export type Lifestyle = {
+  smoking: Smoking | null;
+  drinking: Drinking | null;
+  meetFrequency: MeetFrequency | null;
+};
+
+/** 내 생활 습관 (GET /members/me/lifestyle). */
+export async function getLifestyle(): Promise<Lifestyle> {
+  return authedRequest<Lifestyle>('GET', '/members/me/lifestyle');
+}
+
+/**
+ * 생활 습관을 저장한다 (PUT /members/me/lifestyle). 셋을 한 번에 보내고, null은 "안 고름"이다.
+ * 프로필 저장(PUT /members/me)과 길이 다른 이유: 그쪽은 전체 덮어쓰기라 이 값을 지운다.
+ */
+export async function updateLifestyle(input: Lifestyle): Promise<Lifestyle> {
+  return authedRequest<Lifestyle>('PUT', '/members/me/lifestyle', input);
+}
 
 export type Beliefs = {
   religion: Religion | null;

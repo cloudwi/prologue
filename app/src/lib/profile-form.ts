@@ -1,4 +1,10 @@
-import { POLITICAL_LABELS, RELIGION_LABELS } from '@/constants/profile';
+import {
+  DRINKING_TAGS,
+  MEET_FREQUENCY_TAGS,
+  POLITICAL_TAGS,
+  RELIGION_LABELS,
+  SMOKING_TAGS,
+} from '@/constants/profile';
 
 import type { MemberProfile, OnboardingProfile } from './member';
 
@@ -30,17 +36,32 @@ export function toRequest(p: MemberProfile, patch: Partial<OnboardingProfile> = 
 }
 
 /**
- * 종교·정치 성향을 프로필 칩 문구로. 안 적은 항목은 아예 빠진다 —
- * "무응답"이라는 칩을 만들면 그것도 정보가 되고, 비워둔 사람에게 빈칸을 들이대는 꼴이 된다.
- * 앞에 항목 이름을 붙이는 이유는 취미 칩들과 한 줄에 섞여도 무엇인지 읽히게 하기 위해서다.
+ * 프로필에 붙는 작은 태그들 — 흡연·음주·만나는 빈도·종교·정치 성향.
+ *
+ * 다섯 항목을 편지 본문처럼 늘어놓으면 프로필이 설문지가 된다. 한 줄짜리 사실은 한 줄짜리
+ * 태그로 보여주고, 지면은 그 사람이 직접 쓴 글에 내준다.
+ *
+ * 안 고른 항목은 아예 빠진다 — "무응답" 태그를 만들면 비워둔 것 자체가 정보가 되고,
+ * 비워둔 사람에게 빈칸을 들이대는 꼴이 된다. 모르는 값도 조용히 버린다(서버에 새 값이 생겨도
+ * 구버전 앱이 빈 태그를 그리지 않게).
+ *
+ * 순서는 자리 잡기 쉬운 것부터: 생활 습관 셋 → 신념 둘. 신념은 따로 동의하고 적은 값이라
+ * 가장 뒤에 두되 빠지지는 않는다.
  */
-export function beliefChips(religion?: string | null, politicalLeaning?: string | null): string[] {
-  const chips: string[] = [];
-  const religionLabel = religion ? RELIGION_LABELS[religion] : null;
-  const politicalLabel = politicalLeaning ? POLITICAL_LABELS[politicalLeaning] : null;
-  if (religionLabel) chips.push(`종교 · ${religionLabel}`);
-  if (politicalLabel) chips.push(`정치 · ${politicalLabel}`);
-  return chips;
+export function profileTags(p: {
+  smoking?: string | null;
+  drinking?: string | null;
+  meetFrequency?: string | null;
+  religion?: string | null;
+  politicalLeaning?: string | null;
+}): string[] {
+  return [
+    p.smoking ? SMOKING_TAGS[p.smoking] : null,
+    p.drinking ? DRINKING_TAGS[p.drinking] : null,
+    p.meetFrequency ? MEET_FREQUENCY_TAGS[p.meetFrequency] : null,
+    p.religion ? RELIGION_LABELS[p.religion] : null,
+    p.politicalLeaning ? POLITICAL_TAGS[p.politicalLeaning] : null,
+  ].filter((tag): tag is string => !!tag);
 }
 
 export type NextStep = { label: string; hint: string; href: string };

@@ -65,3 +65,68 @@ export const POLITICAL_ORDER = [
   'CONSERVATIVE',
   'APOLITICAL',
 ] as const;
+
+/**
+ * 생활 습관 — 흡연·음주·만나는 빈도. 편집 화면에서 고를 때 보이는 말.
+ * 프로필에 붙는 태그는 더 짧다(TAG_LABELS) — 고르는 자리와 보이는 자리의 말이 다른 이유는,
+ * 고를 땐 뜻이 분명해야 하고 보일 땐 자리를 적게 써야 하기 때문이다.
+ */
+export const SMOKING_LABELS: Record<string, string> = {
+  NONE: '안 피워요',
+  QUITTING: '끊는 중이에요',
+  SOMETIMES: '가끔 피워요',
+  REGULAR: '피워요',
+};
+
+export const DRINKING_LABELS: Record<string, string> = {
+  NONE: '안 마셔요',
+  RARELY: '거의 안 마셔요',
+  SOMETIMES: '가끔 마셔요',
+  OFTEN: '자주 마셔요',
+};
+
+export const MEET_FREQUENCY_LABELS: Record<string, string> = {
+  ONCE: '주 1회쯤',
+  TWO_TO_THREE: '주 2~3회',
+  FOUR_PLUS: '주 4회 이상',
+  FLEXIBLE: '그때그때 달라요',
+};
+
+export const SMOKING_ORDER = ['NONE', 'QUITTING', 'SOMETIMES', 'REGULAR'] as const;
+export const DRINKING_ORDER = ['NONE', 'RARELY', 'SOMETIMES', 'OFTEN'] as const;
+export const MEET_FREQUENCY_ORDER = ['ONCE', 'TWO_TO_THREE', 'FOUR_PLUS', 'FLEXIBLE'] as const;
+
+/**
+ * 프로필에 붙는 태그 문구 — 한 줄에 여럿이 늘어서므로 최대한 짧게.
+ * 홀로 있어도 무슨 항목인지 읽혀야 해서, 애매한 값에만 앞말을 붙인다("중도"는 그대로 두되
+ * "관심 없음"은 정치라고 말해줘야 한다).
+ */
+export const SMOKING_TAGS: Record<string, string> = {
+  NONE: '비흡연',
+  QUITTING: '금연 중',
+  SOMETIMES: '가끔 흡연',
+  REGULAR: '흡연',
+};
+
+export const DRINKING_TAGS: Record<string, string> = {
+  NONE: '술 안 함',
+  RARELY: '술 거의 안 함',
+  SOMETIMES: '가끔 한잔',
+  OFTEN: '술 자주',
+};
+
+export const MEET_FREQUENCY_TAGS: Record<string, string> = {
+  ONCE: '주 1회',
+  TWO_TO_THREE: '주 2~3회',
+  FOUR_PLUS: '주 4회+',
+  FLEXIBLE: '만남 그때그때',
+};
+
+export const POLITICAL_TAGS: Record<string, string> = {
+  PROGRESSIVE: '진보',
+  CENTER_LEFT: '중도 진보',
+  CENTER: '중도',
+  CENTER_RIGHT: '중도 보수',
+  CONSERVATIVE: '보수',
+  APOLITICAL: '정치 관심 없음',
+};

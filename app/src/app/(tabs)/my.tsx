@@ -22,7 +22,7 @@ import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { POLITICAL_LABELS, RELIGION_LABELS } from '@/constants/profile';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
-import { ageFrom, nextStep } from '@/lib/profile-form';
+import { ageFrom, nextStep, profileTags } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
@@ -282,6 +282,7 @@ function MyHub() {
            * 종교·정치 성향은 민감정보라 상세 프로필과 화면을 나눈다 — 동의 안내가 다른 항목들
            * 사이에 끼면 읽히지 않는다. 비워둔 게 기본이라 값 자리는 '선택'으로 둔다.
            */}
+          <Row label="생활 습관" value={lifestyleLabel(profile)} onPress={() => router.push('/my/lifestyle')} c={c} />
           <Row
             label="종교·정치 성향"
             value={beliefsLabel(profile)}
@@ -395,6 +396,16 @@ function Section({ title, c, children }: { title: string; c: ThemeColors; childr
  * 종교·정치 성향 줄에 붙는 현재 값. 안 적었으면 '선택'이라고만 둔다 —
  * '없음'이라고 쓰면 안 적은 것이 아니라 '무교'라고 답한 것처럼 읽힌다.
  */
+/** 생활 습관 줄의 현재 값 — 고른 것만 짧은 태그로. 프로필에 붙는 말과 같은 말이다. */
+function lifestyleLabel(profile: MemberProfile | null): string {
+  const tags = profileTags({
+    smoking: profile?.smoking,
+    drinking: profile?.drinking,
+    meetFrequency: profile?.meetFrequency,
+  });
+  return tags.length > 0 ? tags.join(' · ') : '선택';
+}
+
 function beliefsLabel(profile: MemberProfile | null): string {
   const parts = [
     profile?.religion ? RELIGION_LABELS[profile.religion] : null,
