@@ -34,6 +34,7 @@ type AnalyticsEvent =
   // 코어 루프
   | 'taste_deck_opened'     // 취향 카드 더미 열기 — 백지 대신 시작하는 자리
   | 'taste_card_chosen'     // 카드 한 장 고름(noted 속성: 한 줄을 덧붙였는지 — 글로 가는 사다리)
+  | 'taste_peer_rewarded'   // 이정표를 밟아 상대가 한 명 더 도착 — 카드가 사람으로 바뀐 순간
   | 'answer_submitted'      // 오늘 질문에 답변
   | 'peer_profile_viewed'   // 상대 프로필 상세 열람
   | 'heart_sent'            // 하트 전송

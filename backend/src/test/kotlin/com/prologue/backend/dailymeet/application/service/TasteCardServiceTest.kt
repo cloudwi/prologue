@@ -6,22 +6,25 @@ import com.prologue.backend.dailymeet.domain.model.TasteChoice
 import com.prologue.backend.dailymeet.domain.model.TasteOption
 import com.prologue.backend.dailymeet.domain.repository.TasteCardRepository
 import com.prologue.backend.dailymeet.domain.repository.TasteChoiceRepository
+import com.prologue.backend.dailymeet.domain.repository.TasteRewardRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TasteCardServiceTest {
 
     private val cardRepository = mockk<TasteCardRepository>()
     private val choiceRepository = mockk<TasteChoiceRepository>()
-    private val inkService = mockk<InkService> { every { rewardTasteMilestone(any(), any()) } returns 0 }
-    private val service = TasteCardService(cardRepository, choiceRepository, inkService)
+    private val rewardRepository = mockk<TasteRewardRepository> { every { claimIfNew(any(), any()) } returns true }
+    private val service = TasteCardService(cardRepository, choiceRepository, rewardRepository)
 
     private val accountId = UUID.randomUUID()
     private val peerAccountId = UUID.randomUUID()
@@ -112,26 +115,39 @@ class TasteCardServiceTest {
     }
 
     @Test
-    fun `이정표에 이르면 잉크가 함께 돌아온다`() {
-        // 카드가 손에 아무것도 쥐여주지 않으면 두 번 넘길 이유가 없다.
+    fun `이정표에 이르면 추가 소개권이 적립된다`() {
+        // 카드가 손에 아무것도 쥐여주지 않으면 두 번 넘길 이유가 없다. 보상은 재화가 아니라 사람이다.
         every { cardRepository.findAllOrdered() } returns cards
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
-        every { inkService.rewardTasteMilestone(accountId, 10) } returns 2
 
         val progress = service.choose(accountId, 1L, TasteOption.A, null)
 
-        assertEquals(2, progress.inkEarned)
+        assertTrue(progress.milestoneReached)
+        verify(exactly = 1) { rewardRepository.claimIfNew(accountId, 10) }
     }
 
     @Test
-    fun `이정표가 아니면 잉크는 0이다`() {
+    fun `이정표가 아니면 아무것도 적립하지 않는다`() {
         every { cardRepository.findAllOrdered() } returns cards
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1L, TasteOption.A))
 
-        assertEquals(0, service.choose(accountId, 1L, TasteOption.A, null).inkEarned)
+        assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
+        verify(exactly = 0) { rewardRepository.claimIfNew(any(), any()) }
+    }
+
+    @Test
+    fun `이미 받은 이정표는 다시 적립되지 않는다`() {
+        // 카드를 지웠다 다시 고르는 식으로 같은 이정표를 두 번 밟을 수 없다 — 판정은 저장소가 한다.
+        every { cardRepository.findAllOrdered() } returns cards
+        every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
+        every { choiceRepository.save(any()) } answers { firstArg() }
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimIfNew(accountId, 10) } returns false
+
+        assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
     }
 }

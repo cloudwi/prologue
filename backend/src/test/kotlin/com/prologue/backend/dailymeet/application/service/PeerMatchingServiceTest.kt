@@ -59,6 +59,10 @@ class PeerMatchingServiceTest {
     private val blockService = mockk<com.prologue.backend.member.application.service.BlockService> {
         every { exclusionFor(any(), any()) } returns com.prologue.backend.member.application.service.BlockService.Exclusion.NONE
     }
+    // 취향 카드 이정표를 아직 아무도 못 밟은 상태 — 추가 소개권이 없다
+    private val tasteRewardRepository = mockk<com.prologue.backend.dailymeet.domain.repository.TasteRewardRepository>(relaxed = true) {
+        every { pendingCount(any()) } returns 0
+    }
     // 취향 카드를 아무도 안 넘긴 상태 — 겹침 점수는 0이라 기존 순위 테스트가 그대로 성립한다
     private val tasteCardService = mockk<TasteCardService> {
         every { optionsOf(any<UUID>()) } returns emptyMap()
@@ -74,10 +78,10 @@ class PeerMatchingServiceTest {
      * 이 값을 열어두면 같은 테스트가 오전에는 통과하고 오후에는 깨진다 — 답하지 않은 사람에게도
      * 정오부터는 상대가 도착하기 때문이다. 정오 이후의 규칙은 [afterNoonService]로 따로 검증한다.
      */
-    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, lockedRevealHour = 24)
+    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, tasteRewardRepository, lockedRevealHour = 24)
 
     /** 정오가 지난 상태 — 0시부터 열린다고 두면 언제 돌려도 "정오 이후"다. */
-    private val afterNoonService = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, lockedRevealHour = 0)
+    private val afterNoonService = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, tasteRewardRepository, lockedRevealHour = 0)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -210,7 +214,7 @@ class PeerMatchingServiceTest {
         // 소개 인원은 설정값이라 테스트에서 2로 고정해 "넘치지 않는지"를 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2, lockedRevealHour = 24,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, tasteRewardRepository, revealCount = 2, lockedRevealHour = 24,
         )
 
         val view = twoPerDay.todayPeers(accountId)
@@ -392,7 +396,7 @@ class PeerMatchingServiceTest {
         // 정원이 1이면 부족분이 없어 채울 일이 없다 — 2로 두고 "모자란 만큼만" 채우는지 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2, lockedRevealHour = 24,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, tasteRewardRepository, revealCount = 2, lockedRevealHour = 24,
         )
 
         val view = twoPerDay.todayPeers(accountId)
@@ -445,7 +449,7 @@ class PeerMatchingServiceTest {
 
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2, lockedRevealHour = 24,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, tasteRewardRepository, revealCount = 2, lockedRevealHour = 24,
         )
         val view = twoPerDay.todayPeers(accountId)
 

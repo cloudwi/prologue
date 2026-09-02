@@ -16,6 +16,7 @@ import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
 import com.prologue.backend.dailymeet.domain.repository.MailRepository
 import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
+import com.prologue.backend.dailymeet.domain.repository.TasteRewardRepository
 import com.prologue.backend.member.application.service.BlockService
 import com.prologue.backend.member.application.service.JobVerificationService
 import com.prologue.backend.member.application.service.MemberQueryService
@@ -48,6 +49,7 @@ class PeerMatchingService(
     private val blockService: BlockService,
     private val tasteCardService: TasteCardService,
     private val answerAccessService: AnswerAccessService,
+    private val tasteRewardRepository: TasteRewardRepository,
     /**
      * 후보를 찾을 질문의 범위(일). 1이면 오늘 질문에 답한 사람만 후보다.
      *
@@ -125,7 +127,7 @@ class PeerMatchingService(
             // 이미 오늘 몫이 도착했다면 시계와 무관하게 그 사람을 보여준다.
             val alreadyRevealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).isNotEmpty()
             if (alreadyRevealed || afterLockedRevealTime()) {
-                val revealed = fillRevealed(accountId, question, questions)
+                val revealed = fillRevealedWithRewards(accountId, question, questions)
                 if (revealed.isNotEmpty()) {
                     return TodayPeersView(
                         open = true,
@@ -149,7 +151,7 @@ class PeerMatchingService(
             )
         }
 
-        val revealed = fillRevealed(accountId, question, questions)
+        val revealed = fillRevealedWithRewards(accountId, question, questions)
         return TodayPeersView(
             open = true,
             answerUnlocked = true,
@@ -157,6 +159,36 @@ class PeerMatchingService(
             // 오늘 공개된 상대는 방금 이어진 사람이라 잠길 수 없다 — 창을 물어볼 것도 없다.
             peers = revealed.map { peerView(accountId, it, answered = true, questions, withRecentAnswers = true) },
         )
+    }
+
+    /**
+     * 오늘의 자리를 채우되, 취향 카드로 받은 추가 소개권이 있으면 그만큼 더 채운다.
+     *
+     * 표는 실제로 사람이 늘었을 때만 쓴다 — 후보가 없어 못 채운 날에 표까지 사라지면
+     * 보상을 약속해 놓고 없던 일로 만드는 셈이다. 그런 날의 표는 남아 있다가 다음에 쓰인다.
+     */
+    private fun fillRevealedWithRewards(accountId: UUID, question: Question, questions: List<Question>): List<Answer> {
+        val pending = tasteRewardRepository.pendingCount(accountId)
+        if (pending == 0) return fillRevealed(accountId, question, questions)
+
+        val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
+        val revealed = fillRevealed(accountId, question, questions, target = revealCount + pending)
+        // 기본 몫(revealCount)을 넘어 늘어난 만큼이 표로 만난 사람이다.
+        val used = revealed.size - maxOf(before, revealCount)
+        if (used > 0) tasteRewardRepository.markGranted(accountId, used)
+        return revealed
+    }
+
+    /**
+     * 적립된 소개권을 지금 써본다 — 카드를 넘겨 이정표를 밟은 그 순간에 부른다.
+     * 후보가 없으면 아무 일도 일어나지 않고 표는 남는다. 새로 도착했으면 true.
+     */
+    @Transactional
+    fun consumeExtraReveals(accountId: UUID): Boolean {
+        val questions = questionRepository.findAllOrdered()
+        val question = QuestionRotation.of(questions, ServiceDay.now())
+        val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
+        return fillRevealedWithRewards(accountId, question, questions).size > before
     }
 
     /**
@@ -198,11 +230,16 @@ class PeerMatchingService(
      * 안에 답한 사람 → 그래도 없으면 이미 만났던 사람 중 다시 소개해도 되는 사람. 사람이 적을 때
      * "오늘은 아무도 없음"이 되는 날을 최대한 줄이되, 가까운 결을 먼저 쓴다.
      */
-    private fun fillRevealed(accountId: UUID, question: Question, questions: List<Question>): List<Answer> {
+    private fun fillRevealed(
+        accountId: UUID,
+        question: Question,
+        questions: List<Question>,
+        target: Int = revealCount,
+    ): List<Answer> {
         val revealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id)
             .mapNotNull { answerRepository.findById(it.peerAnswerId) }
             .toMutableList()
-        if (revealed.size >= revealCount) return revealed
+        if (revealed.size >= target) return revealed
 
         val me = memberQueryService.findProfile(accountId)
             ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
@@ -248,7 +285,7 @@ class PeerMatchingService(
         val peerTastes = if (myTastes.isEmpty()) emptyMap() else tasteCardService.optionsOf(candidates.map { it.peer.accountId })
 
         // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
-        while (revealed.size < revealCount && candidates.isNotEmpty()) {
+        while (revealed.size < target && candidates.isNotEmpty()) {
             val chosen = candidates.maxBy {
                 PeerScore.of(
                     me,

@@ -5,8 +5,10 @@ import com.prologue.backend.dailymeet.domain.model.TasteAffinity
 import com.prologue.backend.dailymeet.domain.model.TasteCard
 import com.prologue.backend.dailymeet.domain.model.TasteChoice
 import com.prologue.backend.dailymeet.domain.model.TasteOption
+import com.prologue.backend.dailymeet.domain.model.TasteReward
 import com.prologue.backend.dailymeet.domain.repository.TasteCardRepository
 import com.prologue.backend.dailymeet.domain.repository.TasteChoiceRepository
+import com.prologue.backend.dailymeet.domain.repository.TasteRewardRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -18,10 +20,10 @@ import java.util.UUID
  * 오늘의 문답([DailyAnswerService])이 하루 한 번의 글이라면, 이쪽은 언제든 몇 장이든 넘길 수 있는
  * 더미다. 가입 직후 백지 앞에 세워지는 대신 카드 몇 장을 넘기며 시작할 수 있게 하려고 만들었다.
  *
- * **장당 잉크는 주지 않는다.** 탭 한 번에 잉크가 붙으면 그게 이 앱에서 가장 값싼 잉크가 되고,
- * 글을 쓰는 일이 바보짓이 된다. 대신 한 계정에 한 번뿐인 이정표로 준다([TasteReward]) —
- * 총량이 묶여 있어 파밍이 안 되면서도, 넘기다 보면 한 번씩 툭 떨어져 손에 남는 것이 생긴다.
- * 카드가 돌려주는 더 큰 몫은 여전히 **더 맞는 상대**다([TasteAffinity]가 매칭 점수에 실린다).
+ * **잉크는 주지 않는다.** 보상은 재화가 아니라 사람이다 — 정해진 장수를 넘기면 오늘의 상대가
+ * 한 명 더 온다([TasteReward]). 잉크로 주면 카드가 재화를 캐는 자리가 되고, 값싼 잉크가
+ * 글의 값어치까지 함께 끌어내린다. 카드가 돌려주는 다른 몫은 **더 맞는 상대**다
+ * ([TasteAffinity]가 매칭 점수에 실린다) — 둘 다 결국 사람이라는 점이 이 기능의 결이다.
  *
  * 소개를 여는 열쇠도 여전히 서술형 답이다 — "쓰면 만난다"는 리듬은 카드가 건드리지 않는다.
  */
@@ -29,7 +31,7 @@ import java.util.UUID
 class TasteCardService(
     private val tasteCardRepository: TasteCardRepository,
     private val tasteChoiceRepository: TasteChoiceRepository,
-    private val inkService: InkService,
+    private val tasteRewardRepository: TasteRewardRepository,
 ) {
     /**
      * 아직 안 고른 카드 한 묶음.
@@ -60,11 +62,11 @@ class TasteCardService(
         tasteChoiceRepository.save(choice)
         // 방금 고른 것까지 세어 이정표를 판정한다 — 한 장 밀리면 보상도 한 장 늦게 온다.
         val answered = tasteChoiceRepository.findAllByAccountId(accountId).size
-        return TasteDeckProgress(
-            answered = answered,
-            total = cards.size,
-            inkEarned = inkService.rewardTasteMilestone(accountId, answered),
-        )
+        val milestone = TasteReward.milestoneAt(answered)
+        // 표만 적립한다. 그 표를 실제 소개로 바꾸는 일은 소개를 아는 쪽의 몫이다
+        // (PeerMatchingService.consumeExtraReveals) — 여기서 부르면 두 서비스가 서로를 참조한다.
+        val claimed = milestone != null && tasteRewardRepository.claimIfNew(accountId, milestone)
+        return TasteDeckProgress(answered = answered, total = cards.size, milestoneReached = claimed)
     }
 
     /** 내가 고른 카드 전부 — 최근에 고른 순. 본인 전용 기록. */
@@ -161,8 +163,8 @@ data class TasteCardView(
     val myNote: String?,
 )
 
-/** 한 장을 고른 결과. [inkEarned]는 이번에 이정표를 밟아 고인 잉크(대개 0). */
-data class TasteDeckProgress(val answered: Int, val total: Int, val inkEarned: Int = 0)
+/** 한 장을 고른 결과. [milestoneReached]가 true면 이번 장으로 추가 소개권이 한 장 적립됐다. */
+data class TasteDeckProgress(val answered: Int, val total: Int, val milestoneReached: Boolean = false)
 
 /** 내가 고른 카드 하나 — 물음과 내가 고른 쪽, 덧붙인 한 줄. */
 data class MyTasteView(

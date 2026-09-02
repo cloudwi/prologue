@@ -1,5 +1,6 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
+import com.prologue.backend.dailymeet.application.service.PeerMatchingService
 import com.prologue.backend.dailymeet.application.service.TasteCardService
 import com.prologue.backend.dailymeet.interfaces.rest.dto.MyTastesResponse
 import com.prologue.backend.dailymeet.interfaces.rest.dto.TasteChoiceRequest
@@ -25,6 +26,7 @@ import java.util.UUID
 @RequestMapping("/taste-cards")
 class TasteCardController(
     private val tasteCardService: TasteCardService,
+    private val peerMatchingService: PeerMatchingService,
 ) {
     /** 아직 안 고른 카드 한 묶음. */
     @GetMapping
@@ -38,7 +40,13 @@ class TasteCardController(
         )
     }
 
-    /** 카드 한 장을 고른다(다시 고르면 덮어쓴다). */
+    /**
+     * 카드 한 장을 고른다(다시 고르면 덮어쓴다).
+     *
+     * 이정표를 밟았으면 그 자리에서 소개권을 써본다. 두 서비스를 여기서 잇는 이유는
+     * 서로를 참조하지 않게 하기 위해서다 — 소개는 취향을 알지만(매칭 점수), 취향은 소개를
+     * 몰라야 한다. 후보가 없어 지금 못 만나면 표는 남아 다음에 쓰인다.
+     */
     @PostMapping("/{cardId}/choice")
     fun choose(
         authentication: Authentication,
@@ -46,9 +54,9 @@ class TasteCardController(
         @Valid @RequestBody request: TasteChoiceRequest,
     ): TasteProgressResponse {
         val accountId = UUID.fromString(authentication.name)
-        return TasteProgressResponse.from(
-            tasteCardService.choose(accountId, cardId, request.option, request.note),
-        )
+        val progress = tasteCardService.choose(accountId, cardId, request.option, request.note)
+        val peerArrived = progress.milestoneReached && peerMatchingService.consumeExtraReveals(accountId)
+        return TasteProgressResponse.from(progress, peerArrived)
     }
 
     /** 내가 고른 카드 전부 — 본인 전용 기록. */

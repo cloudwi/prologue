@@ -40,12 +40,14 @@ data class TasteChoiceRequest(
 data class TasteProgressResponse(
     val answered: Int,
     val total: Int,
-    /** 이번에 이정표를 밟아 고인 잉크. 대개 0이고, 0보다 크면 화면이 알려준다. */
-    val inkEarned: Int,
+    /** 이번 장으로 이정표를 밟았는지 — 추가 소개권 한 장이 적립됐다는 뜻. */
+    val milestoneReached: Boolean,
+    /** 그 표가 그 자리에서 소개로 바뀌었는지. 후보가 없으면 false고, 표는 남아 다음에 쓰인다. */
+    val peerArrived: Boolean,
 ) {
     companion object {
-        fun from(progress: TasteDeckProgress): TasteProgressResponse =
-            TasteProgressResponse(progress.answered, progress.total, progress.inkEarned)
+        fun from(progress: TasteDeckProgress, peerArrived: Boolean): TasteProgressResponse =
+            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived)
     }
 }
 

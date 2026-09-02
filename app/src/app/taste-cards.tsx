@@ -55,8 +55,11 @@ export default function TasteCardsScreen() {
   const [saving, setSaving] = useState(false);
   /** 방금 고른 쪽 — 카드가 넘어가기 전 잠깐 색이 차오르는 자리. */
   const [chosen, setChosen] = useState<TasteOption | null>(null);
-  /** 방금 고인 잉크. 이정표를 밟은 순간에만 값이 생기고, 몇 초 뒤 사라진다. */
-  const [reward, setReward] = useState<number | null>(null);
+  /**
+   * 방금 받은 보상. 이정표를 밟은 순간에만 생기고 몇 초 뒤 사라진다.
+   * 'arrived'는 상대가 그 자리에서 도착한 것, 'pending'은 지금 후보가 없어 기다리는 것.
+   */
+  const [reward, setReward] = useState<'arrived' | 'pending' | null>(null);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -153,15 +156,17 @@ export default function TasteCardsScreen() {
     const saved = chooseTaste(card.id, option, note.trim() || undefined)
       .then((progress) => {
         track('taste_card_chosen', { noted });
-        return progress.inkEarned;
+        if (!progress.milestoneReached) return null;
+        return progress.peerArrived ? ('arrived' as const) : ('pending' as const);
       })
       // 한 장이 저장되지 않았다고 흐름을 세우지는 않는다 — 조용히 다음 장으로 간다.
-      .catch(() => 0);
+      .catch(() => null);
     const [earned] = await Promise.all([saved, new Promise((resolve) => setTimeout(resolve, HOLD_MS))]);
     // 이정표는 예고 없이 온다 — 남은 장수를 안 보여주기로 했으니, 받는 순간에만 말한다.
-    if (earned > 0) {
+    if (earned) {
       haptics.success();
       setReward(earned);
+      if (earned === 'arrived') track('taste_peer_rewarded');
     }
     advance();
     setSaving(false);
@@ -175,14 +180,24 @@ export default function TasteCardsScreen() {
             {isIntro ? '나중에 하기' : '닫기'}
           </Text>
         </Pressable>
+        {/*
+          * 보상은 잉크가 아니라 사람이다. 도착했으면 그렇게 말하고, 지금 후보가 없으면
+          * 그것도 그대로 말한다 — "곧 도착"이라고 얼버무리면 다음에 열어본 사람이 속았다고 느낀다.
+          */}
         {reward != null && (
           <Animated.View
             entering={ZoomIn.duration(220)}
             exiting={FadeOut.duration(200)}
-            style={[styles.reward, { backgroundColor: c.primary }]}
+            style={[styles.reward, { backgroundColor: reward === 'arrived' ? c.primary : c.backgroundSelected }]}
           >
-            <Ionicons name="water" size={13} color={c.primaryText} />
-            <Text style={[styles.rewardText, { color: c.primaryText }]}>잉크 +{reward}</Text>
+            <Ionicons
+              name={reward === 'arrived' ? 'person-add' : 'hourglass-outline'}
+              size={13}
+              color={reward === 'arrived' ? c.primaryText : c.textSecondary}
+            />
+            <Text style={[styles.rewardText, { color: reward === 'arrived' ? c.primaryText : c.textSecondary }]}>
+              {reward === 'arrived' ? '상대 한 명 더 도착' : '자리 하나 맡아뒀어요'}
+            </Text>
           </Animated.View>
         )}
       </View>

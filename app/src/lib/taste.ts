@@ -4,8 +4,8 @@ import { authedRequest } from './api';
  * 취향 카드 — 둘 중 하나를 고르는 가벼운 문답.
  *
  * 오늘의 문답과 **다른 더미**다. 날짜에 매이지 않아 언제든 몇 장이든 넘길 수 있고,
- * 잉크는 주지 않는다(잉크는 글에 대한 보상이다). 돌려주는 것은 더 맞는 상대다 —
- * 겹치는 선택이 매칭 점수에 실리고, 상대 카드에 "둘 다 이걸 골랐어요"로 걸린다.
+ * 잉크는 주지 않는다 — 보상은 재화가 아니라 사람이다. 정해진 장수를 넘기면 오늘의 상대가
+ * 한 명 더 오고, 겹치는 선택은 매칭 점수에 실려 상대 카드에 "둘 다 이걸 골랐어요"로 걸린다.
  */
 export type TasteCard = {
   id: number;
@@ -31,8 +31,10 @@ export async function getTasteDeck(limit?: number): Promise<TasteDeck> {
 export type TasteProgress = {
   answered: number;
   total: number;
-  /** 이번 선택으로 이정표를 밟아 고인 잉크. 대개 0이고, 0보다 크면 화면이 알려준다. */
-  inkEarned: number;
+  /** 이번 장으로 이정표를 밟았는지 — 추가 소개권 한 장이 적립됐다는 뜻. */
+  milestoneReached: boolean;
+  /** 그 표가 그 자리에서 소개로 바뀌었는지. 후보가 없으면 false고, 표는 남아 다음에 쓰인다. */
+  peerArrived: boolean;
 };
 
 /**
