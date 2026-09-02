@@ -47,6 +47,7 @@ class PeerMatchingService(
     private val jobVerificationService: JobVerificationService,
     private val blockService: BlockService,
     private val tasteCardService: TasteCardService,
+    private val answerAccessService: AnswerAccessService,
     /**
      * 후보를 찾을 질문의 범위(일). 1이면 오늘 질문에 답한 사람만 후보다.
      *
@@ -302,9 +303,11 @@ class PeerMatchingService(
             .mapNotNull { reveal -> answerRepository.findById(reveal.peerAnswerId)?.let { reveal to it } }
             .filter { (_, answer) -> answer.accountId !in carriedOver }
 
-        // 같은 질문이 여러 공개에 걸릴 수 있으니 열람 여부는 질문별로 한 번만 판정한다
+        // 같은 질문이 여러 공개에 걸릴 수 있으니 열람 여부는 질문별로 한 번만 판정한다.
+        // 잉크로 산 열람권도 답을 쓴 것과 같은 자격이다(AnswerAccessService) — 규칙이 아니라 값의 문제다.
+        val unlockedQuestions = answerAccessService.unlockedQuestions(accountId)
         val answeredByQuestion = reveals.map { (reveal, _) -> reveal.questionId }.distinct()
-            .associateWith { answerRepository.findByAccountIdAndQuestionId(accountId, it) != null }
+            .associateWith { it in unlockedQuestions || answerRepository.findByAccountIdAndQuestionId(accountId, it) != null }
 
         // 잠김 판정에 필요한 것들은 사람 수와 무관하게 한 번씩만 읽는다
         val unlockedPeers = profileAccessService.unlockedPeers(accountId)
@@ -337,6 +340,8 @@ class PeerMatchingService(
                         // 창이 닫히면 문답도 함께 닫힌다 — 프로필만 가리고 답이 남으면 잠근 게 아니다.
                         val unlocked = open && answeredByQuestion[reveal.questionId] == true
                         PastAnswerView(
+                            questionId = reveal.questionId,
+                            peerAnswerId = answer.id,
                             question = questionById[reveal.questionId]?.content ?: "",
                             content = if (unlocked) answer.content else null,
                             unlocked = unlocked,
@@ -356,7 +361,9 @@ class PeerMatchingService(
         val answer = answerRepository.findById(peerAnswerId)
             ?: throw DailyMeetException("상대의 답변을 찾을 수 없어요")
         if (answer.accountId == accountId) throw DailyMeetException("내 프로필이에요")
-        val answered = answerRepository.findByAccountIdAndQuestionId(accountId, answer.questionId) != null
+        // 잉크로 산 열람권도 답을 쓴 것과 같은 자격이다.
+        val answered = answer.questionId in answerAccessService.unlockedQuestions(accountId) ||
+            answerRepository.findByAccountIdAndQuestionId(accountId, answer.questionId) != null
         val questions = questionRepository.findAllOrdered()
         val open = ProfileAccess.isOpen(
             profileAccessService.pairedAt(accountId, answer.accountId),
@@ -477,6 +484,10 @@ data class PastPeerView(
 
 /** 지난 상대가 남긴 문답 하나 — 열람은 그 질문의 Give&Take 그대로(잠기면 content는 null). */
 data class PastAnswerView(
+    /** 그날의 질문 id — 잠긴 하루를 잉크로 열 때 앱이 가리키는 값이다([AnswerAccessService]). */
+    val questionId: Long,
+    /** 그날 상대가 쓴 답의 id — 열고 난 뒤 그 한 편을 다시 읽어올 때 쓴다. */
+    val peerAnswerId: UUID?,
     val question: String,
     val content: String?,
     val unlocked: Boolean,

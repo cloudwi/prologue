@@ -1,5 +1,6 @@
 package com.prologue.backend.dailymeet.interfaces.rest
 
+import com.prologue.backend.dailymeet.application.service.AnswerAccessService
 import com.prologue.backend.dailymeet.application.service.DailyAnswerService
 import com.prologue.backend.dailymeet.application.service.PeerMatchingService
 import com.prologue.backend.dailymeet.application.service.ProfileAccessService
@@ -35,6 +36,7 @@ class DailyMeetController(
     private val peerMatchingService: PeerMatchingService,
     private val heartService: HeartService,
     private val profileAccessService: ProfileAccessService,
+    private val answerAccessService: AnswerAccessService,
 ) {
     /** 오늘의 질문 + 내 답변 여부. */
     @GetMapping("/today")
@@ -95,6 +97,22 @@ class DailyMeetController(
         )
     }
 
+    /**
+     * 답하지 않은 날의 상대 답을 잉크로 연다(질문 하루치 단위).
+     *
+     * 규칙은 그대로다 — 답하면 공짜로 읽는다. 이건 답하지 않은 날에 값을 매기는 길이다.
+     * 이미 답했거나 이미 산 질문이면 잉크를 쓰지 않고 성공으로 답한다(멱등).
+     */
+    @PostMapping("/questions/{questionId}/unlock")
+    fun unlockAnswers(
+        authentication: Authentication,
+        @PathVariable questionId: Long,
+    ): UnlockAnswersResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val result = answerAccessService.unlock(accountId, questionId)
+        return UnlockAnswersResponse(spent = result.spent, balance = result.balance)
+    }
+
     /** 내가 남긴 답 — 역대 답변 전부(질문 포함), 최신순. 본인 전용. */
     @GetMapping("/my-answers")
     fun myAnswers(authentication: Authentication): MyAnswersResponse {
@@ -142,3 +160,9 @@ class DailyMeetController(
         return ReceivedHeartsResponse.from(heartService.sentHearts(accountId))
     }
 }
+
+/** 문답 열람권 구매 결과 — [spent]가 false면 이미 열려 있어 잉크를 쓰지 않았다는 뜻. */
+data class UnlockAnswersResponse(
+    val spent: Boolean,
+    val balance: Int,
+)

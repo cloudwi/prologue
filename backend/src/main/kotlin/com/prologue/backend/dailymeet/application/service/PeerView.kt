@@ -119,7 +119,7 @@ data class PeerView(
     )
 }
 
-/** 상대가 그날그날 남긴 답 하나 — 그 답의 질문과 함께. */
+/** 지난 상대의 그날 문답 하나. [questionId]는 잠긴 하루를 잉크로 열 때 앱이 가리키는 값이다. */
 data class PeerAnswerView(
     val questionId: Long,
     val question: String,

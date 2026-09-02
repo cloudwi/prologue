@@ -18,6 +18,10 @@ data class PastPeersResponse(
     )
 
     data class AnswerItem(
+        /** 그날의 질문 id — 잠긴 답을 잉크로 열 때 앱이 이 값을 보낸다. */
+        val questionId: Long,
+        /** 그날 상대가 쓴 답의 id — 열고 난 뒤 그 한 편만 다시 읽어올 때 쓴다. */
+        val peerAnswerId: String?,
         val question: String,
         val content: String?,
         val unlocked: Boolean,
@@ -34,7 +38,14 @@ data class PastPeersResponse(
                         closesAt = view.closesAt,
                         peer = PeerResponse.from(view.peer),
                         answers = view.answers.map {
-                            AnswerItem(question = it.question, content = it.content, unlocked = it.unlocked, revealedAt = it.revealedAt)
+                            AnswerItem(
+                                questionId = it.questionId,
+                                peerAnswerId = it.peerAnswerId?.toString(),
+                                question = it.question,
+                                content = it.content,
+                                unlocked = it.unlocked,
+                                revealedAt = it.revealedAt,
+                            )
                         },
                     )
                 },

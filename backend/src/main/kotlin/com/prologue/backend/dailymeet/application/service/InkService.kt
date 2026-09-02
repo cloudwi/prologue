@@ -93,6 +93,8 @@ class InkService(
         const val REASON_PURCHASE = "PURCHASE"
         /** 사흘이 지나 닫힌 프로필을 다시 연 값. */
         const val REASON_PROFILE_UNLOCK = "PROFILE_UNLOCK"
+        /** 답하지 않은 날의 상대 답을 연 값. */
+        const val REASON_ANSWER_UNLOCK = "ANSWER_UNLOCK"
         /** 읽히지 않은 편지를 회수해 절반을 돌려받음. */
         const val REASON_MAIL_RECALL = "MAIL_RECALL"
         /** 이레가 지나도록 열리지 않아 시스템이 회수한 편지의 절반 환급. */
