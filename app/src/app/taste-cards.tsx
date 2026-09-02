@@ -42,19 +42,22 @@ export default function TasteCardsScreen() {
 
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
-  const [answered, setAnswered] = useState(0);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  /**
+   * 받아온 묶음을 화면에 건다.
+   *
+   * 진행 숫자(몇 장 중 몇 장)는 일부러 쓰지 않는다 — 남은 장수가 보이면 카드 넘기기가
+   * 채워야 할 진도표가 되고, 끝이 멀어 보이면 애초에 시작하지 않는다. 이 더미는 언제든
+   * 그만둬도 되는 것이라 끝을 세지 않는다.
+   */
   const apply = useCallback((deck: TasteDeck) => {
     setCards(deck.cards);
     setIndex(0);
-    setAnswered(deck.answered);
-    setTotal(deck.total);
     setFailed(false);
   }, []);
 
@@ -117,9 +120,7 @@ export default function TasteCardsScreen() {
     setSaving(true);
     haptics.select();
     try {
-      const progress = await chooseTaste(card.id, option, note.trim() || undefined);
-      setAnswered(progress.answered);
-      setTotal(progress.total);
+      await chooseTaste(card.id, option, note.trim() || undefined);
       track('taste_card_chosen', { noted: note.trim().length > 0 });
       advance();
     } catch {
@@ -138,11 +139,6 @@ export default function TasteCardsScreen() {
             {isIntro ? '나중에 하기' : '닫기'}
           </Text>
         </Pressable>
-        {total > 0 && (
-          <Text style={[styles.progress, { color: c.textSecondary }]}>
-            {answered} / {total}
-          </Text>
-        )}
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -168,7 +164,7 @@ export default function TasteCardsScreen() {
             <Ionicons name="checkmark-circle-outline" size={44} color={c.primary} />
             <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>카드를 다 넘겼어요</Text>
             <Text style={[styles.emptyHint, { color: c.textSecondary }]}>
-              {answered}장을 골랐어요. 겹치는 취향이 있는 사람이{'\n'}먼저 소개돼요.
+              겹치는 취향이 있는 사람이{'\n'}먼저 소개돼요.
             </Text>
             <Pressable
               onPress={done}
@@ -181,7 +177,8 @@ export default function TasteCardsScreen() {
         ) : (
           <View style={styles.flex}>
             <View style={styles.body}>
-              {isIntro && answered === 0 && (
+              {/* 가입 직후 첫 장에서만 왜 넘기는지 한 줄 — 두 번째 장부터는 카드가 스스로 말한다. */}
+              {isIntro && index === 0 && (
                 <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
                   고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
                 </Animated.Text>
@@ -263,7 +260,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   headerButton: { paddingVertical: 4 },
   headerAction: { ...Type.label },
-  progress: { ...Type.caption, fontVariant: ['tabular-nums'] },
 
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
   intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },

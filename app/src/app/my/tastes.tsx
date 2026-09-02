@@ -57,7 +57,6 @@ export default function MyTastesScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.count, { color: c.textSecondary }]}>{tastes.length}장을 골랐어요</Text>
           {tastes.map((taste) => (
             <View key={taste.cardId} style={[styles.card, { backgroundColor: c.backgroundElement }]}>
               <Text style={[styles.prompt, { color: c.textSecondary }]}>{taste.prompt}</Text>
@@ -75,7 +74,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 48 },
-  count: { ...Type.caption, marginBottom: 10, paddingLeft: 4 },
 
   card: { borderRadius: Radius.md, padding: 18, marginBottom: 12 },
   prompt: { ...Type.caption },

@@ -473,10 +473,9 @@ function DiscoverBoard() {
                 </View>
                 <View style={styles.tasteBody}>
                   <Text style={[styles.tasteTitle, { color: c.text }]}>취향 카드</Text>
+                  {/* 장수는 적지 않는다 — 남은 개수가 보이면 넘기기가 채워야 할 진도표가 된다. */}
                   <Text style={[styles.tasteSub, { color: c.textSecondary }]}>
-                    {tasteDeck.answered > 0
-                      ? `${tasteDeck.answered}장 골랐어요 · 겹치는 사람이 먼저 소개돼요`
-                      : '둘 중 하나만 고르면 돼요 · 겹치는 사람이 먼저 소개돼요'}
+                    둘 중 하나만 고르면 돼요 · 겹치는 사람이 먼저 소개돼요
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={c.textSecondary} />
