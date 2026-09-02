@@ -13,6 +13,8 @@ data class PeerResponse(
     val peerAnswer: String?,
     /** 상대가 답한 질문 — 오늘 질문이 아닐 수 있어 화면은 이 값을 우선 쓴다. */
     val question: String?,
+    /** 그 질문의 id — 답이 잠겨 있을 때 잉크로 열 대상을 가리킨다. */
+    val questionId: Long?,
     val answerUnlocked: Boolean,
     val photoUrls: List<String>,
     val nickname: String?,
@@ -69,6 +71,7 @@ data class PeerResponse(
                 peerAnswerId = view.peerAnswerId?.toString(),
                 peerAnswer = view.peerAnswer,
                 question = view.question,
+                questionId = view.questionId,
                 answerUnlocked = view.answerUnlocked,
                 photoUrls = view.photoUrls,
                 nickname = view.nickname,

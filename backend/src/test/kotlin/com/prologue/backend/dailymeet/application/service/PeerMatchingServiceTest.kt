@@ -69,7 +69,15 @@ class PeerMatchingServiceTest {
     private val answerAccessService = mockk<AnswerAccessService> {
         every { unlockedQuestions(any()) } returns emptySet()
     }
-    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService)
+    /*
+     * 기본 서비스는 **정오 전**을 고정한다(lockedRevealHour = 24는 벽시계로 올 수 없는 값이다).
+     * 이 값을 열어두면 같은 테스트가 오전에는 통과하고 오후에는 깨진다 — 답하지 않은 사람에게도
+     * 정오부터는 상대가 도착하기 때문이다. 정오 이후의 규칙은 [afterNoonService]로 따로 검증한다.
+     */
+    private val service = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, lockedRevealHour = 24)
+
+    /** 정오가 지난 상태 — 0시부터 열린다고 두면 언제 돌려도 "정오 이후"다. */
+    private val afterNoonService = PeerMatchingService(questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository, memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, lockedRevealHour = 0)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -169,9 +177,9 @@ class PeerMatchingServiceTest {
     }
 
     @Test
-    fun `오늘의 상대 - 내가 답하기 전에는 새 상대가 만들어지지 않는다`() {
-        // Give&Take: 받기만 하는 사람은 없게 한다. 공개 기록도 남기지 않아야
-        // 답하지 않은 사람 때문에 후보의 노출 몫이 줄지 않는다. (이월할 지난 상대도 없는 첫날.)
+    fun `오늘의 상대 - 정오 전에 답하지 않았으면 새 상대가 만들어지지 않는다`() {
+        // 오전은 여전히 Give&Take다 — 쓰면 그 자리에서 만나고, 쓰지 않으면 아직 오지 않는다.
+        // 공개 기록도 남기지 않아야 답하지 않은 사람 때문에 후보의 노출 몫이 줄지 않는다.
         every { questionRepository.findAllOrdered() } returns listOf(question)
         every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null // 미답변
 
@@ -202,7 +210,7 @@ class PeerMatchingServiceTest {
         // 소개 인원은 설정값이라 테스트에서 2로 고정해 "넘치지 않는지"를 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2, lockedRevealHour = 24,
         )
 
         val view = twoPerDay.todayPeers(accountId)
@@ -384,7 +392,7 @@ class PeerMatchingServiceTest {
         // 정원이 1이면 부족분이 없어 채울 일이 없다 — 2로 두고 "모자란 만큼만" 채우는지 본다
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2, lockedRevealHour = 24,
         )
 
         val view = twoPerDay.todayPeers(accountId)
@@ -437,7 +445,7 @@ class PeerMatchingServiceTest {
 
         val twoPerDay = PeerMatchingService(
             questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
-            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService, blockService, tasteCardService, answerAccessService, revealCount = 2, lockedRevealHour = 24,
         )
         val view = twoPerDay.todayPeers(accountId)
 
@@ -683,5 +691,85 @@ class PeerMatchingServiceTest {
     companion object {
         /** 열람 창(사흘)을 확실히 넘긴 시각. */
         private val STALE: Instant = Instant.now().minus(java.time.Duration.ofDays(10))
+    }
+
+    @Test
+    fun `오늘의 상대 - 정오가 지나면 답하지 않아도 도착하되 답은 잠긴 채로다`() {
+        // 유저 결정 2026-09-02. 쓰지 않은 사람도 빈 화면을 보지 않되, 읽으려면 쓰거나 잉크를 낸다.
+        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대의 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null // 미답변
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(peerAnswer)
+        every { memberQueryService.findProfile(peerAnswer.accountId) } returns member(peerAnswer.accountId, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
+
+        val view = afterNoonService.todayPeers(accountId)
+
+        assertEquals(1, view.peers.size)
+        assertFalse(view.carriedOver)
+        assertFalse(view.answerUnlocked)
+        assertNull(view.peers[0].peerAnswer) // 글은 잠겨 있다
+        assertEquals(1L, view.peers[0].questionId) // 무엇을 열지는 알려준다
+    }
+
+    @Test
+    fun `오늘의 상대 - 잠긴 카드에는 그 사람의 다른 답도 싣지 않는다`() {
+        // 옆문으로 다 읽히면 잠근 게 아니다.
+        val peerAccount = UUID.randomUUID()
+        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "상대의 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(peerAnswer)
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
+
+        val view = afterNoonService.todayPeers(accountId)
+
+        assertTrue(view.peers[0].recentAnswers.isEmpty())
+        verify(exactly = 0) { answerRepository.findAllByAccountId(peerAccount) }
+    }
+
+    @Test
+    fun `오늘의 상대 - 잉크로 열람권을 샀으면 답을 쓰지 않아도 열린다`() {
+        // 잉크는 규칙을 없애는 게 아니라 값을 매긴다 — 산 사람에게는 쓴 사람과 같은 자격이다.
+        val peerAccount = UUID.randomUUID()
+        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), peerAccount, 1L, "상대의 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { answerAccessService.unlockedQuestions(accountId) } returns setOf(1L)
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(peerAnswer)
+        every { memberQueryService.findProfile(peerAccount) } returns member(peerAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, peerAnswer.id!!) } returns 0
+        every { answerRepository.findAllByAccountId(peerAccount) } returns listOf(peerAnswer)
+
+        val view = afterNoonService.todayPeers(accountId)
+
+        assertTrue(view.answerUnlocked)
+        assertEquals("상대의 답", view.peers[0].peerAnswer)
+    }
+
+    @Test
+    fun `오늘의 상대 - 정오가 지나 이미 도착했다면 시계와 무관하게 그대로 보인다`() {
+        // 새벽 5시에 하루가 넘어가기 전(자정~5시)에도 어제 몫은 그 자리에 남아야 한다.
+        val peerAnswer = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "상대의 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns
+            listOf(DailyReveal.create(accountId, 1L, peerAnswer.id!!))
+        every { answerRepository.findById(peerAnswer.id!!) } returns peerAnswer
+        every { memberQueryService.findProfile(peerAnswer.accountId) } returns member(peerAnswer.accountId, Gender.FEMALE, Gender.MALE)
+
+        // 정오 전으로 고정된 기본 서비스로 불러도, 이미 도착한 사람은 그대로다
+        val view = service.todayPeers(accountId)
+
+        assertEquals(1, view.peers.size)
+        assertFalse(view.carriedOver)
+        assertNull(view.peers[0].peerAnswer)
     }
 }

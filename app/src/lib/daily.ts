@@ -34,6 +34,8 @@ export type Peer = {
   peerAnswer: string | null;
   /** 상대가 답한 질문. 후보를 최근 며칠치로 넓혀서 오늘 질문이 아닐 수 있다. */
   question: string | null;
+  /** 그 질문의 id — 답이 잠겨 있을 때 잉크로 열 대상. 구버전 서버는 안 내려준다. */
+  questionId?: number | null;
   answerUnlocked: boolean;
   /** 노출 순서대로의 프로필 사진. 가입 시 2장 필수라 비어 있는 건 옛 데이터뿐. */
   photoUrls: string[];

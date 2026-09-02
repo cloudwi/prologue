@@ -89,6 +89,13 @@ class PeerMatchingService(
      * 그 사이 상대가 새 답을 남겼을 때만 쓰인다([PeerEligibility.canReintroduce]).
      */
     @param:Value("\${daily.reintroduce-after-days:14}") private val reintroduceAfterDays: Long = 14,
+    /**
+     * 답하지 않은 사람에게도 오늘의 한 명이 도착하는 시각(KST, 24시간제).
+     *
+     * 답을 쓴 사람은 이 시계를 기다리지 않는다 — 쓰는 즉시 도착한다. 이 시각은 **쓰지 않은
+     * 사람의 자리**만 연다. 그것도 답은 잠긴 채로다: 열려면 그날의 답을 쓰거나 잉크를 낸다.
+     */
+    @param:Value("\${daily.locked-reveal-hour:12}") private val lockedRevealHour: Int = 12,
 ) {
     /**
      * 오늘의 상대 — 답을 남기는 순간 [revealCount]명이 도착한다.
@@ -98,7 +105,12 @@ class PeerMatchingService(
      * 답이 곧 열쇠가 되면 "쓰면 만난다"가 한 동작으로 붙고, 하루 한 명이라는 리듬은
      * 시계가 아니라 질문이 지킨다 — 하루에 질문이 하나니 하루에 한 명이다.
      *
-     * 아직 답하기 전이면 자리를 비우지 않고 [carriedOver]로 지난번에 만난 사람을 남겨둔다.
+     * **답하지 않은 사람에게도 정오([lockedRevealHour])가 지나면 오늘의 한 명이 도착한다**
+     * (유저 결정 2026-09-02). 다만 답은 잠긴 채로다 — 열려면 그날의 답을 쓰거나 잉크를 낸다
+     * ([AnswerAccessService]). 쓰는 사람은 여전히 시계를 기다리지 않고, 쓰지 않는 사람도
+     * 빈 화면을 보지 않는다. Give&Take는 사라진 게 아니라 값이 매겨진 것이다.
+     *
+     * 정오 전이고 아직 답하지 않았다면 자리를 비우지 않고 [carriedOver]로 지난번 상대를 남겨둔다.
      */
     @Transactional
     fun todayPeers(accountId: UUID): TodayPeersView {
@@ -106,10 +118,27 @@ class PeerMatchingService(
         val question = QuestionRotation.of(questions, ServiceDay.now())
         val answered = answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null
 
-        // 내가 답하기 전에는 오늘의 상대를 만들지도 보여주지도 않는다.
-        // 여기서 일찍 빠져나가야 공개 기록(DailyReveal)도 남지 않는다 — 답하지 않은 사람 때문에
-        // 후보의 노출 횟수가 올라가면, 정작 답한 사람들에게 돌아갈 몫이 줄어든다.
+        // 잉크로 산 열람권도 답을 쓴 것과 같은 자격이다 — 규칙이 아니라 값의 문제다.
+        val canRead = answered || question.id in answerAccessService.unlockedQuestions(accountId)
+
         if (!answered) {
+            // 이미 오늘 몫이 도착했다면 시계와 무관하게 그 사람을 보여준다.
+            val alreadyRevealed = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).isNotEmpty()
+            if (alreadyRevealed || afterLockedRevealTime()) {
+                val revealed = fillRevealed(accountId, question, questions)
+                if (revealed.isNotEmpty()) {
+                    return TodayPeersView(
+                        open = true,
+                        answerUnlocked = canRead,
+                        carriedOver = false,
+                        peers = revealed.map {
+                            // 답이 잠긴 카드에는 그 사람의 다른 글도 싣지 않는다 — 옆문으로 다 읽히면 잠근 게 아니다.
+                            // 겹치는 취향은 답이 아니라서 남긴다: 열지 말지 정하려면 무언가는 보여야 한다.
+                            peerView(accountId, it, answered = canRead, questions, withRecentAnswers = canRead, withSharedTastes = true)
+                        },
+                    )
+                }
+            }
             val carried = carriedOverReveals(accountId, question)
             return TodayPeersView(
                 // open은 옛 앱을 위해 남는다 — 공개 시각이 사라졌으니 언제나 열려 있다.
@@ -129,6 +158,15 @@ class PeerMatchingService(
             peers = revealed.map { peerView(accountId, it, answered = true, questions, withRecentAnswers = true) },
         )
     }
+
+    /**
+     * 답하지 않은 사람의 자리가 열리는 시각을 지났는가(KST).
+     *
+     * 하루의 경계는 새벽 5시라([ServiceDay]) 자정~5시는 아직 어제다. 그 시간대에는 어제 몫이
+     * 이미 도착해 있으므로 시계를 다시 묻지 않는다 — 여기서는 벽시계의 시(hour)만 본다.
+     */
+    private fun afterLockedRevealTime(): Boolean =
+        java.time.ZonedDateTime.now(ServiceDay.ZONE).hour >= lockedRevealHour
 
     /**
      * 답을 남기기 전에 오늘의 자리를 지키는 사람 — 지난번에 만난 상대.
@@ -386,9 +424,10 @@ class PeerMatchingService(
         answered: Boolean,
         questions: List<Question>,
         withRecentAnswers: Boolean = false,
+        withSharedTastes: Boolean = withRecentAnswers,
     ): PeerView {
         // 겹치는 취향은 한 사람을 자세히 보는 자리에서만 — 목록에서는 사람마다 선택 테이블을 더 읽는 값이 된다.
-        val sharedTastes = if (withRecentAnswers) tasteCardService.sharedWith(viewerAccountId, peer.accountId) else emptyList()
+        val sharedTastes = if (withSharedTastes) tasteCardService.sharedWith(viewerAccountId, peer.accountId) else emptyList()
         val p = memberQueryService.findProfile(peer.accountId)
         val jobDomain = jobVerificationService.verifiedDomain(peer.accountId)
         return PeerView(
@@ -396,6 +435,7 @@ class PeerMatchingService(
             hearted = heartRepository.existsFromTo(viewerAccountId, peer.accountId),
             peerAnswerId = peer.id,
             peerAnswer = if (answered) peer.content else null,
+            questionId = peer.questionId,
             question = questions.firstOrNull { it.id == peer.questionId }?.content,
             answerUnlocked = answered,
             photoUrls = p?.photoUrls ?: emptyList(),

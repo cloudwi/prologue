@@ -28,8 +28,8 @@ import { JobBadge } from '@/components/job-badge';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, Type, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
-import { answerToday, getPastPeers, getPeers, getToday, type Peer } from '@/lib/daily';
-import { getInkBalance } from '@/lib/ink';
+import { answerToday, getPastPeers, getPeers, getToday, unlockAnswers, type Peer } from '@/lib/daily';
+import { getInkBalance, INK_PRICE } from '@/lib/ink';
 import { getTasteDeck } from '@/lib/taste';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
@@ -118,6 +118,7 @@ function DiscoverBoard() {
    */
   const [typed, setTyped] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [unlockingAnswer, setUnlockingAnswer] = useState(false);
   const [editing, setEditing] = useState(false);
   // 답 쓰기 전에는 한 줄짜리 입구만 보인다 — 누르면 그 자리에서 에디터가 펼쳐진다.
   const [composing, setComposing] = useState(false);
@@ -146,6 +147,51 @@ function DiscoverBoard() {
   const pastPeers = pastQuery.data ?? [];
   const peersLoading = peersQuery.isPending;
   const ink = inkQuery.data ?? null;
+
+  /**
+   * 답하지 않은 날의 상대 답을 잉크로 연다.
+   *
+   * 쓰는 길이 먼저이고 공짜라, 여기서도 "답 쓰고 열기"를 앞에 둔다. 이 값은 쓰지 않기로 한
+   * 사람만 낸다 — 열람권은 그날 문답 하루치라 오늘 소개된 상대의 답이 함께 열린다.
+   */
+  function confirmAnswerUnlock(questionId: number) {
+    if (unlockingAnswer) return;
+    Alert.alert(
+      '이 답을 열까요?',
+      `잉크 ${INK_PRICE.ANSWER_UNLOCK}을 사용해요. 오늘의 질문에 답을 남기면 잉크 없이 열려요.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '잉크 쓰기',
+          onPress: async () => {
+            setUnlockingAnswer(true);
+            try {
+              const result = await unlockAnswers(questionId);
+              if (result.spent) {
+                track('answer_unlocked');
+                haptics.success();
+                showToast('답을 열었어요 · 다시 닫히지 않아요');
+              }
+              void refetchPeers();
+              void refetchInk();
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : '잠시 후 다시 시도해주세요';
+              if (msg.includes('잉크가 부족')) {
+                Alert.alert('잉크가 부족해요', '충전하고 다시 열어볼까요?', [
+                  { text: '다음에', style: 'cancel' },
+                  { text: '충전하러 가기', onPress: () => router.push('/my/ink-topup') },
+                ]);
+              } else {
+                Alert.alert('열지 못했어요', msg);
+              }
+            } finally {
+              setUnlockingAnswer(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   // refetch는 React Query가 안정적으로 유지한다 — 쿼리 객체를 의존성에 두면 매 렌더 바뀐다.
   const { refetch: refetchToday } = todayQuery;
@@ -454,22 +500,36 @@ function DiscoverBoard() {
                 // 답하기 전 — 자리를 비우지 않고 지난번에 만난 사람이 지킨다.
                 // 카드 위 한 줄이 "이건 어제 것"임을 알리고, 아래 한 줄이 다음 행동을 준다.
                 <>
-                  <PeerCarousel peers={peersData!.peers} question={null} c={c} />
+                  <PeerCarousel
+                    peers={peersData!.peers}
+                    question={null}
+                    c={c}
+                    onWriteAnswer={() => setComposing(true)}
+                    onUnlock={confirmAnswerUnlock}
+                  />
                   <Pressable onPress={() => setComposing(true)} hitSlop={8} style={styles.carryPrompt}>
                     <Text style={[styles.carryPromptText, { color: c.primaryStrong }]}>
                       답하고 새로운 사람 만나기 →
                     </Text>
                   </Pressable>
                 </>
+              ) : peersData && peersData.peers.length > 0 ? (
+                // 도착한 사람. 답을 썼으면 글이 열려 있고, 정오가 지나 도착한 미답변자의 카드는
+                // 답이 잠긴 채로 온다 — 그 카드가 스스로 두 갈래(쓰기·잉크)를 그린다.
+                <PeerCarousel
+                  peers={peersData.peers}
+                  question={today?.content ?? null}
+                  c={c}
+                  onWriteAnswer={() => setComposing(true)}
+                  onUnlock={confirmAnswerUnlock}
+                />
               ) : !peersData || !peersData.answerUnlocked ? (
-                // 답을 남겨야 상대가 온다 — "후보가 없다"와 다른 상황이라 문구를 나눈다
+                // 정오 전이라 아직 오지 않았다 — 지금 답하면 기다리지 않고 바로 만난다.
                 <EmptyPeer c={c} title="답을 남기면 오늘의 한 사람이 도착해요" action="답 쓰러 가기" onAction={() => setComposing(true)} />
-              ) : peersData.peers.length === 0 ? (
+              ) : (
                 // 하루 한 명이라 후보가 없는 날이 생긴다. 서버는 조회할 때마다 빈자리를 채우므로
                 // "오늘은 끝"이 아니라 "아직"이라는 걸 알려준다 — 저녁에 답한 사람이 생기면 그때 소개된다.
                 <EmptyPeer c={c} title="오늘은 아직 인연이 닿지 않았어요" body="답을 남긴 분이 생기면 바로 소개해 드릴게요." />
-              ) : (
-                <PeerCarousel peers={peersData.peers} question={today?.content ?? null} c={c} />
               )}
             </View>
 
@@ -607,7 +667,19 @@ function EmptyPeer({
 }
 
 /** 상대 카드 캐러셀 — 옆 카드가 살짝 보이게 가로로 넘긴다. 한 명이면 그냥 꽉 채운다. */
-function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string | null; c: ThemeColors }) {
+function PeerCarousel({
+  peers,
+  question,
+  c,
+  onWriteAnswer,
+  onUnlock,
+}: {
+  peers: Peer[];
+  question: string | null;
+  c: ThemeColors;
+  onWriteAnswer: () => void;
+  onUnlock?: (questionId: number) => void;
+}) {
   const [width, setWidth] = useState(0);
   const cardWidth = peers.length > 1 ? width - 28 : width;
 
@@ -625,7 +697,7 @@ function PeerCarousel({ peers, question, c }: { peers: Peer[]; question: string 
         >
           {peers.map((peer, i) => (
             <View key={peer.peerAnswerId ?? i} style={{ width: cardWidth }}>
-              <PeerCard peer={peer} question={question} c={c} />
+              <PeerCard peer={peer} question={question} c={c} onWriteAnswer={onWriteAnswer} onUnlock={onUnlock} />
             </View>
           ))}
         </ScrollView>
@@ -655,7 +727,21 @@ function MaskedAnswer({ icon, hint, tint, c }: { icon: keyof typeof Ionicons.gly
  * 상대 1명 카드 — "사진보다 생각이 먼저".
  * 상대의 답(그 답의 질문과 함께)이 카드의 첫 줄이고, 사진은 그 뒤에 온다. 하트는 상세(청첩장)의 플로팅 버튼에서만.
  */
-function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; c: ThemeColors }) {
+function PeerCard({
+  peer,
+  question,
+  c,
+  onWriteAnswer,
+  onUnlock,
+}: {
+  peer: Peer;
+  question: string | null;
+  c: ThemeColors;
+  /** 답 쓰기로 보내는 길 — 잠긴 답을 여는 공짜 방법이다. */
+  onWriteAnswer: () => void;
+  /** 잉크로 그날 문답을 여는 길. 넘기지 않으면 버튼을 그리지 않는다. */
+  onUnlock?: (questionId: number) => void;
+}) {
   const router = useRouter();
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -702,7 +788,29 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
             )}
           </>
         ) : (
-          <MaskedAnswer icon="lock-closed" hint="내 답을 남기면 열려요" tint={c.textSecondary} c={c} />
+          <View>
+            <MaskedAnswer icon="lock-closed" hint="아직 잠긴 답이에요" tint={c.textSecondary} c={c} />
+            {/*
+             * 잠긴 답 앞의 두 갈래. 쓰는 쪽이 먼저이고 공짜다 — 값은 쓰지 않기로 한 사람만 낸다.
+             * 잉크 버튼은 서버가 질문 id를 줄 때만 그린다(구버전 서버에서는 열 대상을 모른다).
+             */}
+            <View style={styles.lockedActions}>
+              <Pressable onPress={onWriteAnswer} hitSlop={8} style={[styles.lockedPrimary, { backgroundColor: c.primary }]}>
+                <Text style={[styles.lockedPrimaryText, { color: c.primaryText }]}>답 쓰고 열기</Text>
+              </Pressable>
+              {peer.questionId != null && onUnlock ? (
+                <Pressable
+                  onPress={() => onUnlock(peer.questionId!)}
+                  hitSlop={8}
+                  style={[styles.lockedSecondary, { borderColor: c.border }]}
+                >
+                  <Text style={[styles.lockedSecondaryText, { color: c.textSecondary }]}>
+                    잉크 {INK_PRICE.ANSWER_UNLOCK}로 열기
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
         )}
       </View>
 
@@ -784,6 +892,12 @@ const styles = StyleSheet.create({
   tasteCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 24, paddingHorizontal: 16, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1 },
   tasteIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   tasteBody: { flex: 1 },
+  // 잠긴 답 앞의 두 갈래 — 쓰는 길이 앞이고 채워진 버튼이다. 값은 그다음 자리.
+  lockedActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  lockedPrimary: { flex: 1, borderRadius: Radius.pill, paddingVertical: 11, alignItems: 'center' },
+  lockedPrimaryText: { ...Type.button },
+  lockedSecondary: { borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 11, alignItems: 'center' },
+  lockedSecondaryText: { ...Type.caption, fontWeight: '600' },
   tasteTitle: { ...Type.label },
   tasteSub: { ...Type.caption, marginTop: 3 },
   tasteChip: { borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 5 },

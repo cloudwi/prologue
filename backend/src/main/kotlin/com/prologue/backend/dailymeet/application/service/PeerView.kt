@@ -38,6 +38,8 @@ data class PeerView(
     val peerAnswer: String?,
     /** 상대가 답한 질문. 후보를 최근 며칠치로 넓혀서, 오늘 질문이 아닐 수 있다. */
     val question: String?,
+    /** 그 질문의 id — 답이 잠겨 있을 때 앱이 잉크로 열 대상을 가리키는 값이다. */
+    val questionId: Long? = null,
     val answerUnlocked: Boolean,
     /** 노출 순서대로의 프로필 사진. 가입 시 2장이 필수라 비어 있는 건 옛 데이터뿐이다. */
     val photoUrls: List<String>,
