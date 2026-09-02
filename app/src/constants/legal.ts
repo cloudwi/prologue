@@ -9,7 +9,7 @@
  *   - app/src/app/terms.tsx, app/src/app/privacy.tsx (앱 화면)
  *   - web/src/pages/terms.md, web/src/pages/privacy.md (웹)
  */
-export const LEGAL_VERSION = '2026-08-11';
+export const LEGAL_VERSION = '2026-09-02';
 
 /** 화면에 보여줄 시행일. */
-export const LEGAL_EFFECTIVE_DATE = '2026년 8월 11일';
+export const LEGAL_EFFECTIVE_DATE = '2026년 9월 2일';

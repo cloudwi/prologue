@@ -1,3 +1,5 @@
+import { POLITICAL_LABELS, RELIGION_LABELS } from '@/constants/profile';
+
 import type { MemberProfile, OnboardingProfile } from './member';
 
 /**
@@ -25,6 +27,20 @@ export function toRequest(p: MemberProfile, patch: Partial<OnboardingProfile> = 
     avatarId: p.avatarId,
     ...patch,
   };
+}
+
+/**
+ * 종교·정치 성향을 프로필 칩 문구로. 안 적은 항목은 아예 빠진다 —
+ * "무응답"이라는 칩을 만들면 그것도 정보가 되고, 비워둔 사람에게 빈칸을 들이대는 꼴이 된다.
+ * 앞에 항목 이름을 붙이는 이유는 취미 칩들과 한 줄에 섞여도 무엇인지 읽히게 하기 위해서다.
+ */
+export function beliefChips(religion?: string | null, politicalLeaning?: string | null): string[] {
+  const chips: string[] = [];
+  const religionLabel = religion ? RELIGION_LABELS[religion] : null;
+  const politicalLabel = politicalLeaning ? POLITICAL_LABELS[politicalLeaning] : null;
+  if (religionLabel) chips.push(`종교 · ${religionLabel}`);
+  if (politicalLabel) chips.push(`정치 · ${politicalLabel}`);
+  return chips;
 }
 
 export type NextStep = { label: string; hint: string; href: string };

@@ -1,4 +1,5 @@
 import { authedRequest } from './api';
+import type { PoliticalLeaning, Religion } from './member';
 
 export type Today = {
   questionId: number;
@@ -60,6 +61,9 @@ export type Peer = {
   hobbies: string[];
   interests: string[];
   strengths: string[];
+  /** 상대가 적어 공개하기로 한 종교·정치 성향(민감정보). 안 적었으면 null·구버전 서버에서는 undefined. */
+  religion?: Religion | null;
+  politicalLeaning?: PoliticalLeaning | null;
   avatarId: number | null;
   /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
   mailSent: boolean;

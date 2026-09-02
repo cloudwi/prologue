@@ -3,6 +3,23 @@ import type { Consent } from './consent';
 
 export type Gender = 'MALE' | 'FEMALE';
 
+/**
+ * 종교·정치 성향 — 민감정보(개인정보보호법 23조)라 프로필의 다른 항목과 길이 다르다.
+ *
+ * 전부 선택이고, 안 적으면 null이라 화면에 아무것도 그리지 않는다("무응답"이라는 말조차 정보다).
+ * 저장은 프로필 PUT이 아니라 전용 경로로만 한다([updateBeliefs]) — 프로필 저장은 전체 덮어쓰기라
+ * 이 항목을 모르는 화면이 저장 한 번으로 지워버리기 때문이다.
+ */
+export type Religion = 'NONE' | 'CHRISTIAN' | 'CATHOLIC' | 'BUDDHIST' | 'WON_BUDDHIST' | 'ISLAM' | 'OTHER';
+
+export type PoliticalLeaning =
+  | 'PROGRESSIVE'
+  | 'CENTER_LEFT'
+  | 'CENTER'
+  | 'CENTER_RIGHT'
+  | 'CONSERVATIVE'
+  | 'APOLITICAL';
+
 export type OnboardingProfile = {
   nickname: string;
   gender: Gender;
@@ -56,7 +73,37 @@ export type MemberProfile = Required<
   phone: string | null;
   /** 로그인에 쓰는 이메일. 계정의 자연키라 화면에서는 읽기 전용이다. */
   email: string | null;
+  /** 종교·정치 성향(민감정보). 안 적었으면 null. 수정은 my/beliefs 화면에서만. */
+  religion: Religion | null;
+  politicalLeaning: PoliticalLeaning | null;
 };
+
+export type Beliefs = {
+  religion: Religion | null;
+  politicalLeaning: PoliticalLeaning | null;
+  /** 이미 민감정보 수집에 동의한 적이 있는지 — true면 동의 체크박스를 다시 보여주지 않는다. */
+  consented: boolean;
+};
+
+/** 내 종교·정치 성향 (GET /members/me/beliefs). */
+export async function getBeliefs(): Promise<Beliefs> {
+  return authedRequest<Beliefs>('GET', '/members/me/beliefs');
+}
+
+/**
+ * 종교·정치 성향을 적거나 지운다 (PUT /members/me/beliefs).
+ *
+ * 둘 다 null이면 지우는 것이고, 지울 때는 동의가 필요 없다. 처음 적을 때만 [consent]가 필요하다 —
+ * 이미 동의한 사람에게는 서버가 다시 묻지 않는다.
+ */
+export async function updateBeliefs(input: {
+  religion: Religion | null;
+  politicalLeaning: PoliticalLeaning | null;
+  consent?: boolean;
+  legalVersion?: string;
+}): Promise<Beliefs> {
+  return authedRequest<Beliefs>('PUT', '/members/me/beliefs', input);
+}
 
 /** 온보딩 프로필 생성/수정 (PUT /members/me, 인증 필요). */
 export async function completeOnboarding(profile: OnboardingProfile): Promise<MemberProfile> {

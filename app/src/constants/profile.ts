@@ -28,3 +28,40 @@ export const STRENGTHS = [
 ];
 
 export const KEYWORD_MAX = 5;
+
+/**
+ * 종교·정치 성향의 화면 문구 — 민감정보라 서버는 코드만 저장하고, 사람이 읽는 말은 여기 하나뿐이다.
+ * 편집 화면과 상대 프로필이 같은 표를 쓴다(두 곳이 갈라지면 고른 값과 보이는 값이 달라진다).
+ *
+ * '무교'는 답이고, 아예 고르지 않은 것(null)은 답이 아니다 — 목록에 '밝히지 않음'을 두지 않고
+ * 선택 해제로 비운다.
+ */
+export const RELIGION_LABELS: Record<string, string> = {
+  NONE: '무교',
+  CHRISTIAN: '기독교',
+  CATHOLIC: '천주교',
+  BUDDHIST: '불교',
+  WON_BUDDHIST: '원불교',
+  ISLAM: '이슬람교',
+  OTHER: '그 외',
+};
+
+export const POLITICAL_LABELS: Record<string, string> = {
+  PROGRESSIVE: '진보',
+  CENTER_LEFT: '중도 진보',
+  CENTER: '중도',
+  CENTER_RIGHT: '중도 보수',
+  CONSERVATIVE: '보수',
+  APOLITICAL: '관심 없음',
+};
+
+/** 화면에 두는 순서 — 눈금이라 진보에서 보수로 늘어놓고, '관심 없음'만 끝에 둔다. */
+export const RELIGION_ORDER = ['NONE', 'CHRISTIAN', 'CATHOLIC', 'BUDDHIST', 'WON_BUDDHIST', 'ISLAM', 'OTHER'] as const;
+export const POLITICAL_ORDER = [
+  'PROGRESSIVE',
+  'CENTER_LEFT',
+  'CENTER',
+  'CENTER_RIGHT',
+  'CONSERVATIVE',
+  'APOLITICAL',
+] as const;

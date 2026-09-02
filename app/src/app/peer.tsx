@@ -15,6 +15,7 @@ import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import { sendHeart, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
 import { INK_PRICE } from '@/lib/ink';
+import { beliefChips } from '@/lib/profile-form';
 import { promptReport } from '@/lib/reports';
 import { showToast } from '@/components/toast';
 
@@ -236,7 +237,13 @@ export default function PeerDetailScreen() {
           jobDomain={peer.jobDomain}
           photoUrls={peer.photoUrls}
           letters={letters}
-          keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}
+          keywords={[
+            // 신념은 상대가 따로 동의하고 적은 값이라 앞에 둔다 — 취미보다 먼저 보아야 할 정보다.
+            ...beliefChips(peer.religion, peer.politicalLeaning),
+            ...peer.interests,
+            ...peer.hobbies,
+            ...peer.strengths,
+          ]}
           sharedTastes={peer.sharedTastes}
           seed={peer.peerAnswerId ?? peer.nickname ?? ''}
           c={c}

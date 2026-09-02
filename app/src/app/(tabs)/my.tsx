@@ -20,6 +20,7 @@ import { resetAnalytics } from '@/lib/analytics';
 import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
+import { POLITICAL_LABELS, RELIGION_LABELS } from '@/constants/profile';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
 import { ageFrom, nextStep } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
@@ -277,6 +278,16 @@ function MyHub() {
           <Row label="프로필 문답" onPress={() => router.push('/my/letters')} c={c} />
           {/* 취향 카드는 프로필의 일부다 — 겹치는 선택이 상대 카드에 "둘 다 이걸 골랐어요"로 걸린다. */}
           <Row label="취향 카드" onPress={() => router.push('/taste-cards')} c={c} />
+          {/*
+           * 종교·정치 성향은 민감정보라 상세 프로필과 화면을 나눈다 — 동의 안내가 다른 항목들
+           * 사이에 끼면 읽히지 않는다. 비워둔 게 기본이라 값 자리는 '선택'으로 둔다.
+           */}
+          <Row
+            label="종교·정치 성향"
+            value={beliefsLabel(profile)}
+            onPress={() => router.push('/my/beliefs')}
+            c={c}
+          />
           <Row label="상대에게 보이는 화면" onPress={() => router.push('/my/preview')} c={c} last />
         </Section>
 
@@ -378,6 +389,18 @@ function Section({ title, c, children }: { title: string; c: ThemeColors; childr
       <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>{children}</View>
     </View>
   );
+}
+
+/**
+ * 종교·정치 성향 줄에 붙는 현재 값. 안 적었으면 '선택'이라고만 둔다 —
+ * '없음'이라고 쓰면 안 적은 것이 아니라 '무교'라고 답한 것처럼 읽힌다.
+ */
+function beliefsLabel(profile: MemberProfile | null): string {
+  const parts = [
+    profile?.religion ? RELIGION_LABELS[profile.religion] : null,
+    profile?.politicalLeaning ? POLITICAL_LABELS[profile.politicalLeaning] : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : '선택';
 }
 
 function Row({
