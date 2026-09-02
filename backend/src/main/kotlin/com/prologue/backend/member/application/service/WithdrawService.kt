@@ -45,6 +45,7 @@ class WithdrawService(
         exec("delete from mails where sender_account_id = :id or recipient_account_id = :id", accountId)
         exec("delete from profile_letters where account_id = :id", accountId)
         exec("delete from answers where account_id = :id", accountId)
+        exec("delete from taste_choices where account_id = :id", accountId)
         exec("delete from ink_ledger where account_id = :id", accountId)
         exec("delete from ink_event_submissions where account_id = :id", accountId)
         exec("delete from ink_wallets where account_id = :id", accountId)
