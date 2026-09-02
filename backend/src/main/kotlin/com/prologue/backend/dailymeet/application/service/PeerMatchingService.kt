@@ -314,6 +314,25 @@ class PeerMatchingService(
         return fillRevealed(accountId, question, questions).size > before
     }
 
+    /**
+     * 정오의 도착 — 아직 답하지 않은 사람에게 오늘의 한 명을 채운다. 채워졌으면 true.
+     *
+     * 답을 쓴 사람은 이미 그 자리에서 만났으므로 건드리지 않는다. 여기서 채워지는 카드는
+     * 답이 잠긴 채로 보인다([todayPeers]) — 도착과 열람은 다른 일이다.
+     *
+     * 스케줄러가 부른다. 앱을 열어야만 도착하는 소개는 앱을 열지 않는 사람에게 없는 것과 같아서,
+     * 정오라는 시각이 리듬이 되려면 그 시각에 서버가 먼저 움직여야 한다.
+     */
+    @Transactional
+    fun fillLockedArrival(accountId: UUID): Boolean {
+        val questions = questionRepository.findAllOrdered()
+        val question = QuestionRotation.of(questions, ServiceDay.now())
+        if (answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null) return false
+        val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
+        if (before >= revealCount) return false
+        return fillRevealed(accountId, question, questions).size > before
+    }
+
     /** 자격을 통과한 후보 하나 — 프로필과 오늘의 노출 횟수를 함께 들고 다닌다. */
     private data class Candidate(val answer: Answer, val peer: Member, val exposure: Long)
 

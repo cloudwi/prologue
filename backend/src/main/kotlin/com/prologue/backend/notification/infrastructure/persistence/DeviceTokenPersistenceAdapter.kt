@@ -16,6 +16,9 @@ interface DeviceTokenJpaRepository : JpaRepository<DeviceTokenJpaEntity, UUID> {
 
     @Query("select t.token from DeviceTokenJpaEntity t")
     fun findAllTokenValues(): List<String>
+
+    @Query("select distinct t.accountId from DeviceTokenJpaEntity t")
+    fun findAllAccountIdValues(): List<UUID>
 }
 
 @Repository
@@ -45,6 +48,8 @@ class DeviceTokenPersistenceAdapter(
     override fun deleteAllByAccountId(accountId: UUID) = jpa.deleteByAccountId(accountId)
 
     override fun findAllTokens(): List<String> = jpa.findAllTokenValues()
+
+    override fun findAllAccountIds(): Set<UUID> = jpa.findAllAccountIdValues().toSet()
 
     private fun DeviceToken.toEntity() = DeviceTokenJpaEntity(
         id = id, accountId = accountId, token = token, platform = platform,

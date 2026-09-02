@@ -134,6 +134,18 @@ class NotificationService(
     /** 정오 이후 늦게 채워진 오늘의 상대 — 빈 채로 닫힐 뻔한 하루에 한 번 더 문을 두드린다. */
     @Async
     @Transactional(readOnly = true)
+    fun lockedPeerArrived(accountId: UUID) = notify(
+        accountId,
+        PushMessage(
+            // 도착은 알리되 무엇이 잠겨 있는지도 함께 말한다 — 열고 나서 "이럴 줄 몰랐다"가 없게.
+            title = "오늘의 상대가 도착했어요",
+            body = "오늘의 질문에 답을 남기면 그 사람의 답이 열려요.",
+            data = mapOf("screen" to "discover"),
+        ),
+    )
+
+    @Async
+    @Transactional(readOnly = true)
     fun peerArrived(accountId: UUID) = notify(
         accountId,
         PushMessage(
