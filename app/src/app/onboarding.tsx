@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BirthDatePicker } from '@/components/birth-date-picker';
 import { HeightPicker } from '@/components/height-picker';
-import { KeywordChips } from '@/components/keyword-chips';
+import { TagPicker } from '@/components/tag-picker';
 import { PhotoCropModal } from '@/components/photo-crop';
 import { PhotoGrid, pickPhotos, MIN_PHOTOS, MAX_PHOTOS } from '@/components/photo-grid';
 import { EMPTY_FACTS, hasBeliefs, ProfileFactsFields, type ProfileFacts } from '@/components/profile-facts';
@@ -390,28 +390,22 @@ export default function OnboardingScreen() {
       content: <HeightPicker value={extra.height} onChange={(height) => patchExtra({ height })} c={c} />,
     },
     {
-      key: 'hobbies',
-      title: '취미를 골라주세요',
-      subtitle: `최대 ${KEYWORD_MAX}개까지 고를 수 있어요.`,
+      /*
+       * 취미·관심사·장점을 한 스텝에서 고른다. 예전에는 스텝 셋이었는데, 세 번 연속으로 칩 벽을
+       * 마주하면 마지막 하나는 아무도 안 고른다. 고른 것과 검색을 앞에 두고 목록은 접어 둔다.
+       */
+      key: 'tags',
+      title: '나를 설명하는 태그를 골라주세요',
+      subtitle: '취미·관심사·장점 중에서 마음에 드는 만큼만.',
       optional: true,
-      filled: extra.hobbies.length > 0,
-      content: <KeywordChips options={HOBBIES} selected={extra.hobbies} onChange={(v) => patchExtra({ hobbies: v })} c={c} max={KEYWORD_MAX} />,
-    },
-    {
-      key: 'interests',
-      title: '요즘 관심사는 무엇인가요?',
-      subtitle: `최대 ${KEYWORD_MAX}개까지 고를 수 있어요.`,
-      optional: true,
-      filled: extra.interests.length > 0,
-      content: <KeywordChips options={INTERESTS} selected={extra.interests} onChange={(v) => patchExtra({ interests: v })} c={c} max={KEYWORD_MAX} />,
-    },
-    {
-      key: 'strengths',
-      title: '나의 장점을 골라주세요',
-      subtitle: `최대 ${KEYWORD_MAX}개까지 고를 수 있어요.`,
-      optional: true,
-      filled: extra.strengths.length > 0,
-      content: <KeywordChips options={STRENGTHS} selected={extra.strengths} onChange={(v) => patchExtra({ strengths: v })} c={c} max={KEYWORD_MAX} />,
+      filled: extra.hobbies.length + extra.interests.length + extra.strengths.length > 0,
+      content: (
+        <TagPicker
+          value={{ hobbies: extra.hobbies, interests: extra.interests, strengths: extra.strengths }}
+          onChange={patchExtra}
+          c={c}
+        />
+      ),
     },
     {
       /*

@@ -3,9 +3,8 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HeightPicker } from '@/components/height-picker';
-import { KeywordChips } from '@/components/keyword-chips';
+import { TagPicker } from '@/components/tag-picker';
 import { AVATARS } from '@/constants/avatars';
-import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import type { ThemeColors } from '@/constants/theme';
 
 export type ProfileExtra = {
@@ -37,16 +36,13 @@ export function ProfileExtraFields({
         <HeightPicker value={value.height} onChange={(height) => onChange({ height })} c={c} />
       </Field>
 
-      <Field label={`취미 (최대 ${KEYWORD_MAX}개)`} c={c}>
-        <KeywordChips options={HOBBIES} selected={value.hobbies} onChange={(v) => onChange({ hobbies: v })} c={c} max={KEYWORD_MAX} />
-      </Field>
-
-      <Field label={`관심사 (최대 ${KEYWORD_MAX}개)`} c={c}>
-        <KeywordChips options={INTERESTS} selected={value.interests} onChange={(v) => onChange({ interests: v })} c={c} max={KEYWORD_MAX} />
-      </Field>
-
-      <Field label={`나의 장점 (최대 ${KEYWORD_MAX}개)`} c={c}>
-        <KeywordChips options={STRENGTHS} selected={value.strengths} onChange={(v) => onChange({ strengths: v })} c={c} max={KEYWORD_MAX} />
+      {/* 세 벌을 따로 펼치면 106개가 깔린다 — 고른 것과 검색을 앞에 두고 목록은 접는다. */}
+      <Field label="나를 설명하는 태그" c={c}>
+        <TagPicker
+          value={{ hobbies: value.hobbies, interests: value.interests, strengths: value.strengths }}
+          onChange={onChange}
+          c={c}
+        />
       </Field>
     </View>
   );
