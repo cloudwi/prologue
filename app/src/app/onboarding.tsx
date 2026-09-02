@@ -29,7 +29,6 @@ import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/li
 import { toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
 import { LEGAL_VERSION } from '@/constants/legal';
-import { HOBBIES, INTERESTS, KEYWORD_MAX, STRENGTHS } from '@/constants/profile';
 import { Fonts, type ThemeColors } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearConsent, getConsent } from '@/lib/consent';

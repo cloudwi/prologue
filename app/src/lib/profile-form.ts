@@ -66,40 +66,101 @@ export function profileTags(p: {
 
 export type NextStep = { label: string; hint: string; href: string };
 
+/** 프로필 체크리스트의 한 줄. [done]이면 이미 채운 것. */
+export type ChecklistItem = NextStep & { key: string; done: boolean };
+
 /**
- * 프로필에서 지금 채우면 가장 도움이 되는 항목 하나.
- * 진행률 막대는 "무엇을 해야 하는지"를 알려주지 않아서, 다음 행동 하나만 제안한다.
- * 노출 효과가 큰 순서(사진 → 자기소개 → 관심사 → 취미 → 강점 → 아바타)로 검사한다.
- * 자기소개는 프로필 편지의 첫 문단이라 사진 다음에 묻는다(2026-08-19) — 나머지 소개는 매일의 문답으로 쌓인다.
+ * 프로필을 채우는 일의 전부 — 완성도와 "다음 할 일"이 같은 표에서 나온다.
+ *
+ * 두 곳에서 따로 세면 언젠가 "완성도 100%인데 할 일이 남았다"가 된다. 순서는 **노출 효과가
+ * 큰 순서**다 — 위에서부터 하나씩 하면 가장 빨리 소개가 잘 된다.
+ *
+ * 종교·정치는 넣지 않는다. 민감정보라 안 적는 것도 온전한 선택인데, 완성도에 넣으면
+ * "덜 채운 사람"이 되어 적으라는 압력이 된다.
+ *
+ * @param letters 미리 써둔 프로필 문답 수. 모르면(안 불러왔으면) 그 줄은 빠진다.
  */
-export function nextStep(p: MemberProfile): NextStep | null {
-  // 전화번호는 편지(연락처 교환)의 재료라 가장 먼저 챈다 — 필수 도입 이전 회원만 해당.
-  if (!p.phone) {
-    return { label: '전화번호를 등록해주세요', hint: '편지에 연락처를 실으려면 필요해요', href: '/my/edit-basic' };
-  }
+export function profileChecklist(p: MemberProfile, letters?: number): ChecklistItem[] {
   const photos = p.photoUrls?.length ?? 0;
-  if (photos < 2) {
-    return { label: '사진을 2장 이상 올려주세요', hint: '사진이 있어야 상대에게 소개돼요', href: '/my/edit-photos' };
+  const tags = (p.hobbies?.length ?? 0) + (p.interests?.length ?? 0) + (p.strengths?.length ?? 0);
+  const items: ChecklistItem[] = [
+    {
+      key: 'phone',
+      label: '전화번호 등록하기',
+      hint: '편지에 연락처를 실으려면 필요해요',
+      href: '/my/edit-basic',
+      done: !!p.phone,
+    },
+    {
+      key: 'photos2',
+      label: '사진 2장 이상 올리기',
+      hint: '사진이 있어야 상대에게 소개돼요',
+      href: '/my/edit-photos',
+      done: photos >= 2,
+    },
+    {
+      key: 'bio',
+      label: '자기소개 한 문단 쓰기',
+      hint: '프로필을 열면 가장 먼저 읽는 글이에요',
+      href: '/my/edit-bio',
+      done: !!p.bio?.trim(),
+    },
+    {
+      // 사진 권유는 여기서 멈춘다(유저 결정 2026-09-02) — 세 장이면 충분히 보여준 것이고,
+      // 그 뒤로도 계속 사진을 조르면 다른 빈칸이 영영 뒤로 밀린다.
+      key: 'photos3',
+      label: '사진 한 장 더 올리기',
+      hint: '여러 장일수록 대화로 이어질 확률이 높아요',
+      href: '/my/edit-photos',
+      done: photos >= 3,
+    },
+    {
+      key: 'tags',
+      label: '나를 설명하는 태그 고르기',
+      hint: '대화가 시작되는 지점이 돼요',
+      href: '/my/edit-detail',
+      done: tags >= 3,
+    },
+    {
+      key: 'lifestyle',
+      label: '담배·술·만나는 빈도 알려주기',
+      hint: '만나기 전에 알고 싶은 것들이에요',
+      href: '/my/edit-detail',
+      done: !!(p.smoking || p.drinking || p.meetFrequency),
+    },
+    {
+      key: 'avatar',
+      label: '나를 닮은 아바타 고르기',
+      hint: '사진 없이 보이는 화면에서 쓰여요',
+      href: '/my/edit-detail',
+      done: p.avatarId != null,
+    },
+  ];
+  if (letters != null) {
+    items.push({
+      key: 'letters',
+      label: '프로필 문답 써두기',
+      hint: '자기소개를 대신하는 미리 써둔 답이에요',
+      href: '/my/letters',
+      done: letters > 0,
+    });
   }
-  if (!p.bio?.trim()) {
-    return { label: '자기소개를 한 문단 써보세요', hint: '상대가 프로필을 열면 가장 먼저 읽는 글이에요', href: '/my/edit-bio' };
-  }
-  if (photos < 4) {
-    return { label: '사진을 한 장 더 올려보세요', hint: '여러 장일수록 대화로 이어질 확률이 높아요', href: '/my/edit-photos' };
-  }
-  if ((p.interests?.length ?? 0) === 0) {
-    return { label: '관심사를 골라보세요', hint: '대화가 시작되는 지점이 돼요', href: '/my/edit-detail' };
-  }
-  if ((p.hobbies?.length ?? 0) === 0) {
-    return { label: '취미를 골라보세요', hint: '주말을 어떻게 보내는지 보여줄 수 있어요', href: '/my/edit-detail' };
-  }
-  if ((p.strengths?.length ?? 0) === 0) {
-    return { label: '나의 강점을 골라보세요', hint: '어떤 사람인지 짐작하게 해줘요', href: '/my/edit-detail' };
-  }
-  if (p.avatarId == null) {
-    return { label: '나를 닮은 아바타를 골라보세요', hint: '사진 없이 보이는 화면에서 쓰여요', href: '/my/edit-detail' };
-  }
-  return null;
+  return items;
+}
+
+/** 채운 비율(0~1). 완성도 막대가 쓰는 값. */
+export function completionRate(items: ChecklistItem[]): number {
+  if (items.length === 0) return 1;
+  return items.filter((i) => i.done).length / items.length;
+}
+
+/**
+ * 지금 채우면 가장 도움이 되는 항목 하나 — 체크리스트에서 아직 안 한 첫 줄.
+ * 진행률 막대는 "무엇을 해야 하는지"를 알려주지 않아서, 다음 행동 하나만 제안한다.
+ */
+export function nextStep(p: MemberProfile, letters?: number): NextStep | null {
+  const todo = profileChecklist(p, letters).find((i) => !i.done);
+  return todo ? { label: todo.label, hint: todo.hint, href: todo.href } : null;
 }
 
 /** 생년월일(ISO) → 만 나이. */

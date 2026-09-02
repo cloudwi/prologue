@@ -64,13 +64,20 @@ export default function LoginScreen() {
    * 그런데 확인이 길어져(무료 티어 콜드스타트) 루트의 안전장치가 스플래시를 내리면
    * 빈 배경만 남는다. 그래서 스플래시와 **같은 그림**을 그려 둔다 —
    * 무엇이 먼저 걷히든 화면은 이어진 것처럼 보인다. 애니메이션은 넣지 않는다(스플래시는 정지 화면이다).
+   *
+   * "같은 그림"은 말 그대로여야 한다. 예전에는 마크와 글자를 앱에서 새로 조판했는데,
+   * 스플래시가 쓰는 splash.png와 자간·크기가 미묘하게 달라 걷히는 순간 화면이 한 번 튀었다
+   * (유저 지적 2026-09-02). 이제 같은 파일을, 같은 폭(app.json의 imageWidth 200)으로,
+   * 같은 배경 위에 그린다 — 다크 모드까지 짝을 맞춘다.
    */
   if (checking) {
     return (
       <View style={[styles.root, styles.center, { backgroundColor: c.background }]}>
-        <Image source={require('@/assets/images/brand-mark.png')} style={styles.logo} contentFit="contain" />
-        <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
-        <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
+        <Image
+          source={scheme === 'dark' ? require('@/assets/images/splash-dark.png') : require('@/assets/images/splash.png')}
+          style={styles.splashMatch}
+          contentFit="contain"
+        />
       </View>
     );
   }
@@ -140,7 +147,12 @@ export default function LoginScreen() {
   );
 }
 
+/** app.json의 expo-splash-screen 설정과 같은 값 — 여기만 바꾸면 이음매가 어긋난다. */
+const SPLASH_WIDTH = 200;
+const SPLASH_RATIO = 392 / 600; // splash.png의 세로/가로
+
 const styles = StyleSheet.create({
+  splashMatch: { width: SPLASH_WIDTH, height: SPLASH_WIDTH * SPLASH_RATIO },
   root: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   safe: { flex: 1, paddingHorizontal: 25, justifyContent: 'flex-end' },

@@ -21,7 +21,7 @@ import { APPEARANCE_LABEL, useAppearance } from '@/lib/appearance';
 import { clearTokens } from '@/lib/auth-storage';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
 import { disableNotifications, notificationsEnabled, reenableNotifications } from '@/lib/notifications';
-import { ageFrom, nextStep, profileTags } from '@/lib/profile-form';
+import { ageFrom, completionRate, nextStep, profileChecklist, profileTags } from '@/lib/profile-form';
 import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
@@ -172,6 +172,8 @@ function MyHub() {
    * 전화번호처럼 소개와 무관하게 필요한 것만 남긴다.
    */
   const todo = profile ? (datingOff ? (profile.phone ? null : nextStep(profile)) : nextStep(profile)) : null;
+  // 완성도는 목록과 같은 표에서 나온다 — 둘이 따로 세면 "100%인데 할 일이 남았다"가 된다.
+  const completion = profile ? completionRate(profileChecklist(profile)) : 0;
   const hasPhoto = photos.length > 0;
 
   return (
@@ -243,17 +245,28 @@ function MyHub() {
         )}
 
         {/* 다음 한 가지 — 완성도 퍼센트 대신 지금 할 행동 하나만 제안한다. */}
+        {/*
+         * 완성도 — 얼마나 찼는지(막대)와 다음 한 걸음(문구)을 한 카드에 둔다.
+         * 누르면 무엇이 비었는지 전부 보여주는 목록으로 간다. 예전에는 다음 할 일 하나만
+         * 있었는데, "그거 말고 또 뭐가 남았지"에 답할 자리가 없었다.
+         */}
         {todo && (
           <Pressable
-            onPress={() => router.push(todo.href as never)}
+            onPress={() => router.push('/my/checklist')}
             style={({ pressed }) => [
               styles.todo,
               { backgroundColor: c.backgroundSelected, opacity: pressed ? 0.8 : 1 },
             ]}
           >
             <View style={styles.flex}>
-              <Text style={[styles.todoLabel, { color: c.text }]}>{todo.label}</Text>
-              <Text style={[styles.todoHint, { color: c.textSecondary }]}>{todo.hint}</Text>
+              <View style={styles.todoHead}>
+                <Text style={[styles.todoLabel, { color: c.text }]}>프로필 완성도</Text>
+                <Text style={[styles.todoRate, { color: c.primaryStrong }]}>{Math.round(completion * 100)}%</Text>
+              </View>
+              <View style={[styles.todoTrack, { backgroundColor: c.border }]}>
+                <View style={[styles.todoFill, { backgroundColor: c.primary, width: `${Math.round(completion * 100)}%` }]} />
+              </View>
+              <Text style={[styles.todoHint, { color: c.textSecondary }]}>다음: {todo.label}</Text>
             </View>
             <Text style={[styles.chevron, { color: c.primaryStrong }]}>›</Text>
           </Pressable>
@@ -478,6 +491,10 @@ const styles = StyleSheet.create({
   jobTitle: { fontSize: 16, fontWeight: '700' },
   jobHint: { fontSize: 13.5, lineHeight: 19, marginTop: 4 },
 
+  todoHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  todoRate: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  todoTrack: { height: 4, borderRadius: 2, marginTop: 8, marginBottom: 8, overflow: 'hidden' },
+  todoFill: { height: 4, borderRadius: 2 },
   todoLabel: { fontSize: 16, fontWeight: '700' },
   todoHint: { fontSize: 14, marginTop: 3 },
 
