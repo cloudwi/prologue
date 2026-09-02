@@ -10,6 +10,7 @@ import com.prologue.backend.dailymeet.domain.model.ProfileAccess
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
 import com.prologue.backend.dailymeet.domain.model.ServiceDay
+import com.prologue.backend.dailymeet.domain.model.TasteAffinity
 import com.prologue.backend.dailymeet.domain.repository.AnswerRepository
 import com.prologue.backend.dailymeet.domain.repository.DailyRevealRepository
 import com.prologue.backend.dailymeet.domain.repository.HeartRepository
@@ -45,6 +46,7 @@ class PeerMatchingService(
     private val lastSeenService: LastSeenService,
     private val jobVerificationService: JobVerificationService,
     private val blockService: BlockService,
+    private val tasteCardService: TasteCardService,
     /**
      * 후보를 찾을 질문의 범위(일). 1이면 오늘 질문에 답한 사람만 후보다.
      *
@@ -202,9 +204,20 @@ class PeerMatchingService(
             }
         }
 
+        // 취향 겹침은 후보 전원 몫을 한 번에 읽는다 — 점수 계산 안에서 사람마다 읽으면 N+1이다.
+        val myTastes = tasteCardService.optionsOf(accountId)
+        val peerTastes = if (myTastes.isEmpty()) emptyMap() else tasteCardService.optionsOf(candidates.map { it.peer.accountId })
+
         // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
         while (revealed.size < revealCount && candidates.isNotEmpty()) {
-            val chosen = candidates.maxBy { PeerScore.of(me, it.peer, it.exposure) }
+            val chosen = candidates.maxBy {
+                PeerScore.of(
+                    me,
+                    it.peer,
+                    it.exposure,
+                    tasteOverlap = TasteAffinity.overlap(myTastes, peerTastes[it.peer.accountId] ?: emptyMap()),
+                )
+            }
             candidates.remove(chosen)
             // 한 사람이 여러 답으로 풀에 있어도 하루에 한 번만 — 사람 단위로 걷어낸다
             candidates.removeAll { it.peer.accountId == chosen.peer.accountId }
@@ -367,6 +380,8 @@ class PeerMatchingService(
         questions: List<Question>,
         withRecentAnswers: Boolean = false,
     ): PeerView {
+        // 겹치는 취향은 한 사람을 자세히 보는 자리에서만 — 목록에서는 사람마다 선택 테이블을 더 읽는 값이 된다.
+        val sharedTastes = if (withRecentAnswers) tasteCardService.sharedWith(viewerAccountId, peer.accountId) else emptyList()
         val p = memberQueryService.findProfile(peer.accountId)
         val jobDomain = jobVerificationService.verifiedDomain(peer.accountId)
         return PeerView(
@@ -393,6 +408,7 @@ class PeerMatchingService(
             jobVerified = jobDomain != null,
             jobDomain = jobDomain,
             recentAnswers = if (withRecentAnswers) recentAnswersOf(peer, questions) else emptyList(),
+            sharedTastes = sharedTastes,
         )
     }
 

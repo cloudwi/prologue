@@ -17,12 +17,17 @@ import kotlin.math.min
  * 그러면 그 사람은 감당 못 할 관심을 받고 나머지는 영영 소개되지 않는다. 노출될수록 점수가
  * 빠르게 깎이게 해서, 매력적인 상대를 우선하되 한 사람만 계속 내보내지는 않게 한다.
  *
+ * 취향 카드([TasteAffinity])는 프로필 키워드보다 무겁게 잡았다(0.15 대 0.10). 키워드는 자기가 고른
+ * 자기소개라 다들 비슷한 말을 적지만, 카드는 같은 물음에 각자 고른 값이라 두 사람을 실제로 가른다.
+ * 대신 아무나 절반은 겹치므로, 그 절반은 [TasteAffinity]가 미리 0으로 깎아 넘긴다.
+ *
  * 가중치는 확정이 아니라 출발점이다 — 유저가 쌓이면 하트 전환율을 보고 조정한다.
  */
 object PeerScore {
-    private const val REGION_WEIGHT = 0.30
-    private const val AGE_WEIGHT = 0.30
-    private const val KEYWORD_WEIGHT = 0.15
+    private const val REGION_WEIGHT = 0.25
+    private const val AGE_WEIGHT = 0.25
+    private const val KEYWORD_WEIGHT = 0.10
+    private const val TASTE_WEIGHT = 0.15
     private const val FAIRNESS_WEIGHT = 0.25
 
     /** 이 이상 나이가 벌어지면 나이 점수는 0. */
@@ -33,11 +38,19 @@ object PeerScore {
 
     /**
      * @param exposureCount 오늘 이 상대가 다른 사람에게 소개된 횟수
+     * @param tasteOverlap 취향 카드가 겹치는 정도([TasteAffinity]). 둘 중 한쪽이 안 넘겼으면 0.
      */
-    fun of(me: Member, peer: Member, exposureCount: Long, today: LocalDate = LocalDate.now()): Double =
+    fun of(
+        me: Member,
+        peer: Member,
+        exposureCount: Long,
+        today: LocalDate = LocalDate.now(),
+        tasteOverlap: Double = 0.0,
+    ): Double =
         REGION_WEIGHT * regionScore(me.region, peer.region) +
             AGE_WEIGHT * ageScore(me.birthDate, peer.birthDate, today) +
             KEYWORD_WEIGHT * keywordScore(me, peer) +
+            TASTE_WEIGHT * tasteOverlap.coerceIn(0.0, 1.0) +
             FAIRNESS_WEIGHT * fairnessScore(exposureCount)
 
     /**

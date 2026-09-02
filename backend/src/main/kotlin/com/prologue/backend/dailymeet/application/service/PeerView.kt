@@ -50,6 +50,14 @@ data class PeerView(
      * 프로필이 열려 있을 때만 담긴다(잠기면 [locked]가 비운다) — 창을 여는 값은 이미 치른 뒤다.
      */
     val recentAnswers: List<PeerAnswerView> = emptyList(),
+    /**
+     * 나와 똑같이 고른 취향 카드 몇 장([SharedTasteView]).
+     *
+     * 점수는 뒤에서 조용히 순서를 바꿀 뿐이라, 카드를 넘긴 값이 화면에 보이지 않으면 아무도 두 번
+     * 넘기지 않는다. "둘 다 밤형"이라는 한 줄이 첫 인사를 훨씬 쉽게 만들기도 한다.
+     * 답변과 같은 규칙으로 잠긴다 — 창이 닫히면 함께 비운다([locked]).
+     */
+    val sharedTastes: List<SharedTasteView> = emptyList(),
     val gender: Gender?,
     /** 만 나이(서버 계산). 생년월일 원본은 상대에게 노출하지 않는다. */
     val age: Int?,
@@ -90,6 +98,7 @@ data class PeerView(
         answerUnlocked = false,
         letters = emptyList(),
         recentAnswers = emptyList(),
+        sharedTastes = emptyList(),
         bio = null,
         heightCm = null,
         bodyType = null,

@@ -15,6 +15,10 @@ data class PeerResponse(
     val photoUrls: List<String>,
     val nickname: String?,
     val letters: List<ProfileLetterDtos.Letter>,
+    /** 그 사람이 최근에 남긴 답 몇 개 — 한 사람을 자세히 보는 자리에서만 채워진다. */
+    val recentAnswers: List<RecentAnswer>,
+    /** 나와 똑같이 고른 취향 카드 — 상대가 덧붙인 한 줄까지. 목록에서는 비어 있다. */
+    val sharedTastes: List<SharedTaste>,
     val gender: Gender?,
     val age: Int?,
     val region: String?,
@@ -31,9 +35,27 @@ data class PeerResponse(
     val hearted: Boolean,
     /** 최근 접속 버킷(TODAY/THIS_WEEK/WEEKS_AGO). 기록 없음·한 달 초과는 null. */
     val lastActive: LastActiveBucket?,
+    /** 직장 인증 여부 — 모임 프로필과 같은 신뢰 신호를 매칭 프로필에도 단다. */
+    val jobVerified: Boolean,
+    /** 인증한 회사 이메일 도메인. 배지에 그대로 노출된다(유저 결정 2026-08-24). 미인증이면 null. */
+    val jobDomain: String?,
     /** 이어진 지 사흘이 지나 닫힌 프로필. true면 사진·답변·상세가 비어 있고, 열려면 잉크가 든다. */
     val locked: Boolean,
 ) {
+    data class RecentAnswer(
+        val questionId: Long,
+        val question: String,
+        val content: String,
+        val answeredAt: java.time.Instant,
+    )
+
+    data class SharedTaste(
+        val cardId: Long,
+        val prompt: String,
+        val choice: String,
+        val peerNote: String?,
+    )
+
     companion object {
         fun from(view: PeerView): PeerResponse =
             PeerResponse(
@@ -46,6 +68,8 @@ data class PeerResponse(
                 photoUrls = view.photoUrls,
                 nickname = view.nickname,
                 letters = view.letters.map { ProfileLetterDtos.Letter(it.questionId, it.question, it.content) },
+                recentAnswers = view.recentAnswers.map { RecentAnswer(it.questionId, it.question, it.content, it.answeredAt) },
+                sharedTastes = view.sharedTastes.map { SharedTaste(it.cardId, it.prompt, it.choice, it.peerNote) },
                 gender = view.gender,
                 age = view.age,
                 region = view.region,
@@ -57,6 +81,8 @@ data class PeerResponse(
                 strengths = view.strengths,
                 avatarId = view.avatarId,
                 lastActive = view.lastActive,
+                jobVerified = view.jobVerified,
+                jobDomain = view.jobDomain,
                 locked = view.locked,
             )
     }
