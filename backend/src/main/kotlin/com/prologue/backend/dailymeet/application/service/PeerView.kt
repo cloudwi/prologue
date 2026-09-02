@@ -1,7 +1,10 @@
 package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.member.domain.model.BodyType
+import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.PoliticalLeaning
+import com.prologue.backend.member.domain.model.Smoking
 import com.prologue.backend.member.domain.model.Religion
 import com.prologue.backend.member.domain.model.Gender
 import java.time.Duration
@@ -76,6 +79,13 @@ data class PeerView(
      */
     val religion: Religion? = null,
     val politicalLeaning: PoliticalLeaning? = null,
+    /**
+     * 생활 습관 — 흡연·음주·만나는 빈도. 본인이 고른 것만 온다(안 고르면 null).
+     * 민감정보가 아니라 동의로 잠기지는 않지만, 프로필이 닫히면 다른 상세와 함께 비운다.
+     */
+    val smoking: Smoking? = null,
+    val drinking: Drinking? = null,
+    val meetFrequency: MeetFrequency? = null,
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
@@ -115,6 +125,9 @@ data class PeerView(
         bodyType = null,
         religion = null,
         politicalLeaning = null,
+        smoking = null,
+        drinking = null,
+        meetFrequency = null,
         hobbies = emptyList(),
         interests = emptyList(),
         strengths = emptyList(),

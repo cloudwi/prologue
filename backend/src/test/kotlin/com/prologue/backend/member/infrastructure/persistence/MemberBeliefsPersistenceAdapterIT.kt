@@ -1,10 +1,13 @@
 package com.prologue.backend.member.infrastructure.persistence
 
+import com.prologue.backend.member.domain.model.Drinking
 import com.prologue.backend.member.domain.model.Gender
+import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.Member
 import com.prologue.backend.member.domain.model.MemberConsent
 import com.prologue.backend.member.domain.model.PoliticalLeaning
 import com.prologue.backend.member.domain.model.Religion
+import com.prologue.backend.member.domain.model.Smoking
 import com.prologue.backend.support.PostgresRepositoryTest
 import java.time.LocalDate
 import java.util.UUID
@@ -81,6 +84,31 @@ class MemberBeliefsPersistenceAdapterIT : PostgresRepositoryTest() {
         val after = members.findByAccountId(member.accountId)!!
         assertEquals(Religion.CATHOLIC, after.religion)
         assertEquals(PoliticalLeaning.CONSERVATIVE, after.politicalLeaning)
+    }
+
+    @Test
+    fun `생활 습관도 저장되고 프로필 저장에 지워지지 않는다`() {
+        // V62의 세 열이 엔티티와 맞는지(ddl-auto validate), 그리고 전체 덮어쓰기에 살아남는지.
+        val member = newMember().apply {
+            updateLifestyle(Smoking.NONE, Drinking.SOMETIMES, MeetFrequency.TWO_TO_THREE)
+        }
+        members.save(member)
+
+        val loaded = members.findByAccountId(member.accountId)!!
+        loaded.updateProfile(
+            nickname = "바뀐이름",
+            gender = Gender.FEMALE,
+            birthDate = LocalDate.of(1996, 5, 14),
+            preferredGender = Gender.MALE,
+            region = "서울 마포구",
+            phone = "01012345678",
+        )
+        members.save(loaded)
+
+        val after = members.findByAccountId(member.accountId)!!
+        assertEquals(Smoking.NONE, after.smoking)
+        assertEquals(Drinking.SOMETIMES, after.drinking)
+        assertEquals(MeetFrequency.TWO_TO_THREE, after.meetFrequency)
     }
 
     @Test

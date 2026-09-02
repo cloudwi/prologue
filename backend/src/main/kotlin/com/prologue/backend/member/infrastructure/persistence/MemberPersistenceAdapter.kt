@@ -40,6 +40,9 @@ class MemberPersistenceAdapter(
             kakaoId = kakaoId,
             religion = religion,
             politicalLeaning = politicalLeaning,
+            smoking = smoking,
+            drinking = drinking,
+            meetFrequency = meetFrequency,
         )
 
     private fun MemberJpaEntity.toDomain(): Member =
@@ -65,6 +68,9 @@ class MemberPersistenceAdapter(
             kakaoId = kakaoId,
             religion = religion,
             politicalLeaning = politicalLeaning,
+            smoking = smoking,
+            drinking = drinking,
+            meetFrequency = meetFrequency,
         )
 
     private fun splitKeywords(joined: String?): List<String> =

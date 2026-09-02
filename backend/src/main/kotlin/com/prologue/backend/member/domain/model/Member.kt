@@ -35,6 +35,9 @@ class Member private constructor(
     maxAge: Int?,
     religion: Religion?,
     politicalLeaning: PoliticalLeaning?,
+    smoking: Smoking?,
+    drinking: Drinking?,
+    meetFrequency: MeetFrequency?,
 ) {
     var nickname: String = nickname
         private set
@@ -103,6 +106,26 @@ class Member private constructor(
 
     /** 하나라도 적혀 있는지 — 동의가 필요한 상태인지 판단할 때 쓴다. */
     fun hasBeliefs(): Boolean = religion != null || politicalLeaning != null
+
+    /**
+     * 생활 습관 — 흡연·음주·만나는 빈도([Smoking], [Drinking], [MeetFrequency]).
+     *
+     * 민감정보는 아니지만 [updateProfile]이 건드리지 않는 것은 신념과 같다. 프로필 저장은
+     * 전체 덮어쓰기라, 이 항목을 모르는 화면이 저장 한 번으로 지워버리기 때문이다.
+     */
+    var smoking: Smoking? = smoking
+        private set
+    var drinking: Drinking? = drinking
+        private set
+    var meetFrequency: MeetFrequency? = meetFrequency
+        private set
+
+    /** 생활 습관을 적거나 지운다. 셋 다 null이면 지우는 것이다. */
+    fun updateLifestyle(smoking: Smoking?, drinking: Drinking?, meetFrequency: MeetFrequency?) {
+        this.smoking = smoking
+        this.drinking = drinking
+        this.meetFrequency = meetFrequency
+    }
 
     /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최대 [MAX_PHOTOS]장, 전용 업로드 엔드포인트에서 갱신된다. */
     var photoUrls: List<String> = photoUrls
@@ -254,6 +277,10 @@ class Member private constructor(
                 // 가입에서는 묻지 않는다 — 민감정보는 별도 동의와 함께 나중에(updateBeliefs).
                 religion = null,
                 politicalLeaning = null,
+                // 생활 습관도 가입 문턱을 늘리지 않는다 — 프로필에서 천천히(updateLifestyle).
+                smoking = null,
+                drinking = null,
+                meetFrequency = null,
             )
         }
 
@@ -280,10 +307,13 @@ class Member private constructor(
             maxAge: Int? = null,
             religion: Religion? = null,
             politicalLeaning: PoliticalLeaning? = null,
+            smoking: Smoking? = null,
+            drinking: Drinking? = null,
+            meetFrequency: MeetFrequency? = null,
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
             bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
-            phone, kakaoId, minAge, maxAge, religion, politicalLeaning,
+            phone, kakaoId, minAge, maxAge, religion, politicalLeaning, smoking, drinking, meetFrequency,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =

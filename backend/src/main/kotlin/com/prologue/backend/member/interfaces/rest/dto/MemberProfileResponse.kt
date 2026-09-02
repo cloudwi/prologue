@@ -1,6 +1,9 @@
 package com.prologue.backend.member.interfaces.rest.dto
 
 import com.prologue.backend.member.domain.model.BodyType
+import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.MeetFrequency
+import com.prologue.backend.member.domain.model.Smoking
 import com.prologue.backend.member.domain.model.PoliticalLeaning
 import com.prologue.backend.member.domain.model.Religion
 import com.prologue.backend.member.domain.model.Gender
@@ -22,6 +25,10 @@ data class MemberProfileResponse(
     /** 종교·정치 성향(민감정보). 안 적었으면 null — 수정은 전용 경로(PUT /members/me/beliefs). */
     val religion: Religion?,
     val politicalLeaning: PoliticalLeaning?,
+    /** 생활 습관(흡연·음주·만나는 빈도). 안 골랐으면 null — 수정은 PUT /members/me/lifestyle. */
+    val smoking: Smoking?,
+    val drinking: Drinking?,
+    val meetFrequency: MeetFrequency?,
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
@@ -50,6 +57,9 @@ data class MemberProfileResponse(
                 bodyType = member.bodyType,
                 religion = member.religion,
                 politicalLeaning = member.politicalLeaning,
+                smoking = member.smoking,
+                drinking = member.drinking,
+                meetFrequency = member.meetFrequency,
                 hobbies = member.hobbies,
                 interests = member.interests,
                 strengths = member.strengths,

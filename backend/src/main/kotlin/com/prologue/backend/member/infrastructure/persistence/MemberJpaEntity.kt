@@ -1,6 +1,9 @@
 package com.prologue.backend.member.infrastructure.persistence
 
 import com.prologue.backend.member.domain.model.BodyType
+import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.MeetFrequency
+import com.prologue.backend.member.domain.model.Smoking
 import com.prologue.backend.member.domain.model.PoliticalLeaning
 import com.prologue.backend.member.domain.model.Religion
 import com.prologue.backend.member.domain.model.Gender
@@ -80,6 +83,19 @@ class MemberJpaEntity(
     @Enumerated(EnumType.STRING)
     @Column(name = "political_leaning", length = 20)
     var politicalLeaning: PoliticalLeaning? = null,
+
+    /** 생활 습관 — 민감정보는 아니지만 저장 경로는 프로필과 분리돼 있다(Member.updateLifestyle). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "smoking", length = 20)
+    var smoking: Smoking? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "drinking", length = 20)
+    var drinking: Drinking? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "meet_frequency", length = 20)
+    var meetFrequency: MeetFrequency? = null,
 
     /** 사진 공개 URL 목록(콤마 조인, 등록 순). 최대 6장. */
     @Column(name = "photo_urls", columnDefinition = "text")
