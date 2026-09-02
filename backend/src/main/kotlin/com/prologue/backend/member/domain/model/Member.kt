@@ -33,6 +33,8 @@ class Member private constructor(
     kakaoId: String?,
     minAge: Int?,
     maxAge: Int?,
+    religion: Religion?,
+    politicalLeaning: PoliticalLeaning?,
 ) {
     var nickname: String = nickname
         private set
@@ -77,6 +79,30 @@ class Member private constructor(
     /** 카카오톡 ID(선택). 편지에 전화번호 대신 실을 수 있다. */
     var kakaoId: String? = kakaoId
         private set
+
+    /**
+     * 종교·정치 성향 — 민감정보라 다른 선택 항목과 다르게 다룬다([Religion], [PoliticalLeaning]).
+     *
+     * **[updateProfile]이 건드리지 않는다.** 프로필 저장은 전체 덮어쓰기라, 이 필드를 거기 끼우면
+     * 이 항목을 모르는 옛 앱이 프로필을 한 번 저장할 때마다 조용히 지워버린다. 동의를 받고 적은
+     * 값이 그렇게 사라지면 안 된다 — 오직 [updateBeliefs]로만 바뀐다.
+     */
+    var religion: Religion? = religion
+        private set
+    var politicalLeaning: PoliticalLeaning? = politicalLeaning
+        private set
+
+    /**
+     * 종교·정치 성향을 적거나 지운다. 둘 다 null이면 지우는 것이고, 지우는 데는 동의가 필요 없다.
+     * (동의 확인은 응용 계층의 일이다 — 도메인은 무엇이 민감한지만 알고, 누가 동의했는지는 모른다.)
+     */
+    fun updateBeliefs(religion: Religion?, politicalLeaning: PoliticalLeaning?) {
+        this.religion = religion
+        this.politicalLeaning = politicalLeaning
+    }
+
+    /** 하나라도 적혀 있는지 — 동의가 필요한 상태인지 판단할 때 쓴다. */
+    fun hasBeliefs(): Boolean = religion != null || politicalLeaning != null
 
     /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최대 [MAX_PHOTOS]장, 전용 업로드 엔드포인트에서 갱신된다. */
     var photoUrls: List<String> = photoUrls
@@ -225,6 +251,9 @@ class Member private constructor(
                 kakaoId = normalizeKakaoId(kakaoId),
                 minAge = minAge,
                 maxAge = maxAge,
+                // 가입에서는 묻지 않는다 — 민감정보는 별도 동의와 함께 나중에(updateBeliefs).
+                religion = null,
+                politicalLeaning = null,
             )
         }
 
@@ -249,10 +278,12 @@ class Member private constructor(
             kakaoId: String? = null,
             minAge: Int? = null,
             maxAge: Int? = null,
+            religion: Religion? = null,
+            politicalLeaning: PoliticalLeaning? = null,
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
             bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
-            phone, kakaoId, minAge, maxAge,
+            phone, kakaoId, minAge, maxAge, religion, politicalLeaning,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =

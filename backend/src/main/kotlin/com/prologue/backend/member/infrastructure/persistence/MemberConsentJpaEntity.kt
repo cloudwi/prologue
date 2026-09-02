@@ -33,6 +33,9 @@ class MemberConsentJpaEntity(
     @Column(name = "sensitive", nullable = false, updatable = false)
     val sensitive: Boolean,
 
+    @Column(name = "beliefs", nullable = false, updatable = false)
+    val beliefs: Boolean,
+
     @Column(name = "marketing", nullable = false, updatable = false)
     val marketing: Boolean,
 

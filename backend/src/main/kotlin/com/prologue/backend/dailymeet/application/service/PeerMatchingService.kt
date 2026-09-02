@@ -400,6 +400,8 @@ class PeerMatchingService(
             bio = p?.bio,
             heightCm = p?.heightCm,
             bodyType = p?.bodyType,
+            religion = p?.religion,
+            politicalLeaning = p?.politicalLeaning,
             hobbies = p?.hobbies ?: emptyList(),
             interests = p?.interests ?: emptyList(),
             strengths = p?.strengths ?: emptyList(),

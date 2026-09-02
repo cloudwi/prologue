@@ -20,6 +20,12 @@ class MemberConsent private constructor(
     val age: Boolean,
     /** 선호 성별은 성적 지향을 드러내므로 민감정보(23조) — 소개팅을 켤 때 별도로 받는다. */
     val sensitive: Boolean,
+    /**
+     * 종교·정치 성향(신념) 수집 동의 — 같은 23조지만 **다른 항목**이다.
+     * 동의는 항목별로 받아야 하므로(22조) 선호 성별 동의로 갈음하지 않는다. 프로필에 처음
+     * 적을 때 받고, 지울 때는 묻지 않는다. 이 줄이 false여도 서비스 이용에는 아무 영향이 없다.
+     */
+    val beliefs: Boolean,
     /** 유일한 선택 항목. 거부해도 가입은 된다(16조 3항). */
     val marketing: Boolean,
     val agreedAt: Instant,
@@ -33,6 +39,7 @@ class MemberConsent private constructor(
             age: Boolean,
             sensitive: Boolean,
             marketing: Boolean,
+            beliefs: Boolean = false,
             now: Instant = Instant.now(),
         ): MemberConsent {
             require(legalVersion.isNotBlank()) { "약관 버전이 비어 있습니다" }
@@ -52,10 +59,32 @@ class MemberConsent private constructor(
                 privacy = privacy,
                 age = age,
                 sensitive = sensitive,
+                beliefs = beliefs,
                 marketing = marketing,
                 agreedAt = now,
             )
         }
+
+        /**
+         * 신념(종교·정치 성향) 수집에 동의한 사실만 새 줄로 남긴다 — 프로필에 처음 적는 순간.
+         *
+         * 약관·개인정보·연령은 가입 때 이미 동의했고 지금도 그 아래에서 서비스를 쓰므로 true다.
+         * [sensitive]·[marketing]이 false인 것은 **철회가 아니라 "이번에 새로 동의한 항목이
+         * 아니다"는 뜻**이다 — 이 표는 고치지 않고 쌓기만 하며, 어떤 항목에 동의했는지는
+         * 그 항목이 true인 줄이 하나라도 있는지로 판단한다.
+         */
+        fun recordBeliefs(accountId: UUID, legalVersion: String, now: Instant = Instant.now()): MemberConsent =
+            record(
+                accountId = accountId,
+                legalVersion = legalVersion,
+                terms = true,
+                privacy = true,
+                age = true,
+                sensitive = false,
+                marketing = false,
+                beliefs = true,
+                now = now,
+            )
 
         /** 영속 계층이 저장된 행을 도메인으로 되살릴 때 쓴다. */
         fun reconstitute(
@@ -67,7 +96,8 @@ class MemberConsent private constructor(
             age: Boolean,
             sensitive: Boolean,
             marketing: Boolean,
+            beliefs: Boolean,
             agreedAt: Instant,
-        ) = MemberConsent(id, accountId, legalVersion, terms, privacy, age, sensitive, marketing, agreedAt)
+        ) = MemberConsent(id, accountId, legalVersion, terms, privacy, age, sensitive, beliefs, marketing, agreedAt)
     }
 }

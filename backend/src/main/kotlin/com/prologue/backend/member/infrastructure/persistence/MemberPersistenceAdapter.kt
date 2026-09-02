@@ -38,6 +38,8 @@ class MemberPersistenceAdapter(
             photoUrls = photoUrls.joinToString(",").ifBlank { null },
             phone = phone,
             kakaoId = kakaoId,
+            religion = religion,
+            politicalLeaning = politicalLeaning,
         )
 
     private fun MemberJpaEntity.toDomain(): Member =
@@ -61,6 +63,8 @@ class MemberPersistenceAdapter(
             photoUrls = splitKeywords(photoUrls),
             phone = phone,
             kakaoId = kakaoId,
+            religion = religion,
+            politicalLeaning = politicalLeaning,
         )
 
     private fun splitKeywords(joined: String?): List<String> =

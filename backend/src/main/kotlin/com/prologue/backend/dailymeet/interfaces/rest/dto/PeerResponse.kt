@@ -5,6 +5,8 @@ import com.prologue.backend.dailymeet.application.service.PeerView
 import com.prologue.backend.dailymeet.application.service.TodayPeersView
 import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
+import com.prologue.backend.member.domain.model.PoliticalLeaning
+import com.prologue.backend.member.domain.model.Religion
 
 data class PeerResponse(
     val peerAnswerId: String?,
@@ -25,6 +27,9 @@ data class PeerResponse(
     val bio: String?,
     val heightCm: Int?,
     val bodyType: BodyType?,
+    /** 상대가 적어 공개하기로 한 종교·정치 성향. 안 적었으면 null. */
+    val religion: Religion?,
+    val politicalLeaning: PoliticalLeaning?,
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
@@ -76,6 +81,8 @@ data class PeerResponse(
                 bio = view.bio,
                 heightCm = view.heightCm,
                 bodyType = view.bodyType,
+                religion = view.religion,
+                politicalLeaning = view.politicalLeaning,
                 hobbies = view.hobbies,
                 interests = view.interests,
                 strengths = view.strengths,

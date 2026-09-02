@@ -1,6 +1,8 @@
 package com.prologue.backend.member.interfaces.rest.dto
 
 import com.prologue.backend.member.domain.model.BodyType
+import com.prologue.backend.member.domain.model.PoliticalLeaning
+import com.prologue.backend.member.domain.model.Religion
 import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.member.domain.model.Member
 import java.time.LocalDate
@@ -17,6 +19,9 @@ data class MemberProfileResponse(
     val bio: String?,
     val heightCm: Int?,
     val bodyType: BodyType?,
+    /** 종교·정치 성향(민감정보). 안 적었으면 null — 수정은 전용 경로(PUT /members/me/beliefs). */
+    val religion: Religion?,
+    val politicalLeaning: PoliticalLeaning?,
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
@@ -43,6 +48,8 @@ data class MemberProfileResponse(
                 bio = member.bio,
                 heightCm = member.heightCm,
                 bodyType = member.bodyType,
+                religion = member.religion,
+                politicalLeaning = member.politicalLeaning,
                 hobbies = member.hobbies,
                 interests = member.interests,
                 strengths = member.strengths,

@@ -1,6 +1,8 @@
 package com.prologue.backend.member.infrastructure.persistence
 
 import com.prologue.backend.member.domain.model.BodyType
+import com.prologue.backend.member.domain.model.PoliticalLeaning
+import com.prologue.backend.member.domain.model.Religion
 import com.prologue.backend.member.domain.model.Gender
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -69,6 +71,15 @@ class MemberJpaEntity(
 
     @Column(name = "avatar_id")
     var avatarId: Int? = null,
+
+    /** 민감정보(23조) — 프로필 저장이 아니라 전용 경로로만 바뀐다(Member.updateBeliefs). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "religion", length = 20)
+    var religion: Religion? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "political_leaning", length = 20)
+    var politicalLeaning: PoliticalLeaning? = null,
 
     /** 사진 공개 URL 목록(콤마 조인, 등록 순). 최대 6장. */
     @Column(name = "photo_urls", columnDefinition = "text")

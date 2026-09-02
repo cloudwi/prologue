@@ -1,6 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.member.domain.model.BodyType
+import com.prologue.backend.member.domain.model.PoliticalLeaning
+import com.prologue.backend.member.domain.model.Religion
 import com.prologue.backend.member.domain.model.Gender
 import java.time.Duration
 import java.time.Instant
@@ -65,6 +67,13 @@ data class PeerView(
     val bio: String?,
     val heightCm: Int?,
     val bodyType: BodyType?,
+    /**
+     * 종교·정치 성향(민감정보). 본인이 적어 **공개하기로 한 값**만 온다 — 안 적었으면 null이고,
+     * 그때는 화면에도 아무것도 그리지 않는다("무응답"이라는 말조차 정보다).
+     * 프로필이 잠기면 다른 상세와 함께 비운다([locked]).
+     */
+    val religion: Religion? = null,
+    val politicalLeaning: PoliticalLeaning? = null,
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
@@ -102,6 +111,8 @@ data class PeerView(
         bio = null,
         heightCm = null,
         bodyType = null,
+        religion = null,
+        politicalLeaning = null,
         hobbies = emptyList(),
         interests = emptyList(),
         strengths = emptyList(),
