@@ -275,12 +275,15 @@ function MyHub() {
           <Row label="기본 정보" onPress={() => router.push('/my/edit-basic')} c={c} />
           <Row label="상세 소개" onPress={() => router.push('/my/edit-detail')} c={c} />
           <Row label="프로필 문답" onPress={() => router.push('/my/letters')} c={c} />
+          {/* 취향 카드는 프로필의 일부다 — 겹치는 선택이 상대 카드에 "둘 다 이걸 골랐어요"로 걸린다. */}
+          <Row label="취향 카드" onPress={() => router.push('/taste-cards')} c={c} />
           <Row label="상대에게 보이는 화면" onPress={() => router.push('/my/preview')} c={c} last />
         </Section>
 
         {/* 기록 — 프로필과 별개의 내 서랍. 상대에게 보이지 않는 본인 전용 목록이라 프로필 카드에 섞지 않는다. */}
         <Section title="기록" c={c}>
-          <Row label="내가 남긴 답" onPress={() => router.push('/my/answers')} c={c} last />
+          <Row label="내가 남긴 답" onPress={() => router.push('/my/answers')} c={c} />
+          <Row label="내가 고른 취향" onPress={() => router.push('/my/tastes')} c={c} last />
         </Section>
 
         <Section title="지갑" c={c}>

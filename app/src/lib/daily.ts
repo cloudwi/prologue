@@ -19,6 +19,15 @@ export async function answerToday(content: string): Promise<Today> {
   return authedRequest<Today>('POST', '/daily/today/answer', { content });
 }
 
+/** 상대와 똑같이 고른 취향 카드 한 장. */
+export type SharedTaste = {
+  cardId: number;
+  prompt: string;
+  choice: string;
+  /** 상대가 그 선택에 덧붙인 한 줄. 없을 수 있다. */
+  peerNote: string | null;
+};
+
 export type Peer = {
   peerAnswerId: string | null;
   peerAnswer: string | null;
@@ -36,6 +45,12 @@ export type Peer = {
    * 프로필이 잠기면 비어 온다. 구버전 서버는 안 내려주므로 옵셔널.
    */
   recentAnswers?: { questionId: number; question: string; content: string; answeredAt: string }[];
+  /**
+   * 나와 똑같이 고른 취향 카드(상대가 덧붙인 한 줄까지). 목록·구버전 서버에서는 비어 온다.
+   * 점수는 뒤에서 조용히 순서를 바꾸지만 사람이 보는 건 이 목록이다 — 넘긴 값이 보이지 않으면
+   * 아무도 두 번 넘기지 않는다.
+   */
+  sharedTastes?: SharedTaste[];
   gender: 'MALE' | 'FEMALE' | null;
   /** 만 나이(서버 계산). */
   age: number | null;

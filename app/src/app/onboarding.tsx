@@ -88,8 +88,14 @@ export default function OnboardingScreen() {
   const meetupOnly = intent === 'meetup';
   /** 모임 전용 가입은 얼굴 한 장이면 된다 — 소개팅은 여전히 두 장. */
   const minPhotos = meetupOnly ? 1 : MIN_PHOTOS;
-  /** 가입을 마치고 갈 곳. 보던 모임에서 왔다면 그 초대장으로 되돌아간다. */
-  const done = () => router.replace((nextPath ?? (meetupOnly ? '/meetups' : '/discover')) as never);
+  /**
+   * 가입을 마치고 갈 곳. 보던 모임에서 왔다면 그 초대장으로 되돌아간다.
+   *
+   * 소개팅으로 온 사람은 발견 탭이 아니라 **취향 카드**로 보낸다. 여기서 곧장 발견 탭에 놓으면
+   * 가입하고 처음 만나는 것이 백지(오늘의 문답)다 — 첫날의 벽은 분량이 아니라 빈 화면이었다.
+   * 카드는 탭 하나로 시작하게 하고, 넘긴 만큼 소개가 정확해진다. 그 화면에도 '나중에 하기'가 있다.
+   */
+  const done = () => router.replace((nextPath ?? (meetupOnly ? '/meetups' : '/taste-cards?intro=1')) as never);
 
   const [nickname, setNickname] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);

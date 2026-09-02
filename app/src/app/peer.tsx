@@ -237,6 +237,7 @@ export default function PeerDetailScreen() {
           photoUrls={peer.photoUrls}
           letters={letters}
           keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}
+          sharedTastes={peer.sharedTastes}
           seed={peer.peerAnswerId ?? peer.nickname ?? ''}
           c={c}
           onReport={peer.peerAnswerId ? () => promptReport({ peerAnswerId: peer.peerAnswerId! }) : undefined}

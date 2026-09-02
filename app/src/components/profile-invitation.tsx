@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { JobBadge } from '@/components/job-badge';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
-import type { LastActive } from '@/lib/daily';
+import type { LastActive, SharedTaste } from '@/lib/daily';
 
 const ACTIVITY_LABEL: Record<LastActive, string> = {
   TODAY: '오늘 활동했어요',
@@ -35,6 +35,7 @@ export function ProfileInvitation({
   photoUrls,
   letters,
   keywords,
+  sharedTastes,
   seed,
   c,
   onReport,
@@ -50,6 +51,12 @@ export function ProfileInvitation({
   photoUrls: string[];
   letters: InvitationLetter[];
   keywords: string[];
+  /**
+   * 나와 똑같이 고른 취향 카드 — 상대 프로필에서만 넘긴다(내 미리보기에는 겹칠 상대가 없다).
+   * 자기소개는 다들 비슷한 말을 적지만, 이건 같은 물음에 둘이 같은 쪽을 골랐다는 사실이라
+   * 첫 인사를 훨씬 쉽게 만든다.
+   */
+  sharedTastes?: SharedTaste[];
   /** 사진 배치용 시드 — 같은 프로필은 항상 같은 배치. */
   seed: string;
   c: ThemeColors;
@@ -89,6 +96,21 @@ export function ProfileInvitation({
           {keywords.map((item) => (
             <View key={item} style={[styles.chip, { backgroundColor: c.backgroundElement }]}>
               <Text style={{ color: c.textSecondary, fontSize: 14 }}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {sharedTastes && sharedTastes.length > 0 && (
+        <View style={[styles.shared, { backgroundColor: c.backgroundElement }]}>
+          <Text style={[styles.sharedTitle, { color: c.primaryStrong }]}>둘 다 이렇게 골랐어요</Text>
+          {sharedTastes.map((taste) => (
+            <View key={taste.cardId} style={styles.sharedRow}>
+              <Text style={[styles.sharedPrompt, { color: c.textSecondary }]}>{taste.prompt}</Text>
+              <Text style={[styles.sharedChoice, { color: c.text }]}>{taste.choice}</Text>
+              {taste.peerNote ? (
+                <Text style={[styles.sharedNote, { color: c.textSecondary }]}>“{taste.peerNote}”</Text>
+              ) : null}
             </View>
           ))}
         </View>
@@ -190,6 +212,12 @@ function Divider({ c }: { c: ThemeColors }) {
 }
 
 const styles = StyleSheet.create({
+  shared: { marginTop: 18, marginHorizontal: 20, borderRadius: Radius.md, padding: 16 },
+  sharedTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
+  sharedRow: { marginTop: 12 },
+  sharedPrompt: { fontSize: 13, lineHeight: 18 },
+  sharedChoice: { fontSize: 15.5, lineHeight: 22, fontWeight: '600', marginTop: 2 },
+  sharedNote: { fontSize: 14, lineHeight: 20, marginTop: 4 },
   content: { paddingBottom: 64 },
 
   photo: { width: '100%', aspectRatio: 4 / 5 },

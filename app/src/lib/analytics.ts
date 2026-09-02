@@ -32,6 +32,8 @@ type AnalyticsEvent =
   | 'auth_succeeded'        // 인증 성공(로그인)
   | 'onboarding_completed'  // 프로필 작성 완료
   // 코어 루프
+  | 'taste_deck_opened'     // 취향 카드 더미 열기 — 백지 대신 시작하는 자리
+  | 'taste_card_chosen'     // 카드 한 장 고름(noted 속성: 한 줄을 덧붙였는지 — 글로 가는 사다리)
   | 'answer_submitted'      // 오늘 질문에 답변
   | 'peer_profile_viewed'   // 상대 프로필 상세 열람
   | 'heart_sent'            // 하트 전송

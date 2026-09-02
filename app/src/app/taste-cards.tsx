@@ -1,0 +1,274 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+
+import { PlaceholderInput } from '@/components/placeholder-input';
+import { Fonts, Radius, Type } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
+import { haptics } from '@/lib/haptics';
+import { chooseTaste, getTasteDeck, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
+
+/**
+ * 취향 카드 — 둘 중 하나를 고르는 가벼운 문답.
+ *
+ * 이 화면이 있는 이유는 하나다. 가입하고 처음 만나는 것이 **백지**였다는 것 —
+ * 오늘의 문답은 열 자면 되지만, 막는 건 분량이 아니라 빈 화면이다. 카드는 탭 하나로 시작하게 하고,
+ * 고르고 난 자리에 한 줄 칸을 열어둔다. 고른 다음의 한 줄은 백지 앞의 한 줄보다 훨씬 쉽다.
+ *
+ * 그래서 이 화면은 **빠르게 넘어가는 것**을 가장 중요하게 친다 — 고르면 곧장 다음 장이다.
+ * 한 줄은 쓰고 싶은 사람만, 한 번 더 눌러서.
+ *
+ * 잉크는 여기서 나오지 않는다. 잉크는 글(오늘의 문답)의 몫이고, 카드가 돌려주는 것은
+ * 더 맞는 상대다 — 겹치는 선택이 소개 순서에 실린다.
+ */
+export default function TasteCardsScreen() {
+  const c = useTheme();
+  const router = useRouter();
+  /** intro=1이면 가입 직후다 — 첫 화면에 왜 넘기는지 한 줄을 붙이고, 마치면 발견 탭으로 보낸다. */
+  const { intro } = useLocalSearchParams<{ intro?: string }>();
+  const isIntro = intro === '1';
+
+  const [cards, setCards] = useState<TasteCard[]>([]);
+  const [index, setIndex] = useState(0);
+  const [answered, setAnswered] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState('');
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const apply = useCallback((deck: TasteDeck) => {
+    setCards(deck.cards);
+    setIndex(0);
+    setAnswered(deck.answered);
+    setTotal(deck.total);
+    setFailed(false);
+  }, []);
+
+  /** 다음 묶음을 받아온다. 스피너를 켜는 건 부르는 쪽 몫이다 — 마운트 시엔 이미 켜져 있다. */
+  const load = useCallback(async () => {
+    try {
+      apply(await getTasteDeck());
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [apply]);
+
+  useEffect(() => {
+    track('taste_deck_opened');
+    let active = true;
+    getTasteDeck()
+      .then((deck) => active && apply(deck))
+      .catch(() => active && setFailed(true))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [apply]);
+
+  const card = cards[index];
+  const done = () => router.replace((isIntro ? '/discover' : '/my') as never);
+
+  /** 다음 장으로. 묶음을 다 넘겼으면 서버에서 다음 묶음을 받아온다. */
+  function advance() {
+    setNote('');
+    setNoteOpen(false);
+    if (index + 1 < cards.length) {
+      setIndex(index + 1);
+    } else {
+      setLoading(true);
+      void load();
+    }
+  }
+
+  async function choose(option: TasteOption) {
+    if (!card || saving) return;
+    setSaving(true);
+    haptics.select();
+    try {
+      const progress = await chooseTaste(card.id, option, note.trim() || undefined);
+      setAnswered(progress.answered);
+      setTotal(progress.total);
+      track('taste_card_chosen', { noted: note.trim().length > 0 });
+      advance();
+    } catch {
+      // 한 장이 저장되지 않았다고 흐름을 세우지는 않는다 — 다음 장으로 넘기고 조용히 넘어간다.
+      advance();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={[styles.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <Pressable onPress={done} hitSlop={12} style={styles.headerButton}>
+          <Text style={[styles.headerAction, { color: c.textSecondary }]}>
+            {isIntro ? '나중에 하기' : '닫기'}
+          </Text>
+        </Pressable>
+        {total > 0 && (
+          <Text style={[styles.progress, { color: c.textSecondary }]}>
+            {answered} / {total}
+          </Text>
+        )}
+      </View>
+
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {loading ? (
+          <View style={[styles.flex, styles.center]}>
+            <ActivityIndicator color={c.primary} />
+          </View>
+        ) : failed ? (
+          <View style={[styles.flex, styles.center, styles.pad]}>
+            <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>카드를 불러오지 못했어요</Text>
+            <Pressable
+              onPress={() => {
+                setLoading(true);
+                void load();
+              }}
+              hitSlop={12}
+            >
+              <Text style={[styles.retry, { color: c.primaryStrong }]}>다시 시도</Text>
+            </Pressable>
+          </View>
+        ) : !card ? (
+          <View style={[styles.flex, styles.center, styles.pad]}>
+            <Ionicons name="checkmark-circle-outline" size={44} color={c.primary} />
+            <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>카드를 다 넘겼어요</Text>
+            <Text style={[styles.emptyHint, { color: c.textSecondary }]}>
+              {answered}장을 골랐어요. 겹치는 취향이 있는 사람이{'\n'}먼저 소개돼요.
+            </Text>
+            <Pressable
+              onPress={done}
+              style={[styles.primaryButton, { backgroundColor: c.primary }]}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.primaryLabel, { color: c.primaryText }]}>돌아가기</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.flex}>
+            <View style={styles.body}>
+              {isIntro && answered === 0 && (
+                <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
+                  고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
+                </Animated.Text>
+              )}
+              <Animated.Text
+                key={card.id}
+                entering={FadeInDown.duration(220)}
+                style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}
+              >
+                {card.prompt}
+              </Animated.Text>
+
+              <View style={styles.options}>
+                {(['A', 'B'] as const).map((option) => (
+                  <Pressable
+                    key={option}
+                    onPress={() => void choose(option)}
+                    disabled={saving}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.option,
+                      {
+                        backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
+                        borderColor: c.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.optionText, { color: c.text }]}>
+                      {option === 'A' ? card.optionA : card.optionB}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {noteOpen ? (
+                <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
+                  <PlaceholderInput
+                    value={note}
+                    onChangeText={setNote}
+                    placeholder="예) 새벽이 제일 조용해서요"
+                    placeholderTextColor={c.textSecondary}
+                    maxLength={TASTE_NOTE_MAX}
+                    autoFocus
+                    style={[
+                      styles.noteInput,
+                      { backgroundColor: c.backgroundElement, borderColor: c.border, color: c.text },
+                    ]}
+                  />
+                  <Text style={[styles.noteHint, { color: c.textSecondary }]}>
+                    위에서 고르면 이 한 줄까지 함께 남아요.
+                  </Text>
+                </Animated.View>
+              ) : (
+                <Pressable onPress={() => setNoteOpen(true)} hitSlop={10} style={styles.noteOpen}>
+                  <Ionicons name="create-outline" size={15} color={c.textSecondary} />
+                  <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <View style={styles.footer}>
+              <Pressable onPress={advance} disabled={saving} hitSlop={12} style={styles.headerButton}>
+                <Text style={[styles.skip, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  flex: { flex: 1 },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  pad: { paddingHorizontal: 32 },
+
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
+  headerButton: { paddingVertical: 4 },
+  headerAction: { ...Type.label },
+  progress: { ...Type.caption, fontVariant: ['tabular-nums'] },
+
+  body: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
+  intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },
+  prompt: { ...Type.display, textAlign: 'center' },
+
+  options: { marginTop: 28, gap: 12 },
+  option: { borderRadius: Radius.md, borderWidth: 1, paddingVertical: 22, paddingHorizontal: 20, alignItems: 'center' },
+  optionText: { ...Type.read, fontWeight: '600', textAlign: 'center' },
+
+  noteOpen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 },
+  noteOpenLabel: { ...Type.caption },
+  noteBox: { marginTop: 20 },
+  noteInput: { borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, ...Type.body },
+  noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
+
+  footer: { alignItems: 'center', paddingBottom: 12 },
+  skip: { ...Type.caption },
+
+  retry: { ...Type.label, marginTop: 12 },
+  emptyTitle: { ...Type.title, marginTop: 12 },
+  emptyHint: { ...Type.body, textAlign: 'center', marginTop: 10 },
+  primaryButton: { marginTop: 24, borderRadius: Radius.pill, paddingHorizontal: 32, paddingVertical: 14 },
+  primaryLabel: { ...Type.button },
+});

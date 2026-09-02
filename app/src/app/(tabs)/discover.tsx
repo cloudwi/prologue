@@ -345,6 +345,7 @@ function DiscoverBoard() {
                    * 대신 답이 놓일 자리에 **빈 종이 한 장**을 미리 깔아둔다(저장 후와 같은 면·같은 그림자).
                    * 누르면 그 종이가 그 자리에서 펼쳐진다 — 새 화면으로 넘어가지 않는다.
                    */
+                  <>
                   <Pressable
                     onPress={() => setComposing(true)}
                     accessibilityRole="button"
@@ -361,6 +362,18 @@ function DiscoverBoard() {
                     </View>
                     <Text style={[styles.composeEntryText, { color: c.textSecondary }]}>답을 적어보세요</Text>
                   </Pressable>
+                    {/*
+                     * 글 앞에서 멈춘 사람의 자리. 문턱은 분량(10자)이 아니라 빈 화면이라,
+                     * 탭 하나로 시작할 수 있는 길을 답 쓰기 바로 아래에 둔다.
+                     * 잉크는 여전히 글에만 붙는다 — 이 길은 소개를 정확하게 만들 뿐이다.
+                     */}
+                    <Pressable onPress={() => router.push('/taste-cards')} hitSlop={8} style={styles.tasteEntry}>
+                      <Ionicons name="albums-outline" size={14} color={c.textSecondary} />
+                      <Text style={[styles.tasteEntryText, { color: c.textSecondary }]}>
+                        쓰기 전에 가볍게 — 취향 카드 넘기기
+                      </Text>
+                    </Pressable>
+                  </>
                 )
               ) : (
                 <AnswerSheet c={c} isDark={isDark}>
@@ -709,6 +722,16 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
             {peer.bio}
           </Text>
         ) : null}
+        {/* 겹치는 취향 — 키워드보다 위에. "둘 다 골랐다"는 사실이 자기소개보다 먼저 눈에 들어와야 한다. */}
+        {(peer.sharedTastes ?? []).length > 0 && (
+          <View style={styles.peerChips}>
+            {(peer.sharedTastes ?? []).slice(0, 2).map((taste) => (
+              <View key={taste.cardId} style={[styles.tasteChip, { borderColor: c.primary, backgroundColor: c.primary + '14' }]}>
+                <Text style={[styles.tasteChipText, { color: c.primaryStrong }]}>둘 다 · {taste.choice}</Text>
+              </View>
+            ))}
+          </View>
+        )}
         {keywords.length > 0 && (
           <View style={styles.peerChips}>
             {keywords.map((k) => (
@@ -725,6 +748,11 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  // 취향 카드 진입 — 답 쓰기 바로 아래, 눈에 띄되 답을 밀어내지 않는 크기.
+  tasteEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 },
+  tasteEntryText: { ...Type.caption },
+  tasteChip: { borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  tasteChipText: { ...Type.caption, fontWeight: '600' },
   flex: { flex: 1 },
   content: { padding: 20, paddingTop: 8 }, // 아래 여백은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
   skeletonEntry: { marginTop: 24 },
