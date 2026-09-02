@@ -82,7 +82,23 @@ export default function TasteCardsScreen() {
   }, [apply]);
 
   const card = cards[index];
-  const done = () => router.replace((isIntro ? '/discover' : '/my') as never);
+  /**
+   * 이 화면을 떠난다. **왔던 곳으로 돌아가는 게 기본이다** — 발견 탭에서 들어온 사람을 MY로
+   * 보내면 쓰던 흐름이 끊긴다(처음엔 그렇게 짜서 실제로 그랬다).
+   * 가입 직후(intro)만 예외다: 그때는 뒤가 온보딩이라 돌아갈 곳이 아니고, 발견 탭이 목적지다.
+   */
+  const done = () => {
+    if (isIntro) {
+      router.replace('/discover' as never);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    // 뒤가 없는 경우(딥링크·알림으로 바로 열렸을 때)의 착지점.
+    router.replace('/my' as never);
+  };
 
   /** 다음 장으로. 묶음을 다 넘겼으면 서버에서 다음 묶음을 받아온다. */
   function advance() {
