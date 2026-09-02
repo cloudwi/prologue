@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from 'react-native-reanimated';
 
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { Fonts, Radius, Type } from '@/constants/theme';
@@ -33,6 +33,12 @@ import { chooseTaste, getTasteDeck, TASTE_NOTE_MAX, type TasteCard, type TasteDe
  * 잉크는 여기서 나오지 않는다. 잉크는 글(오늘의 문답)의 몫이고, 카드가 돌려주는 것은
  * 더 맞는 상대다 — 겹치는 선택이 소개 순서에 실린다.
  */
+/**
+ * 고른 뒤 카드가 머무는 시간(ms). 짧으면 무엇을 골랐는지 눈에 안 남고, 길면 빠르게 넘기는
+ * 맛이 사라진다 — 손이 다음 카드를 누르러 가기 직전이 이 언저리다.
+ */
+const HOLD_MS = 260;
+
 export default function TasteCardsScreen() {
   const c = useTheme();
   const router = useRouter();
@@ -44,6 +50,8 @@ export default function TasteCardsScreen() {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /** 방금 고른 쪽 — 카드가 넘어가기 전 잠깐 색이 차오르는 자리. */
+  const [chosen, setChosen] = useState<TasteOption | null>(null);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -107,6 +115,7 @@ export default function TasteCardsScreen() {
   function advance() {
     setNote('');
     setNoteOpen(false);
+    setChosen(null);
     if (index + 1 < cards.length) {
       setIndex(index + 1);
     } else {
@@ -115,20 +124,27 @@ export default function TasteCardsScreen() {
     }
   }
 
+  /**
+   * 한 장을 고른다.
+   *
+   * 누르자마자 다음 카드로 갈아치우면 무엇을 골랐는지 손에 남지 않는다 — 그래서 고른 쪽에
+   * 색이 차오르는 짧은 순간([HOLD_MS])을 두고 넘긴다. 저장은 그 사이에 끝난다.
+   * 저장이 더 걸려도 기다리지 않는다: 카드 한 장이 서버를 기다리느라 멈추면, 빠르게 넘기는
+   * 맛이 사라져 이 화면의 존재 이유가 없어진다.
+   */
   async function choose(option: TasteOption) {
     if (!card || saving) return;
     setSaving(true);
+    setChosen(option);
     haptics.select();
-    try {
-      await chooseTaste(card.id, option, note.trim() || undefined);
-      track('taste_card_chosen', { noted: note.trim().length > 0 });
-      advance();
-    } catch {
-      // 한 장이 저장되지 않았다고 흐름을 세우지는 않는다 — 다음 장으로 넘기고 조용히 넘어간다.
-      advance();
-    } finally {
-      setSaving(false);
-    }
+    const noted = note.trim().length > 0;
+    const saved = chooseTaste(card.id, option, note.trim() || undefined)
+      .then(() => track('taste_card_chosen', { noted }))
+      // 한 장이 저장되지 않았다고 흐름을 세우지는 않는다 — 조용히 다음 장으로 간다.
+      .catch(() => undefined);
+    await Promise.all([saved, new Promise((resolve) => setTimeout(resolve, HOLD_MS))]);
+    advance();
+    setSaving(false);
   }
 
   return (
@@ -183,35 +199,47 @@ export default function TasteCardsScreen() {
                   고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
                 </Animated.Text>
               )}
-              <Animated.Text
-                key={card.id}
-                entering={FadeInDown.duration(220)}
-                style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}
-              >
-                {card.prompt}
-              </Animated.Text>
+              {/* 카드 한 장이 통째로 갈린다 — 물음만 바뀌면 같은 종이에 글자만 바뀐 것처럼 보인다. */}
+              <Animated.View key={card.id} entering={FadeInDown.duration(240)} exiting={FadeOut.duration(120)}>
+                <Text style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}>{card.prompt}</Text>
 
-              <View style={styles.options}>
-                {(['A', 'B'] as const).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() => void choose(option)}
-                    disabled={saving}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.option,
-                      {
-                        backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
-                        borderColor: c.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.optionText, { color: c.text }]}>
-                      {option === 'A' ? card.optionA : card.optionB}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+                <View style={styles.options}>
+                  {(['A', 'B'] as const).map((option) => {
+                    const picked = chosen === option;
+                    const passed = chosen != null && !picked;
+                    return (
+                      <Pressable
+                        key={option}
+                        onPress={() => void choose(option)}
+                        disabled={saving}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: picked }}
+                        style={({ pressed }) => [
+                          styles.option,
+                          {
+                            // 고른 쪽은 색이 차오르고, 고르지 않은 쪽은 조용히 물러난다.
+                            backgroundColor: picked ? c.primary : pressed ? c.backgroundSelected : c.backgroundElement,
+                            borderColor: picked ? c.primary : c.border,
+                            opacity: passed ? 0.35 : 1,
+                            transform: [{ scale: picked ? 1.02 : pressed ? 0.99 : 1 }],
+                          },
+                        ]}
+                      >
+                        <View style={styles.optionRow}>
+                          <Text style={[styles.optionText, { color: picked ? c.primaryText : c.text }]}>
+                            {option === 'A' ? card.optionA : card.optionB}
+                          </Text>
+                          {picked ? (
+                            <Animated.View entering={ZoomIn.duration(160)}>
+                              <Ionicons name="checkmark-circle" size={20} color={c.primaryText} />
+                            </Animated.View>
+                          ) : null}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Animated.View>
 
               {noteOpen ? (
                 <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
@@ -266,6 +294,7 @@ const styles = StyleSheet.create({
   prompt: { ...Type.display, textAlign: 'center' },
 
   options: { marginTop: 28, gap: 12 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   option: { borderRadius: Radius.md, borderWidth: 1, paddingVertical: 22, paddingHorizontal: 20, alignItems: 'center' },
   optionText: { ...Type.read, fontWeight: '600', textAlign: 'center' },
 
