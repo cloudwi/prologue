@@ -42,6 +42,7 @@ type AnalyticsEvent =
   | 'mail_recalled'         // 편지 회수
   // 재화
   | 'profile_unlocked'      // 잉크로 프로필 다시 열기
+  | 'answer_unlocked'       // 답하지 않은 날의 상대 답을 잉크로 열기
   | 'topup_viewed'          // 충전 화면 진입
   | 'topup_purchase_started' // 상품 탭(결제창 열림)
   | 'topup_purchase_completed' // 서버 지급까지 완료

@@ -24,6 +24,8 @@ export type InvitationLetter = {
   content: string;
   /** 잠긴 문답 — 질문은 보이되 답 대신 잠김 안내를 놓는다(지난 상대의 Give&Take). */
   locked?: boolean;
+  /** 그날의 질문 id. 잠긴 문답을 잉크로 열 때 [onUnlock]에 넘길 값이다. */
+  questionId?: number;
 };
 
 export function ProfileInvitation({
@@ -39,6 +41,9 @@ export function ProfileInvitation({
   seed,
   c,
   onReport,
+  onUnlock,
+  unlockPrice,
+  unlocking,
 }: {
   nickname: string | null;
   meta: string;
@@ -62,6 +67,14 @@ export function ProfileInvitation({
   c: ThemeColors;
   /** 신고 진입점 — 상대 프로필에서만 넘긴다(내 미리보기에는 없음). */
   onReport?: () => void;
+  /**
+   * 잠긴 문답을 잉크로 여는 길. 넘기지 않으면 잠김 안내만 그린다 —
+   * 열 방법이 없는 화면(내 미리보기)에 버튼이 뜨면 안 된다.
+   */
+  onUnlock?: (questionId: number) => void;
+  unlockPrice?: number;
+  /** 지금 여는 중인 질문 id — 버튼을 두 번 누르지 못하게. */
+  unlocking?: number | null;
 }) {
   const [cover, ...restPhotos] = photoUrls;
   const photoSlots = scatter(restPhotos.length, letters.length, seed);
@@ -130,9 +143,26 @@ export function ProfileInvitation({
               <Text style={[styles.letterQuestion, { color: c.textSecondary }]}>{block.question}</Text>
             ) : null}
             {block.locked ? (
-              <Text style={[styles.letterLocked, { color: c.textSecondary }]}>
-                그날 질문에 답하지 않아{'\n'}잠긴 채로 남은 답장이에요
-              </Text>
+              <View>
+                <Text style={[styles.letterLocked, { color: c.textSecondary }]}>
+                  그날 질문에 답하지 않아{'\n'}잠긴 채로 남은 답장이에요
+                </Text>
+                {onUnlock && block.questionId != null ? (
+                  <Pressable
+                    onPress={() => onUnlock(block.questionId!)}
+                    disabled={unlocking === block.questionId}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.unlockButton,
+                      { borderColor: c.primary, opacity: pressed || unlocking === block.questionId ? 0.6 : 1 },
+                    ]}
+                  >
+                    <Text style={[styles.unlockLabel, { color: c.primaryStrong }]}>
+                      {unlocking === block.questionId ? '여는 중…' : `잉크 ${unlockPrice ?? 5}로 이 답 열기`}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
             ) : (
               <Text style={[styles.letterContent, { color: c.text, fontFamily: Fonts.serif }]}>{block.content}</Text>
             )}
@@ -239,6 +269,8 @@ const styles = StyleSheet.create({
   letterQuestion: { fontSize: 14, lineHeight: 21, textAlign: 'center' },
   letterContent: { fontSize: 18, lineHeight: 30, textAlign: 'center', marginTop: 12 },
   letterLocked: { fontSize: 15, lineHeight: 24, textAlign: 'center', marginTop: 12, opacity: 0.7 },
+  unlockButton: { alignSelf: 'center', marginTop: 14, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 18, paddingVertical: 9 },
+  unlockLabel: { fontSize: 14, fontWeight: '600' },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },

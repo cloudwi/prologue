@@ -13,7 +13,7 @@ import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
-import { sendHeart, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
+import { getPeerProfile, sendHeart, unlockAnswers, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
 import { INK_PRICE } from '@/lib/ink';
 import { beliefChips } from '@/lib/profile-form';
 import { promptReport } from '@/lib/reports';
@@ -66,7 +66,7 @@ export default function PeerDetailScreen() {
   const [hearting, setHearting] = useState(false);
 
   // 지난 상대는 그동안의 문답 목록을 함께 넘긴다 — 없으면(오늘의 상대·대화 목록) 빈 배열.
-  const pastAnswers = useMemo<PastAnswer[]>(() => {
+  const initialPastAnswers = useMemo<PastAnswer[]>(() => {
     try {
       const parsed = JSON.parse(typeof answers === 'string' ? answers : '');
       return Array.isArray(parsed) ? parsed : [];
@@ -74,6 +74,14 @@ export default function PeerDetailScreen() {
       return [];
     }
   }, [answers]);
+  /*
+   * 잉크로 연 답은 이 화면에서 그 자리에 채워 넣는다 — 목록으로 되돌아갔다 다시 들어오게 하면
+   * 방금 값을 치른 사람에게 "그래서 뭐라고 썼는데"를 한 번 더 묻는 꼴이다.
+   * null이면 아직 아무것도 열지 않았다는 뜻이라 넘겨받은 목록을 그대로 쓴다.
+   */
+  const [openedAnswers, setOpenedAnswers] = useState<PastAnswer[] | null>(null);
+  const pastAnswers = openedAnswers ?? initialPastAnswers;
+  const [unlockingQuestion, setUnlockingQuestion] = useState<number | null>(null);
 
   if (!peer) {
     return (
@@ -126,6 +134,60 @@ export default function PeerDetailScreen() {
     );
   }
 
+  /**
+   * 그날 답하지 않아 잠긴 문답을 잉크로 연다.
+   *
+   * 열고 나서 그 한 편을 다시 읽어와 화면에 채운다 — 값을 치렀는데 글이 안 나타나면
+   * 무엇을 샀는지 알 수 없다. 열람권은 질문 하루치라, 같은 질문의 다른 잠긴 답도 함께 열린다.
+   */
+  function confirmAnswerUnlock(questionId: number) {
+    if (unlockingQuestion != null) return;
+    Alert.alert(
+      '이 답을 열까요?',
+      `잉크 ${INK_PRICE.ANSWER_UNLOCK}을 사용해요. 그날 질문에 답을 남기면 잉크 없이 열려요.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '잉크 쓰기',
+          onPress: async () => {
+            setUnlockingQuestion(questionId);
+            try {
+              const result = await unlockAnswers(questionId);
+              if (result.spent) track('answer_unlocked');
+              // 열린 뒤의 내용은 서버에서 다시 받아온다 — 같은 질문의 답을 모두 채운다.
+              const opened = await Promise.all(
+                pastAnswers.map(async (a) => {
+                  if (a.questionId !== questionId || !a.peerAnswerId) return a;
+                  try {
+                    const fresh = await getPeerProfile(a.peerAnswerId);
+                    return { ...a, unlocked: true, content: fresh.peer.peerAnswer ?? a.content };
+                  } catch {
+                    return a;
+                  }
+                }),
+              );
+              setOpenedAnswers(opened);
+              haptics.success();
+              showToast('답을 열었어요 · 다시 닫히지 않아요');
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : '잠시 후 다시 시도해주세요';
+              if (msg.includes('잉크가 부족')) {
+                Alert.alert('잉크가 부족해요', '충전하고 다시 열어볼까요?', [
+                  { text: '다음에', style: 'cancel' },
+                  { text: '충전하러 가기', onPress: () => router.push('/my/ink-topup') },
+                ]);
+              } else {
+                Alert.alert('열지 못했어요', msg);
+              }
+            } finally {
+              setUnlockingQuestion(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   const meta = [
     peer.age != null ? `${peer.age}세` : null,
     peer.heightCm ? `${peer.heightCm}cm` : null,
@@ -148,6 +210,7 @@ export default function PeerDetailScreen() {
         question: a.question,
         content: a.unlocked && a.content ? a.content : '',
         locked: !(a.unlocked && a.content),
+        questionId: a.questionId,
       }),
     );
   } else if (peer.answerUnlocked && peer.peerAnswer) {
@@ -245,6 +308,9 @@ export default function PeerDetailScreen() {
             ...peer.strengths,
           ]}
           sharedTastes={peer.sharedTastes}
+          onUnlock={confirmAnswerUnlock}
+          unlockPrice={INK_PRICE.ANSWER_UNLOCK}
+          unlocking={unlockingQuestion}
           seed={peer.peerAnswerId ?? peer.nickname ?? ''}
           c={c}
           onReport={peer.peerAnswerId ? () => promptReport({ peerAnswerId: peer.peerAnswerId! }) : undefined}

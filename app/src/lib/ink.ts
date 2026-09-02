@@ -31,6 +31,11 @@ export const INK_PRICE = {
   MAIL_REPLY: 25,
   /** 사흘이 지나 닫힌 프로필을 다시 여는 값. */
   PROFILE_UNLOCK: 8,
+  /**
+   * 내가 답하지 않은 날의 상대 답을 여는 값 — 그날 문답 하루치.
+   * 답변 보상(2)보다 무겁고 프로필 열기(8)보다 가볍다: 쓰면 고이고 안 쓰면 나간다.
+   */
+  ANSWER_UNLOCK: 5,
   /** 오늘의 질문에 답을 남기면 하루 한 번 고이는 잉크. */
   DAILY_ANSWER: 2,
 } as const;

@@ -30,6 +30,7 @@ import { BottomTabInset, Fonts, Radius, Type, type ThemeColors } from '@/constan
 import { track } from '@/lib/analytics';
 import { answerToday, getPastPeers, getPeers, getToday, type Peer } from '@/lib/daily';
 import { getInkBalance } from '@/lib/ink';
+import { getTasteDeck } from '@/lib/taste';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/lib/haptics';
@@ -136,6 +137,9 @@ function DiscoverBoard() {
   const pastQuery = useQuery({ queryKey: ['daily', 'pastPeers'], queryFn: getPastPeers });
   // 잉크 잔액 — 편지를 보내고 돌아와도 맞게. 실패하면 칩을 그리지 않는다.
   const inkQuery = useQuery({ queryKey: ['ink', 'balance'], queryFn: getInkBalance });
+  // 남은 카드가 있는지만 보면 되는 값이라 가볍게 — 실패하면 카드 자리를 그리지 않을 뿐이다.
+  const tasteQuery = useQuery({ queryKey: ['taste', 'deck'], queryFn: () => getTasteDeck() });
+  const tasteDeck = tasteQuery.data;
 
   const today = todayQuery.data ?? null;
   const peersData = peersQuery.data ?? null;
@@ -148,12 +152,15 @@ function DiscoverBoard() {
   const { refetch: refetchPeers } = peersQuery;
   const { refetch: refetchPast } = pastQuery;
   const { refetch: refetchInk } = inkQuery;
+  // 카드를 넘기고 돌아온 사람에게 어제 숫자를 보여주지 않는다.
+  const { refetch: refetchTaste } = tasteQuery;
   const refreshAll = useCallback(() => {
     void refetchToday();
     void refetchPeers();
     void refetchPast();
     void refetchInk();
-  }, [refetchToday, refetchPeers, refetchPast, refetchInk]);
+    void refetchTaste();
+  }, [refetchToday, refetchPeers, refetchPast, refetchInk, refetchTaste]);
   useRefreshOnFocus(refreshAll);
 
   // 세션 만료는 "HTTP 403" 알림이 아니라 로그인 화면으로 답한다.
@@ -362,17 +369,6 @@ function DiscoverBoard() {
                     </View>
                     <Text style={[styles.composeEntryText, { color: c.textSecondary }]}>답을 적어보세요</Text>
                   </Pressable>
-                    {/*
-                     * 글 앞에서 멈춘 사람의 자리. 문턱은 분량(10자)이 아니라 빈 화면이라,
-                     * 탭 하나로 시작할 수 있는 길을 답 쓰기 바로 아래에 둔다.
-                     * 잉크는 여전히 글에만 붙는다 — 이 길은 소개를 정확하게 만들 뿐이다.
-                     */}
-                    <Pressable onPress={() => router.push('/taste-cards')} hitSlop={8} style={styles.tasteEntry}>
-                      <Ionicons name="albums-outline" size={14} color={c.textSecondary} />
-                      <Text style={[styles.tasteEntryText, { color: c.textSecondary }]}>
-                        쓰기 전에 가볍게 — 취향 카드 넘기기
-                      </Text>
-                    </Pressable>
                   </>
                 )
               ) : (
@@ -404,6 +400,42 @@ function DiscoverBoard() {
                 </AnswerSheet>
               )}
             </Animated.View>
+
+            {/*
+             * 취향 카드 — 답을 쓰기 전에도, 쓰고 나서도 늘 있는 자리.
+             *
+             * 처음엔 답 쓰기 아래의 작은 글씨 한 줄이었는데, 작은 글씨는 아무도 안 누른다.
+             * 카드로 세워야 "여기 할 게 하나 더 있다"가 보이고, 남은 장수를 적어 두면
+             * 다 넘기지 않은 사람에게 돌아올 이유가 생긴다. 다 넘겼으면 사라진다 —
+             * 할 일이 없는 자리를 남겨두면 화면만 길어진다.
+             */}
+            {tasteDeck && tasteDeck.cards.length > 0 && (
+              <Pressable
+                onPress={() => router.push('/taste-cards')}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.tasteCard,
+                  {
+                    backgroundColor: c.backgroundElement,
+                    borderColor: c.primary + '55',
+                    opacity: pressed ? 0.9 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.tasteIcon, { backgroundColor: c.primary + '1F' }]}>
+                  <Ionicons name="albums" size={16} color={c.primaryStrong} />
+                </View>
+                <View style={styles.tasteBody}>
+                  <Text style={[styles.tasteTitle, { color: c.text }]}>취향 카드</Text>
+                  <Text style={[styles.tasteSub, { color: c.textSecondary }]}>
+                    {tasteDeck.answered > 0
+                      ? `${tasteDeck.answered}장 골랐어요 · 겹치는 사람이 먼저 소개돼요`
+                      : '둘 중 하나만 고르면 돼요 · 겹치는 사람이 먼저 소개돼요'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={c.textSecondary} />
+              </Pressable>
+            )}
 
             {/* 오늘의 상대 — 하루 한 사람. 도착한 편지처럼, 크게 한 장. */}
             {/* 쓰는 동안은 아래를 흐린다 — 입력칸을 꾸미는 대신 주변을 가라앉혀 "지금은 쓰는 시간"을 만든다. */}
@@ -748,9 +780,12 @@ function PeerCard({ peer, question, c }: { peer: Peer; question: string | null; 
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // 취향 카드 진입 — 답 쓰기 바로 아래, 눈에 띄되 답을 밀어내지 않는 크기.
-  tasteEntry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 },
-  tasteEntryText: { ...Type.caption },
+  // 취향 카드 진입 — 답과 오늘의 상대 사이에 놓이는 한 줄짜리 카드. 테두리만 테라코타로 옅게.
+  tasteCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 24, paddingHorizontal: 16, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1 },
+  tasteIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tasteBody: { flex: 1 },
+  tasteTitle: { ...Type.label },
+  tasteSub: { ...Type.caption, marginTop: 3 },
   tasteChip: { borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   tasteChipText: { ...Type.caption, fontWeight: '600' },
   flex: { flex: 1 },

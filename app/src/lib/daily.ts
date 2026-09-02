@@ -107,6 +107,10 @@ export async function getPeers(): Promise<TodayPeers> {
 }
 
 export type PastAnswer = {
+  /** 그날의 질문 id — 잠긴 답을 잉크로 열 때 이 값을 보낸다. 구버전 서버는 안 내려준다. */
+  questionId?: number;
+  /** 그날 상대가 쓴 답의 id — 열고 난 뒤 그 한 편만 다시 읽어올 때 쓴다. */
+  peerAnswerId?: string | null;
   question: string;
   /** 잠긴 답변은 null — 그날 질문에 내가 답하지 않았다. */
   content: string | null;
@@ -199,6 +203,16 @@ export async function getReceivedHearts(): Promise<ReceivedHeart[]> {
 export async function getSentHearts(): Promise<ReceivedHeart[]> {
   const res = await authedRequest<{ hearts: ReceivedHeart[] }>('GET', '/daily/hearts/sent');
   return res.hearts;
+}
+
+/**
+ * 답하지 않은 날의 상대 답을 잉크로 연다 (POST /daily/questions/{id}/unlock).
+ *
+ * 규칙은 그대로다 — 답하면 공짜로 읽는다. 이건 답하지 않은 날에 값을 매기는 길이다.
+ * 이미 답했거나 이미 산 질문이면 잉크를 쓰지 않고 성공으로 돌아온다(spent=false).
+ */
+export async function unlockAnswers(questionId: number): Promise<{ spent: boolean; balance: number }> {
+  return authedRequest<{ spent: boolean; balance: number }>('POST', `/daily/questions/${questionId}/unlock`);
 }
 
 export type UnlockResult = {
