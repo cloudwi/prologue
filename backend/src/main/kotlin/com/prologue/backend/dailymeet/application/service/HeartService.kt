@@ -1,5 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Heart
 import com.prologue.backend.dailymeet.domain.model.ProfileAccess
@@ -30,6 +33,7 @@ class HeartService(
     private val memberQueryService: MemberQueryService,
     private val notificationService: NotificationService,
     private val profileAccessService: ProfileAccessService,
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     /** 상대 답변에 하트를 보낸다. 멱등. 상호 하트면 matched — 서로의 마음을 안 것. */
     @Transactional
@@ -41,7 +45,8 @@ class HeartService(
 
         // 이미 이 사람에게 보냈다면 아무 일도 일어나지 않는다(멱등).
         if (!heartRepository.existsFromTo(fromAccountId, toAccountId)) {
-            heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
+            val saved = heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
+            growthEvents.record(fromAccountId, GrowthEvent.HEART_SENT, "heart:${saved.id}")
             // 처음 보낸 하트일 때만 알린다 — 하트는 1인 1회라 두 번 울릴 일이 없다.
             notificationService.heartArrived(toAccountId)
         }

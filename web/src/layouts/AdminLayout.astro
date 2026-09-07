@@ -12,6 +12,7 @@ const { title, tabs: tabsProp, brandSuffix = '어드민', home = '/admin' } = As
 const path = Astro.url.pathname.replace(/\/$/, '') || home;
 const tabs = tabsProp ?? [
   { href: '/admin', label: '대시보드' },
+  { href: '/admin/growth', label: '성장 지표' },
   { href: '/admin/questions', label: '질문' },
   { href: '/admin/answers', label: '문답' },
   { href: '/admin/photos', label: '사진 검수' },
@@ -21,9 +22,10 @@ const tabs = tabsProp ?? [
   { href: '/admin/ink', label: '잉크' },
   { href: '/admin/settings', label: '앱 설정' },
 ];
-const icons = ['grid', 'message', 'lines', 'image', 'flag', 'calendar', 'people', 'drop', 'sliders'];
+const icons = ['grid', 'chart', 'message', 'lines', 'image', 'flag', 'calendar', 'people', 'drop', 'sliders'];
 const descriptions: Record<string, string> = {
   '/admin': '회원과 서비스의 현황을 한눈에 확인하세요.',
+  '/admin/growth': '가입과 소개가 실제 연결로 이어지는지 확인하세요.',
   '/admin/questions': '매일 도착할 질문을 준비하고 관리하세요.',
   '/admin/answers': '회원이 남긴 문답을 확인하세요.',
   '/admin/photos': '공개된 프로필 사진을 살펴보세요.',

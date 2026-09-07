@@ -1,5 +1,11 @@
 package com.prologue.backend.auth.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+import com.prologue.backend.dailymeet.domain.model.ServiceDay
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
 import com.prologue.backend.auth.domain.model.AccountId
 import com.prologue.backend.auth.domain.repository.AccountRepository
 import org.springframework.stereotype.Service
@@ -17,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Service
 class LastSeenService(
     private val accountRepository: AccountRepository,
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     private val recentlyTouched = ConcurrentHashMap<UUID, Instant>()
 
@@ -24,9 +31,18 @@ class LastSeenService(
     fun touch(accountId: UUID) {
         val now = Instant.now()
         val cached = recentlyTouched[accountId]
-        if (cached != null && Duration.between(cached, now) < THROTTLE) return
-        recentlyTouched[accountId] = now
+        if (cached != null && Duration.between(cached, now) < THROTTLE &&
+            ServiceDay.of(cached.atZone(ServiceDay.ZONE)) ==
+            ServiceDay.of(now.atZone(ServiceDay.ZONE))) return
         accountRepository.touchLastSeen(AccountId(accountId), now, now.minus(THROTTLE))
+        growthEvents.record(accountId, GrowthEvent.ACTIVE_DAY, ServiceDay.now().toString())
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() { recentlyTouched[accountId] = now }
+            })
+        } else {
+            recentlyTouched[accountId] = now
+        }
     }
 
     @Transactional(readOnly = true)

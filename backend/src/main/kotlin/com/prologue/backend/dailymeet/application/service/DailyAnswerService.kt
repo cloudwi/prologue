@@ -1,5 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
@@ -27,6 +30,7 @@ class DailyAnswerService(
     private val questionRepository: QuestionRepository,
     private val answerRepository: AnswerRepository,
     private val inkService: InkService,
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     @Transactional(readOnly = true)
     fun today(accountId: UUID): TodayView {
@@ -43,6 +47,7 @@ class DailyAnswerService(
         val answer = existing?.apply { updateContent(content) }
             ?: Answer.write(accountId, question.id, content)
         val saved = answerRepository.save(answer)
+        if (existing == null) growthEvents.record(accountId, GrowthEvent.ANSWER_SUBMITTED, "answer:${saved.id}")
         return AnswerResult(saved, inkEarned = inkService.rewardDailyAnswer(accountId))
     }
 

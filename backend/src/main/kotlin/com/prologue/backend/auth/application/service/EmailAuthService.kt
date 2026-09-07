@@ -1,5 +1,8 @@
 package com.prologue.backend.auth.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+
 import com.prologue.backend.auth.application.port.CodeGenerator
 import com.prologue.backend.auth.application.port.CodeHasher
 import com.prologue.backend.auth.application.port.EmailSender
@@ -36,6 +39,7 @@ class EmailAuthService(
     // 심사가 끝나면 yaml의 review 블록을 지우고 배포하는 것으로 통로가 사라진다(코드가 빈 값이면 비활성).
     @Value("\${review.email:}") private val reviewEmail: String = "",
     @Value("\${review.code:}") private val reviewCode: String = "",
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     /** 인증코드 발송. */
     @Transactional
@@ -106,6 +110,7 @@ class EmailAuthService(
             ?: accountRepository.save(Account.register(email, now))
 
         val accountId = requireNotNull(account.id) { "영속화된 계정은 반드시 id를 가진다" }
+        if (isNewUser && !isReviewAccount(email)) growthEvents.record(accountId.value, GrowthEvent.REGISTERED, "registration")
         return LoginResult(accountId = accountId, tokens = tokenProvider.issue(account), isNewUser = isNewUser)
     }
 

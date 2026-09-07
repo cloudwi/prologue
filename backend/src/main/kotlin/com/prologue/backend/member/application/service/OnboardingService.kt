@@ -1,5 +1,8 @@
 package com.prologue.backend.member.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+
 import com.prologue.backend.member.domain.model.Member
 import com.prologue.backend.member.domain.model.MemberConsent
 import com.prologue.backend.member.domain.repository.MemberConsentRepository
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 class OnboardingService(
     private val memberRepository: MemberRepository,
     private val consentRepository: MemberConsentRepository,
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     @Transactional
     fun complete(command: CompleteOnboardingCommand): Member {
@@ -62,7 +66,9 @@ class OnboardingService(
                 avatarId = command.avatarId,
             )
         }
-        return memberRepository.save(member)
+        return memberRepository.save(member).also {
+            if (existing == null) growthEvents.record(command.accountId, GrowthEvent.ONBOARDED, "onboarding")
+        }
     }
 
     /**

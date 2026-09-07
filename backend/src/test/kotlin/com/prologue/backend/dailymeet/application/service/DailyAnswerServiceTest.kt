@@ -23,7 +23,8 @@ class DailyAnswerServiceTest {
     private val questionRepository = mockk<QuestionRepository>()
     private val answerRepository = mockk<AnswerRepository>()
     private val inkService = mockk<InkService> { every { rewardDailyAnswer(any()) } returns 0 }
-    private val service = DailyAnswerService(questionRepository, answerRepository, inkService)
+    private val growth = mockk<com.prologue.backend.growth.GrowthEvents>(relaxed = true)
+    private val service = DailyAnswerService(questionRepository, answerRepository, inkService, growth)
 
     private val accountId = UUID.randomUUID()
     // 질문 1개면 날짜와 무관하게 항상 그 질문이 선택됨 → 결정적 테스트
@@ -64,6 +65,7 @@ class DailyAnswerServiceTest {
 
         assertEquals("나의 답변은 열다섯 자를 넘겨 쓴다", result.answer.content)
         assertEquals(1L, result.answer.questionId)
+        verify(exactly = 1) { growth.record(accountId, com.prologue.backend.growth.GrowthEvent.ANSWER_SUBMITTED, any()) }
     }
 
     @Test
@@ -86,6 +88,7 @@ class DailyAnswerServiceTest {
 
         assertFailsWith<DailyMeetException> { service.answerToday(accountId, "   ") }
         verify(exactly = 0) { inkService.rewardDailyAnswer(any()) }
+        verify(exactly = 0) { growth.record(any(), any(), any()) }
     }
 
     @Test
@@ -98,6 +101,7 @@ class DailyAnswerServiceTest {
         val result = service.answerToday(accountId, "새로 고쳐 쓴 답변은 이만큼 길다")
 
         assertEquals("새로 고쳐 쓴 답변은 이만큼 길다", result.answer.content)
+        verify(exactly = 0) { growth.record(any(), any(), any()) }
     }
 
     @Test

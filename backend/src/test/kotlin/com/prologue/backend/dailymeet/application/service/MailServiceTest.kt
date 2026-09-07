@@ -27,13 +27,14 @@ import kotlin.test.assertTrue
 class MailServiceTest {
 
     private val answerRepository = mockk<AnswerRepository>()
-    private val mailRepository = mockk<MailRepository>()
+    private val mailRepository = mockk<MailRepository> { every { existsBySenderAndRecipient(any(), any()) } returns false }
     // 기본은 하트가 오간 적 없는 사이 — 상호 하트 테스트에서만 덮어쓴다.
     private val heartRepository = mockk<HeartRepository> { every { existsFromTo(any(), any()) } returns false }
     private val memberQueryService = mockk<MemberQueryService>()
     private val inkService = mockk<InkService>(relaxed = true)
     private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
-    private val service = MailService(answerRepository, mailRepository, heartRepository, memberQueryService, inkService, notificationService)
+    private val growth = mockk<com.prologue.backend.growth.GrowthEvents>(relaxed = true)
+    private val service = MailService(answerRepository, mailRepository, heartRepository, memberQueryService, inkService, notificationService, growth)
 
     private val senderId = UUID.randomUUID()
     private val recipientId = UUID.randomUUID()
@@ -78,6 +79,7 @@ class MailServiceTest {
         service.send(senderId, peerAnswerId, "만나서 반가웠어요. 답변 읽고 결이 닿는다고 느꼈어요. 괜찮으시면 커피 한잔하면서 이야기 나누고 싶어요.", includePhone = true, kakaoId = null)
 
         verify(exactly = 1) { inkService.spend(senderId, InkPrice.MAIL, InkService.REASON_MAIL) }
+        verify(exactly = 1) { growth.record(senderId, com.prologue.backend.growth.GrowthEvent.MAIL_SENT, any()) }
     }
 
     @Test

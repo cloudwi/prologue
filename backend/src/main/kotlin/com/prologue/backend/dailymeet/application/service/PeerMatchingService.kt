@@ -1,5 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+
 import com.prologue.backend.auth.application.service.LastSeenService
 import com.prologue.backend.dailymeet.domain.model.Answer
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
@@ -98,6 +101,7 @@ class PeerMatchingService(
      * 사람의 자리**만 연다. 그것도 답은 잠긴 채로다: 열려면 그날의 답을 쓰거나 잉크를 낸다.
      */
     @param:Value("\${daily.locked-reveal-hour:12}") private val lockedRevealHour: Int = 12,
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     /**
      * 오늘의 상대 — 답을 남기는 순간 [revealCount]명이 도착한다.
@@ -116,6 +120,14 @@ class PeerMatchingService(
      */
     @Transactional
     fun todayPeers(accountId: UUID): TodayPeersView {
+        val view = loadTodayPeers(accountId)
+        val day = ServiceDay.now().toString()
+        growthEvents.record(accountId, GrowthEvent.PEER_CHECKED, day)
+        if (view.peers.isNotEmpty()) growthEvents.record(accountId, GrowthEvent.PEER_AVAILABLE, day)
+        return view
+    }
+
+    private fun loadTodayPeers(accountId: UUID): TodayPeersView {
         val questions = questionRepository.findAllOrdered()
         val question = QuestionRotation.of(questions, ServiceDay.now())
         val answered = answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null

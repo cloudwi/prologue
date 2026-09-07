@@ -1,5 +1,8 @@
 package com.prologue.backend.dailymeet.application.service
 
+import com.prologue.backend.growth.GrowthEvents
+import com.prologue.backend.growth.GrowthEvent
+
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.Mail
@@ -101,6 +104,7 @@ class MailService(
     private val memberQueryService: MemberQueryService,
     private val inkService: InkService,
     private val notificationService: NotificationService,
+    private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
     /** 상대 답변(peerAnswerId)의 주인에게 부칠 때 드는 값. */
     @Transactional(readOnly = true)
@@ -183,6 +187,8 @@ class MailService(
         val saved = mailRepository.save(
             Mail.write(senderAccountId, recipientId, content, phone, kakaoId, inkPaid = price),
         )
+        val eventSource = "mail:${saved.id}"
+        growthEvents.record(senderAccountId, GrowthEvent.MAIL_SENT, eventSource)
         // 받는 사람이 모르고 지나가면 보낸 사람의 잉크가 헛되이 사라진다.
         notificationService.letterArrived(recipientId)
         return SendMailResult(mailId = requireNotNull(saved.id), inkSpent = price)
