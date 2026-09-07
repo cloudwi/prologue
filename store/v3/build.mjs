@@ -20,7 +20,9 @@ const OUT = resolve(DIR, 'out');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const MARK = '../../design/brand/brand-mark.png';
-const P = (name) => `../personas/${name}.jpg`;
+const P = (name) => name === '조용한위로-1'
+  ? '../../web/public/photos/cafe-selfie-2026-09.webp'
+  : `../personas/${name}.jpg`;
 
 /** iOS 상태 바 — 실제 스크린샷처럼 읽히게 하는 최소한의 장치. */
 const status = `
@@ -111,7 +113,7 @@ const panels = [
             <div class="peer-head">
               <div class="grow">
                 <div class="peer-name">조용한위로</div>
-                <div class="peer-meta">29세 · 164cm · 마포구 · 오늘 활동</div>
+                <div class="peer-meta">28세 · 164cm · 마포구 · 예시 프로필</div>
               </div>
               <div class="peer-cta">프로필 보기</div>
             </div>

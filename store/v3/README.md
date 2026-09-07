@@ -5,9 +5,9 @@
 웹 판은 굽는 김에 webp로 줄여 `web/public/screens/`에 바로 꽂습니다 — 손으로 옮기면 언젠가 한쪽만 갱신되고, 실제로 그런 적이 있습니다(스토어는 v3인데 랜딩은 v1이었습니다).
 
 2026-09-07부터 웹의 첫 화면과 문답·오늘의 상대 미리보기는 `web/src/components/ProfilePreview.astro`에서 그립니다.
-사진은 `web/public/photos/cafe-portrait-2026-09.webp`를 공유하며, 원본과 생성 기록은 `design/photos/`에 있습니다.
+사진은 `web/public/photos/cafe-selfie-2026-09.webp`를 공유하며, 원본과 생성 기록은 `design/photos/`에 있습니다.
 이 두 미리보기는 `screens/1-discover.webp`와 `screens/4-answers.webp`를 더 이상 화면에 사용하지 않습니다.
-스토어 제출 이미지와 실제 계정의 사진은 별도로 유지합니다.
+스토어 제출 이미지도 같은 셀카 사진을 공유합니다. 실제 계정의 사진은 변경하지 않습니다.
 
 ## 왜 다시 만들었나
 
@@ -60,7 +60,7 @@
 
 ## 사진
 
-`store/personas/`의 페르소나 사진을 씁니다(앱 시드 계정과 같은 인물).
+주인공 조용한위로는 웹과 공유하는 `web/public/photos/cafe-selfie-2026-09.webp`를 씁니다. 나머지 예시 프로필은 `store/personas/`의 기존 이미지를 유지합니다.
 사람 사진이 들어가면 애플 심사에서 실제 인물로 오인될 소지가 없도록
 생성 이미지임을 유지하고, 실제 유저 사진은 절대 쓰지 않습니다.
 
