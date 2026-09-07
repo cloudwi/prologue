@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getAccessToken } from './auth-storage';
+import { isSessionExpired } from './api';
 import { getMyProfile, type MemberProfile } from './member';
 
 /**
@@ -23,6 +24,10 @@ export type Session = {
   dating: boolean;
   /** 아직 확인 중. 첫 프레임에서 손님으로 단정해 가입 유도를 띄우지 않기 위해 본다. */
   loading: boolean;
+  /** 첫 조회 실패를 가입 전 상태로 오인하지 않도록 화면에 전달한다. */
+  error: Error | null;
+  retry: () => void;
+  refreshing: boolean;
 };
 
 export const SESSION_QUERY_KEY = ['session'] as const;
@@ -34,7 +39,10 @@ export function useSession(): Session {
       const token = await getAccessToken();
       if (!token) return { signedIn: false, profile: null };
       // 토큰이 죽었으면 authedFetch가 지운다 — 여기서는 손님으로 떨어질 뿐이다.
-      const profile = await getMyProfile().catch(() => null);
+      const profile = await getMyProfile().catch((error: unknown) => {
+        if (isSessionExpired(error)) return null;
+        throw error;
+      });
       return { signedIn: profile != null || (await getAccessToken()) != null, profile };
     },
   });
@@ -44,5 +52,8 @@ export function useSession(): Session {
     profile: q.data?.profile ?? null,
     dating: q.data?.profile?.preferredGender != null,
     loading: q.isPending,
+    error: q.isLoadingError ? q.error : null,
+    retry: () => { void q.refetch(); },
+    refreshing: q.isFetching,
   };
 }

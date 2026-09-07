@@ -2,6 +2,7 @@ package com.prologue.backend.dailymeet.application.service
 
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Meetup
+import com.prologue.backend.dailymeet.domain.model.MeetupApplication
 import com.prologue.backend.dailymeet.domain.repository.MeetupApplicationRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupFollowRepository
 import com.prologue.backend.dailymeet.domain.repository.MeetupRepository
@@ -39,6 +40,24 @@ class MeetupSeriesTest {
 
     private val host = UUID.randomUUID()
     private val stranger = UUID.randomUUID()
+
+    @Test
+    fun `모임 목록의 확정 참가자는 한 번에 조회하고 모임별로 나눈다`() {
+        val first = existing(UUID.randomUUID(), host)
+        val second = existing(UUID.randomUUID(), host)
+        val attendee = UUID.randomUUID()
+        val confirmed = MeetupApplication.apply(requireNotNull(first.id), attendee).also { it.confirm() }
+        every { meetupRepository.findUpcoming(any()) } returns listOf(first, second)
+        every { applicationRepository.findConfirmedByMeetups(any()) } returns listOf(confirmed)
+
+        val result = service.upcoming(null).associateBy { it.meetupId }
+
+        assertEquals(1, result[first.id]?.confirmedCount)
+        assertEquals(listOf(attendee), result[first.id]?.participants?.map { it.accountId })
+        assertEquals(0, result[second.id]?.confirmedCount)
+        verify(exactly = 1) { applicationRepository.findConfirmedByMeetups(listOfNotNull(first.id, second.id)) }
+        verify(exactly = 0) { applicationRepository.findAllByMeetup(any()) }
+    }
 
     private fun create(hostAccountId: UUID = host, seriesId: UUID? = null): UUID = service.create(
         hostAccountId = hostAccountId,

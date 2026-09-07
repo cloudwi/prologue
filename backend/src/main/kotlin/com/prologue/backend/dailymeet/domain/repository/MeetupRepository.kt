@@ -58,6 +58,9 @@ interface MeetupApplicationRepository {
     /** 모임의 신청 전부(취소 포함), 신청순 — 모임장이 본다. */
     fun findAllByMeetup(meetupId: UUID): List<MeetupApplication>
 
+    /** 여러 모임의 확정 참가자를 신청순으로 조회 — 목록에서 모임마다 되묻지 않는다. */
+    fun findConfirmedByMeetups(meetupIds: Collection<UUID>): List<MeetupApplication>
+
     /** 모임별 확정 인원 — 목록 카드가 "n/정원"을 그릴 때. */
     fun countConfirmedByMeetup(meetupIds: Collection<UUID>): Map<UUID, Int>
 

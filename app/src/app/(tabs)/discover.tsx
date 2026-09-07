@@ -36,6 +36,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/lib/haptics';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { SignupGate } from '@/components/signup-gate';
+import { ScreenLoadError } from '@/components/screen-load-error';
 import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
@@ -73,6 +74,7 @@ export default function DiscoverScreen() {
 
   // 아직 누구인지 모른다 — 이 한 프레임에 손님으로 단정하면 회원에게 가입 유도가 번쩍인다.
   if (session.loading) return null;
+  if (session.error) return <ScreenLoadError title="로그인 정보를 불러오지 못했어요" onRetry={session.retry} retrying={session.refreshing} />;
 
   if (!session.signedIn) {
     return (
@@ -275,6 +277,10 @@ function DiscoverBoard() {
 
   const isEditing = !today?.answered || editing;
   const editorOpen = isEditing && (today?.answered ? true : composing);
+
+  if (todayQuery.isError && !today) {
+    return <ScreenLoadError title="오늘의 질문을 불러오지 못했어요" onRetry={refreshAll} retrying={todayQuery.isFetching} />;
+  }
 
   /*
    * 생애 첫 로딩에만 보이는 자리 표시 — 캐시가 있으면 여기까지 오지 않는다.

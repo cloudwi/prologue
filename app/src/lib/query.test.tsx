@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, renderHook, screen } from '@testing-library/react-native';
 import { useState } from 'react';
 import { Text } from 'react-native';
 
-import { useRefreshOnFocus } from './query';
+import { ApiError } from './api';
+import { queryClient, useRefreshOnFocus, useSessionGuard } from './query';
 
 /**
  * 포커스 갱신 훅 — **다시 읽기가 무한히 도는지**를 본다.
@@ -17,8 +18,34 @@ import { useRefreshOnFocus } from './query';
  * 훅이 불안정한 콜백에 흔들리면 여기서 그대로 드러난다.
  */
 jest.mock('expo-router', () => {
-  const { useEffect } = require('react');
+  const { useEffect } = jest.requireActual<typeof import('react')>('react');
   return { useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
+});
+
+describe('세션 캐시 경계', () => {
+  afterEach(() => { queryClient.clear(); });
+
+  it('확정된 세션 만료에서는 이전 회원의 캐시를 비우고 로그인으로 이동한다', async () => {
+    queryClient.setQueryData(['mails', 'inbox'], { privateMail: 'previous member' });
+    queryClient.setQueryData(['me', 'profile'], { accountId: 'previous-member' });
+    const onExpired = jest.fn();
+
+    await renderHook(() => useSessionGuard(new ApiError(401), onExpired));
+
+    expect(queryClient.getQueryData(['mails', 'inbox'])).toBeUndefined();
+    expect(queryClient.getQueryData(['me', 'profile'])).toBeUndefined();
+    expect(onExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it('통신 실패에서는 읽고 있던 내용을 보존하고 로그인을 요구하지 않는다', async () => {
+    queryClient.setQueryData(['mails', 'inbox'], { count: 2 });
+    const onExpired = jest.fn();
+
+    await renderHook(() => useSessionGuard(new ApiError(503), onExpired));
+
+    expect(queryClient.getQueryData(['mails', 'inbox'])).toEqual({ count: 2 });
+    expect(onExpired).not.toHaveBeenCalled();
+  });
 });
 
 /** 매 렌더 새 함수를 넘기는 화면 — 사고 당시의 잘못된 사용법 그대로. */

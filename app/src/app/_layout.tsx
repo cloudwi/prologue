@@ -49,7 +49,6 @@ const SPLASH_MAX_MS = 4000;
 export default Sentry.wrap(RootLayout);
 
 function RootLayout() {
-  useScreenPrivacy();
   useSplashFailsafe();
 
   // 배경에서 돌아오면 화면이 스스로 최신으로 맞춘다 — RN에는 window 포커스 이벤트가 없어 직접 잇는다.
@@ -57,6 +56,8 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* 캡처 보호는 네이티브 전용이다. 웹에서 호출하면 UnavailabilityError가 발생한다. */}
+      {Platform.OS !== 'web' && <ScreenPrivacy />}
       {/* 서버 데이터는 한 곳에 캐시한다 — 탭을 옮길 때 화면이 비지 않는 이유가 이것이다. */}
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
@@ -87,7 +88,7 @@ function useSplashFailsafe() {
  * 안드로이드는 FLAG_SECURE라 스크린샷·화면 녹화가 막히고 최근 앱 미리보기도 비워진다.
  * iOS는 캡처 차단(13+)은 되지만 앱 스위처 가림은 별도라, 그쪽만 따로 켠다.
  */
-function useScreenPrivacy() {
+function ScreenPrivacy() {
   // 열쇠에 이름을 준다 — 모임 초대장 화면이 이 열쇠를 잠시 반납해 캡처를 연다.
   usePreventScreenCapture(APP_CAPTURE_KEY);
 
@@ -96,6 +97,7 @@ function useScreenPrivacy() {
     // 실패해도 앱이 멈출 이유는 없다 — 가림막이 없을 뿐이다.
     void enableAppSwitcherProtectionAsync().catch(() => {});
   }, []);
+  return null;
 }
 
 /**

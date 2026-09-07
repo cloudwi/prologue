@@ -141,6 +141,13 @@ class MeetupApplicationPersistenceAdapter(
     override fun findAllByMeetup(meetupId: UUID): List<MeetupApplication> =
         jpa.findByMeetupIdOrderByCreatedAtAsc(meetupId).map { it.toDomain() }
 
+    override fun findConfirmedByMeetups(meetupIds: Collection<UUID>): List<MeetupApplication> {
+        if (meetupIds.isEmpty()) return emptyList()
+        return jpa.findByMeetupIdInAndStatus(meetupIds, MeetupApplicationStatus.CONFIRMED.name)
+            .sortedBy { it.createdAt }
+            .map { it.toDomain() }
+    }
+
     override fun countConfirmedByMeetup(meetupIds: Collection<UUID>): Map<UUID, Int> {
         if (meetupIds.isEmpty()) return emptyMap()
         return jpa.findByMeetupIdInAndStatus(meetupIds, MeetupApplicationStatus.CONFIRMED.name)

@@ -405,12 +405,13 @@ class MeetupService(
         val meetups = (listed + alsoMine).sortedBy { it.meetAt }
         // 목록이 모임 수만큼 되묻지 않도록 한 번에 읽는다.
         val followed = accountId?.let { followRepository.findSeriesIdsByAccount(it) } ?: emptySet()
+        val confirmedByMeetup = applicationRepository.findConfirmedByMeetups(meetups.mapNotNull { it.id })
+            .groupBy { it.meetupId }
         val seriesCounts = mutableMapOf<UUID, List<Meetup>>()
         return meetups.map { m ->
             val siblings = seriesCounts.getOrPut(m.seriesId) { meetupRepository.findAllBySeries(m.seriesId) }
             val my = mine[m.id]?.takeIf { it.status != MeetupApplicationStatus.CANCELED }
-            val confirmedApps = applicationRepository.findAllByMeetup(requireNotNull(m.id))
-                .filter { it.status == MeetupApplicationStatus.CONFIRMED }
+            val confirmedApps = confirmedByMeetup[m.id].orEmpty()
             MeetupView(
                 meetupId = requireNotNull(m.id),
                 title = m.title,

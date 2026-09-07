@@ -41,7 +41,7 @@ jobs:
           retention-days: 7
 
   app:
-    name: 앱 타입·린트
+    name: 앱 타입·린트·테스트
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,9 +59,8 @@ jobs:
       # 예외 없이 전부 본다(2026-08-25에 남아 있던 react-hooks 위반 6건을 정리했다).
       - name: 린트
         working-directory: app
-        run: npx eslint src
-      # 순수 로직만 — 화면 렌더는 다루지 않는다(느리고 깨지기 쉽다).
-      # 참가비·조건 문구, 날짜 경계, 주소 꼴처럼 경우의 수가 많아 눈으로는 못 미더운 것들.
+        run: npx eslint src --max-warnings 0
+      # 순수 로직과 세션·포커스 훅의 회귀 검증. 통신 실패도 정상 상태와 구분한다.
       - name: 유닛 테스트
         working-directory: app
         run: npm test -- --ci

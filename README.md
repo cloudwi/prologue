@@ -10,6 +10,9 @@
 |---|---|---|
 | [`app/`](./app) | 모바일 앱 | Expo (React Native) · TypeScript · expo-router |
 | [`backend/`](./backend) | API 서버 | Spring Boot · Kotlin · JPA |
+| [`web/`](./web) | 랜딩·블로그·운영 콘솔 | Astro |
+
+디자인 규칙은 [`design/README.md`](./design/README.md)에 있습니다.
 
 ## 시작하기
 
@@ -25,3 +28,20 @@ npx expo start
 cd backend
 ./gradlew bootRun
 ```
+
+### web
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+## 검증
+
+각 디렉터리에서 실행합니다. 백엔드의 Postgres 통합 테스트까지 실행하려면 Docker가 필요합니다.
+
+| 위치 | 명령 |
+|---|---|
+| `app/` | `npx tsc --noEmit -p .` · `npx eslint src --max-warnings 0` · `npm test -- --ci --runInBand` |
+| `backend/` | `./gradlew test --no-daemon` |
+| `web/` | `npm test` · `npm run build` |

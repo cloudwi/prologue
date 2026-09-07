@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -21,6 +21,7 @@ import { deleteAccount } from '@/lib/member';
 export default function WithdrawScreen() {
   const c = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   // 잔액은 두 번째 확인창에서 "무엇을 잃는지"를 숫자로 말하기 위해 읽는다. 실패해도 탈퇴는 막지 않는다.
   const inkQuery = useQuery({ queryKey: ['ink', 'balance'], queryFn: getInkBalance });
@@ -30,6 +31,7 @@ export default function WithdrawScreen() {
     try {
       await deleteAccount();
       await clearTokens();
+      queryClient.clear();
       Alert.alert('탈퇴가 완료됐어요', '프롤로그의 기록이 모두 지워졌어요. 좋은 인연이 닿기를 바랄게요.', [
         { text: '확인', onPress: () => router.replace('/') },
       ]);

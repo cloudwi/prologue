@@ -43,12 +43,15 @@ export default function LoginScreen() {
         // (심지 않으면 발견 탭이 자기 차례에 프로필을 또 기다리며 빈 화면을 낸다)
         queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: true, profile });
         if (active) {
-          router.replace(profile ? '/discover' : '/onboarding');
+          router.replace(profile ? (profile.preferredGender ? '/discover' : '/meetups') : '/onboarding');
           hideSplash(); // 목적지가 그려지는 프레임에 맞춰 내린다
         }
       } catch (e) {
         // 재발급까지 실패한 만료(401/403) — authedFetch가 토큰을 지웠으니 로그인 화면으로 남는다
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) await clearTokens();
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+          await clearTokens();
+          queryClient.clear();
+        }
         if (active) setChecking(false);
       }
     })();
@@ -107,6 +110,7 @@ export default function LoginScreen() {
             이메일도 개인정보라 수집 전에 동의를 받아야 해서, 동의 화면을 먼저 거친다. */}
         <Animated.View entering={FadeInUp.duration(380).delay(180)} style={styles.buttons}>
           <Pressable
+            accessibilityRole="button"
             onPress={() => router.push('/consent')}
             style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
@@ -121,6 +125,7 @@ export default function LoginScreen() {
             * 가입을 정하게 한다 — 손드는 순간에만 나를 밝히면 된다.
             */}
           <Pressable
+            accessibilityRole="button"
             onPress={() => {
               track('guest_browsed');
               queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: false, profile: null });

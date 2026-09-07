@@ -65,12 +65,18 @@ async function refreshTokens(): Promise<boolean> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!res.ok) return false;
+      // 인증 거절만 세션 만료다. 서버 장애·요청 제한은 토큰을 지울 근거가 아니다.
+      if (res.status === 401 || res.status === 403) return false;
+      if (!res.ok) {
+        throw new ApiError(res.status, undefined, '로그인을 확인하지 못했어요. 잠시 후 다시 시도해주세요.');
+      }
       const data = await res.json();
+      if (typeof data?.accessToken !== 'string' || !data.accessToken ||
+          typeof data?.refreshToken !== 'string' || !data.refreshToken) {
+        throw new Error('로그인을 확인하지 못했어요. 잠시 후 다시 시도해주세요.');
+      }
       await saveTokens(data.accessToken, data.refreshToken);
       return true;
-    } catch {
-      return false; // 네트워크 실패 — 원래 요청의 에러가 그대로 사용자에게 전달된다
     } finally {
       refreshing = null;
     }
@@ -80,8 +86,8 @@ async function refreshTokens(): Promise<boolean> {
 
 /**
  * 인증 헤더를 붙여 보내는 fetch. 만료(401/403)를 만나면 재발급 후 한 번 재시도한다.
- * 재발급까지 실패하면 저장된 토큰을 지운다 — 죽은 토큰으로 403만 반복하지 않고,
- * 다음 앱 시작에서 로그인 화면으로 이어지게.
+ * 재발급이 인증 거절되면 저장된 토큰을 지운다. 통신 실패·서버 장애는 그대로 던져
+ * 화면에서 재시도하게 한다 — 연결이 끊겼다는 이유로 다시 가입하러 보내지 않는다.
  */
 export async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const send = async () => {

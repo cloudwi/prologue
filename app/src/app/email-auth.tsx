@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -46,7 +46,7 @@ export default function EmailAuthScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [codeFocused, setCodeFocused] = useState(false);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const coolingDown = cooldown > 0;
 
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   const codeValid = /^\d{6}$/.test(code);
@@ -70,12 +70,10 @@ export default function EmailAuthScreen() {
 
   // 재전송 쿨다운 카운트다운
   useEffect(() => {
-    if (cooldown <= 0) return;
-    timer.current = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
-    return () => {
-      if (timer.current) clearInterval(timer.current);
-    };
-  }, [cooldown > 0]);
+    if (!coolingDown) return;
+    const timer = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [coolingDown]);
 
   async function sendCode() {
     if (!emailValid || submitting) return;
@@ -108,6 +106,8 @@ export default function EmailAuthScreen() {
     setError(null);
     try {
       const session = await verifyCode(email.trim(), code);
+      // 세션 만료 뒤 다른 계정으로 로그인할 수도 있다. 이전 계정의 프로필·편지는 폐기한다.
+      queryClient.clear();
       if (session?.accountId) identify(session.accountId);
       track('auth_succeeded');
       await clearPendingEmail();
@@ -118,7 +118,7 @@ export default function EmailAuthScreen() {
        * 갈림길 셋.
        *  - 프로필이 없다 → 온보딩. 모임 하러 온 사람에게는 짧은 쪽(intent=meetup)으로 보낸다.
        *  - 프로필이 있고 돌아갈 자리가 있다 → 그 자리로. 보던 모임에서 가입하러 온 경우다.
-       *  - 그 외 → 늘 가던 발견 탭.
+       *  - 그 외 → 소개팅 회원은 발견, 모임 회원은 모임 탭.
        */
       if (!profile) {
         router.replace({
@@ -128,7 +128,7 @@ export default function EmailAuthScreen() {
       } else if (next) {
         router.replace(next as never);
       } else {
-        router.replace(intent === 'meetup' ? '/meetups' : '/discover');
+        router.replace(intent === 'meetup' || !profile.preferredGender ? '/meetups' : '/discover');
       }
     } catch (e) {
       setError(verifyErrorMessage(e));

@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
+import { ScreenLoadError } from '@/components/screen-load-error';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
 import { track } from '@/lib/analytics';
@@ -138,19 +139,20 @@ export default function MeetupsScreen() {
    */
   const boardQuery = useQuery({
     queryKey: ['meetups', 'board'],
+    enabled: !session.loading,
     queryFn: async () => {
       const [ups, done, profile, job] = await Promise.all([
         getMeetups(),
         getMeetupHistory().catch(() => []),
-        getMyProfile().catch(() => null),
-        getJobStatus().catch(() => ({ verified: false, domain: null })),
+        session.signedIn ? getMyProfile().catch(() => null) : Promise.resolve(null),
+        session.signedIn ? getJobStatus().catch(() => ({ verified: false, domain: null })) : Promise.resolve(null),
       ]);
       const my: MyEligibility | null = profile
         ? {
             gender: profile.gender,
             age: ageFrom(profile.birthDate),
             heightCm: profile.heightCm ?? null,
-            jobVerified: job.verified,
+            jobVerified: job?.verified ?? false,
           }
         : null;
       // 모임을 여는 일은 웹 콘솔(prologue.day/host)로 옮겼다 — 앱은 손드는 쪽만 한다.
@@ -200,6 +202,10 @@ export default function MeetupsScreen() {
   const regions = [...new Set(meetups.map((m) => regionOf(m.placeAddress)).filter((r): r is string => r != null))].sort();
   const appliedCount = meetups.filter((m) => m.myStatus != null).length;
   const mineCount = meetups.filter((m) => m.isMine).length;
+
+  if (boardQuery.isError && !boardQuery.data) {
+    return <ScreenLoadError title="모임을 불러오지 못했어요" onRetry={refresh} retrying={boardQuery.isFetching} />;
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>

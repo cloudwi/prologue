@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Fonts, type ThemeColors } from '@/constants/theme';
+import { Fonts, Type, type ThemeColors } from '@/constants/theme';
 
 /**
  * MY 하위 화면의 공통 틀 — 네이티브 스택 헤더를 쓴다.
@@ -37,13 +37,13 @@ export function SubScreen({
           headerShadowVisible: false,
           headerStyle: { backgroundColor: c.background },
           headerTintColor: c.text,
-          headerTitleStyle: { fontFamily: Fonts.serif, fontWeight: '700', color: c.text },
+          headerTitleStyle: { fontFamily: Fonts.serif, fontSize: Type.title.fontSize, fontWeight: Type.title.fontWeight, color: c.text },
           headerRight: onSave
             ? () =>
                 saving ? (
                   <ActivityIndicator color={c.primary} />
                 ) : (
-                  <Pressable onPress={onSave} disabled={saveDisabled} hitSlop={12}>
+                  <Pressable onPress={onSave} disabled={saveDisabled} hitSlop={12} accessibilityRole="button" accessibilityState={{ disabled: saveDisabled }}>
                     <Text style={[styles.save, { color: c.primaryStrong, opacity: saveDisabled ? 0.35 : 1 }]}>
                       {saveLabel}
                     </Text>
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  save: { fontSize: 16, fontWeight: '700' },
-  soonTitle: { fontSize: 18, fontWeight: '700' },
-  soonDesc: { fontSize: 15, textAlign: 'center', marginTop: 8, lineHeight: 23 },
+  save: { ...Type.button },
+  soonTitle: { ...Type.title },
+  soonDesc: { ...Type.body, textAlign: 'center', marginTop: 8 },
 });

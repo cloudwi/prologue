@@ -12,6 +12,7 @@ import { BottomTabInset, Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { SignupGate } from '@/components/signup-gate';
+import { ScreenLoadError } from '@/components/screen-load-error';
 import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonCard } from '@/components/skeleton';
 import { isSessionExpired } from '@/lib/api';
@@ -39,6 +40,7 @@ export default function MailsScreen() {
   const session = useSession();
 
   if (session.loading) return null;
+  if (session.error) return <ScreenLoadError title="로그인 정보를 불러오지 못했어요" onRetry={session.retry} retrying={session.refreshing} />;
 
   if (!session.signedIn) {
     return (
@@ -297,6 +299,10 @@ function MailsInbox() {
   const isEmpty = hearts.length === 0 && (sentHearts?.length ?? 0) === 0 && mails.length === 0;
   const dateFmt = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' });
   const sealedCount = mails.filter((m) => m.status === 'PENDING').length;
+
+  if (inboxQuery.isError && !inboxQuery.data) {
+    return <ScreenLoadError title="편지함을 불러오지 못했어요" onRetry={refresh} retrying={inboxQuery.isFetching} />;
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>

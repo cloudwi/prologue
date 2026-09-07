@@ -84,7 +84,11 @@ export function useRefreshOnFocus(refetch: () => void) {
 export function useSessionGuard(error: unknown, onExpired: () => void) {
   useEffect(() => {
     if (!error) return;
-    if (isSessionExpired(error)) onExpired();
+    if (isSessionExpired(error)) {
+      // 로그인 화면으로만 이동하면 다음 계정이 앞사람의 캐시를 잠깐 볼 수 있다.
+      queryClient.clear();
+      onExpired();
+    }
   }, [error, onExpired]);
 }
 

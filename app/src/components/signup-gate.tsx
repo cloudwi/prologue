@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { BottomTabInset, Fonts } from '@/constants/theme';
+import { BottomTabInset, Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -56,6 +56,7 @@ export function SignupGate({
           </View>
 
           <Pressable
+            accessibilityRole="button"
             onPress={() => router.push(guest ? '/consent' : '/my/start-dating')}
             style={({ pressed }) => [styles.cta, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
@@ -85,10 +86,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 23, fontWeight: '700', marginTop: 22, textAlign: 'center', lineHeight: 33 },
+  title: { ...Type.display, marginTop: 22, textAlign: 'center' },
   lines: { marginTop: 12, gap: 4 },
-  line: { fontSize: 15, textAlign: 'center', lineHeight: 23 },
-  cta: { marginTop: 30, alignSelf: 'stretch', height: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  ctaText: { fontSize: 17, fontWeight: '700' },
-  foot: { fontSize: 13, marginTop: 14, textAlign: 'center' },
+  line: { ...Type.body, textAlign: 'center' },
+  cta: { marginTop: 30, alignSelf: 'stretch', minHeight: 54, paddingVertical: 12, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  ctaText: { ...Type.button },
+  foot: { ...Type.caption, marginTop: 14, textAlign: 'center' },
 });

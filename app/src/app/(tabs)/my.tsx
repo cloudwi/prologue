@@ -26,6 +26,7 @@ import { getJobStatus } from '@/lib/job';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { SignupGate } from '@/components/signup-gate';
+import { ScreenLoadError } from '@/components/screen-load-error';
 import { useSession } from '@/lib/session';
 import { Skeleton } from '@/components/skeleton';
 
@@ -44,6 +45,7 @@ export default function MyScreen() {
   const session = useSession();
 
   if (session.loading) return null;
+  if (session.error) return <ScreenLoadError title="로그인 정보를 불러오지 못했어요" onRetry={session.retry} retrying={session.refreshing} />;
 
   if (!session.signedIn) {
     return (
@@ -138,6 +140,10 @@ function MyHub() {
       { text: '취소', style: 'cancel' },
       { text: '로그아웃', style: 'destructive', onPress: logout },
     ]);
+  }
+
+  if (meQuery.isError && !meQuery.data) {
+    return <ScreenLoadError title="내 정보를 불러오지 못했어요" onRetry={refresh} retrying={meQuery.isFetching} />;
   }
 
   if (meQuery.isPending && !meQuery.data) {
