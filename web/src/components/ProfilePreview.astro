@@ -1,0 +1,67 @@
+---
+interface Props {
+  variant?: 'peer' | 'question';
+  eager?: boolean;
+}
+const { variant = 'peer', eager = false } = Astro.props;
+const question = '당신의 하루에서 가장 아끼는 시간은 언제인가요?';
+---
+
+<!-- 사진을 화면 글자에 합치지 않아 원본 교체와 반응형 표시가 함께 유지된다. -->
+<div class="profile-preview" role="img" aria-label={variant === 'peer' ? '앱 미리보기 — 오늘의 상대의 답변과 가상 인물의 예시 프로필' : '앱 미리보기 — 오늘의 질문에 답을 남기고 상대를 만나는 화면'}>
+  <div class="preview-content" aria-hidden="true">
+    <div class="status"><span>9:41</span><span class="island"></span><span class="status-icons">▂▄▆ <span class="battery"></span></span></div>
+    <div class="preview-scroll">
+      {variant === 'question' && <div class="question-cover">
+        <div class="date">오늘의 문답</div>
+        <div class="question-label">오늘의 질문</div>
+        <div class="question-title">{question}</div>
+        <div class="my-answer">해가 완전히 넘어가기 직전, 골목이 통째로 주황색이 되는 20분이요. 그때만은 아무 생각 없이 걷습니다.</div>
+        <div class="answered">✓ 오늘 답변했어요</div>
+      </div>}
+      <div class="section-head"><span>오늘의 상대</span><span>답을 남기면, 한 사람</span></div>
+      <div class="peer-card">
+        <div class="answer-block"><div class="peer-question">{question}</div><div class="peer-answer">아침에 물 끓이는 3분이요. 아무것도 안 해도 되는 시간이 하루에 그때뿐이라서, 주전자 소리만 듣고 서 있어요.</div></div>
+        <img class="peer-photo" src="/photos/cafe-portrait-2026-09.webp" alt="" width="800" height="1000" loading={eager ? 'eager' : 'lazy'} fetchpriority={eager ? 'high' : 'auto'} />
+        <div class="peer-body">
+          <div class="peer-heading"><div><strong>조용한위로</strong><div class="peer-meta">28세 · 마포구 · 예시 프로필</div></div><span class="profile-link">프로필 보기</span></div>
+          <p>기록하는 걸 좋아해요. 주말에는 동네 책방과 카페를 구경해요.</p>
+          <div class="chips"><span>글쓰기</span><span>전시 보기</span><span>느긋함</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .profile-preview { position: relative; width: 100%; aspect-ratio: 460 / 1000; container-type: inline-size; overflow: hidden; background: #f6f8fa; color: #1b2126; font-family: var(--sans); text-align: left; }
+  .profile-preview::after { content: ''; position: absolute; inset: auto 0 0; height: 13%; pointer-events: none; background: linear-gradient(transparent, #f6f8fa); }
+  .preview-content { position: absolute; inset: 0; font-size: 3.6cqw; line-height: 1.5; }
+  .status { position: relative; display: flex; justify-content: space-between; align-items: flex-end; height: 16.5cqw; padding: 0 8cqw 3.5cqw; font-size: 3.7cqw; font-weight: 600; }
+  .island { position: absolute; top: 2.8cqw; left: 34%; width: 32%; height: 8.8cqw; border-radius: 6cqw; background: #000; }
+  .status-icons { display: flex; align-items: center; gap: 2cqw; font-size: 3.1cqw; }
+  .battery { width: 5cqw; height: 2.6cqw; border: .25cqw solid #7c868e; border-radius: .65cqw; background: linear-gradient(to right, #1b2126 75%, transparent 75%); }
+  .preview-scroll { padding: 0 5cqw; }
+  .section-head { display: flex; justify-content: space-between; margin: 1.5cqw 0 4.6cqw; font-size: 3.3cqw; }
+  .section-head span:first-child { color: #c25539; font-weight: 700; }
+  .section-head span:last-child { color: #7c868e; font-size: 3cqw; }
+  .peer-card { overflow: hidden; border-radius: 6cqw; background: #fff; }
+  .answer-block { padding: 4.8cqw; }
+  .peer-question { color: #7c868e; font-size: 3.1cqw; margin-bottom: 2cqw; }
+  .peer-answer { font-size: 4.3cqw; line-height: 1.55; letter-spacing: -.04em; }
+  .peer-photo { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; }
+  .peer-body { padding: 4.8cqw; }
+  .peer-heading { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; }
+  .peer-heading strong { font-size: 4.7cqw; font-weight: 700; }
+  .peer-meta { margin-top: 1cqw; color: #7c868e; font-size: 3cqw; }
+  .profile-link { padding: 1.5cqw 2.8cqw; border-radius: 6cqw; background: #eef2f6; font-size: 3cqw; font-weight: 600; white-space: nowrap; }
+  .peer-body p { margin-top: 3cqw; color: #7c868e; font-size: 3.5cqw; line-height: 1.6; }
+  .chips { display: flex; gap: 2cqw; margin-top: 3.5cqw; color: #7c868e; font-size: 3cqw; }
+  .chips span { padding: 1cqw 2.5cqw; background: #f6f8fa; border-radius: 6cqw; }
+  .question-cover { padding: 3cqw 1cqw 7cqw; }
+  .date { color: #7c868e; font-size: 3cqw; margin-bottom: 5cqw; }
+  .question-label { color: #c25539; font-size: 3.3cqw; font-weight: 600; }
+  .question-title { margin-top: 3cqw; font-size: 6.3cqw; line-height: 1.4; font-weight: 700; letter-spacing: -.04em; }
+  .my-answer { margin-top: 5cqw; padding-left: 3.5cqw; border-left: .55cqw solid #d9694c; font-size: 4cqw; line-height: 1.7; }
+  .answered { margin-top: 3cqw; padding-left: 3.5cqw; color: #c25539; font-size: 3cqw; }
+</style>

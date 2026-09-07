@@ -4,6 +4,11 @@
 
 웹 판은 굽는 김에 webp로 줄여 `web/public/screens/`에 바로 꽂습니다 — 손으로 옮기면 언젠가 한쪽만 갱신되고, 실제로 그런 적이 있습니다(스토어는 v3인데 랜딩은 v1이었습니다).
 
+2026-09-07부터 웹의 첫 화면과 문답·오늘의 상대 미리보기는 `web/src/components/ProfilePreview.astro`에서 그립니다.
+사진은 `web/public/photos/cafe-portrait-2026-09.webp`를 공유하며, 원본과 생성 기록은 `design/photos/`에 있습니다.
+이 두 미리보기는 `screens/1-discover.webp`와 `screens/4-answers.webp`를 더 이상 화면에 사용하지 않습니다.
+스토어 제출 이미지와 실제 계정의 사진은 별도로 유지합니다.
+
 ## 왜 다시 만들었나
 
 이전 스크린샷(`store/*.png`, `store/v2/`)이 낡아 보인 이유는 취향 문제가 아니라 두 가지였습니다.
