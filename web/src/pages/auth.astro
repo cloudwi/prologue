@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import FontLinks from '../components/FontLinks.astro';
 
 // 스토어 주소는 src/lib/site.ts 한 곳에서 관리한다.
 import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
@@ -15,12 +16,7 @@ import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
     <meta name="robots" content="noindex,nofollow" />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
-    />
+    <FontLinks />
   </head>
   <body class="auth-body">
     <main class="auth-wrap">
@@ -155,10 +151,10 @@ import { APP_STORE_URL, PLAY_STORE_URL } from '../lib/site';
         height: 56px;
       }
       .auth-word {
-        font-family: var(--serif);
+        font-family: var(--sans);
         font-size: 1.2rem;
-        font-weight: 700;
-        letter-spacing: 2px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
         margin-top: 6px;
         margin-bottom: 26px;
       }

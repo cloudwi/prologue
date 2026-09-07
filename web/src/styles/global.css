@@ -19,10 +19,9 @@
   --radius-card: 20px;
   --radius-panel: 28px;
   --shadow-soft: 0 8px 30px rgba(27, 33, 38, 0.045);
-  --serif: 'Gowun Batang', 'Noto Serif KR', ui-serif, serif;
   --sans:
-    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
-    'Noto Sans KR', sans-serif;
+    'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
+    'Malgun Gothic', sans-serif;
 }
 
 /*
@@ -68,6 +67,7 @@ html {
 
 body {
   font-family: var(--sans);
+  font-weight: 400;
   background: var(--paper);
   color: var(--ink);
   line-height: 1.7;
@@ -78,9 +78,9 @@ h1,
 h2,
 h3 {
   font-family: var(--sans);
-  font-weight: 700;
-  line-height: 1.3;
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -133,8 +133,8 @@ img {
   gap: 10px;
   font-family: var(--sans);
   font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .header-brand img {
@@ -326,14 +326,14 @@ img {
 }
 
 .quote .mark {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 3rem;
   color: var(--terracotta);
   line-height: 1;
 }
 
 .quote p {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: clamp(1.2rem, 2.5vw, 1.6rem);
   max-width: 640px;
   margin: 18px auto 0;
@@ -424,7 +424,7 @@ img {
   padding: 4px 0 4px 20px;
   border-left: 3px solid var(--terracotta-soft);
   color: var(--muted);
-  font-family: var(--serif);
+  font-family: var(--sans);
 }
 
 /* ── 푸터 ── */
@@ -716,7 +716,7 @@ img {
   list-style: none;
   padding: 16px 0;
   font-weight: 700;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 1.05rem;
   display: flex;
   justify-content: space-between;

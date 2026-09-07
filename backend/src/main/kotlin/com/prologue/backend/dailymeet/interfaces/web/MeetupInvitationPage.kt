@@ -381,20 +381,11 @@ object MeetupInvitationPage {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${escape(title)}</title>
 ${head.prependIndent("        ")}
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-        <!--
-          본문 글씨는 Pretendard — prologue.day의 나머지와 같은 글씨다.
-
-          그동안 이 페이지만 시스템 기본체로 나갔다. font-family에 "Pretendard"가 적혀는
-          있었지만 불러오지 않았고, 그나마도 -apple-system 뒤에 있어서 애플 기기에서는
-          영영 차례가 오지 않았다. 링크로 열린 초대장과 사이트가 다른 글씨로 보였다는 뜻이고,
-          콘솔의 미리보기는 이 페이지를 그대로 끼우므로 거기서도 어긋났다.
-
-          동적 서브셋 판을 쓴다 — 한글은 글자 수가 많아 통짜로 받으면 무겁고, 이 판은 쓰는
-          글자만 골라 받는다. 못 받아 오면 아래 폴백이 그대로 받는다.
-        -->
+        <!-- 공개 웹과 같은 Noto Sans KR. 글꼴을 기다리는 동안 기본 고딕체로 표시한다. -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="stylesheet"
-              href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+              href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300..700&amp;display=swap" />
         <style>
           :root { --bg:#F6F8FA; --card:#FFFFFF; --sunken:#F3F6F9; --text:#1B2126; --muted:#69747E; --line:#E3E8EE; --point:#D9694C; --on-point:#fff; }
           @media (prefers-color-scheme: dark) {
@@ -402,7 +393,7 @@ ${head.prependIndent("        ")}
           }
           * { box-sizing: border-box; }
           body { margin:0; background:var(--bg); color:var(--text);
-                 font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+                 font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
                  display:flex; justify-content:center; padding:24px 16px 48px; }
           .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:20px; overflow:hidden;
                   padding:0 24px 32px; text-align:center; }
@@ -410,7 +401,7 @@ ${head.prependIndent("        ")}
           .eyebrow { margin:32px 0 0; font-size:11.5px; font-weight:600; letter-spacing:4px; color:var(--muted); }
           .cover ~ .eyebrow { margin-top:0; }
           .occurrence { margin:10px 0 0; font-size:13px; font-weight:700; color:var(--point); }
-          h1 { margin:14px 0 0; font-size:26px; line-height:1.38; letter-spacing:-0.3px; }
+          h1 { margin:14px 0 0; font-size:26px; font-weight:600; line-height:1.4; letter-spacing:-0.02em; }
           .date { margin:20px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
           .when { margin:8px 0 0; font-size:14px; color:var(--muted); }
           /*
