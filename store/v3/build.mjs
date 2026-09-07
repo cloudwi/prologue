@@ -21,7 +21,7 @@ const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const MARK = '../../design/brand/brand-mark.png';
 const P = (name) => name === '조용한위로-1'
-  ? '../../web/public/photos/cafe-selfie-2026-09.webp'
+  ? '../../web/public/photos/cafe-selfie-refined-2026-09.webp'
   : `../personas/${name}.jpg`;
 
 /** iOS 상태 바 — 실제 스크린샷처럼 읽히게 하는 최소한의 장치. */

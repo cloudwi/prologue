@@ -11,7 +11,7 @@
 
 ## 현재 사용 사진 — 일상 셀카
 
-2026-09-07 사용자 요청에 따라 `cafe-selfie-2026-09.png`로 교체했다. 웹과 각 스토어 스크린샷이 `../../web/public/photos/cafe-selfie-2026-09.webp`를 공유한다. 내장 image_gen 편집 도구로 생성했으며, 최종 프롬프트는 [selfie-prompt-2026-09.md](selfie-prompt-2026-09.md)에 기록했다. 아래는 이전 카페 인물사진의 기록이다.
+2026-09-07 사용자 요청에 따라 `cafe-selfie-refined-2026-09.png`로 교체했다. 웹과 각 스토어 스크린샷이 `../../web/public/photos/cafe-selfie-refined-2026-09.webp`를 공유한다. 내장 image_gen 편집 도구로 생성했으며, 최종 프롬프트는 [selfie-refined-prompt-2026-09.md](selfie-refined-prompt-2026-09.md)에 기록했다. 아래는 이전 카페 인물사진의 기록이다.
 
 ## 최종 생성 프롬프트
 
