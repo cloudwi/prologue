@@ -13,13 +13,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     window.pageLoad = async function () {
       const { $, api, showLogin } = window.admin;
       const listEl = $('report-list');
-      listEl.textContent = '불러오는 중...';
+      if (listEl.getAttribute('aria-busy') === 'true') return;
+      const done = window.admin.loading(listEl, {});
       try {
         const data = await api('/admin/reports');
         render(data.reports);
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
-        listEl.textContent = e.message;
+        window.admin.error(listEl, window.pageLoad);
+      } finally {
+        done();
       }
     };
 
@@ -29,7 +32,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const listEl = $('report-list');
       listEl.textContent = '';
       if (!items.length) {
-        listEl.textContent = '접수된 신고가 없어요.';
+        window.admin.empty(listEl, '접수된 신고가 없어요.');
         return;
       }
       for (const item of items) {

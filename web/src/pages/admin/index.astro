@@ -10,7 +10,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     window.pageLoad = async function () {
       const { $, api, showLogin } = window.admin;
       const el = $('stats');
-      el.textContent = '불러오는 중...';
+      if (el.getAttribute('aria-busy') === 'true') return;
+      const done = window.admin.loading(el, { variant: 'stats', label: '통계를 불러오고 있어요' });
       try {
         const s = await api('/admin/stats');
         const femaleRatio = s.totalMembers > 0 ? Math.round((s.femaleMembers / s.totalMembers) * 100) : null;
@@ -49,7 +50,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         }
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
-        el.textContent = e.message;
+        window.admin.error(el, window.pageLoad);
+      } finally {
+        done();
       }
     };
   </script>

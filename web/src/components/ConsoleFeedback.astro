@@ -1,0 +1,47 @@
+---
+import script from '../lib/console-feedback.js?raw';
+---
+
+<script is:inline set:html={script} />
+
+<style is:global>
+  .feedback-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .feedback-spinner { display: inline-block; flex-shrink: 0; width: 18px; height: 18px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: feedback-spin .8s linear infinite; vertical-align: -3px; }
+  button .feedback-spinner { width: 14px; height: 14px; margin-right: 7px; vertical-align: -2px; }
+  .feedback-loading, .feedback-message { grid-column: 1 / -1; width: 100%; }
+  .feedback-status { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 42px; padding: 8px; color: var(--terracotta-strong); font-size: 13px; text-align: center; }
+  .feedback-loading--spinner { padding: 28px 0; }
+  .feedback-loading--spinner .feedback-spinner { width: 28px; height: 28px; border-width: 3px; }
+  .feedback-layout--stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .feedback-placeholder { display: flex; align-items: center; gap: 16px; padding: 20px 0; }
+  .feedback-placeholder--rows + .feedback-placeholder--rows { border-top: 1px solid var(--border); }
+  .feedback-placeholder--stats, .feedback-placeholder--cards { padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .feedback-placeholder--cards { margin-bottom: 12px; min-height: 130px; border-radius: 20px; }
+  .feedback-lines { display: grid; flex: 1; min-width: 0; gap: 12px; }
+  .feedback-bone { display: block; height: 12px; border-radius: 5px; background: var(--sunken); animation: feedback-pulse 1.8s ease-in-out infinite; }
+  .feedback-line--title { width: 48%; height: 17px; }
+  .feedback-line--meta { width: 78%; }
+  .feedback-line--short { width: 32%; height: 10px; }
+  .feedback-placeholder--stats .feedback-line--title { height: 30px; width: 44%; }
+  .feedback-placeholder--stats .feedback-line--meta { width: 60%; }
+  .feedback-cover { flex: 0 0 104px; height: 76px; border-radius: 10px; }
+  .feedback-message { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 220px; padding: 32px 20px; text-align: center; }
+  .feedback-mark { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 4px; border: 1px solid var(--border); border-radius: 50%; background: var(--paper); color: var(--muted); font-size: 20px; }
+  .feedback-message--error .feedback-mark { color: var(--terracotta-strong); background: var(--warm-soft); }
+  .feedback-title { color: var(--ink); font-size: 15px; }
+  .feedback-description { max-width: 340px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .feedback-retry { min-height: 40px; margin-top: 10px; padding: 8px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .feedback-retry:hover { background: var(--paper); border-color: var(--terracotta-strong); }
+  .feedback-retry:focus-visible { outline: 2px solid var(--terracotta-strong); outline-offset: 3px; }
+  @keyframes feedback-spin { to { transform: rotate(360deg); } }
+  @keyframes feedback-pulse { 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) {
+    .feedback-spinner, .feedback-bone { animation: none; }
+    .feedback-status .feedback-sr-only { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
+  }
+  @media (max-width: 480px) {
+    .feedback-layout--stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feedback-cover { flex-basis: 84px; height: 72px; }
+    .feedback-placeholder--cards { padding: 16px; }
+  }
+</style>

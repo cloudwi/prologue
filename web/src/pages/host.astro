@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { API_BASE, CONTACT_EMAIL, SITE_URL } from '../lib/site';
 import RichField from '../components/RichField.astro';
+import ConsoleFeedback from '../components/ConsoleFeedback.astro';
 
 /*
  * 모임장 콘솔 — 모임을 열고, 누가 왔는지 보고, 오픈채팅으로 건너가는 자리.
@@ -22,6 +23,7 @@ import RichField from '../components/RichField.astro';
 ---
 
 <Base title="모임장 콘솔 — 프롤로그" description="프롤로그 모임을 열고 신청자를 확정합니다." noindex>
+  <ConsoleFeedback />
   <section class="console">
     <div class="wide">
       <!-- 로그인 — 앱과 같은 이메일 인증코드. 이 서비스에 비밀번호는 없다. -->
@@ -53,8 +55,11 @@ import RichField from '../components/RichField.astro';
         이제 확인이 끝나기 전에는 어느 쪽도 열지 않는다.
       -->
       <div class="gate" id="checking" hidden>
-        <div class="gate-card">
-          <p class="lead" style="margin:0">로그인을 확인하는 중이에요…</p>
+        <div class="gate-card" id="checkingContent">
+          <div class="feedback-status" role="status">
+            <span class="feedback-spinner" aria-hidden="true"></span>
+            <span class="feedback-sr-only">로그인을 확인하고 있어요</span>
+          </div>
         </div>
       </div>
 
@@ -80,6 +85,7 @@ import RichField from '../components/RichField.astro';
               <p class="lead" id="paneLead">연 모임과 신청한 사람들이 여기 모여요.</p>
             </div>
             <div class="head-actions">
+              <button class="btn ghost small" id="reloadBtn">새로고침</button>
               <button class="btn small" id="newBtn">새 모임</button>
               <button class="btn ghost small" id="logoutBtn">로그아웃</button>
             </div>
@@ -411,6 +417,7 @@ import RichField from '../components/RichField.astro';
 
   const { API_BASE, SITE_URL, CONTACT_EMAIL } = JSON.parse(document.getElementById('host-config').textContent);
   const $ = (id) => document.getElementById(id);
+  const feedback = window.consoleFeedback;
   const TOKEN_KEY = 'prologue.host.token';
   /*
    * 액세스 토큰은 30분짜리다(application.yaml: access-token-expiry).
@@ -543,15 +550,12 @@ import RichField from '../components/RichField.astro';
    */
   function pending(btn, label) {
     if (!btn) return () => {};
-    const html = btn.innerHTML;
-    const was = btn.disabled;
-    btn.disabled = true;
-    btn.innerHTML = `<i class="spin" aria-hidden="true"></i>${esc(label)}`;
-    return () => { btn.innerHTML = html; btn.disabled = was; };
+    return feedback.pending(btn, label);
   }
 
   const view = (name) => {
     for (const v of ['list', 'detail', 'new', 'recap']) $(`v-${v}`).hidden = v !== name;
+    $('reloadBtn').hidden = name !== 'list';
   };
 
   /**
@@ -572,7 +576,7 @@ import RichField from '../components/RichField.astro';
 
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
-    if (res.status === 401) { logout(); throw new Error('다시 로그인해 주세요'); }
+    if (res.status === 401) { logout(); throw Object.assign(new Error('다시 로그인해 주세요'), { auth: true }); }
     if (!res.ok) throw new Error(data?.message || `요청이 실패했어요 (${res.status})`);
     return data;
   }
@@ -777,7 +781,19 @@ import RichField from '../components/RichField.astro';
 
   // ── 목록 ────────────────────────────────────────────────
   async function loadList() {
-    const r = await api('/meetups/mine');
+    const newDisabled = $('newBtn').disabled;
+    $('newBtn').disabled = true;
+    const done = feedback.loading($('list'), { variant: 'cards', label: '내 모임을 불러오고 있어요', buttons: [$('reloadBtn')] });
+    try {
+      const r = await api('/meetups/mine');
+      renderList(r);
+    } finally {
+      done();
+      $('newBtn').disabled = newDisabled;
+    }
+  }
+
+  function renderList(r) {
     meetups = r.meetups || [];
     /*
      * 못 하는 일은 하기 전에 말한다.
@@ -1562,8 +1578,20 @@ import RichField from '../components/RichField.astro';
   }
 
   $('newBtn').onclick = () => openForm(null);
-  $('backFromNew').onclick = () => loadList();
-  $('backFromDetail').onclick = () => loadList();
+  async function reloadList() {
+    if ($('list').getAttribute('aria-busy') === 'true') return;
+    view('list');
+    $('paneTitle').textContent = '내 모임';
+    $('paneLead').textContent = '연 모임과 신청한 사람들이 여기 모여요.';
+    try {
+      await loadList();
+    } catch (e) {
+      if (!e.auth) feedback.error($('list'), reloadList);
+    }
+  }
+  $('reloadBtn').onclick = reloadList;
+  $('backFromNew').onclick = reloadList;
+  $('backFromDetail').onclick = reloadList;
 
   /*
    * 소개 칸 — 서식 편집기를 넣지 않았다.
@@ -2147,12 +2175,20 @@ import RichField from '../components/RichField.astro';
     } catch (e) { say(e.message, true); } finally { done(); }
   };
 
-  if (token) {
-    // 목록을 받아오는 데 성공해야 토큰이 살아 있다는 뜻이다. 그때 비로소 연다.
-    loadList()
-      .then(() => { $('checking').hidden = true; $('app').hidden = false; })
-      .catch(() => logout());
+  async function restoreSession() {
+    const done = feedback.loading($('checkingContent'), { variant: 'spinner', label: '로그인을 확인하고 있어요' });
+    try {
+      await loadList();
+      $('checking').hidden = true;
+      $('app').hidden = false;
+    } catch (e) {
+      // 통신 실패로 로그인 정보를 지우지 않는다. 같은 자리에서 다시 확인할 수 있다.
+      if (!e.auth) feedback.error($('checkingContent'), restoreSession);
+    } finally {
+      done();
+    }
   }
+  if (token) restoreSession();
 </script>
 
 <style is:global>
@@ -2177,8 +2213,13 @@ import RichField from '../components/RichField.astro';
   .console .pane { min-width: 0; }
   .console .pane-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
   .console .pane-head h1 { font-size: 1.5rem; }
-  .console .head-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .console .head-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .console .lead { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+  @media (max-width: 640px) {
+    .console .pane-head { flex-direction: column; gap: 14px; }
+    .console .head-actions { width: 100%; justify-content: flex-start; }
+    .console .card .thumb { width: 84px; height: 72px; align-self: flex-start; }
+  }
   .console .back { background: none; border: 0; color: var(--muted); font: inherit; cursor: pointer; padding: 0 0 22px; }
 
   /* 목록 카드 */

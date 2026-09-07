@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import ConsoleFeedback from '../components/ConsoleFeedback.astro';
 
 // 어드민 공용 셸 — 로그인(이메일 인증코드)·API 헬퍼·사이드바 내비를 제공한다.
 // 각 페이지는 패널 내용 마크업과 window.pageLoad()만 구현하면 된다.
@@ -32,6 +33,7 @@ const tabs = tabsProp ?? [
     <link rel="icon" href="/favicon.png" />
   </head>
   <body class="admin-body admin-locked">
+    <ConsoleFeedback />
     <aside class="admin-side">
       <a class="admin-brand" href={home}>
         <img src="/brand-mark.webp" alt="" width="26" height="19" />
@@ -39,7 +41,7 @@ const tabs = tabsProp ?? [
       </a>
       <nav class="admin-nav">
         {tabs.map((t) => (
-          <a href={t.href} class:list={['admin-tab', { active: path === t.href }]}>{t.label}</a>
+          <a href={t.href} class:list={['admin-tab', { active: path === t.href }]} aria-current={path === t.href ? 'page' : undefined}>{t.label}</a>
         ))}
       </nav>
       <a class="admin-side-foot" href="/" target="_blank" rel="noopener">prologue.day ↗</a>
@@ -147,12 +149,19 @@ const tabs = tabsProp ?? [
       }
 
       // 페이지 스크립트가 쓰는 공용 훅
-      window.admin = { $, api, showLogin };
+      const feedback = window.consoleFeedback;
+      function loading(target, options = {}) {
+        return feedback.loading(target, {
+          ...options,
+          buttons: [$('refresh'), ...document.querySelectorAll('.admin-search button')],
+        });
+      }
+      window.admin = { $, api, showLogin, ...feedback, loading };
 
       $('send-code').addEventListener('click', async () => {
         const email = $('email').value.trim();
         if (!email) return;
-        $('send-code').disabled = true;
+        const done = feedback.pending($('send-code'), '코드 보내는 중');
         try {
           await api('/auth/email/request-code', { method: 'POST', body: JSON.stringify({ email }) });
           $('code-row').hidden = false;
@@ -161,7 +170,7 @@ const tabs = tabsProp ?? [
         } catch (e) {
           $('login-msg').textContent = e.message;
         } finally {
-          $('send-code').disabled = false;
+          done();
         }
       });
 
@@ -172,7 +181,7 @@ const tabs = tabsProp ?? [
           $('login-msg').textContent = '이메일과 6자리 코드를 확인해 주세요.';
           return;
         }
-        $('verify').disabled = true;
+        const done = feedback.pending($('verify'), '로그인 중');
         try {
           const data = await api('/auth/email/verify', { method: 'POST', body: JSON.stringify({ email, code }) });
           token = data.accessToken;
@@ -183,7 +192,7 @@ const tabs = tabsProp ?? [
         } catch (e) {
           $('login-msg').textContent = e.message;
         } finally {
-          $('verify').disabled = false;
+          done();
         }
       });
 
@@ -245,7 +254,9 @@ const tabs = tabsProp ?? [
         display: flex;
         flex-direction: column;
         gap: 2px;
+        scrollbar-width: none;
       }
+      .admin-nav::-webkit-scrollbar { display: none; }
       .admin-tab {
         padding: 9px 10px;
         font-size: 14px;
@@ -378,6 +389,7 @@ const tabs = tabsProp ?? [
       .admin-row-actions {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 6px;
         flex-shrink: 0;
       }
@@ -488,8 +500,8 @@ const tabs = tabsProp ?? [
         padding: 0 18px;
         border: 0;
         border-radius: 10px;
-        background: var(--terracotta);
-        color: #fff;
+        background: var(--terracotta-strong);
+        color: var(--on-point);
         font-size: 14px;
         font-weight: 700;
         cursor: pointer;
@@ -685,6 +697,14 @@ const tabs = tabsProp ?? [
         .admin-row-actions {
           justify-content: flex-end;
         }
+      }
+      @media (max-width: 480px) {
+        .admin-side { flex-direction: column; align-items: stretch; gap: 10px; }
+        .admin-brand { padding-left: 8px; }
+        .admin-nav { padding-bottom: 2px; }
+        .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .admin-stat { padding: 16px; }
+        .admin-panel-head { flex-wrap: wrap; }
       }
     </style>
   </body>

@@ -14,7 +14,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     window.pageLoad = async function () {
       const { $, api, showLogin } = window.admin;
       const listEl = $('meetup-list');
-      listEl.textContent = '불러오는 중...';
+      if (listEl.getAttribute('aria-busy') === 'true') return;
+      const done = window.admin.loading(listEl, { label: '모임 목록을 불러오고 있어요' });
       try {
         const data = await api('/admin/meetups');
         /*
@@ -28,7 +29,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         render([...data.meetups].sort((a, b) => rank(a) - rank(b)));
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
-        listEl.textContent = e.message;
+        window.admin.error(listEl, window.pageLoad);
+      } finally {
+        done();
       }
     };
 
@@ -38,7 +41,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const listEl = $('meetup-list');
       listEl.textContent = '';
       if (!items.length) {
-        listEl.textContent = '등록된 모임이 없어요.';
+        window.admin.empty(listEl, '등록된 모임이 없어요.');
         return;
       }
       for (const m of items) {

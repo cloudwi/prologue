@@ -26,13 +26,16 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     window.pageLoad = async function () {
       const { $, api, showLogin } = window.admin;
       const listEl = $('setting-list');
-      listEl.textContent = '불러오는 중...';
+      if (listEl.getAttribute('aria-busy') === 'true') return;
+      const done = window.admin.loading(listEl, {});
       try {
         const data = await api('/admin/app-config');
         render(data.settings);
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
-        listEl.textContent = e.message;
+        window.admin.error(listEl, window.pageLoad);
+      } finally {
+        done();
       }
     };
 
