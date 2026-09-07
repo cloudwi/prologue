@@ -13,7 +13,7 @@ const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long
   <section class="section">
     <div class="container">
       <div class="section-label">스토리</div>
-      <h2>프롤로그가 쓰는 이야기</h2>
+      <h1 class="story-index-title">우리가 생각하는 만남.</h1>
       <p class="desc">만남과 가치관에 대한 생각들, 그리고 프롤로그를 만들어가는 뒷이야기를 기록합니다.</p>
       <div class="post-list">
         {
@@ -29,3 +29,11 @@ const dateFmt = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long
     </div>
   </section>
 </Base>
+
+<style>
+  .story-index-title { margin-top: 18px; font-size: clamp(32px, 4vw, 48px); }
+  .post-card:first-child { grid-column: 1 / -1; padding: 36px; background: var(--warm-soft); }
+  .post-card:first-child h3 { font-size: clamp(22px, 3vw, 30px); max-width: 680px; }
+  .post-card .meta { font-size: 12px; }
+  @media (max-width: 560px) { .post-card:first-child { padding: 24px; } }
+</style>

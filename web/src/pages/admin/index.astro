@@ -1,9 +1,15 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icon from '../../components/Icon.astro';
 ---
 
 <AdminLayout title="대시보드">
   <div id="stats" class="admin-stats"></div>
+  <section class="admin-quick-section" aria-labelledby="quick-title"><h2 id="quick-title">바로 확인하기</h2><div class="admin-quick-links">
+    <a href="/admin/meetups"><Icon name="calendar" size={23} /><div><strong>모임 운영</strong><span>모임과 후기 심사</span></div></a>
+    <a href="/admin/reports"><Icon name="flag" size={23} /><div><strong>신고 검토</strong><span>신고 내용과 처리 상태</span></div></a>
+    <a href="/admin/photos"><Icon name="image" size={23} /><div><strong>사진 검수</strong><span>공개 프로필 사진 확인</span></div></a>
+  </div></section>
 
   <script is:inline>
     // innerHTML 금지 — 전부 textContent로만 그린다.
@@ -16,22 +22,23 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         const s = await api('/admin/stats');
         const femaleRatio = s.totalMembers > 0 ? Math.round((s.femaleMembers / s.totalMembers) * 100) : null;
         const tiles = [
-          { label: '전체 회원', value: s.totalMembers },
+          { label: '전체 회원', value: s.totalMembers, href: '/admin/members' },
           {
             label: '여성 비율',
             value: femaleRatio == null ? '—' : femaleRatio + '%',
             hint: '여 ' + s.femaleMembers + ' · 남 ' + s.maleMembers,
           },
-          { label: '오늘 가입', value: s.joinedToday },
+          { label: '오늘 가입', value: s.joinedToday, href: '/admin/members' },
           { label: '주간 활성', value: s.weeklyActive, hint: '최근 7일 접속 계정' },
-          { label: '오늘 답변', value: s.answersToday },
+          { label: '오늘 답변', value: s.answersToday, href: '/admin/answers' },
           { label: '오늘 소개 카드', value: s.revealsToday, hint: '0에 가까우면 성비·풀 부족 신호' },
-          { label: '대기 신고', value: s.pendingReports, alert: s.pendingReports > 0 },
-          { label: '정지 계정', value: s.suspendedAccounts },
+          { label: '대기 신고', value: s.pendingReports, alert: s.pendingReports > 0, href: '/admin/reports' },
+          { label: '정지 계정', value: s.suspendedAccounts, href: '/admin/members' },
         ];
         el.textContent = '';
         for (const t of tiles) {
-          const tile = document.createElement('div');
+          const tile = document.createElement(t.href ? 'a' : 'div');
+          if (t.href) tile.href = t.href;
           tile.className = 'admin-stat';
           const value = document.createElement('div');
           value.className = 'admin-stat-value' + (t.alert ? ' alert' : '');
@@ -39,7 +46,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           const label = document.createElement('div');
           label.className = 'admin-stat-label';
           label.textContent = t.label;
-          tile.append(value, label);
+          tile.append(label, value);
           if (t.hint) {
             const hint = document.createElement('div');
             hint.className = 'admin-stat-hint';

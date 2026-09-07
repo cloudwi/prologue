@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import ConsoleFeedback from '../components/ConsoleFeedback.astro';
+import Icon from '../components/Icon.astro';
 
 // 어드민 공용 셸 — 로그인(이메일 인증코드)·API 헬퍼·사이드바 내비를 제공한다.
 // 각 페이지는 패널 내용 마크업과 window.pageLoad()만 구현하면 된다.
@@ -19,6 +20,18 @@ const tabs = tabsProp ?? [
   { href: '/admin/ink', label: '잉크' },
   { href: '/admin/settings', label: '앱 설정' },
 ];
+const icons = ['grid', 'message', 'lines', 'image', 'flag', 'calendar', 'people', 'drop', 'sliders'];
+const descriptions: Record<string, string> = {
+  '/admin': '회원과 서비스의 현황을 한눈에 확인하세요.',
+  '/admin/questions': '매일 도착할 질문을 준비하고 관리하세요.',
+  '/admin/answers': '회원이 남긴 문답을 확인하세요.',
+  '/admin/photos': '공개된 프로필 사진을 살펴보세요.',
+  '/admin/reports': '접수된 신고를 확인하고 필요한 조치를 진행하세요.',
+  '/admin/meetups': '모임과 후기의 심사, 운영 상태를 관리하세요.',
+  '/admin/members': '회원을 찾고 프로필과 계정 상태를 확인하세요.',
+  '/admin/ink': '잉크 이벤트에 제출된 내용을 검토하세요.',
+  '/admin/settings': '앱 버전과 이용 안내 설정을 관리하세요.',
+};
 ---
 
 <!doctype html>
@@ -31,23 +44,27 @@ const tabs = tabsProp ?? [
     <meta name="robots" content="noindex,nofollow" />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="/favicon.png" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   </head>
   <body class="admin-body admin-locked">
     <ConsoleFeedback />
+    <a class="skip-link" href="#admin-content">본문으로 건너뛰기</a>
     <aside class="admin-side">
       <a class="admin-brand" href={home}>
         <img src="/brand-mark.webp" alt="" width="26" height="19" />
         <span>프롤로그 <em>{brandSuffix}</em></span>
       </a>
-      <nav class="admin-nav">
-        {tabs.map((t) => (
-          <a href={t.href} class:list={['admin-tab', { active: path === t.href }]} aria-current={path === t.href ? 'page' : undefined}>{t.label}</a>
+      <p class="admin-nav-label">관리 메뉴</p>
+      <nav class="admin-nav" aria-label="관리자 메뉴">
+        {tabs.map((t, i) => (
+          <a href={t.href} class:list={['admin-tab', { active: path === t.href }]} aria-current={path === t.href ? 'page' : undefined}><Icon name={icons[i] ?? 'grid'} size={19} /><span>{t.label}</span></a>
         ))}
       </nav>
-      <a class="admin-side-foot" href="/" target="_blank" rel="noopener">prologue.day ↗</a>
+      <a class="admin-side-foot" href="/" target="_blank" rel="noopener">웹사이트 보기 <Icon name="external" size={17} /></a>
     </aside>
 
-    <main class="admin-main">
+    <main class="admin-main" id="admin-content" tabindex="-1">
       <!-- 로그인 — 앱과 같은 이메일 인증코드 방식. 이때는 사이드바를 감춰(body.admin-locked)
            메뉴 구성을 광고하지 않고, 카드 하나만 화면 정중앙에 둔다. -->
       <section id="login" class="admin-login" hidden>
@@ -69,10 +86,10 @@ const tabs = tabsProp ?? [
 
       <section id="panel" hidden>
         <div class="admin-panel-head">
-          <h2 class="admin-sub">{title}</h2>
+          <div><p class="admin-eyebrow">서비스 운영</p><h1 class="admin-sub">{title}</h1><p class="admin-page-description">{descriptions[path] ?? ''}</p></div>
           <div class="admin-panel-actions">
-            <button type="button" class="admin-btn ghost small" id="refresh">새로고침</button>
-            <button type="button" class="admin-btn ghost small" id="logout">로그아웃</button>
+            <button type="button" class="admin-btn ghost small" id="refresh"><Icon name="refresh" size={16} />새로고침</button>
+            <button type="button" class="admin-btn ghost small" id="logout"><Icon name="logout" size={16} />로그아웃</button>
           </div>
         </div>
         <slot />
@@ -204,12 +221,11 @@ const tabs = tabsProp ?? [
     </script>
 
     <style is:global>
-      /* 운영 도구는 멋 부리지 않는다 — 시스템 글씨체, 낮은 채도, 정보 밀도. */
+      /* 공개 웹과 같은 서체·표면을 쓰고, 운영에 필요한 정보의 위계를 분명히 한다. */
       .admin-body,
       .admin-body h1,
       .admin-body h2 {
-        font-family:
-          -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+        font-family: var(--sans);
       }
       .admin-body {
         min-height: 100vh;
@@ -224,14 +240,14 @@ const tabs = tabsProp ?? [
 
       /* ── 사이드바 ── */
       .admin-side {
-        width: 216px;
+        width: 232px;
         flex-shrink: 0;
         position: sticky;
         top: 0;
         height: 100vh;
         display: flex;
         flex-direction: column;
-        padding: 22px 14px;
+        padding: 28px 16px 20px;
         border-right: 1px solid var(--border);
         background: var(--surface);
       }
@@ -240,8 +256,8 @@ const tabs = tabsProp ?? [
         align-items: center;
         gap: 9px;
         padding: 4px 10px 18px;
-        font-size: 15px;
-        font-weight: 800;
+        font-size: 16px;
+        font-weight: 700;
         color: var(--ink);
         text-decoration: none;
         letter-spacing: -0.2px;
@@ -253,14 +269,19 @@ const tabs = tabsProp ?? [
       .admin-nav {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 5px;
         scrollbar-width: none;
       }
       .admin-nav::-webkit-scrollbar { display: none; }
+      .admin-nav-label { padding: 24px 12px 12px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .08em; }
       .admin-tab {
-        padding: 9px 10px;
-        font-size: 14px;
-        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 44px;
+        padding: 10px 12px;
+        font-size: 13px;
+        border-radius: var(--radius-control);
         color: var(--muted);
         text-decoration: none;
       }
@@ -274,6 +295,9 @@ const tabs = tabsProp ?? [
         font-weight: 700;
       }
       .admin-side-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         margin-top: auto;
         padding: 10px;
         font-size: 12px;
@@ -288,24 +312,28 @@ const tabs = tabsProp ?? [
       .admin-main {
         flex: 1;
         min-width: 0;
-        max-width: 980px;
-        padding: 28px 32px 64px;
+        max-width: 1400px;
+        padding: 40px 40px 72px;
+        margin-inline: auto;
       }
       .admin-panel-head {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 12px;
-        margin-bottom: 18px;
+        margin-bottom: 32px;
       }
       .admin-sub {
-        font-size: 20px;
-        font-weight: 800;
-        letter-spacing: -0.3px;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -1px;
       }
+      .admin-eyebrow { margin-bottom: 8px; color: var(--terracotta-strong); font-size: 11px; font-weight: 600; }
+      .admin-page-description { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.7; }
       .admin-panel-actions {
         display: flex;
-        gap: 6px;
+        gap: 8px;
+        padding-top: 26px;
       }
       .admin-desc {
         color: var(--muted);
@@ -341,9 +369,9 @@ const tabs = tabsProp ?? [
       .admin-card {
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 14px;
+        border-radius: var(--radius-card);
         padding: 22px;
-        box-shadow: 0 1px 2px rgba(16, 24, 32, 0.04);
+        box-shadow: var(--shadow-soft);
       }
       .admin-list {
         padding: 6px 22px;
@@ -354,7 +382,7 @@ const tabs = tabsProp ?? [
         display: flex;
         align-items: center;
         gap: 16px;
-        padding: 14px 0;
+        padding: 20px 0;
       }
       .admin-row + .admin-row {
         border-top: 1px solid var(--border);
@@ -440,6 +468,9 @@ const tabs = tabsProp ?? [
         border-color: color-mix(in srgb, #2e9e5b 30%, transparent);
         color: #227945;
       }
+      @media (prefers-color-scheme: dark) {
+        .admin-badge.ok { color: #7bdd9c; }
+      }
       .admin-badge.warn {
         background: color-mix(in srgb, var(--terracotta) 12%, transparent);
         border-color: color-mix(in srgb, var(--terracotta) 35%, transparent);
@@ -496,10 +527,14 @@ const tabs = tabsProp ?? [
         margin: 0 0 14px;
       }
       .admin-btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        gap: 7px;
         height: 42px;
         padding: 0 18px;
         border: 0;
-        border-radius: 10px;
+        border-radius: var(--radius-control);
         background: var(--terracotta-strong);
         color: var(--on-point);
         font-size: 14px;
@@ -519,7 +554,7 @@ const tabs = tabsProp ?? [
         color: var(--terracotta-strong);
       }
       .admin-btn.small {
-        height: 32px;
+        height: 36px;
         padding: 0 12px;
         font-size: 12.5px;
         border-radius: 8px;
@@ -546,22 +581,30 @@ const tabs = tabsProp ?? [
       }
 
       /* ── 대시보드 스탯 타일 ── */
-      .admin-stats {
+      .admin-stats, .admin-stats .feedback-layout--stats {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
       }
+      .admin-stats .feedback-placeholder--stats { min-height: 144px; border-radius: var(--radius-card); }
       .admin-stat {
+        display: block;
+        position: relative;
+        min-height: 144px;
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 18px 20px;
-        box-shadow: 0 1px 2px rgba(16, 24, 32, 0.04);
+        border-radius: var(--radius-card);
+        padding: 22px;
+        box-shadow: var(--shadow-soft);
       }
+      a.admin-stat:hover { border-color: var(--terracotta-strong); }
+      a.admin-stat::after { content: '↗'; position: absolute; top: 18px; right: 20px; color: var(--muted); font-size: 13px; }
       .admin-stat-value {
         color: var(--ink);
-        font-size: 28px;
-        font-weight: 800;
+        font-size: 32px;
+        font-weight: 650;
+        margin-top: 16px;
+        line-height: 1.1;
         font-variant-numeric: tabular-nums;
         letter-spacing: -0.5px;
       }
@@ -570,14 +613,23 @@ const tabs = tabsProp ?? [
       }
       .admin-stat-label {
         color: var(--muted);
-        font-size: 13px;
-        margin-top: 2px;
+        font-size: 12px;
+        padding-right: 12px;
       }
       .admin-stat-hint {
         color: var(--muted);
-        font-size: 12px;
-        margin-top: 6px;
+        font-size: 11px;
+        margin-top: 10px;
       }
+      .admin-quick-section { margin-top: 36px; }
+      .admin-quick-section h2 { font-size: 16px; margin-bottom: 16px; }
+      .admin-quick-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+      .admin-quick-links a { display: flex; align-items: center; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+      .admin-quick-links a > svg { color: var(--terracotta-strong); flex-shrink: 0; }
+      .admin-quick-links a:hover { border-color: var(--terracotta-strong); }
+      .admin-quick-links strong { display: block; font-size: 13px; }
+      .admin-quick-links span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+      @media (max-width: 1150px) { .admin-stats, .admin-stats .feedback-layout--stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .admin-main { padding: 32px 28px 64px; } .admin-quick-links { grid-template-columns: 1fr; } }
 
       /* ── 회원 프로필 상세(펼침) ── */
       .admin-profile-detail {
@@ -687,6 +739,7 @@ const tabs = tabsProp ?? [
         .admin-side-foot {
           display: none;
         }
+        .admin-nav-label { display: none; }
         .admin-main {
           padding: 20px 16px 48px;
         }
@@ -705,6 +758,11 @@ const tabs = tabsProp ?? [
         .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .admin-stat { padding: 16px; }
         .admin-panel-head { flex-wrap: wrap; }
+        .admin-panel-actions { padding-top: 0; }
+        .admin-sub { font-size: 26px; }
+        .admin-tab { gap: 7px; min-height: 40px; }
+        .admin-tab svg { width: 16px; }
+        .admin-stat-value { font-size: 30px; }
       }
     </style>
   </body>
