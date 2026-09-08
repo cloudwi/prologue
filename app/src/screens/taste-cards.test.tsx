@@ -47,7 +47,7 @@ it('네 번째 선택지를 저장하고 다음 세 선택지 카드로 넘어�
   await fireEvent.press(await screen.findByText('친구 만나기'));
   await screen.findByText('다음 질문', {}, { timeout: 2500 });
   expect(chooseTaste).toHaveBeenCalledWith(1001, 'D', undefined, 'daily-session');
-  expect(screen.getByText('9장 더 답하면 한 명 더 소개해 드려요')).toBeTruthy();
+  expect(screen.getByText('1 / 10')).toBeTruthy();
   expect(screen.getByText('오후')).toBeTruthy();
 });
 
@@ -64,10 +64,10 @@ it('저장 실패 시 같은 카드에 남아 다시 시도할 수 있다', asyn
 });
 
 it('소개할 후보가 없으면 자동 소개 안내만 보이고 수령 버튼이나 보유 수량은 없다', async () => {
-  jest.mocked(startTasteSession).mockResolvedValue({ ...deck, cards: [], reward: { ...deck.reward!, pending: 1 } });
+  jest.mocked(startTasteSession).mockResolvedValue({ ...deck, cards: [], reward: { ...deck.reward!, pending: 1, remaining: 0 } });
   await render(<TasteCardsScreen />);
-  await screen.findByText('지금은 소개할 상대를 찾고 있어요. 인연이 닿으면 자동으로 소개해 드릴게요.');
-  expect(screen.getByText('매일 정오에 새 카드 10개 · 모두 답하면 추가 한 명')).toBeTruthy();
+  await screen.findByText('인연 찾는 중');
+  expect(screen.getByLabelText('매일 정오에 새 카드 10개')).toBeTruthy();
   expect(screen.queryByText(/소개권/)).toBeNull();
   expect(screen.queryByText(/보유/)).toBeNull();
 });
@@ -76,9 +76,9 @@ it('선택 후에만 집계된 취향을 조용히 보여준다', async () => {
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42 });
   await render(<TasteCardsScreen />);
   await screen.findByText('취미');
-  expect(screen.queryByText('42%가 같은 취향을 골랐어요')).toBeNull();
+  expect(screen.queryByText('42%')).toBeNull();
   await fireEvent.press(screen.getByText('취미'));
-  await screen.findByText('42%가 같은 취향을 골랐어요');
+  await screen.findByText('42%');
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
   await screen.findByText('다음 질문', {}, { timeout: 2500 });
   expect(startTasteSession).toHaveBeenCalledTimes(1);

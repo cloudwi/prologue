@@ -52,7 +52,7 @@ export default function TasteCardsScreen() {
   const isIntro = intro === '1';
 
   const sessionId = useRef<string | undefined>(undefined);
-  const [statistic, setStatistic] = useState<string | null>(null);
+  const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -149,9 +149,8 @@ export default function TasteCardsScreen() {
     try {
       if (!sessionId.current) throw new Error('Missing taste session');
       const progress = await chooseTaste(card.id, option, note.trim() || undefined, sessionId.current);
-      setStatistic(progress.selectedPercentage != null
-        ? `${progress.selectedPercentage}%가 같은 취향을 골랐어요`
-        : '아직 취향이 모이고 있어요');
+      setStatistic(progress.selectedPercentage ?? null);
+      setRewardStatus(progress.reward ?? null);
       await new Promise((resolve) => setTimeout(resolve, HOLD_MS));
       setRewardStatus(progress.reward ?? null);
       track('taste_card_chosen', { noted });
@@ -200,18 +199,44 @@ export default function TasteCardsScreen() {
       </View>
 
       {rewardStatus && (
-        <View style={[styles.rewardPanel, { backgroundColor: c.backgroundElement }]}>
-          <Text style={[styles.rewardTitle, { color: c.text }]}>
-            {rewardStatus.remaining === 0 ? '오늘의 취향 10개를 모두 남겼어요' : `${rewardStatus.remaining}장 더 답하면 한 명 더 소개해 드려요`}
-          </Text>
-          <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
-            매일 정오에 새 카드 10개 · 모두 답하면 추가 한 명
-          </Text>
-          {rewardStatus.pending > 0 && (
-            <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
-              지금은 소개할 상대를 찾고 있어요. 인연이 닿으면 자동으로 소개해 드릴게요.
-            </Text>
-          )}
+        <View style={styles.journey}>
+          <View style={styles.journeyLabels}>
+            <Text style={[styles.headerAction, { color: c.text }]}>오늘의 취향</Text>
+            <View style={styles.clockLabel} accessible accessibilityLabel="매일 정오에 새 카드 10개">
+              <Ionicons name="refresh-outline" size={14} color={c.textSecondary} />
+              <Ionicons name="sunny-outline" size={16} color={c.textSecondary} />
+              <Text style={[styles.skip, { color: c.textSecondary }]}>12:00</Text>
+            </View>
+          </View>
+          <View style={styles.journeyTrack}>
+            <View style={styles.progressGroup} accessible accessibilityRole="progressbar"
+              accessibilityLabel="취향 카드 완료. 10개를 모두 답하면 한 명 추가 소개"
+              accessibilityValue={{ min: 0, max: 10, now: 10 - rewardStatus.remaining }}>
+              <View style={styles.stamps}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <View key={i} style={[styles.stamp, {
+                    backgroundColor: i < 10 - rewardStatus.remaining ? c.text : c.backgroundSelected,
+                  }]}>
+                    {i < 10 - rewardStatus.remaining && <Ionicons name="checkmark" size={12} color={c.background} />}
+                  </View>
+                ))}
+              </View>
+              <Text style={[styles.progressCount, { color: c.textSecondary }]}>{10 - rewardStatus.remaining} / 10</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={18} color={c.textSecondary} />
+            <View style={styles.destination} accessible accessibilityLabel={rewardStatus.remaining > 0
+              ? '완료하면 한 명 추가 소개' : rewardStatus.pending > 0 ? '완료. 소개할 상대를 찾는 중' : '추가 소개 완료'}>
+              <View style={[styles.personCircle, { backgroundColor: c.backgroundSelected }]}>
+                <Ionicons name={rewardStatus.remaining === 0 && rewardStatus.pending > 0 ? 'hourglass-outline' : 'person-outline'} size={24} color={c.text} />
+                <View style={[styles.personBadge, { backgroundColor: c.text }]}>
+                  {rewardStatus.remaining === 0 && rewardStatus.pending === 0
+                    ? <Ionicons name="checkmark" size={12} color={c.background} />
+                    : <Text style={[styles.badgeText, { color: c.background }]}>+1</Text>}
+                </View>
+              </View>
+              <Text style={[styles.skip, { color: c.textSecondary }]}>{rewardStatus.remaining === 0 && rewardStatus.pending > 0 ? '인연 찾는 중' : '추가 소개'}</Text>
+            </View>
+          </View>
         </View>
       )}
 
@@ -238,7 +263,7 @@ export default function TasteCardsScreen() {
             <Ionicons name="checkmark-circle-outline" size={44} color={c.primary} />
             <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>카드를 다 넘겼어요</Text>
             <Text style={[styles.emptyHint, { color: c.textSecondary }]}>
-              다음 정오에 새 카드 10개가 도착해요.
+              ☀ 12:00  ↻
             </Text>
             <Pressable
               onPress={done}
@@ -283,11 +308,19 @@ export default function TasteCardsScreen() {
                           },
                         ]}
                       >
+                        {picked && statistic != null && (
+                          <View pointerEvents="none" style={[styles.voteFill, { width: `${statistic}%`, backgroundColor: c.primaryText }]} />
+                        )}
                         <View style={styles.optionRow}>
                           <Text style={[styles.optionText, { color: picked ? c.primaryText : c.text }]}>
                             {label}
                           </Text>
-                          {picked ? (
+                          {picked && statistic != null ? (
+                            <View accessible accessibilityLabel={`${statistic}%가 같은 취향을 골랐어요`} style={styles.voteLabel}>
+                              <Ionicons name="people-outline" size={14} color={c.primaryText} />
+                              <Text style={[styles.headerAction, { color: c.primaryText }]}>{statistic}%</Text>
+                            </View>
+                          ) : picked ? (
                             <Animated.View entering={ZoomIn.duration(160)}>
                               <Ionicons name="checkmark-circle" size={20} color={c.primaryText} />
                             </Animated.View>
@@ -299,9 +332,7 @@ export default function TasteCardsScreen() {
                 </View>
               </Animated.View>
 
-              {statistic && (
-                <Text accessibilityLiveRegion="polite" style={[styles.noteHint, { color: c.textSecondary }]}>{statistic}</Text>
-              )}
+
 
               {noteOpen ? (
                 <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
@@ -342,7 +373,7 @@ export default function TasteCardsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center' },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   pad: { paddingHorizontal: 32 },
@@ -353,9 +384,20 @@ const styles = StyleSheet.create({
   reward: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.pill },
   rewardText: { ...Type.caption, fontWeight: '700' },
 
-  rewardPanel: { marginHorizontal: 20, marginBottom: 8, padding: 14, borderRadius: Radius.md },
-  rewardTitle: { ...Type.label, fontWeight: '700' },
-  rewardHint: { ...Type.caption, marginTop: 5 },
+  journey: { marginHorizontal: 24, paddingVertical: 12 },
+  journeyLabels: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  clockLabel: { flexDirection: 'row', gap: 4, alignItems: 'center' },
+  journeyTrack: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  progressGroup: { flex: 1 },
+  stamps: { flexDirection: 'row', gap: 4 },
+  stamp: { flex: 1, height: 28, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
+  progressCount: { ...Type.caption, marginTop: 8 },
+  destination: { alignItems: 'center', gap: 8 },
+  personCircle: { width: 48, height: 48, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  personBadge: { position: 'absolute', right: -4, bottom: -2, borderRadius: Radius.pill, minWidth: 24, height: 20, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { ...Type.caption, fontWeight: '600' },
+  voteFill: { position: 'absolute', left: 0, top: 0, bottom: 0, opacity: 0.16 },
+  voteLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   body: { flexGrow: 1, paddingTop: 20, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
   intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },
@@ -363,8 +405,8 @@ const styles = StyleSheet.create({
 
   options: { marginTop: 28, gap: 12 },
   optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  option: { borderRadius: Radius.md, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center' },
-  optionText: { ...Type.read, fontWeight: '600', textAlign: 'center' },
+  option: { overflow: 'hidden', borderRadius: Radius.md, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center' },
+  optionText: { flexShrink: 1, ...Type.read, fontWeight: '600', textAlign: 'center' },
 
   noteOpen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 },
   noteOpenLabel: { ...Type.caption },
