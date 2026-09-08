@@ -61,10 +61,11 @@ data class TasteProgressResponse(
     val peerArrived: Boolean,
     val reward: TasteRewardView? = null,
     val selectedPercentage: Int? = null,
+    val optionPercentages: Map<TasteOption, Int>? = null,
 ) {
     companion object {
         fun from(progress: TasteDeckProgress, peerArrived: Boolean): TasteProgressResponse =
-            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived, progress.reward, progress.selectedPercentage)
+            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived, progress.reward, progress.selectedPercentage, progress.optionPercentages)
     }
 }
 

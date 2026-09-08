@@ -44,6 +44,7 @@ export async function getTasteSession(id: string): Promise<TasteDeck> {
 
 export type TasteProgress = {
   selectedPercentage?: number | null;
+  optionPercentages?: Partial<Record<TasteOption, number>> | null;
   answered: number;
   total: number;
   reward?: TasteReward;

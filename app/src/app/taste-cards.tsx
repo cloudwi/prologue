@@ -46,6 +46,7 @@ export default function TasteCardsScreen() {
   const isIntro = intro === '1';
 
   const sessionId = useRef<string | undefined>(undefined);
+  const [percentages, setPercentages] = useState<Partial<Record<TasteOption, number>> | null>(null);
   const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
@@ -123,6 +124,7 @@ export default function TasteCardsScreen() {
   /** 다음 장으로. 묶음을 다 넘겼으면 서버에서 다음 묶음을 받아온다. */
   function advance() {
     setStatistic(null);
+    setPercentages(null);
     setNote('');
     setNoteOpen(false);
     setChosen(null);
@@ -144,6 +146,7 @@ export default function TasteCardsScreen() {
       if (!sessionId.current) throw new Error('Missing taste session');
       const progress = await chooseTaste(card.id, option, note.trim() || undefined, sessionId.current);
       setStatistic(progress.selectedPercentage ?? null);
+      setPercentages(progress.optionPercentages ?? null);
       setRewardStatus(progress.reward ?? null);
       track('taste_card_chosen', { noted });
       if (progress.milestoneReached) {
@@ -280,7 +283,7 @@ export default function TasteCardsScreen() {
                 <View style={styles.options}>
                   {(card.options ?? [{ id: 'A' as const, label: card.optionA }, { id: 'B' as const, label: card.optionB }]).map(({ id: option, label }) => {
                     const picked = chosen === option;
-                    const passed = chosen != null && !picked;
+                    const percentage = chosen != null ? percentages?.[option] ?? (picked ? statistic : null) : null;
                     return (
                       <Pressable
                         key={option}
@@ -292,30 +295,25 @@ export default function TasteCardsScreen() {
                           styles.option,
                           {
                             // 고른 쪽은 색이 차오르고, 고르지 않은 쪽은 조용히 물러난다.
-                            backgroundColor: picked ? c.primary : pressed ? c.backgroundSelected : c.backgroundElement,
+                            backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
                             borderColor: picked ? c.primary : c.border,
-                            opacity: passed ? 0.35 : 1,
-                            transform: [{ scale: picked ? 1.02 : pressed ? 0.99 : 1 }],
+                            opacity: 1,
+                            transform: [{ scale: pressed ? 0.99 : 1 }],
                           },
                         ]}
                       >
-                        {picked && statistic != null && (
-                          <View pointerEvents="none" style={[styles.voteFill, { width: `${statistic}%`, backgroundColor: c.primaryText }]} />
+                        {percentage != null && (
+                          <Animated.View entering={FadeIn.duration(220)} pointerEvents="none"
+                            style={[styles.voteFill, { width: `${percentage}%`, backgroundColor: picked ? c.primary : c.textSecondary }]} />
                         )}
                         <View style={styles.optionRow}>
-                          <Text style={[styles.optionText, { color: picked ? c.primaryText : c.text }]}>
-                            {label}
-                          </Text>
-                          {picked && statistic != null ? (
-                            <View accessible accessibilityLabel={`${statistic}%가 같은 취향을 골랐어요`} style={styles.voteLabel}>
-                              <Ionicons name="people-outline" size={14} color={c.primaryText} />
-                              <Text style={[styles.headerAction, { color: c.primaryText }]}>{statistic}%</Text>
-                            </View>
-                          ) : picked ? (
-                            <Animated.View entering={ZoomIn.duration(160)}>
-                              <Ionicons name="checkmark-circle" size={20} color={c.primaryText} />
-                            </Animated.View>
-                          ) : null}
+                          <Text style={[styles.optionText, { color: c.text }]}>{label}</Text>
+                          <View style={styles.voteLabel}>
+                            {picked && <Ionicons name="checkmark-circle" size={18} color={c.primaryStrong} />}
+                            {percentage != null && (
+                              <Text accessibilityLabel={`${label}, ${percentage}% 선택`} style={[styles.headerAction, { color: c.textSecondary }]}>{percentage}%</Text>
+                            )}
+                          </View>
                         </View>
                       </Pressable>
                     );
@@ -325,9 +323,9 @@ export default function TasteCardsScreen() {
 
 
 
-              {chosen != null && !saving && (
+              {chosen != null && !saving && statistic == null && (
                 <Text accessibilityLiveRegion="polite" style={[styles.noteHint, { color: c.textSecondary }]}>
-                  {statistic != null ? `이 답변을 고른 사람은 ${statistic}%예요` : '아직 응답을 모으고 있어요'}
+                  아직 응답을 모으고 있어요
                 </Text>
               )}
 
@@ -401,9 +399,9 @@ const styles = StyleSheet.create({
   prompt: { ...Type.display, textAlign: 'center' },
 
   options: { marginTop: 28, gap: 12 },
-  optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  optionRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   option: { overflow: 'hidden', borderRadius: Radius.md, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center' },
-  optionText: { flexShrink: 1, ...Type.read, fontWeight: '600', textAlign: 'center' },
+  optionText: { flex: 1, ...Type.read, fontWeight: '600', textAlign: 'left' },
 
   noteOpen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 },
   noteOpenLabel: { ...Type.caption },

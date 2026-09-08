@@ -64,7 +64,11 @@ class TasteSessionServiceIT : PostgresRepositoryTest() {
         repeat(8) { choices.save(TasteChoice.choose(UUID.randomUUID(), id, TasteOption.A)) }
         assertNull(service.choose(me, deck.sessionId!!, id, TasteOption.B, null, noon).selectedPercentage)
         choices.save(TasteChoice.choose(UUID.randomUUID(), id, TasteOption.B))
-        assertEquals(20, service.choose(me, deck.sessionId, id, TasteOption.B, null, noon).selectedPercentage)
+        val result = service.choose(me, deck.sessionId, id, TasteOption.B, null, noon)
+        assertEquals(20, result.selectedPercentage)
+        assertEquals(80, result.optionPercentages!![TasteOption.A])
+        assertEquals(20, result.optionPercentages[TasteOption.B])
+        assertEquals(0, result.optionPercentages[TasteOption.C])
         assertEquals(90, service.choose(me, deck.sessionId, id, TasteOption.A, null, noon).selectedPercentage)
         assertEquals(10, sessions.statistics(id).values.sum())
         assertEquals(1, service.get(me, deck.sessionId).answered)

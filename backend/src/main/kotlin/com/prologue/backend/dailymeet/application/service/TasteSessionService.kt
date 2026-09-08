@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 import kotlin.random.Random
-import kotlin.math.roundToInt
 
 @Service
 class TasteSessionService(
@@ -52,8 +51,16 @@ class TasteSessionService(
         val earned = answered == TasteDay.SIZE && rewards.claimIfNew(accountId, -session.rewardKey)
         val stats = sessions.statistics(cardId)
         val total = stats.values.sum()
+        val percentages = if (total >= 10) listOfNotNull(
+            TasteOption.A, TasteOption.B, card.optionC?.let { TasteOption.C }, card.optionD?.let { TasteOption.D },
+        ).let { options ->
+            val values = options.associateWith { ((stats[it] ?: 0) * 100L / total).toInt() }.toMutableMap()
+            options.sortedByDescending { (stats[it] ?: 0) * 100L % total }
+                .take(100 - values.values.sum()).forEach { values[it] = values.getValue(it) + 1 }
+            values.toMap()
+        } else null
         return TasteDeckProgress(answered, TasteDay.SIZE, earned, reward(accountId, answered),
-            if (total >= 10) ((stats[option] ?: 0) * 100.0 / total).roundToInt() else null)
+            percentages?.get(option), percentages)
     }
 
     private fun active(accountId: UUID, id: UUID): TasteSession {

@@ -74,14 +74,16 @@ it('소개할 후보가 없으면 자동 소개 안내만 보이고 수령 버�
 });
 
 it('선택 후에만 집계된 취향을 조용히 보여준다', async () => {
-  jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42 });
+  jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42, optionPercentages: { A: 25, B: 33, C: 42, D: 0 } });
   await render(<TasteCardsScreen />);
   await screen.findByText('취미');
   expect(screen.queryByText('42%')).toBeNull();
   await fireEvent.press(screen.getByText('취미'));
   await screen.findByText('42%');
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
-  expect(screen.getByText('이 답변을 고른 사람은 42%예요')).toBeTruthy();
+  expect(screen.getByText('25%')).toBeTruthy();
+  expect(screen.getByText('33%')).toBeTruthy();
+  expect(screen.getByText('0%')).toBeTruthy();
   await fireEvent.press(screen.getByText('취미'));
   expect(chooseTaste).toHaveBeenCalledTimes(1);
   await fireEvent.press(await screen.findByText('다음 카드'));

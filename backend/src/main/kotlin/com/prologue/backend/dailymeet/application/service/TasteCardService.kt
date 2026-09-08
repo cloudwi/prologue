@@ -214,6 +214,7 @@ data class TasteDeckProgress(
     val answered: Int, val total: Int, val milestoneReached: Boolean = false,
     val reward: TasteRewardView? = null,
     val selectedPercentage: Int? = null,
+    val optionPercentages: Map<TasteOption, Int>? = null,
 )
 
 data class TasteRewardView(
