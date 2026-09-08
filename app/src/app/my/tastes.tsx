@@ -45,7 +45,7 @@ export default function MyTastesScreen() {
         <View style={[styles.flex, styles.center, styles.emptyPad]}>
           <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>아직 고른 카드가 없어요</Text>
           <Text style={[styles.emptyHint, { color: c.textSecondary }]}>
-            둘 중 하나를 고르기만 하면 돼요.{'\n'}겹치는 취향이 있는 사람이 먼저 소개돼요.
+            나에게 맞는 답을 고르기만 하면 돼요.{'\n'}겹치는 취향이 있는 사람이 먼저 소개돼요.
           </Text>
           <Pressable
             onPress={() => router.push('/taste-cards')}
@@ -59,7 +59,7 @@ export default function MyTastesScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {tastes.map((taste) => (
             <View key={taste.cardId} style={[styles.card, { backgroundColor: c.backgroundElement }]}>
-              <Text style={[styles.prompt, { color: c.textSecondary }]}>{taste.prompt}</Text>
+              <Text style={[styles.prompt, { color: c.textSecondary }]}>{taste.prompt}{taste.version === 1 ? ' · 이전 카드' : ''}</Text>
               <Text style={[styles.choice, { color: c.text }]}>{taste.choice}</Text>
               {taste.note && <Text style={[styles.note, { color: c.textSecondary }]}>“{taste.note}”</Text>}
             </View>

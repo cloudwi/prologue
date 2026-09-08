@@ -481,7 +481,7 @@ function DiscoverBoard() {
                   <Text style={[styles.tasteTitle, { color: c.text }]}>취향 카드</Text>
                   {/* 장수는 적지 않는다 — 남은 개수가 보이면 넘기기가 채워야 할 진도표가 된다. */}
                   <Text style={[styles.tasteSub, { color: c.textSecondary }]}>
-                    둘 중 하나만 고르면 돼요 · 겹치는 사람이 먼저 소개돼요
+                    10장 고르면 추가 소개권 1장 · 하루 1장 수령
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={c.textSecondary} />

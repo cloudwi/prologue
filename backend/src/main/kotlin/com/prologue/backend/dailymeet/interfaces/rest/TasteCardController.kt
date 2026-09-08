@@ -33,10 +33,11 @@ class TasteCardController(
     fun deck(
         authentication: Authentication,
         @RequestParam(required = false) limit: Int?,
+        @RequestParam(defaultValue = "1") version: Int,
     ): TasteDeckResponse {
         val accountId = UUID.fromString(authentication.name)
         return TasteDeckResponse.from(
-            limit?.let { tasteCardService.deck(accountId, it) } ?: tasteCardService.deck(accountId),
+            tasteCardService.deck(accountId, limit ?: TasteCardService.DECK_SIZE, if (version >= 2) 2 else 1),
         )
     }
 
@@ -56,7 +57,15 @@ class TasteCardController(
         val accountId = UUID.fromString(authentication.name)
         val progress = tasteCardService.choose(accountId, cardId, request.option, request.note)
         val peerArrived = progress.milestoneReached && peerMatchingService.consumeExtraReveals(accountId)
-        return TasteProgressResponse.from(progress, peerArrived)
+        return TasteProgressResponse.from(progress.copy(reward = tasteCardService.rewardStatus(accountId)), peerArrived)
+    }
+
+    @PostMapping("/rewards/claim")
+    fun claimReward(authentication: Authentication): TasteProgressResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val progress = tasteCardService.claimReward(accountId)
+        val peerArrived = progress.milestoneReached && peerMatchingService.consumeExtraReveals(accountId)
+        return TasteProgressResponse.from(progress.copy(reward = tasteCardService.rewardStatus(accountId)), peerArrived)
     }
 
     /** 내가 고른 카드 전부 — 본인 전용 기록. */

@@ -3,6 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,10 +20,10 @@ import { Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
-import { chooseTaste, getTasteDeck, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
+import { claimTasteReward, chooseTaste, getTasteDeck, type TasteReward, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
 
 /**
- * 취향 카드 — 둘 중 하나를 고르는 가벼운 문답.
+ * 취향 카드 — 3~4개 중 하나를 고르는 가벼운 문답.
  *
  * 이 화면이 있는 이유는 하나다. 가입하고 처음 만나는 것이 **백지**였다는 것 —
  * 오늘의 문답은 열 자면 되지만, 막는 건 분량이 아니라 빈 화면이다. 카드는 탭 하나로 시작하게 하고,
@@ -39,7 +41,7 @@ import { chooseTaste, getTasteDeck, TASTE_NOTE_MAX, type TasteCard, type TasteDe
  */
 const HOLD_MS = 260;
 
-/** 잉크 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
+/** 보상 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
 const REWARD_SHOWN_MS = 2600;
 
 export default function TasteCardsScreen() {
@@ -60,19 +62,15 @@ export default function TasteCardsScreen() {
    * 'arrived'는 상대가 그 자리에서 도착한 것, 'pending'은 지금 후보가 없어 기다리는 것.
    */
   const [reward, setReward] = useState<'arrived' | 'pending' | null>(null);
+  const [rewardStatus, setRewardStatus] = useState<TasteReward | null>(null);
+  const [claiming, setClaiming] = useState(false);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  /**
-   * 받아온 묶음을 화면에 건다.
-   *
-   * 진행 숫자(몇 장 중 몇 장)는 일부러 쓰지 않는다 — 남은 장수가 보이면 카드 넘기기가
-   * 채워야 할 진도표가 되고, 끝이 멀어 보이면 애초에 시작하지 않는다. 이 더미는 언제든
-   * 그만둬도 되는 것이라 끝을 세지 않는다.
-   */
   const apply = useCallback((deck: TasteDeck) => {
     setCards(deck.cards);
+    setRewardStatus(deck.reward ?? null);
     setIndex(0);
     setFailed(false);
   }, []);
@@ -139,37 +137,48 @@ export default function TasteCardsScreen() {
     }
   }
 
-  /**
-   * 한 장을 고른다.
-   *
-   * 누르자마자 다음 카드로 갈아치우면 무엇을 골랐는지 손에 남지 않는다 — 그래서 고른 쪽에
-   * 색이 차오르는 짧은 순간([HOLD_MS])을 두고 넘긴다. 저장은 그 사이에 끝난다.
-   * 저장이 더 걸려도 기다리지 않는다: 카드 한 장이 서버를 기다리느라 멈추면, 빠르게 넘기는
-   * 맛이 사라져 이 화면의 존재 이유가 없어진다.
-   */
   async function choose(option: TasteOption) {
-    if (!card || saving) return;
+    if (!card || saving || claiming) return;
     setSaving(true);
     setChosen(option);
     haptics.select();
     const noted = note.trim().length > 0;
-    const saved = chooseTaste(card.id, option, note.trim() || undefined)
-      .then((progress) => {
-        track('taste_card_chosen', { noted });
-        if (!progress.milestoneReached) return null;
-        return progress.peerArrived ? ('arrived' as const) : ('pending' as const);
-      })
-      // 한 장이 저장되지 않았다고 흐름을 세우지는 않는다 — 조용히 다음 장으로 간다.
-      .catch(() => null);
-    const [earned] = await Promise.all([saved, new Promise((resolve) => setTimeout(resolve, HOLD_MS))]);
-    // 이정표는 예고 없이 온다 — 남은 장수를 안 보여주기로 했으니, 받는 순간에만 말한다.
-    if (earned) {
-      haptics.success();
-      setReward(earned);
-      if (earned === 'arrived') track('taste_peer_rewarded');
+    try {
+      const [progress] = await Promise.all([
+        chooseTaste(card.id, option, note.trim() || undefined),
+        new Promise((resolve) => setTimeout(resolve, HOLD_MS)),
+      ]);
+      setRewardStatus(progress.reward ?? null);
+      track('taste_card_chosen', { noted });
+      if (progress.milestoneReached) {
+        haptics.success();
+        setReward(progress.peerArrived ? 'arrived' : 'pending');
+        if (progress.peerArrived) track('taste_peer_rewarded');
+      }
+      advance();
+    } catch {
+      setChosen(null);
+      Alert.alert('저장하지 못했어요', '선택이 저장됐는지 확인하지 못했어요. 같은 선택을 다시 눌러주세요.');
+    } finally {
+      setSaving(false);
     }
-    advance();
-    setSaving(false);
+  }
+
+  async function claimReward() {
+    if (claiming || saving) return;
+    setClaiming(true);
+    try {
+      const progress = await claimTasteReward();
+      setRewardStatus(progress.reward ?? null);
+      if (progress.milestoneReached) {
+        haptics.success();
+        setReward(progress.peerArrived ? 'arrived' : 'pending');
+      }
+    } catch {
+      Alert.alert('보상을 확인하지 못했어요', '잠시 후 다시 눌러주세요. 이미 받은 소개권은 중복 지급되지 않아요.');
+    } finally {
+      setClaiming(false);
+    }
   }
 
   return (
@@ -196,11 +205,34 @@ export default function TasteCardsScreen() {
               color={reward === 'arrived' ? c.primaryText : c.textSecondary}
             />
             <Text style={[styles.rewardText, { color: reward === 'arrived' ? c.primaryText : c.textSecondary }]}>
-              {reward === 'arrived' ? '상대 한 명 더 도착' : '자리 하나 맡아뒀어요'}
+              {reward === 'arrived' ? '상대 한 명 더 도착' : '추가 소개권 1장 적립'}
             </Text>
           </Animated.View>
         )}
       </View>
+
+      {rewardStatus && (
+        <View style={[styles.rewardPanel, { backgroundColor: c.backgroundElement }]}>
+          <Text style={[styles.rewardTitle, { color: c.text }]}>
+            {rewardStatus.unclaimed > 0
+              ? `받을 수 있는 추가 소개권 ${rewardStatus.unclaimed}장`
+              : `${rewardStatus.remaining}장 더 고르면 추가 소개권 1장`}
+          </Text>
+          <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
+            {rewardStatus.every}장마다 1장 · 하루 1장 수령 · 보유 {rewardStatus.pending}장
+          </Text>
+          <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
+            {rewardStatus.dailyLimitReached
+              ? '오늘 보상은 받았어요. 더 고른 분량은 쌓이고, 오전 5시 이후 다시 받을 수 있어요.'
+              : '소개권은 만날 수 있는 상대가 있을 때 자동으로 사용돼요.'}
+          </Text>
+          {rewardStatus.unclaimed > 0 && !rewardStatus.dailyLimitReached && (
+            <Pressable onPress={() => void claimReward()} disabled={claiming || saving} accessibilityRole="button">
+              <Text style={[styles.retry, { color: c.primaryStrong }]}>{claiming ? '받는 중…' : '추가 소개권 받기'}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {loading ? (
@@ -237,7 +269,7 @@ export default function TasteCardsScreen() {
           </View>
         ) : (
           <View style={styles.flex}>
-            <View style={styles.body}>
+            <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
               {/* 가입 직후 첫 장에서만 왜 넘기는지 한 줄 — 두 번째 장부터는 카드가 스스로 말한다. */}
               {isIntro && index === 0 && (
                 <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
@@ -249,14 +281,14 @@ export default function TasteCardsScreen() {
                 <Text style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}>{card.prompt}</Text>
 
                 <View style={styles.options}>
-                  {(['A', 'B'] as const).map((option) => {
+                  {(card.options ?? [{ id: 'A' as const, label: card.optionA }, { id: 'B' as const, label: card.optionB }]).map(({ id: option, label }) => {
                     const picked = chosen === option;
                     const passed = chosen != null && !picked;
                     return (
                       <Pressable
                         key={option}
                         onPress={() => void choose(option)}
-                        disabled={saving}
+                        disabled={saving || claiming}
                         accessibilityRole="button"
                         accessibilityState={{ selected: picked }}
                         style={({ pressed }) => [
@@ -272,7 +304,7 @@ export default function TasteCardsScreen() {
                       >
                         <View style={styles.optionRow}>
                           <Text style={[styles.optionText, { color: picked ? c.primaryText : c.text }]}>
-                            {option === 'A' ? card.optionA : card.optionB}
+                            {label}
                           </Text>
                           {picked ? (
                             <Animated.View entering={ZoomIn.duration(160)}>
@@ -310,10 +342,10 @@ export default function TasteCardsScreen() {
                   <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
                 </Pressable>
               )}
-            </View>
+            </ScrollView>
 
             <View style={styles.footer}>
-              <Pressable onPress={advance} disabled={saving} hitSlop={12} style={styles.headerButton}>
+              <Pressable onPress={advance} disabled={saving || claiming} hitSlop={12} style={styles.headerButton}>
                 <Text style={[styles.skip, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
               </Pressable>
             </View>
@@ -336,13 +368,17 @@ const styles = StyleSheet.create({
   reward: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.pill },
   rewardText: { ...Type.caption, fontWeight: '700' },
 
-  body: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
+  rewardPanel: { marginHorizontal: 20, marginBottom: 8, padding: 14, borderRadius: Radius.md },
+  rewardTitle: { ...Type.label, fontWeight: '700' },
+  rewardHint: { ...Type.caption, marginTop: 5 },
+
+  body: { flexGrow: 1, paddingTop: 20, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
   intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },
   prompt: { ...Type.display, textAlign: 'center' },
 
   options: { marginTop: 28, gap: 12 },
   optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  option: { borderRadius: Radius.md, borderWidth: 1, paddingVertical: 22, paddingHorizontal: 20, alignItems: 'center' },
+  option: { borderRadius: Radius.md, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center' },
   optionText: { ...Type.read, fontWeight: '600', textAlign: 'center' },
 
   noteOpen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 },

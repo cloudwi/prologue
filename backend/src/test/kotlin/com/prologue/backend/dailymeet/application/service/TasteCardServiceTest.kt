@@ -24,7 +24,9 @@ class TasteCardServiceTest {
     private val cardRepository = mockk<TasteCardRepository>()
     private val choiceRepository = mockk<TasteChoiceRepository>()
     private val rewardRepository = mockk<TasteRewardRepository> {
-        every { claimIfNew(any(), any()) } returns true
+        every { claimEarned(any(), any(), any(), any()) } returns false
+        every { claimedMilestones(any()) } returns emptyList()
+        every { pendingCount(any()) } returns 0
         every { claimedSince(any(), any()) } returns 0 // 오늘 아직 안 받은 상태
     }
     private val service = TasteCardService(cardRepository, choiceRepository, rewardRepository)
@@ -125,10 +127,12 @@ class TasteCardServiceTest {
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
 
+        every { rewardRepository.claimEarned(accountId, 10, any(), 1) } returns true
+
         val progress = service.choose(accountId, 1L, TasteOption.A, null)
 
         assertTrue(progress.milestoneReached)
-        verify(exactly = 1) { rewardRepository.claimIfNew(accountId, 10) }
+        verify(exactly = 1) { rewardRepository.claimEarned(accountId, 10, any(), 1) }
     }
 
     @Test
@@ -139,7 +143,7 @@ class TasteCardServiceTest {
         every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1L, TasteOption.A))
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
-        verify(exactly = 0) { rewardRepository.claimIfNew(any(), any()) }
+        verify(exactly = 1) { rewardRepository.claimEarned(accountId, any(), any(), 1) }
     }
 
     @Test
@@ -152,7 +156,7 @@ class TasteCardServiceTest {
         every { rewardRepository.claimedSince(accountId, any()) } returns 1 // 오늘 이미 한 번 받았다
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
-        verify(exactly = 0) { rewardRepository.claimIfNew(any(), any()) }
+        verify(exactly = 1) { rewardRepository.claimEarned(accountId, any(), any(), 1) }
     }
 
     @Test
@@ -162,8 +166,61 @@ class TasteCardServiceTest {
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimIfNew(accountId, 10) } returns false
+        every { rewardRepository.claimEarned(accountId, 10, any(), 1) } returns false
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
     }
+    @Test
+    fun `개편 더미는 원본 답변과 분리되고 구버전은 두 선택지 카드만 받는다`() {
+        val revised = TasteCard(1001, cards[0].prompt, "새 A", "새 B", "새 C", "새 D", 2)
+        every { cardRepository.findAllOrdered() } returns cards + revised
+        every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1, TasteOption.A))
+        val deck = service.deck(accountId, version = 2)
+        assertEquals(listOf(1001L), deck.cards.map { it.id })
+        assertEquals(0, deck.answered)
+        assertEquals(1, deck.total)
+        assertEquals(listOf(2L, 3L), service.deck(accountId).cards.map { it.id })
+        assertEquals("일찍 깬다", service.mine(accountId).single().choice)
+    }
+
+    @Test
+    fun `카드에 없는 선택지는 저장 전에 거절한다`() {
+        every { cardRepository.findAllOrdered() } returns cards
+        assertFailsWith<DailyMeetException> { service.choose(accountId, 1, TasteOption.C, null) }
+        verify(exactly = 0) { choiceRepository.save(any()) }
+    }
+
+    @Test
+    fun `새 선택지 D가 저장되고 기록에 정확한 문구로 나온다`() {
+        val revised = TasteCard(1001, "애정은?", "말", "행동", "시간", "스킨십", 2)
+        every { cardRepository.findAllOrdered() } returns cards + revised
+        every { choiceRepository.findByAccountIdAndCardId(accountId, 1001) } returns null
+        every { choiceRepository.save(any()) } answers { firstArg() }
+        every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1001, TasteOption.D))
+        assertEquals(1, service.choose(accountId, 1001, TasteOption.D, null).answered)
+        assertEquals("스킨십", service.mine(accountId).single().choice)
+    }
+
+    @Test
+    fun `초과 달성 보상과 다음 보상까지 남은 장수를 함께 보여준다`() {
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(35) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimedMilestones(accountId) } returns listOf(10)
+        every { rewardRepository.pendingCount(accountId) } returns 1
+        every { rewardRepository.claimedSince(accountId, any()) } returns 1
+        val status = service.rewardStatus(accountId)
+        assertEquals(2, status.unclaimed)
+        assertEquals(5, status.remaining)
+        assertEquals(1, status.pending)
+        assertTrue(status.dailyLimitReached)
+    }
+
+    @Test
+    fun `모든 카드를 마친 뒤에도 남은 보상을 수령할 수 있다`() {
+        every { cardRepository.findAllOrdered() } returns cards
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(25) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimEarned(accountId, 25, any(), 1) } returns true
+        assertTrue(service.claimReward(accountId).milestoneReached)
+        verify(exactly = 0) { choiceRepository.save(any()) }
+    }
+
 }

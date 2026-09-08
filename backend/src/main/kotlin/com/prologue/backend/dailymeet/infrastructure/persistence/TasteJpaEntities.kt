@@ -25,6 +25,15 @@ class TasteCardJpaEntity(
 
     @Column(name = "option_b", nullable = false, length = 60)
     val optionB: String,
+
+    @Column(name = "option_c", length = 60)
+    val optionC: String? = null,
+
+    @Column(name = "option_d", length = 60)
+    val optionD: String? = null,
+
+    @Column(name = "version", nullable = false)
+    val version: Int = 1,
 )
 
 /** (계정, 카드)가 곧 키다 — 한 사람이 한 카드에 두 번 답할 수는 없다. */

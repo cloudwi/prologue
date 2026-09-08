@@ -1,5 +1,6 @@
 package com.prologue.backend.dailymeet.interfaces.rest.dto
 
+import com.prologue.backend.dailymeet.application.service.TasteRewardView
 import com.prologue.backend.dailymeet.application.service.MyTasteView
 import com.prologue.backend.dailymeet.application.service.TasteDeckProgress
 import com.prologue.backend.dailymeet.application.service.TasteDeckView
@@ -13,19 +14,28 @@ data class TasteDeckResponse(
     val cards: List<Card>,
     val answered: Int,
     val total: Int,
+    val reward: TasteRewardView,
 ) {
     data class Card(
         val id: Long,
         val prompt: String,
         val optionA: String,
         val optionB: String,
+        val options: List<Option>,
     )
+
+    data class Option(val id: TasteOption, val label: String)
 
     companion object {
         fun from(view: TasteDeckView): TasteDeckResponse = TasteDeckResponse(
-            cards = view.cards.map { Card(it.id, it.prompt, it.optionA, it.optionB) },
+            cards = view.cards.map { Card(it.id, it.prompt, it.optionA, it.optionB, listOfNotNull(
+                Option(TasteOption.A, it.optionA), Option(TasteOption.B, it.optionB),
+                it.optionC?.let { label -> Option(TasteOption.C, label) },
+                it.optionD?.let { label -> Option(TasteOption.D, label) },
+            )) },
             answered = view.answered,
             total = view.total,
+            reward = view.reward,
         )
     }
 }
@@ -44,10 +54,11 @@ data class TasteProgressResponse(
     val milestoneReached: Boolean,
     /** 그 표가 그 자리에서 소개로 바뀌었는지. 후보가 없으면 false고, 표는 남아 다음에 쓰인다. */
     val peerArrived: Boolean,
+    val reward: TasteRewardView? = null,
 ) {
     companion object {
         fun from(progress: TasteDeckProgress, peerArrived: Boolean): TasteProgressResponse =
-            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived)
+            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived, progress.reward)
     }
 }
 
@@ -59,10 +70,11 @@ data class MyTastesResponse(val tastes: List<Item>) {
         val choice: String,
         val note: String?,
         val chosenAt: Instant,
+        val version: Int,
     )
 
     companion object {
         fun from(views: List<MyTasteView>): MyTastesResponse =
-            MyTastesResponse(views.map { Item(it.cardId, it.prompt, it.choice, it.note, it.chosenAt) })
+            MyTastesResponse(views.map { Item(it.cardId, it.prompt, it.choice, it.note, it.chosenAt, it.version) })
     }
 }

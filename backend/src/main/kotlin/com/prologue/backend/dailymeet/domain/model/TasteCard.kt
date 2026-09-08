@@ -1,7 +1,7 @@
 package com.prologue.backend.dailymeet.domain.model
 
 /**
- * 취향 카드 — 둘 중 하나를 고르는 문답.
+ * 취향 카드 — 선택지 중 하나를 고르는 문답.
  *
  * 오늘의 질문([Question])과 **다른 더미**다. 로테이션에 섞지 않는 이유는 두 가지다.
  * ① 어떤 날은 탭 한 번으로 끝난다면 다음 날 서술형 앞에서 사람은 "어제는 안 써도 됐는데"를
@@ -15,16 +15,21 @@ package com.prologue.backend.dailymeet.domain.model
  */
 class TasteCard(
     val id: Long,
-    /** 카드의 물음 — "주말의 나는?" 처럼 짧게. 두 선택지가 무엇을 가르는지 말해준다. */
+    /** 카드의 물음 — "주말의 나는?" 처럼 짧게. 선택지가 무엇을 가르는지 말해준다. */
     val prompt: String,
     val optionA: String,
     val optionB: String,
+    val optionC: String? = null,
+    val optionD: String? = null,
+    val version: Int = 1,
 ) {
     fun labelOf(option: TasteOption): String = when (option) {
         TasteOption.A -> optionA
         TasteOption.B -> optionB
+        TasteOption.C -> optionC ?: throw DailyMeetException("없는 선택지예요")
+        TasteOption.D -> optionD ?: throw DailyMeetException("없는 선택지예요")
     }
 }
 
-/** 카드의 두 선택지. 고르지 않는 것(건너뛰기)은 답이 아니라 부재라 값을 두지 않는다. */
-enum class TasteOption { A, B }
+/** 카드의 선택지. 고르지 않는 것(건너뛰기)은 답이 아니라 부재라 값을 두지 않는다. */
+enum class TasteOption { A, B, C, D }

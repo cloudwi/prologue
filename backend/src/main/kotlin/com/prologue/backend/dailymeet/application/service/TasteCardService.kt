@@ -16,7 +16,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * 취향 카드 — 둘 중 하나를 고르는 가벼운 문답.
+ * 취향 카드 — 선택지 중 하나를 고르는 가벼운 문답.
  *
  * 오늘의 문답([DailyAnswerService])이 하루 한 번의 글이라면, 이쪽은 언제든 몇 장이든 넘길 수 있는
  * 더미다. 가입 직후 백지 앞에 세워지는 대신 카드 몇 장을 넘기며 시작할 수 있게 하려고 만들었다.
@@ -42,13 +42,14 @@ class TasteCardService(
      * 계산할 것이 없다([TasteAffinity.MIN_SHARED]).
      */
     @Transactional(readOnly = true)
-    fun deck(accountId: UUID, limit: Int = DECK_SIZE): TasteDeckView {
-        val cards = tasteCardRepository.findAllOrdered()
+    fun deck(accountId: UUID, limit: Int = DECK_SIZE, version: Int = 1): TasteDeckView {
+        val cards = tasteCardRepository.findAllOrdered().filter { it.version == version }
         val mine = tasteChoiceRepository.findAllByAccountId(accountId).associateBy { it.cardId }
         return TasteDeckView(
             cards = cards.filter { it.id !in mine.keys }.take(limit.coerceIn(1, MAX_DECK_SIZE)).map { it.toView(null) },
-            answered = mine.size,
+            answered = cards.count { it.id in mine },
             total = cards.size,
+            reward = rewardStatus(accountId),
         )
     }
 
@@ -56,23 +57,20 @@ class TasteCardService(
     @Transactional
     fun choose(accountId: UUID, cardId: Long, option: TasteOption, note: String?): TasteDeckProgress {
         val cards = tasteCardRepository.findAllOrdered()
-        if (cards.none { it.id == cardId }) throw DailyMeetException("없는 카드예요")
+        val card = cards.find { it.id == cardId } ?: throw DailyMeetException("없는 카드예요")
+        card.labelOf(option) // 해당 카드에 실제로 존재하는 선택지만 저장한다.
         val existing = tasteChoiceRepository.findByAccountIdAndCardId(accountId, cardId)
         val choice = existing?.apply { revise(option, note) }
             ?: TasteChoice.choose(accountId, cardId, option, note)
         tasteChoiceRepository.save(choice)
         // 방금 고른 것까지 세어 이정표를 판정한다 — 한 장 밀리면 보상도 한 장 늦게 온다.
-        val answered = tasteChoiceRepository.findAllByAccountId(accountId).size
-        val milestone = TasteReward.milestoneAt(answered)
-        // 표만 적립한다. 그 표를 실제 소개로 바꾸는 일은 소개를 아는 쪽의 몫이다
-        // (PeerMatchingService.consumeExtraReveals) — 여기서 부르면 두 서비스가 서로를 참조한다.
-        //
-        // 하루치 상한을 먼저 본다. 되풀이되는 보상이라 상한이 없으면 하루에 백 장을 넘겨
-        // 열 명을 받아 갈 수 있고, 그건 얕은 후보 풀을 하루 만에 비우는 일이다.
-        val claimed = milestone != null &&
-            tasteRewardRepository.claimedSince(accountId, ServiceDay.startOfToday()) < TasteReward.DAILY_LIMIT &&
-            tasteRewardRepository.claimIfNew(accountId, milestone)
-        return TasteDeckProgress(answered = answered, total = cards.size, milestoneReached = claimed)
+        val choices = tasteChoiceRepository.findAllByAccountId(accountId)
+        val claimed = claimEarnedReward(accountId, choices.size)
+        val versionIds = cards.filter { it.version == card.version }.map { it.id }.toSet()
+        return TasteDeckProgress(
+            answered = choices.count { it.cardId in versionIds }, total = versionIds.size,
+            milestoneReached = claimed, reward = rewardStatus(accountId),
+        )
     }
 
     /** 내가 고른 카드 전부 — 최근에 고른 순. 본인 전용 기록. */
@@ -89,8 +87,14 @@ class TasteCardService(
                     choice = card.labelOf(choice.option),
                     note = choice.note,
                     chosenAt = choice.createdAt,
+                    version = card.version,
                 )
             }
+    }
+
+    @Transactional(readOnly = true)
+    fun optionCounts(): Map<Long, Int> = tasteCardRepository.findAllOrdered().associate {
+        it.id to listOfNotNull(it.optionA, it.optionB, it.optionC, it.optionD).size
     }
 
     /** 한 사람의 선택을 카드 id → 선택지로. 매칭 점수([TasteAffinity])가 쓰는 모양. */
@@ -140,9 +144,36 @@ class TasteCardService(
         prompt = prompt,
         optionA = optionA,
         optionB = optionB,
+        optionC = optionC,
+        optionD = optionD,
         myOption = choice?.option,
         myNote = choice?.note,
     )
+
+    /** 초과 달성분도 사라지지 않는다. 다음 서비스 날짜에 버튼으로 수령한다. */
+    @Transactional
+    fun claimReward(accountId: UUID): TasteDeckProgress {
+        val claimed = claimEarnedReward(accountId, tasteChoiceRepository.findAllByAccountId(accountId).size)
+        val deck = deck(accountId, version = 2)
+        return TasteDeckProgress(deck.answered, deck.total, claimed, deck.reward)
+    }
+
+    private fun claimEarnedReward(accountId: UUID, answered: Int): Boolean =
+        tasteRewardRepository.claimEarned(accountId, answered, ServiceDay.startOfToday(), TasteReward.DAILY_LIMIT)
+
+    @Transactional(readOnly = true)
+    fun rewardStatus(accountId: UUID): TasteRewardView {
+        val answered = tasteChoiceRepository.findAllByAccountId(accountId).size
+        val claimed = tasteRewardRepository.claimedMilestones(accountId).toSet()
+        val earned = (TasteReward.EVERY..answered step TasteReward.EVERY).count { it !in claimed }
+        return TasteRewardView(
+            every = TasteReward.EVERY,
+            remaining = TasteReward.EVERY - answered % TasteReward.EVERY,
+            unclaimed = earned,
+            pending = tasteRewardRepository.pendingCount(accountId),
+            dailyLimitReached = tasteRewardRepository.claimedSince(accountId, ServiceDay.startOfToday()) >= TasteReward.DAILY_LIMIT,
+        )
+    }
 
     companion object {
         /** 한 번에 내려주는 카드 수. 온보딩에서 한 자리에 앉아 넘길 만한 분량. */
@@ -157,6 +188,7 @@ data class TasteDeckView(
     val cards: List<TasteCardView>,
     val answered: Int,
     val total: Int,
+    val reward: TasteRewardView,
 )
 
 data class TasteCardView(
@@ -167,10 +199,20 @@ data class TasteCardView(
     /** 이미 고른 카드면 내 선택(더미에는 안 실리고, 기록 조회에서 쓴다). */
     val myOption: TasteOption?,
     val myNote: String?,
+    val optionC: String? = null,
+    val optionD: String? = null,
 )
 
 /** 한 장을 고른 결과. [milestoneReached]가 true면 이번 장으로 추가 소개권이 한 장 적립됐다. */
-data class TasteDeckProgress(val answered: Int, val total: Int, val milestoneReached: Boolean = false)
+data class TasteDeckProgress(
+    val answered: Int, val total: Int, val milestoneReached: Boolean = false,
+    val reward: TasteRewardView? = null,
+)
+
+data class TasteRewardView(
+    val every: Int, val remaining: Int, val unclaimed: Int, val pending: Int,
+    val dailyLimitReached: Boolean,
+)
 
 /** 내가 고른 카드 하나 — 물음과 내가 고른 쪽, 덧붙인 한 줄. */
 data class MyTasteView(
@@ -179,6 +221,7 @@ data class MyTasteView(
     val choice: String,
     val note: String?,
     val chosenAt: Instant,
+    val version: Int = 1,
 )
 
 /** 상대와 똑같이 고른 카드 하나. [peerNote]는 상대가 덧붙인 한 줄(없을 수 있다). */

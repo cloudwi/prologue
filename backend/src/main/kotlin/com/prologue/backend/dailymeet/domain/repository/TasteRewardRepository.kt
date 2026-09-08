@@ -11,6 +11,11 @@ import java.util.UUID
  * 그건 보상이 아니다.
  */
 interface TasteRewardRepository {
+    fun claimedMilestones(accountId: UUID): List<Int>
+
+    /** 계정별로 직렬화하여 하루 한도와 이정표 중복을 함께 보장한다. */
+    fun claimEarned(accountId: UUID, answered: Int, since: java.time.Instant, dailyLimit: Int): Boolean
+
     /** 새 지점이면 true(한 장 적립), 이미 받은 지점이면 false. 판정은 유니크 제약이 한다. */
     fun claimIfNew(accountId: UUID, milestone: Int): Boolean
 

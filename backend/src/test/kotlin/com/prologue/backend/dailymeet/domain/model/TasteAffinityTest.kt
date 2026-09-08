@@ -89,4 +89,27 @@ class TasteAffinityTest {
 
         assertTrue(withTaste > without)
     }
+    @Test
+    fun `네 선택지에서 절반의 일치는 우연을 넘어선다`() {
+        val mine = (1L..4L).associateWith { TasteOption.A }
+        val theirs = mine + mapOf(3L to TasteOption.C, 4L to TasteOption.D)
+        assertEquals(1.0 / 3.0, TasteAffinity.overlap(mine, theirs, mine.mapValues { 4 }), 0.000001)
+    }
+
+    @Test
+    fun `세 선택지에서 삼분의 일 일치는 우연이다`() {
+        val mine = (1L..3L).associateWith { TasteOption.C }
+        val theirs = mine + mapOf(2L to TasteOption.A, 3L to TasteOption.B)
+        assertEquals(0.0, TasteAffinity.overlap(mine, theirs, mine.mapValues { 3 }), 0.000001)
+    }
+
+    @Test
+    fun `혼합 더미는 카드별 우연 일치율을 평균한다`() {
+        val mine = (1L..3L).associateWith { TasteOption.A }
+        val theirs = mine + mapOf(3L to TasteOption.D)
+        val chance = (0.5 + 1.0 / 3 + 0.25) / 3
+        assertEquals((2.0 / 3 - chance) / (1 - chance),
+            TasteAffinity.overlap(mine, theirs, mapOf(1L to 2, 2L to 3, 3L to 4)), 0.000001)
+    }
+
 }

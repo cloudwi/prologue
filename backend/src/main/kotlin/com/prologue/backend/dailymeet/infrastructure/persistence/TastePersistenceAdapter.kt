@@ -13,7 +13,7 @@ class TasteCardPersistenceAdapter(
     private val jpa: TasteCardJpaRepository,
 ) : TasteCardRepository {
     override fun findAllOrdered(): List<TasteCard> =
-        jpa.findAllByOrderByIdAsc().map { TasteCard(it.id, it.prompt, it.optionA, it.optionB) }
+        jpa.findAllByOrderByIdAsc().map { TasteCard(it.id, it.prompt, it.optionA, it.optionB, it.optionC, it.optionD, it.version) }
 }
 
 @Repository

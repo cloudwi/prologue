@@ -21,6 +21,9 @@ class TasteRewardPersistenceAdapterIT : PostgresRepositoryTest() {
     @Autowired
     private lateinit var rewards: TasteRewardPersistenceAdapter
 
+    @Autowired
+    private lateinit var transactions: org.springframework.transaction.PlatformTransactionManager
+
     private val me = UUID.randomUUID()
     private val someoneElse = UUID.randomUUID()
 
@@ -76,4 +79,48 @@ class TasteRewardPersistenceAdapterIT : PostgresRepositoryTest() {
         assertEquals(0, rewards.pendingCount(me))
         assertEquals(1, rewards.pendingCount(someoneElse))
     }
+    @Test
+    fun `정확히 열 번째 장이 아니어도 누락 이정표를 적립한다`() {
+        val since = java.time.Instant.now().minusSeconds(60)
+        assertTrue(rewards.claimEarned(me, 25, since, 1))
+        assertEquals(listOf(10), rewards.claimedMilestones(me))
+        assertFalse(rewards.claimEarned(me, 25, since, 1))
+        // 새 서비스 날짜를 모사한다. 이미 받은 이정표는 건너뛴다.
+        assertTrue(rewards.claimEarned(me, 25, java.time.Instant.now().plusSeconds(60), 1))
+        assertEquals(setOf(10, 20), rewards.claimedMilestones(me).toSet())
+        assertFalse(rewards.claimEarned(me, 25, java.time.Instant.now().plusSeconds(60), 1))
+    }
+
+    @Test
+    fun `열 장 미만이면 보상을 만들지 않는다`() {
+        assertFalse(rewards.claimEarned(me, 9, java.time.Instant.now().minusSeconds(60), 1))
+        assertEquals(0, rewards.pendingCount(me))
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    fun `동시 수령 요청도 하루 한 장만 적립한다`() {
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        val ready = java.util.concurrent.CountDownLatch(2)
+        val go = java.util.concurrent.CountDownLatch(1)
+        val tx = org.springframework.transaction.support.TransactionTemplate(transactions)
+        val since = java.time.Instant.now().minusSeconds(60)
+        try {
+            val tasks = (1..2).map {
+                executor.submit<Boolean> {
+                    ready.countDown()
+                    check(go.await(10, java.util.concurrent.TimeUnit.SECONDS))
+                    tx.execute { rewards.claimEarned(me, 30, since, 1) }!!
+                }
+            }
+            assertTrue(ready.await(10, java.util.concurrent.TimeUnit.SECONDS))
+            go.countDown()
+            assertEquals(1, tasks.count { it.get(15, java.util.concurrent.TimeUnit.SECONDS) })
+            assertEquals(1, rewards.pendingCount(me))
+        } finally {
+            go.countDown()
+            executor.shutdownNow()
+        }
+    }
+
 }

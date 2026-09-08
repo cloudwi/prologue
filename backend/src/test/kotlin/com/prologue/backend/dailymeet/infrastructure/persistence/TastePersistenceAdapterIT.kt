@@ -81,4 +81,35 @@ class TastePersistenceAdapterIT : PostgresRepositoryTest() {
         assertEquals(setOf(me, someoneElse), both.map { it.accountId }.toSet())
         assertTrue(choices.findAllByAccountIds(emptyList()).isEmpty())
     }
+    @Test
+    fun `개편 카드 100장은 원본 질문을 유지하고 3개 또는 4개 선택지를 갖는다`() {
+        val all = cards.findAllOrdered()
+        val original = all.filter { it.version == 1 }.associateBy { it.id }
+        val revised = all.filter { it.version == 2 }
+        assertEquals(100, revised.size)
+        revised.forEach {
+            val expected = when (it.id) {
+                1021L -> "하나만 간다면?"
+                1037L -> "끌리는 맛은?"
+                else -> original.getValue(it.id - 1000).prompt
+            }
+            assertEquals(expected, it.prompt)
+            assertTrue(!it.optionC.isNullOrBlank())
+            val labels = listOfNotNull(it.optionA, it.optionB, it.optionC, it.optionD)
+            assertEquals(labels.size, labels.distinct().size)
+        }
+    }
+
+    @Test
+    fun `이전 선택과 새 선택은 모두 보존되고 C와 D가 왕복된다`() {
+        choices.save(TasteChoice.choose(me, 1, TasteOption.B, "이전 기록"))
+        choices.save(TasteChoice.choose(me, 1001, TasteOption.D, "새 기록"))
+        choices.save(TasteChoice.choose(me, 1002, TasteOption.C))
+        val mine = choices.findAllByAccountId(me).associateBy { it.cardId }
+        assertEquals(3, mine.size)
+        assertEquals("이전 기록", mine.getValue(1).note)
+        assertEquals(TasteOption.D, mine.getValue(1001).option)
+        assertEquals(TasteOption.C, mine.getValue(1002).option)
+    }
+
 }

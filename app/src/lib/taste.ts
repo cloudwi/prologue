@@ -1,7 +1,7 @@
 import { authedRequest } from './api';
 
 /**
- * 취향 카드 — 둘 중 하나를 고르는 가벼운 문답.
+ * 취향 카드 — 선택지 중 하나를 고르는 가벼운 문답.
  *
  * 오늘의 문답과 **다른 더미**다. 날짜에 매이지 않아 언제든 몇 장이든 넘길 수 있고,
  * 잉크는 주지 않는다 — 보상은 재화가 아니라 사람이다. 정해진 장수를 넘기면 오늘의 상대가
@@ -12,25 +12,36 @@ export type TasteCard = {
   prompt: string;
   optionA: string;
   optionB: string;
+  options?: { id: TasteOption; label: string }[];
 };
 
-export type TasteOption = 'A' | 'B';
+export type TasteOption = 'A' | 'B' | 'C' | 'D';
+
+export type TasteReward = {
+  every: number;
+  remaining: number;
+  unclaimed: number;
+  pending: number;
+  dailyLimitReached: boolean;
+};
 
 export type TasteDeck = {
   /** 아직 안 고른 카드. 다 넘기면 빈 배열이 온다. */
   cards: TasteCard[];
   answered: number;
   total: number;
+  reward?: TasteReward;
 };
 
 /** 아직 안 고른 카드 한 묶음 (GET /taste-cards). */
 export async function getTasteDeck(limit?: number): Promise<TasteDeck> {
-  return authedRequest<TasteDeck>('GET', limit ? `/taste-cards?limit=${limit}` : '/taste-cards');
+  return authedRequest<TasteDeck>('GET', `/taste-cards?version=2${limit ? `&limit=${limit}` : ''}`);
 }
 
 export type TasteProgress = {
   answered: number;
   total: number;
+  reward?: TasteReward;
   /** 이번 장으로 이정표를 밟았는지 — 추가 소개권 한 장이 적립됐다는 뜻. */
   milestoneReached: boolean;
   /** 그 표가 그 자리에서 소개로 바뀌었는지. 후보가 없으면 false고, 표는 남아 다음에 쓰인다. */
@@ -45,7 +56,12 @@ export async function chooseTaste(cardId: number, option: TasteOption, note?: st
   return authedRequest<TasteProgress>('POST', `/taste-cards/${cardId}/choice`, { option, note: note || null });
 }
 
+export async function claimTasteReward(): Promise<TasteProgress> {
+  return authedRequest<TasteProgress>('POST', '/taste-cards/rewards/claim');
+}
+
 export type MyTaste = {
+  version?: number;
   cardId: number;
   prompt: string;
   /** 내가 고른 쪽의 문구(선택지 A/B가 아니라 사람이 읽는 값). */

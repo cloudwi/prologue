@@ -294,6 +294,7 @@ class PeerMatchingService(
 
         // 취향 겹침은 후보 전원 몫을 한 번에 읽는다 — 점수 계산 안에서 사람마다 읽으면 N+1이다.
         val myTastes = tasteCardService.optionsOf(accountId)
+        val tasteOptionCounts = if (myTastes.isEmpty()) emptyMap() else tasteCardService.optionCounts()
         val peerTastes = if (myTastes.isEmpty()) emptyMap() else tasteCardService.optionsOf(candidates.map { it.peer.accountId })
 
         // 비독점: 같은 상대가 여러 명에게 노출될 수 있되, 노출될수록 점수가 깎여 쏠리지 않는다.
@@ -303,7 +304,7 @@ class PeerMatchingService(
                     me,
                     it.peer,
                     it.exposure,
-                    tasteOverlap = TasteAffinity.overlap(myTastes, peerTastes[it.peer.accountId] ?: emptyMap()),
+                    tasteOverlap = TasteAffinity.overlap(myTastes, peerTastes[it.peer.accountId] ?: emptyMap(), tasteOptionCounts),
                 )
             }
             candidates.remove(chosen)
