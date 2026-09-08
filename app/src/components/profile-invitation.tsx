@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image as NativeImage, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
@@ -33,16 +34,22 @@ export type InvitationLetter = {
 type ProfilePhoto = string | number;
 
 /**
- * 원본 픽셀은 건드리지 않고 세로다운 3:4 지면에 cover로 놓는다.
- * 4:5 원본의 좌우만 조금 덜 보이며 인물 자체가 늘어나거나 눌리지는 않는다.
+ * 사진마다 생성 원본의 가로세로 비율을 그대로 쓴다.
+ * 데모 자산은 resolveAssetSource로 첫 화면부터 알고, 원격 사진은 로드된 실제 크기로 맞춘다.
  */
 function NaturalPhoto({ source, inter, backgroundColor }: { source: ProfilePhoto; inter?: boolean; backgroundColor: string }) {
+  const local = typeof source === 'number' ? NativeImage.resolveAssetSource(source) : null;
+  const [ratio, setRatio] = useState(local?.width && local?.height ? local.width / local.height : 4 / 5);
+
   return (
     <Image
       source={typeof source === 'string' ? { uri: source } : source}
-      style={[styles.photo, inter && styles.interPhoto, { backgroundColor }]}
-      contentFit="cover"
+      style={[styles.photo, inter && styles.interPhoto, { aspectRatio: ratio, backgroundColor }]}
+      contentFit="contain"
       transition={150}
+      onLoad={({ source: loaded }) => {
+        if (loaded.width > 0 && loaded.height > 0) setRatio(loaded.width / loaded.height);
+      }}
     />
   );
 }
@@ -311,8 +318,8 @@ const styles = StyleSheet.create({
   sharedNote: { fontSize: 14, lineHeight: 20, marginTop: 4 },
   content: { paddingBottom: 64 },
 
-  // 4:5는 휴대폰에서 생각보다 넓게 읽힌다. 3:4로 세우고 폭도 줄여 청첩장 속 세로 사진처럼 둔다.
-  photo: { alignSelf: 'center', width: '82%', maxWidth: 400, aspectRatio: 3 / 4, borderRadius: Radius.md },
+  // 폭만 제한하고 높이는 각 원본 비율이 정한다. 화면이 사진을 같은 틀에 억지로 맞추지 않는다.
+  photo: { alignSelf: 'center', width: '82%', maxWidth: 400, aspectRatio: 4 / 5, borderRadius: Radius.md },
   interPhoto: { marginBottom: 34 },
 
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
