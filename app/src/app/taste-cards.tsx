@@ -303,7 +303,7 @@ export default function TasteCardsScreen() {
                         ]}
                       >
                         {percentage != null && (
-                          <Animated.View entering={FadeIn.duration(220)} pointerEvents="none"
+                          <View pointerEvents="none"
                             style={[styles.voteFill, { width: `${percentage}%`, backgroundColor: picked ? c.primary : c.textSecondary }]} />
                         )}
                         <View style={styles.optionRow}>
