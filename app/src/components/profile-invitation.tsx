@@ -33,15 +33,15 @@ export type InvitationLetter = {
 type ProfilePhoto = string | number;
 
 /**
- * 프로필 사진은 업로드와 데모 자산 모두 4:5다.
- * 하나의 4:5 지면 안에서 contain으로 그려 기기별 메타데이터 해석이 달라도 늘어나거나 잘리지 않게 한다.
+ * 원본 픽셀은 건드리지 않고 세로다운 3:4 지면에 cover로 놓는다.
+ * 4:5 원본의 좌우만 조금 덜 보이며 인물 자체가 늘어나거나 눌리지는 않는다.
  */
 function NaturalPhoto({ source, inter, backgroundColor }: { source: ProfilePhoto; inter?: boolean; backgroundColor: string }) {
   return (
     <Image
       source={typeof source === 'string' ? { uri: source } : source}
       style={[styles.photo, inter && styles.interPhoto, { backgroundColor }]}
-      contentFit="contain"
+      contentFit="cover"
       transition={150}
     />
   );
@@ -311,8 +311,8 @@ const styles = StyleSheet.create({
   sharedNote: { fontSize: 14, lineHeight: 20, marginTop: 4 },
   content: { paddingBottom: 64 },
 
-  // 청첩장 지면 안에 세로 사진을 한 겹 더 얹는다. 화면을 거의 다 채우던 92%보다 여백을 넉넉히 둔다.
-  photo: { alignSelf: 'center', width: '86%', maxWidth: 440, aspectRatio: 4 / 5, borderRadius: Radius.md },
+  // 4:5는 휴대폰에서 생각보다 넓게 읽힌다. 3:4로 세우고 폭도 줄여 청첩장 속 세로 사진처럼 둔다.
+  photo: { alignSelf: 'center', width: '82%', maxWidth: 400, aspectRatio: 3 / 4, borderRadius: Radius.md },
   interPhoto: { marginBottom: 34 },
 
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
