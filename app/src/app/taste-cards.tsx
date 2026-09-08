@@ -50,13 +50,14 @@ export default function TasteCardsScreen() {
   const sessionId = useRef<string | undefined>(undefined);
   const visibleIndex = useRef(0);
   const manualNavigationVersion = useRef(0);
+  const pendingCardIds = useRef(new Set<number>());
   const [percentages, setPercentages] = useState<Partial<Record<TasteOption, number>> | null>(null);
   const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
   const [reviewing, setReviewing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingCardIds, setSavingCardIds] = useState<ReadonlySet<number>>(() => new Set());
   /** 방금 고른 쪽 — 카드가 넘어가기 전 잠깐 색이 차오르는 자리. */
   const [chosen, setChosen] = useState<TasteOption | null>(null);
   /**
@@ -119,6 +120,7 @@ export default function TasteCardsScreen() {
   }, [reward]);
 
   const card = cards[index];
+  const currentCardSaving = card ? savingCardIds.has(card.id) : false;
   /**
    * 이 화면을 떠난다. **왔던 곳으로 돌아가는 게 기본이다** — 발견 탭에서 들어온 사람을 MY로
    * 보내면 쓰던 흐름이 끊긴다(처음엔 그렇게 짜서 실제로 그랬다).
@@ -153,8 +155,9 @@ export default function TasteCardsScreen() {
   }
 
   function nextUnanswered(snapshot = cards) {
-    const after = snapshot.findIndex((item, i) => i > index && !item.myOption);
-    const next = after >= 0 ? after : snapshot.findIndex((item) => !item.myOption);
+    const unanswered = (item: TasteCard) => !item.myOption && !pendingCardIds.current.has(item.id);
+    const after = snapshot.findIndex((item, i) => i > index && unanswered(item));
+    const next = after >= 0 ? after : snapshot.findIndex(unanswered);
     return next >= 0 ? next : snapshot.length;
   }
 
@@ -168,10 +171,13 @@ export default function TasteCardsScreen() {
   }
 
   async function choose(option: TasteOption) {
-    if (!card || card.myOption || saving || chosen != null) return;
+    if (!card || card.myOption || savingCardIds.has(card.id) || chosen != null) return;
+    const answeredCardId = card.id;
     const answeredIndex = index;
     const navigationVersion = manualNavigationVersion.current;
-    setSaving(true);
+    pendingCardIds.current.add(answeredCardId);
+    setSavingCardIds((current) => new Set(current).add(answeredCardId));
+    setCards((current) => current.map((item) => item.id === answeredCardId ? { ...item, myOption: option } : item));
     setChosen(option);
     haptics.select();
     const noted = note.trim().length > 0;
@@ -179,17 +185,21 @@ export default function TasteCardsScreen() {
       if (!sessionId.current) throw new Error('Missing taste session');
       const progress = await chooseTaste(card.id, option, note.trim() || undefined, sessionId.current);
       if (!alive.current) return;
-      const updated = cards.map((item) => item.id === card.id
+      const updated = cards.map((item) => item.id === answeredCardId
         ? { ...item, myOption: option, optionPercentages: progress.optionPercentages ?? null }
         : item);
-      setCards(updated);
+      setCards((current) => current.map((item) => item.id === answeredCardId
+        ? { ...item, myOption: option, optionPercentages: progress.optionPercentages ?? null }
+        : item));
       const stayedOnAnsweredCard = visibleIndex.current === answeredIndex;
       if (manualNavigationVersion.current === navigationVersion || stayedOnAnsweredCard) {
         setChosen(option);
         setStatistic(progress.selectedPercentage ?? null);
         setPercentages(progress.optionPercentages ?? null);
       }
-      setRewardStatus(progress.reward ?? rewardStatus);
+      if (progress.reward) {
+        setRewardStatus((current) => !current || progress.reward!.remaining <= current.remaining ? progress.reward! : current);
+      }
       track('taste_card_chosen', { noted });
       if (manualNavigationVersion.current === navigationVersion) {
         autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 800);
@@ -200,10 +210,24 @@ export default function TasteCardsScreen() {
         if (progress.peerArrived) track('taste_peer_rewarded');
       }
     } catch {
-      setChosen(null);
+      setCards((current) => current.map((item) => item.id === answeredCardId
+        ? { ...item, myOption: undefined, optionPercentages: null }
+        : item));
+      if (visibleIndex.current === answeredIndex) {
+        setChosen(null);
+        setStatistic(null);
+        setPercentages(null);
+      }
       Alert.alert('저장하지 못했어요', '선택이 저장됐는지 확인하지 못했어요. 같은 선택을 다시 눌러주세요.');
     } finally {
-      if (alive.current) setSaving(false);
+      if (alive.current) {
+        pendingCardIds.current.delete(answeredCardId);
+        setSavingCardIds((current) => {
+          const next = new Set(current);
+          next.delete(answeredCardId);
+          return next;
+        });
+      }
     }
   }
 
@@ -322,7 +346,7 @@ export default function TasteCardsScreen() {
                       <Pressable
                         key={option}
                         onPress={() => void choose(option)}
-                        disabled={saving || chosen != null}
+                        disabled={currentCardSaving || chosen != null}
                         accessibilityRole="button"
                         accessibilityState={{ selected: picked }}
                         style={({ pressed }) => [
@@ -355,7 +379,7 @@ export default function TasteCardsScreen() {
                 </View>
               </Animated.View>
               <View testID="taste-card-meta" style={styles.cardMeta}>
-                {chosen != null && !saving && statistic == null && (
+                {chosen != null && !currentCardSaving && statistic == null && (
                   <Text accessibilityLiveRegion="polite" style={[styles.feedbackHint, { color: c.textSecondary }]}>아직 응답을 모으고 있어요</Text>
                 )}
 
@@ -385,7 +409,7 @@ export default function TasteCardsScreen() {
             </ScrollView>
 
             <View style={styles.footer}>
-              {chosen == null && !reviewing && <Pressable onPress={advance} disabled={saving} hitSlop={12} style={styles.headerButton}>
+              {chosen == null && !reviewing && <Pressable onPress={advance} disabled={currentCardSaving} hitSlop={12} style={styles.headerButton}>
                 <Text style={[styles.headerAction, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
               </Pressable>}
             </View>

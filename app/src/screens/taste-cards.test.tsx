@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import TasteCardsScreen from '../app/taste-cards';
 import { chooseTaste, startTasteSession, getTasteSession, type TasteDeck } from '../lib/taste';
@@ -118,17 +118,22 @@ it('상단 카드 칸으로 이전 답변을 보고 다른 칸으로 바로 이�
   await screen.findByText('다음 질문');
 });
 
-it('답변 저장 중에도 상단의 다른 카드 칸으로 바로 이동한다', async () => {
-  let finishSaving!: (value: Awaited<ReturnType<typeof chooseTaste>>) => void;
-  jest.mocked(chooseTaste).mockReturnValue(new Promise((resolve) => { finishSaving = resolve; }));
+it('앞 카드가 저장 중이어도 다른 카드로 이동해 바로 답할 수 있다', async () => {
+  const finishSaving: ((value: Awaited<ReturnType<typeof chooseTaste>>) => void)[] = [];
+  jest.mocked(chooseTaste).mockImplementation(() => new Promise((resolve) => { finishSaving.push(resolve); }));
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('취미'));
   await fireEvent.press(screen.getByLabelText('2번 카드'));
   await screen.findByText('다음 질문');
-  finishSaving({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42, optionPercentages: { A: 25, B: 33, C: 42, D: 0 } });
-  await waitFor(() => expect(chooseTaste).toHaveBeenCalledTimes(1));
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  expect(screen.getByText('다음 질문')).toBeTruthy();
+  await fireEvent.press(screen.getByText('밤'));
+  expect(chooseTaste).toHaveBeenCalledTimes(2);
+  await act(async () => {
+    finishSaving[0]({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42, optionPercentages: { A: 25, B: 33, C: 42, D: 0 } });
+    finishSaving[1]({ answered: 2, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 55, optionPercentages: { A: 30, B: 55, C: 15 } });
+  });
+  await waitFor(() => expect(screen.getByText('55%')).toBeTruthy());
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1000)); });
+  expect(screen.getByText('카드를 다 넘겼어요')).toBeTruthy();
 });
 
 it('재입장해도 이미 답한 카드를 상단에서 다시 볼 수 있다', async () => {
