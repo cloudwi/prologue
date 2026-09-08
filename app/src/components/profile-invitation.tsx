@@ -296,7 +296,9 @@ const styles = StyleSheet.create({
   sharedNote: { fontSize: 14, lineHeight: 20, marginTop: 4 },
   content: { paddingBottom: 64 },
 
-  photo: { width: '100%', aspectRatio: 4 / 5 },
+  // 원본은 4:5 세로 사진이다. 폭을 화면 끝까지 늘리면 태블릿·웹에서 사진이 프로필보다 커지므로
+  // 종이 안에 사진을 얹듯 좌우 숨을 두고 최대 폭을 제한한다.
+  photo: { alignSelf: 'center', width: '92%', maxWidth: 520, aspectRatio: 4 / 5, borderRadius: Radius.md },
   interPhoto: { marginBottom: 34 },
 
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
