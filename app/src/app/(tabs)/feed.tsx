@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -101,7 +102,20 @@ function FeedBoard() {
             feed.data!.map((post) => (
               <View key={post.id} style={[styles.card, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
                 <View style={styles.authorRow}>
-                  <View style={[styles.gender, { backgroundColor: c.backgroundSelected }]}><Ionicons name={post.gender === 'FEMALE' ? 'female' : 'male'} size={16} color={c.primaryStrong} /></View>
+                  <View style={[styles.authorPhoto, { backgroundColor: c.backgroundSelected }]}>
+                    {post.photoPreview ? (
+                      <>
+                        <Image
+                          source={{ uri: post.photoPreview }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                          blurRadius={8}
+                          accessibilityLabel={`${post.nickname}님의 흐린 프로필 사진`}
+                        />
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: c.background, opacity: 0.18 }]} />
+                      </>
+                    ) : <Ionicons name="person" size={15} color={c.textSecondary} />}
+                  </View>
                   <View style={styles.authorText}><Text style={[styles.nickname, { color: c.text }]}>{post.nickname}</Text><Text style={[styles.kind, { color: c.textSecondary }]}>{post.sourceType === 'DAILY' ? '오늘의 문답' : '취향 카드'} · {relativeTime(post.createdAt)}</Text></View>
                   <Pressable onPress={() => post.mine ? remove(post) : promptReport({ feedPostId: post.id })} hitSlop={10} accessibilityLabel={post.mine ? '내 피드 글 관리' : '피드 글 신고'}><Ionicons name="ellipsis-horizontal" size={20} color={c.textSecondary} /></Pressable>
                 </View>
@@ -132,7 +146,7 @@ const styles = StyleSheet.create({
   sort: { flexDirection: 'row', padding: 3, borderRadius: Radius.pill }, sortButton: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill }, sortLabel: { ...Type.caption, fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 }, retry: { ...Type.button }, list: { paddingHorizontal: 16, gap: 14 },
   empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: 30 }, emptyTitle: { ...Type.title, marginTop: 18 }, emptyBody: { ...Type.body, textAlign: 'center', marginTop: 8 },
-  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg, padding: 18 }, authorRow: { flexDirection: 'row', alignItems: 'center' }, gender: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg, padding: 18 }, authorRow: { flexDirection: 'row', alignItems: 'center' }, authorPhoto: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   authorText: { flex: 1, marginLeft: 10 }, nickname: { ...Type.label }, kind: { ...Type.caption, marginTop: 1 }, prompt: { ...Type.caption, marginTop: 22 }, answer: { ...Type.read, marginTop: 8 },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth }, action: { flexDirection: 'row', alignItems: 'center', minWidth: 52 }, count: { ...Type.caption, marginLeft: 5 },
   profileAction: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5 }, profileLabel: { ...Type.caption, fontWeight: '600' },

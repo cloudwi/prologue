@@ -30,6 +30,7 @@ data class FeedPostView(
     val hearted: Boolean,
     val mine: Boolean,
     val profileUnlocked: Boolean,
+    val photoPreview: String?,
 )
 
 @Service
@@ -43,6 +44,7 @@ class FeedService(
     private val blockService: BlockService,
     private val profileAccessService: ProfileAccessService,
     private val reports: ReportRepository,
+    private val photoPreviews: FeedPhotoPreviewService,
 ) {
     @Transactional(readOnly = true)
     fun latest(accountId: UUID, sort: String = "latest"): List<FeedPostView> {
@@ -50,7 +52,7 @@ class FeedService(
         val exclusion = blockService.exclusionFor(accountId, me.phone)
         val unlocked = profileAccessService.unlockedPeers(accountId)
         val orderBy = if (sort == "hearts") "heart_count desc, p.created_at desc, p.id desc" else "p.created_at desc, p.id desc"
-        return jdbc.query(
+        val posts = jdbc.query(
             """
             select p.id, p.author_account_id, p.source_type, p.prompt, p.content, p.created_at,
                    m.nickname, m.gender,
@@ -73,10 +75,15 @@ class FeedService(
                     hearted = rs.getBoolean("hearted"),
                 )
             }, accountId,
-        ).mapNotNull { raw ->
+        )
+        val visible = posts.mapNotNull { raw ->
             val author = members.findProfile(raw.authorId) ?: return@mapNotNull null
             if (raw.authorId != accountId && exclusion.excludes(author)) return@mapNotNull null
-            raw.toView(accountId, raw.authorId in unlocked)
+            raw to author.photoUrls.firstOrNull()
+        }
+        val previews = photoPreviews.previewDataUris(visible.mapNotNull { it.second })
+        return visible.map { (raw, photoUrl) ->
+            raw.toView(accountId, raw.authorId in unlocked, photoUrl?.let(previews::get))
         }
     }
 
@@ -156,9 +163,10 @@ class FeedService(
         val gender: Gender, val prompt: String, val content: String, val createdAt: Instant,
         val heartCount: Int, val hearted: Boolean,
     ) {
-        fun toView(viewer: UUID, unlocked: Boolean) = FeedPostView(
+        fun toView(viewer: UUID, unlocked: Boolean, photoPreview: String?) = FeedPostView(
             id, sourceType, nickname, gender, prompt, content, createdAt, heartCount, hearted,
             mine = authorId == viewer, profileUnlocked = authorId == viewer || unlocked,
+            photoPreview = photoPreview,
         )
     }
 }

@@ -14,11 +14,11 @@ data class FeedResponse(val posts: List<FeedPostResponse>)
 data class FeedPostResponse(
     val id: String, val sourceType: String, val nickname: String, val gender: String,
     val prompt: String, val content: String, val createdAt: Instant, val heartCount: Int,
-    val hearted: Boolean, val mine: Boolean, val profileUnlocked: Boolean,
+    val hearted: Boolean, val mine: Boolean, val profileUnlocked: Boolean, val photoPreview: String?,
 ) {
     companion object { fun from(v: FeedPostView) = FeedPostResponse(
         v.id.toString(), v.sourceType.name, v.nickname, v.gender.name, v.prompt, v.content,
-        v.createdAt, v.heartCount, v.hearted, v.mine, v.profileUnlocked,
+        v.createdAt, v.heartCount, v.hearted, v.mine, v.profileUnlocked, v.photoPreview,
     ) }
 }
 data class FeedHeartRequest(val liked: Boolean)

@@ -13,6 +13,7 @@ export type FeedPost = {
   hearted: boolean;
   mine: boolean;
   profileUnlocked: boolean;
+  photoPreview: string | null;
 };
 
 export type FeedSort = 'latest' | 'hearts';
