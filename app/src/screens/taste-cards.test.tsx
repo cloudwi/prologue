@@ -45,7 +45,7 @@ it('네 번째 선택지를 저장하고 다음 세 선택지 카드로 넘어�
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, reward: { ...deck.reward!, remaining: 9 } });
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('친구 만나기'));
-  await screen.findByText('다음 질문', {}, { timeout: 3000 });
+  await screen.findByText('다음 질문', {}, { timeout: 2000 });
   expect(chooseTaste).toHaveBeenCalledWith(1001, 'D', undefined, 'daily-session');
   expect(screen.getByText('1 / 10')).toBeTruthy();
   expect(screen.getByText('오후')).toBeTruthy();
@@ -80,13 +80,14 @@ it('선택 후에만 집계된 취향을 조용히 보여준다', async () => {
   expect(screen.queryByText('42%')).toBeNull();
   await fireEvent.press(screen.getByText('취미'));
   await screen.findByText('42%');
+  expect(screen.getByTestId('taste-card-meta')).toBeTruthy();
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
   expect(screen.getByText('25%')).toBeTruthy();
   expect(screen.getByText('33%')).toBeTruthy();
   expect(screen.getByText('0%')).toBeTruthy();
   await fireEvent.press(screen.getByText('취미'));
   expect(chooseTaste).toHaveBeenCalledTimes(1);
-  await screen.findByText('다음 질문', {}, { timeout: 3000 });
+  await screen.findByText('다음 질문', {}, { timeout: 2000 });
   expect(startTasteSession).toHaveBeenCalledTimes(1);
 });
 
@@ -96,7 +97,7 @@ it('묶음을 다 넘겨도 같은 묶음의 남은 카드만 읽는다', async 
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 10, total: 10, milestoneReached: true, peerArrived: false });
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('취미'));
-  await screen.findByText('카드를 다 넘겼어요', {}, { timeout: 3000 });
+  await screen.findByText('카드를 다 넘겼어요', {}, { timeout: 2000 });
   expect(getTasteSession).not.toHaveBeenCalled();
   expect(startTasteSession).toHaveBeenCalledTimes(1);
 });
@@ -108,7 +109,7 @@ it('상단 카드 칸으로 이전 답변을 보고 자동 이동을 멈춘다',
   await screen.findByText('42%');
   await fireEvent.press(screen.getByLabelText('1번 카드, 답변 완료'));
   await screen.findByText('이어서 답하기');
-  await new Promise((resolve) => setTimeout(resolve, 1800));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
   expect(screen.getByText('42%')).toBeTruthy();
   expect(chooseTaste).toHaveBeenCalledTimes(1);

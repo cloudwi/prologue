@@ -175,7 +175,7 @@ export default function TasteCardsScreen() {
       setPercentages(progress.optionPercentages ?? null);
       setRewardStatus(progress.reward ?? rewardStatus);
       track('taste_card_chosen', { noted });
-      autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 1600);
+      autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 800);
       if (progress.milestoneReached) {
         haptics.success();
         setReward(progress.peerArrived ? 'arrived' : 'pending');
@@ -336,39 +336,34 @@ export default function TasteCardsScreen() {
                   })}
                 </View>
               </Animated.View>
+              <View testID="taste-card-meta" style={styles.cardMeta}>
+                {chosen != null && !saving && statistic == null && (
+                  <Text accessibilityLiveRegion="polite" style={[styles.feedbackHint, { color: c.textSecondary }]}>아직 응답을 모으고 있어요</Text>
+                )}
 
-
-
-              {chosen != null && !saving && statistic == null && (
-                <Text accessibilityLiveRegion="polite" style={[styles.noteHint, { color: c.textSecondary }]}>
-                  아직 응답을 모으고 있어요
-                </Text>
-              )}
-
-              {chosen == null && (noteOpen ? (
-                <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
-                  <PlaceholderInput
-                    value={note}
-                    onChangeText={setNote}
-                    placeholder="예) 새벽이 제일 조용해서요"
-                    placeholderTextColor={c.textSecondary}
-                    maxLength={TASTE_NOTE_MAX}
-                    autoFocus
-                    style={[
-                      styles.noteInput,
-                      { backgroundColor: c.backgroundElement, borderColor: c.border, color: c.text },
-                    ]}
-                  />
-                  <Text style={[styles.noteHint, { color: c.textSecondary }]}>
-                    위에서 고르면 이 한 줄까지 함께 남아요.
-                  </Text>
-                </Animated.View>
-              ) : (
-                <Pressable onPress={() => setNoteOpen(true)} hitSlop={10} style={styles.noteOpen}>
-                  <Ionicons name="create-outline" size={15} color={c.textSecondary} />
-                  <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
-                </Pressable>
-              ))}
+                {chosen == null && (noteOpen ? (
+                  <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
+                    <PlaceholderInput
+                      value={note}
+                      onChangeText={setNote}
+                      placeholder="예) 새벽이 제일 조용해서요"
+                      placeholderTextColor={c.textSecondary}
+                      maxLength={TASTE_NOTE_MAX}
+                      autoFocus
+                      style={[
+                        styles.noteInput,
+                        { backgroundColor: c.backgroundElement, borderColor: c.border, color: c.text },
+                      ]}
+                    />
+                    <Text style={[styles.noteHint, { color: c.textSecondary }]}>위에서 고르면 이 한 줄까지 함께 남아요.</Text>
+                  </Animated.View>
+                ) : (
+                  <Pressable onPress={() => setNoteOpen(true)} hitSlop={10} style={styles.noteOpen}>
+                    <Ionicons name="create-outline" size={15} color={c.textSecondary} />
+                    <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
+                  </Pressable>
+                ))}
+              </View>
             </ScrollView>
 
             <View style={styles.footer}>
@@ -415,11 +410,13 @@ const styles = StyleSheet.create({
   option: { overflow: 'hidden', borderRadius: Radius.md, borderWidth: 1, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center' },
   optionText: { flex: 1, ...Type.read, fontWeight: '600', textAlign: 'left' },
 
-  noteOpen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 },
+  cardMeta: { minHeight: 50, justifyContent: 'center' },
+  noteOpen: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   noteOpenLabel: { ...Type.caption },
-  noteBox: { marginTop: 20 },
+  noteBox: { paddingTop: 12 },
   noteInput: { borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, ...Type.body },
   noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
+  feedbackHint: { ...Type.caption, textAlign: 'center' },
 
   nextButton: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: Radius.pill },
   footer: { minHeight: 64, alignItems: 'center', paddingBottom: 12 },
