@@ -127,12 +127,12 @@ class TasteCardServiceTest {
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
 
-        every { rewardRepository.claimEarned(accountId, 10, any(), 1) } returns true
+        every { rewardRepository.claimEarned(accountId, 10, any(), Int.MAX_VALUE) } returns true
 
         val progress = service.choose(accountId, 1L, TasteOption.A, null)
 
         assertTrue(progress.milestoneReached)
-        verify(exactly = 1) { rewardRepository.claimEarned(accountId, 10, any(), 1) }
+        verify(exactly = 1) { rewardRepository.claimEarned(accountId, 10, any(), Int.MAX_VALUE) }
     }
 
     @Test
@@ -143,20 +143,15 @@ class TasteCardServiceTest {
         every { choiceRepository.findAllByAccountId(accountId) } returns listOf(choice(1L, TasteOption.A))
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
-        verify(exactly = 1) { rewardRepository.claimEarned(accountId, any(), any(), 1) }
+        verify(exactly = 0) { rewardRepository.claimEarned(accountId, any(), any(), Int.MAX_VALUE) }
     }
 
     @Test
-    fun `하루에 한 번을 넘겨 받지는 못한다`() {
-        // 되풀이되는 보상이라 상한이 없으면 하루에 백 장을 넘겨 열 명을 받아 갈 수 있다.
-        every { cardRepository.findAllOrdered() } returns cards
-        every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
-        every { choiceRepository.save(any()) } answers { firstArg() }
+    fun `같은 날 스무 장이면 추가 두 명을 모두 자동 인정한다`() {
         every { choiceRepository.findAllByAccountId(accountId) } returns List(20) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimedSince(accountId, any()) } returns 1 // 오늘 이미 한 번 받았다
-
-        assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
-        verify(exactly = 1) { rewardRepository.claimEarned(accountId, any(), any(), 1) }
+        every { rewardRepository.claimEarned(accountId, 20, any(), Int.MAX_VALUE) } returnsMany listOf(true, true)
+        assertTrue(service.accrueRewards(accountId))
+        verify(exactly = 2) { rewardRepository.claimEarned(accountId, 20, any(), Int.MAX_VALUE) }
     }
 
     @Test
@@ -166,7 +161,7 @@ class TasteCardServiceTest {
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
         every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimEarned(accountId, 10, any(), 1) } returns false
+        every { rewardRepository.claimEarned(accountId, 10, any(), Int.MAX_VALUE) } returns false
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
     }
@@ -211,14 +206,14 @@ class TasteCardServiceTest {
         assertEquals(2, status.unclaimed)
         assertEquals(5, status.remaining)
         assertEquals(1, status.pending)
-        assertTrue(status.dailyLimitReached)
+        assertFalse(status.dailyLimitReached)
     }
 
     @Test
     fun `모든 카드를 마친 뒤에도 남은 보상을 수령할 수 있다`() {
         every { cardRepository.findAllOrdered() } returns cards
         every { choiceRepository.findAllByAccountId(accountId) } returns List(25) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimEarned(accountId, 25, any(), 1) } returns true
+        every { rewardRepository.claimEarned(accountId, 25, any(), Int.MAX_VALUE) } returns true
         assertTrue(service.claimReward(accountId).milestoneReached)
         verify(exactly = 0) { choiceRepository.save(any()) }
     }

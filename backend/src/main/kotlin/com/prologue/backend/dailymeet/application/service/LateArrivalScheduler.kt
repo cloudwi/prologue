@@ -10,15 +10,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
-/**
- * 도착을 채우고 알린다 — 정오에 한 번(쓰지 않은 사람), 그리고 낮 동안 매시(쓴 사람의 빈자리).
- *
- * 답을 남기면 그 자리에서 상대가 도착하지만, 그 시각에 자격을 갖춘 후보가 하나도 없으면
- * (노출 상한·성비·차단) 자리가 빈 채로 남는다. 그 사람은 저녁에 누가 답을 남겨도 앱을 다시
- * 열어야만 만나고, 빈 화면을 본 사람은 다시 열지 않는다. 이 스케줄러가 오늘 답한 사람 전원의
- * 빈자리를 한 시간에 한 번 채워 보고, 새로 채워진 사람에게만 알린다.
- * 밤에는 돌지 않는다 — 자정 직전의 도착은 내일의 도착보다 반갑지 않다.
- */
+/** 정오에 기본 소개, 이후 매시간 후보 부족으로 미뤄진 소개를 재시도한다. */
 @Component
 class LateArrivalScheduler(
     private val peerMatchingService: PeerMatchingService,
@@ -27,16 +19,7 @@ class LateArrivalScheduler(
     private val notificationService: NotificationService,
     private val deviceTokenRepository: DeviceTokenRepository,
 ) {
-    /**
-     * 정오(KST) — 아직 답하지 않은 사람에게 오늘의 한 명을 보내고 알린다(유저 결정 2026-09-02).
-     *
-     * 앱을 열어야만 도착하는 소개는 앱을 열지 않는 사람에게 없는 것과 같다. "정오에 한 사람이
-     * 온다"가 리듬이 되려면 그 시각에 서버가 먼저 움직여야 한다.
-     *
-     * 대상은 **기기를 등록한 사람 중 오늘 답하지 않은 사람**이다. 답한 사람은 이미 그 자리에서
-     * 만났으니 부르지 않는다 — 같은 소식을 두 번 알리는 알림이 앱을 지우게 만든다.
-     * 실제로 채워진 사람에게만 보낸다: 후보가 없어 빈 채로 남은 사람에게 "도착했어요"는 거짓말이다.
-     */
+    /** 새 상대가 실제로 도착한 계정에만 알린다. */
     @Scheduled(cron = "0 0 12 * * *", zone = KST_ID)
     fun revealAndNotifyUnanswered() {
         val questions = questionRepository.findAllOrdered()
@@ -44,10 +27,11 @@ class LateArrivalScheduler(
         val today = QuestionRotation.of(questions, ServiceDay.now())
         val answered = answerRepository.findAllByQuestionId(today.id).map { it.accountId }.toSet()
         var arrived = 0
-        deviceTokenRepository.findAllAccountIds().filterNot { it in answered }.forEach { accountId ->
+        deviceTokenRepository.findAllAccountIds().distinct().forEach { accountId ->
             try {
                 if (peerMatchingService.fillLockedArrival(accountId)) {
-                    notificationService.lockedPeerArrived(accountId)
+                    if (accountId in answered) notificationService.peerArrived(accountId)
+                    else notificationService.lockedPeerArrived(accountId)
                     arrived++
                 }
             } catch (e: RuntimeException) {
@@ -55,22 +39,18 @@ class LateArrivalScheduler(
                 log.warn("정오 도착 채우기 실패 — account={}", accountId, e)
             }
         }
-        if (arrived > 0) log.info("정오에 미답변 {}명에게 오늘의 상대를 보냈다", arrived)
+        if (arrived > 0) log.info("정오에 {}명에게 오늘의 상대를 보냈다", arrived)
     }
 
-    /**
-     * 8시~22시(KST) 매시 정각. 공개 시각이 사라져 이른 아침에 답하는 사람이 생겼으므로
-     * 예전(13~21시)보다 일찍 시작한다. 밤 9시 일괄 안내는 폐지됐다(2026-09-02) — 하루의 알림은
-     * 정오의 도착 하나면 충분하고, 그건 실제로 무언가 일어난 사람에게만 간다.
-     */
-    @Scheduled(cron = "0 0 8-22 * * *", zone = KST_ID)
+    /** 새 상대가 실제로 도착한 계정에만 알린다. */
+    @Scheduled(cron = "0 0 13-22 * * *", zone = KST_ID)
     fun fillAndNotify() {
-        // 답한 사람의 빈자리만 본다 — 미답변자는 정오 잡이 맡는다.
+        // 답변자와 기기 등록자의 미완료 소개를 다시 시도한다.
         val questions = questionRepository.findAllOrdered()
         if (questions.isEmpty()) return
         val today = QuestionRotation.of(questions, ServiceDay.now())
         var arrived = 0
-        answerRepository.findAllByQuestionId(today.id).map { it.accountId }.distinct().forEach { accountId ->
+        (answerRepository.findAllByQuestionId(today.id).map { it.accountId } + deviceTokenRepository.findAllAccountIds()).distinct().forEach { accountId ->
             try {
                 if (peerMatchingService.fillLateArrival(accountId)) {
                     notificationService.peerArrived(accountId)

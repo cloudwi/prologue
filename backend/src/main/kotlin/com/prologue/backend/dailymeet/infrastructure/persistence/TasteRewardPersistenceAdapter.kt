@@ -44,6 +44,9 @@ class TasteRewardJpaEntity(
  * 키가 @EmbeddedId라 파생 쿼리는 실행 시점에 터진다 — 경로를 명시한다(meetup_follows에서 겪은 함정).
  */
 interface TasteRewardJpaRepository : JpaRepository<TasteRewardJpaEntity, TasteRewardId> {
+    @Query("select count(r) from TasteRewardJpaEntity r where r.id.accountId = :accountId and r.grantedAt >= :since")
+    fun countGrantedSince(@Param("accountId") accountId: UUID, @Param("since") since: Instant): Long
+
     @Query("select r.id.milestone from TasteRewardJpaEntity r where r.id.accountId = :accountId")
     fun findMilestones(@Param("accountId") accountId: UUID): List<Int>
 
@@ -72,13 +75,20 @@ class TasteRewardPersistenceAdapter(
     @Transactional
     override fun claimEarned(accountId: UUID, answered: Int, since: Instant, dailyLimit: Int): Boolean {
         // 잠금은 트랜잭션 종료까지 유지된다. 다른 카드의 동시 저장도 하루 한도를 넘기지 못한다.
-        entityManager.createNativeQuery("select pg_advisory_xact_lock(cast(:key as bigint))")
-            .setParameter("key", accountId.mostSignificantBits xor accountId.leastSignificantBits).resultList
+        lockAccount(accountId)
         if (claimedSince(accountId, since) >= dailyLimit) return false
         val claimed = claimedMilestones(accountId).toSet()
         val next = (TasteReward.EVERY..answered step TasteReward.EVERY).firstOrNull { it !in claimed } ?: return false
         return claimIfNew(accountId, next)
     }
+
+    @Transactional
+    override fun lockAccount(accountId: UUID) {
+        entityManager.createNativeQuery("select pg_advisory_xact_lock(cast(:key as bigint))")
+            .setParameter("key", accountId.mostSignificantBits xor accountId.leastSignificantBits).resultList
+    }
+
+    override fun grantedSince(accountId: UUID, since: Instant): Int = jpa.countGrantedSince(accountId, since).toInt()
 
     override fun pendingCount(accountId: UUID): Int = jpa.findPending(accountId).size
 

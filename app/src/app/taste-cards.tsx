@@ -20,7 +20,7 @@ import { Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
-import { claimTasteReward, chooseTaste, getTasteDeck, type TasteReward, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
+import { chooseTaste, getTasteDeck, type TasteReward, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
 
 /**
  * 취향 카드 — 3~4개 중 하나를 고르는 가벼운 문답.
@@ -63,7 +63,6 @@ export default function TasteCardsScreen() {
    */
   const [reward, setReward] = useState<'arrived' | 'pending' | null>(null);
   const [rewardStatus, setRewardStatus] = useState<TasteReward | null>(null);
-  const [claiming, setClaiming] = useState(false);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -138,7 +137,7 @@ export default function TasteCardsScreen() {
   }
 
   async function choose(option: TasteOption) {
-    if (!card || saving || claiming) return;
+    if (!card || saving) return;
     setSaving(true);
     setChosen(option);
     haptics.select();
@@ -161,23 +160,6 @@ export default function TasteCardsScreen() {
       Alert.alert('저장하지 못했어요', '선택이 저장됐는지 확인하지 못했어요. 같은 선택을 다시 눌러주세요.');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function claimReward() {
-    if (claiming || saving) return;
-    setClaiming(true);
-    try {
-      const progress = await claimTasteReward();
-      setRewardStatus(progress.reward ?? null);
-      if (progress.milestoneReached) {
-        haptics.success();
-        setReward(progress.peerArrived ? 'arrived' : 'pending');
-      }
-    } catch {
-      Alert.alert('보상을 확인하지 못했어요', '잠시 후 다시 눌러주세요. 이미 받은 소개권은 중복 지급되지 않아요.');
-    } finally {
-      setClaiming(false);
     }
   }
 
@@ -205,7 +187,7 @@ export default function TasteCardsScreen() {
               color={reward === 'arrived' ? c.primaryText : c.textSecondary}
             />
             <Text style={[styles.rewardText, { color: reward === 'arrived' ? c.primaryText : c.textSecondary }]}>
-              {reward === 'arrived' ? '상대 한 명 더 도착' : '추가 소개권 1장 적립'}
+              {reward === 'arrived' ? '상대 한 명 더 도착' : '새로운 인연을 찾고 있어요'}
             </Text>
           </Animated.View>
         )}
@@ -214,22 +196,15 @@ export default function TasteCardsScreen() {
       {rewardStatus && (
         <View style={[styles.rewardPanel, { backgroundColor: c.backgroundElement }]}>
           <Text style={[styles.rewardTitle, { color: c.text }]}>
-            {rewardStatus.unclaimed > 0
-              ? `받을 수 있는 추가 소개권 ${rewardStatus.unclaimed}장`
-              : `${rewardStatus.remaining}장 더 고르면 추가 소개권 1장`}
+            {`${rewardStatus.remaining}장 더 답하면 한 명 더 소개해 드려요`}
           </Text>
           <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
-            {rewardStatus.every}장마다 1장 · 하루 1장 수령 · 보유 {rewardStatus.pending}장
+            매일 정오에 한 명 · 카드 {rewardStatus.every}개마다 추가 한 명
           </Text>
-          <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
-            {rewardStatus.dailyLimitReached
-              ? '오늘 보상은 받았어요. 더 고른 분량은 쌓이고, 오전 5시 이후 다시 받을 수 있어요.'
-              : '소개권은 만날 수 있는 상대가 있을 때 자동으로 사용돼요.'}
-          </Text>
-          {rewardStatus.unclaimed > 0 && !rewardStatus.dailyLimitReached && (
-            <Pressable onPress={() => void claimReward()} disabled={claiming || saving} accessibilityRole="button">
-              <Text style={[styles.retry, { color: c.primaryStrong }]}>{claiming ? '받는 중…' : '추가 소개권 받기'}</Text>
-            </Pressable>
+          {rewardStatus.pending > 0 && (
+            <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
+              지금은 소개할 상대를 찾고 있어요. 인연이 닿으면 자동으로 소개해 드릴게요.
+            </Text>
           )}
         </View>
       )}
@@ -288,7 +263,7 @@ export default function TasteCardsScreen() {
                       <Pressable
                         key={option}
                         onPress={() => void choose(option)}
-                        disabled={saving || claiming}
+                        disabled={saving}
                         accessibilityRole="button"
                         accessibilityState={{ selected: picked }}
                         style={({ pressed }) => [
@@ -345,7 +320,7 @@ export default function TasteCardsScreen() {
             </ScrollView>
 
             <View style={styles.footer}>
-              <Pressable onPress={advance} disabled={saving || claiming} hitSlop={12} style={styles.headerButton}>
+              <Pressable onPress={advance} disabled={saving} hitSlop={12} style={styles.headerButton}>
                 <Text style={[styles.skip, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
               </Pressable>
             </View>

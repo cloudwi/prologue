@@ -15,19 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-/**
- * 취향 카드 — 선택지 중 하나를 고르는 가벼운 문답.
- *
- * 오늘의 문답([DailyAnswerService])이 하루 한 번의 글이라면, 이쪽은 언제든 몇 장이든 넘길 수 있는
- * 더미다. 가입 직후 백지 앞에 세워지는 대신 카드 몇 장을 넘기며 시작할 수 있게 하려고 만들었다.
- *
- * **잉크는 주지 않는다.** 보상은 재화가 아니라 사람이다 — [TasteReward.EVERY]장마다 오늘의
- * 상대가 한 명 더 오고, 하루에 한 번까지다. 잉크로 주면 카드가 재화를 캐는 자리가 되고, 값싼 잉크가
- * 글의 값어치까지 함께 끌어내린다. 카드가 돌려주는 다른 몫은 **더 맞는 상대**다
- * ([TasteAffinity]가 매칭 점수에 실린다) — 둘 다 결국 사람이라는 점이 이 기능의 결이다.
- *
- * 소개를 여는 열쇠도 여전히 서술형 답이다 — "쓰면 만난다"는 리듬은 카드가 건드리지 않는다.
- */
+/** 카드 선택과 누적 달성을 저장한다. 소개는 매칭 서비스가 자동으로 수행한다. */
 @Service
 class TasteCardService(
     private val tasteCardRepository: TasteCardRepository,
@@ -150,7 +138,7 @@ class TasteCardService(
         myNote = choice?.note,
     )
 
-    /** 초과 달성분도 사라지지 않는다. 다음 서비스 날짜에 버튼으로 수령한다. */
+    /** 이전 앱의 수령 요청 호환용. 새 앱에서는 자동 소개만 사용한다. */
     @Transactional
     fun claimReward(accountId: UUID): TasteDeckProgress {
         val claimed = claimEarnedReward(accountId, tasteChoiceRepository.findAllByAccountId(accountId).size)
@@ -158,8 +146,20 @@ class TasteCardService(
         return TasteDeckProgress(deck.answered, deck.total, claimed, deck.reward)
     }
 
-    private fun claimEarnedReward(accountId: UUID, answered: Int): Boolean =
-        tasteRewardRepository.claimEarned(accountId, answered, ServiceDay.startOfToday(), TasteReward.DAILY_LIMIT)
+    /** 지급 누락 방지용 내부 기록. 사용자가 받거나 쓰는 이용권은 아니다. */
+    @Transactional
+    fun accrueRewards(accountId: UUID): Boolean =
+        claimEarnedReward(accountId, tasteChoiceRepository.findAllByAccountId(accountId).size)
+
+    private fun claimEarnedReward(accountId: UUID, answered: Int): Boolean {
+        var accrued = false
+        // 과거 하루 제한으로 밀린 분량도 자동으로 인정한다. 같은 이정표는 한 번뿐이다.
+        repeat(answered / TasteReward.EVERY) {
+            if (!tasteRewardRepository.claimEarned(accountId, answered, ServiceDay.startOfToday(), Int.MAX_VALUE)) return accrued
+            accrued = true
+        }
+        return accrued
+    }
 
     @Transactional(readOnly = true)
     fun rewardStatus(accountId: UUID): TasteRewardView {
@@ -171,7 +171,7 @@ class TasteCardService(
             remaining = TasteReward.EVERY - answered % TasteReward.EVERY,
             unclaimed = earned,
             pending = tasteRewardRepository.pendingCount(accountId),
-            dailyLimitReached = tasteRewardRepository.claimedSince(accountId, ServiceDay.startOfToday()) >= TasteReward.DAILY_LIMIT,
+            dailyLimitReached = false, // 이전 앱 응답 호환용. 새 앱은 수령·보유 개념을 표시하지 않는다.
         )
     }
 
@@ -203,7 +203,7 @@ data class TasteCardView(
     val optionD: String? = null,
 )
 
-/** 한 장을 고른 결과. [milestoneReached]가 true면 이번 장으로 추가 소개권이 한 장 적립됐다. */
+/** 한 장을 고른 결과. [milestoneReached]가 true면 이번 장으로 추가 소개 조건을 달성했다. */
 data class TasteDeckProgress(
     val answered: Int, val total: Int, val milestoneReached: Boolean = false,
     val reward: TasteRewardView? = null,

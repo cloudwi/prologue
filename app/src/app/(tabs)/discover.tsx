@@ -481,7 +481,7 @@ function DiscoverBoard() {
                   <Text style={[styles.tasteTitle, { color: c.text }]}>취향 카드</Text>
                   {/* 장수는 적지 않는다 — 남은 개수가 보이면 넘기기가 채워야 할 진도표가 된다. */}
                   <Text style={[styles.tasteSub, { color: c.textSecondary }]}>
-                    10장 고르면 추가 소개권 1장 · 하루 1장 수령
+                    카드 10개에 답하면 한 명 더 소개해 드려요
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={c.textSecondary} />
@@ -514,7 +514,7 @@ function DiscoverBoard() {
                   />
                   <Pressable onPress={() => setComposing(true)} hitSlop={8} style={styles.carryPrompt}>
                     <Text style={[styles.carryPromptText, { color: c.primaryStrong }]}>
-                      답하고 새로운 사람 만나기 →
+                      오늘의 답 남기기 →
                     </Text>
                   </Pressable>
                 </>
@@ -529,8 +529,8 @@ function DiscoverBoard() {
                   onUnlock={confirmAnswerUnlock}
                 />
               ) : !peersData || !peersData.answerUnlocked ? (
-                // 정오 전이라 아직 오지 않았다 — 지금 답하면 기다리지 않고 바로 만난다.
-                <EmptyPeer c={c} title="답을 남기면 오늘의 한 사람이 도착해요" action="답 쓰러 가기" onAction={() => setComposing(true)} />
+                // 기본 소개는 정오, 카드 추가 소개는 달성 직후다.
+                <EmptyPeer c={c} title="매일 정오에 한 사람을 소개해 드려요" body="카드 10개에 답하면 한 명을 더 만날 수 있어요." action="취향 카드 답하기" onAction={() => router.push('/taste-cards')} />
               ) : (
                 // 하루 한 명이라 후보가 없는 날이 생긴다. 서버는 조회할 때마다 빈자리를 채우므로
                 // "오늘은 끝"이 아니라 "아직"이라는 걸 알려준다 — 저녁에 답한 사람이 생기면 그때 소개된다.

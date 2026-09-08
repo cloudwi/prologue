@@ -42,9 +42,9 @@ export type TasteProgress = {
   answered: number;
   total: number;
   reward?: TasteReward;
-  /** 이번 장으로 이정표를 밟았는지 — 추가 소개권 한 장이 적립됐다는 뜻. */
+  /** 이번 장으로 이정표를 밟았는지 — 추가 한 명의 소개 조건을 달성했다는 뜻. */
   milestoneReached: boolean;
-  /** 그 표가 그 자리에서 소개로 바뀌었는지. 후보가 없으면 false고, 표는 남아 다음에 쓰인다. */
+  /** 추가 상대가 실제로 도착했는지. 후보가 없으면 나중에 자동으로 소개한다. */
   peerArrived: boolean;
 };
 
@@ -54,10 +54,6 @@ export type TasteProgress = {
  */
 export async function chooseTaste(cardId: number, option: TasteOption, note?: string): Promise<TasteProgress> {
   return authedRequest<TasteProgress>('POST', `/taste-cards/${cardId}/choice`, { option, note: note || null });
-}
-
-export async function claimTasteReward(): Promise<TasteProgress> {
-  return authedRequest<TasteProgress>('POST', '/taste-cards/rewards/claim');
 }
 
 export type MyTaste = {

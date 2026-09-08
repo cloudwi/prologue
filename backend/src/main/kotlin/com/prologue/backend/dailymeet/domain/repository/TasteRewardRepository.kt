@@ -11,6 +11,9 @@ import java.util.UUID
  * 그건 보상이 아니다.
  */
 interface TasteRewardRepository {
+    fun lockAccount(accountId: UUID)
+    fun grantedSince(accountId: UUID, since: java.time.Instant): Int
+
     fun claimedMilestones(accountId: UUID): List<Int>
 
     /** 계정별로 직렬화하여 하루 한도와 이정표 중복을 함께 보장한다. */

@@ -123,4 +123,16 @@ class TasteRewardPersistenceAdapterIT : PostgresRepositoryTest() {
         }
     }
 
+    @Test
+    fun `하루 제한 없이 여러 달성을 기록하고 실제 소개한 수만 센다`() {
+        val since = java.time.Instant.now().minusSeconds(60)
+        assertTrue(rewards.claimEarned(me, 20, since, Int.MAX_VALUE))
+        assertTrue(rewards.claimEarned(me, 20, since, Int.MAX_VALUE))
+        assertFalse(rewards.claimEarned(me, 20, since, Int.MAX_VALUE))
+        assertEquals(0, rewards.grantedSince(me, since))
+        rewards.markGranted(me, 1)
+        assertEquals(1, rewards.grantedSince(me, since))
+        assertEquals(1, rewards.pendingCount(me))
+    }
+
 }

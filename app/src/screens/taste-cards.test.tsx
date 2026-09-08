@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import TasteCardsScreen from '../app/taste-cards';
-import { chooseTaste, claimTasteReward, getTasteDeck, type TasteDeck } from '../lib/taste';
+import { chooseTaste, getTasteDeck, type TasteDeck } from '../lib/taste';
 
 jest.mock('../global.css', () => ({}));
 
@@ -9,7 +9,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
   useRouter: () => ({ back: jest.fn(), canGoBack: () => true, replace: jest.fn() }),
 }));
-jest.mock('../lib/taste', () => ({ getTasteDeck: jest.fn(), chooseTaste: jest.fn(), claimTasteReward: jest.fn(), TASTE_NOTE_MAX: 100 }));
+jest.mock('../lib/taste', () => ({ getTasteDeck: jest.fn(), chooseTaste: jest.fn(), TASTE_NOTE_MAX: 100 }));
 jest.mock('../lib/analytics', () => ({ track: jest.fn() }));
 jest.mock('../lib/haptics', () => ({ haptics: { select: jest.fn(), success: jest.fn() } }));
 jest.mock('../hooks/use-theme', () => ({ useTheme: () => ({ text: '#111111', primary: '#aa5544' }) }));
@@ -46,7 +46,7 @@ it('네 번째 선택지를 저장하고 다음 세 선택지 카드로 넘어�
   await fireEvent.press(await screen.findByText('친구 만나기'));
   await screen.findByText('다음 질문');
   expect(chooseTaste).toHaveBeenCalledWith(1001, 'D', undefined);
-  expect(screen.getByText('9장 더 고르면 추가 소개권 1장')).toBeTruthy();
+  expect(screen.getByText('9장 더 답하면 한 명 더 소개해 드려요')).toBeTruthy();
   expect(screen.getByText('오후')).toBeTruthy();
 });
 
@@ -62,12 +62,11 @@ it('저장 실패 시 같은 카드에 남아 다시 시도할 수 있다', asyn
   expect(chooseTaste).toHaveBeenCalledTimes(2);
 });
 
-it('카드를 다 답한 뒤에도 이월 보상을 받고 보유 수량을 확인한다', async () => {
-  jest.mocked(getTasteDeck).mockResolvedValue({ ...deck, cards: [], reward: { ...deck.reward!, unclaimed: 1 } });
-  jest.mocked(claimTasteReward).mockResolvedValue({ answered: 100, total: 100, milestoneReached: true, peerArrived: false, reward: { ...deck.reward!, pending: 1, dailyLimitReached: true } });
+it('소개할 후보가 없으면 자동 소개 안내만 보이고 수령 버튼이나 보유 수량은 없다', async () => {
+  jest.mocked(getTasteDeck).mockResolvedValue({ ...deck, cards: [], reward: { ...deck.reward!, pending: 1 } });
   await render(<TasteCardsScreen />);
-  await fireEvent.press(await screen.findByText('추가 소개권 받기'));
-  await screen.findByText('추가 소개권 1장 적립');
-  expect(screen.getByText('10장마다 1장 · 하루 1장 수령 · 보유 1장')).toBeTruthy();
-  expect(screen.queryByText('추가 소개권 받기')).toBeNull();
+  await screen.findByText('지금은 소개할 상대를 찾고 있어요. 인연이 닿으면 자동으로 소개해 드릴게요.');
+  expect(screen.getByText('매일 정오에 한 명 · 카드 10개마다 추가 한 명')).toBeTruthy();
+  expect(screen.queryByText(/소개권/)).toBeNull();
+  expect(screen.queryByText(/보유/)).toBeNull();
 });
