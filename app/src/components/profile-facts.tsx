@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -74,73 +75,104 @@ export function ProfileFactsFields({
 
   return (
     <View>
-      <Group
-        title="담배"
-        options={SMOKING_ORDER.map((key) => ({ key, label: SMOKING_LABELS[key] }))}
-        value={value.smoking}
-        onChange={(v) => onChange({ smoking: v as Smoking | null })}
-        c={c}
-      />
-      <Group
-        title="술"
-        options={DRINKING_ORDER.map((key) => ({ key, label: DRINKING_LABELS[key] }))}
-        value={value.drinking}
-        onChange={(v) => onChange({ drinking: v as Drinking | null })}
-        c={c}
-      />
-      <Group
-        title="얼마나 자주 만나고 싶나요"
-        options={MEET_FREQUENCY_ORDER.map((key) => ({ key, label: MEET_FREQUENCY_LABELS[key] }))}
-        value={value.meetFrequency}
-        onChange={(v) => onChange({ meetFrequency: v as MeetFrequency | null })}
-        c={c}
-      />
-      <Group
-        title="얼마나 자주 연락하고 싶나요"
-        options={CONTACT_FREQUENCY_ORDER.map((key) => ({ key, label: CONTACT_FREQUENCY_LABELS[key] }))}
-        value={value.contactFrequency}
-        onChange={(v) => onChange({ contactFrequency: v as ContactFrequency | null })}
-        c={c}
-      />
-      <Group
-        title="종교"
-        options={RELIGION_ORDER.map((key) => ({ key, label: RELIGION_LABELS[key] }))}
-        value={value.religion}
-        onChange={(v) => onChange({ religion: v as Religion | null })}
-        c={c}
-      />
-      <Group
-        title="정치 성향"
-        options={POLITICAL_ORDER.map((key) => ({ key, label: POLITICAL_LABELS[key] }))}
-        value={value.politicalLeaning}
-        onChange={(v) => onChange({ politicalLeaning: v as PoliticalLeaning | null })}
-        c={c}
-      />
+      <FactSection title="생활" hint="평소의 생활 방식" c={c}>
+        <Group
+          title="흡연"
+          options={SMOKING_ORDER.map((key) => ({ key, label: SMOKING_LABELS[key] }))}
+          value={value.smoking}
+          onChange={(v) => onChange({ smoking: v as Smoking | null })}
+          c={c}
+        />
+        <Group
+          title="음주"
+          options={DRINKING_ORDER.map((key) => ({ key, label: DRINKING_LABELS[key] }))}
+          value={value.drinking}
+          onChange={(v) => onChange({ drinking: v as Drinking | null })}
+          c={c}
+          last
+        />
+      </FactSection>
 
-      {needsConsent && (
-        <Pressable
-          onPress={() => onConsentChange(!consentChecked)}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: consentChecked }}
-          style={[
-            styles.consent,
-            { backgroundColor: c.backgroundElement, borderColor: consentChecked ? c.primary : c.border },
-          ]}
-        >
-          <Ionicons
-            name={consentChecked ? 'checkmark-circle' : 'ellipse-outline'}
-            size={22}
-            color={consentChecked ? c.primary : c.textSecondary}
-          />
-          <View style={styles.consentBody}>
-            <Text style={[styles.consentLabel, { color: c.text }]}>민감정보 수집·이용에 동의합니다</Text>
-            <Text style={[styles.consentNote, { color: c.textSecondary }]}>
-              종교와 정치 성향은 개인정보보호법이 민감정보로 정한 항목이라 따로 동의를 받아요.
-              프로필에 공개할 목적으로만 쓰고, 언제든 지울 수 있어요(지울 때는 동의가 필요 없어요).
-            </Text>
-          </View>
-        </Pressable>
-      )}
+      <FactSection title="관계 리듬" hint="만남과 연락의 속도" c={c}>
+        <Group
+          title="얼마나 자주 만나고 싶나요"
+          options={MEET_FREQUENCY_ORDER.map((key) => ({ key, label: MEET_FREQUENCY_LABELS[key] }))}
+          value={value.meetFrequency}
+          onChange={(v) => onChange({ meetFrequency: v as MeetFrequency | null })}
+          c={c}
+        />
+        <Group
+          title="얼마나 자주 연락하고 싶나요"
+          options={CONTACT_FREQUENCY_ORDER.map((key) => ({ key, label: CONTACT_FREQUENCY_LABELS[key] }))}
+          value={value.contactFrequency}
+          onChange={(v) => onChange({ contactFrequency: v as ContactFrequency | null })}
+          c={c}
+          last
+        />
+      </FactSection>
+
+      <FactSection title="가치관" hint="종교와 정치 성향" c={c}>
+        <Group
+          title="종교"
+          options={RELIGION_ORDER.map((key) => ({ key, label: RELIGION_LABELS[key] }))}
+          value={value.religion}
+          onChange={(v) => onChange({ religion: v as Religion | null })}
+          c={c}
+        />
+        <Group
+          title="정치 성향"
+          options={POLITICAL_ORDER.map((key) => ({ key, label: POLITICAL_LABELS[key] }))}
+          value={value.politicalLeaning}
+          onChange={(v) => onChange({ politicalLeaning: v as PoliticalLeaning | null })}
+          c={c}
+          last
+        />
+
+        {needsConsent && (
+          <Pressable
+            onPress={() => onConsentChange(!consentChecked)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: consentChecked }}
+            style={[
+              styles.consent,
+              { backgroundColor: c.background, borderColor: consentChecked ? c.primary : c.border },
+            ]}
+          >
+            <Ionicons
+              name={consentChecked ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={consentChecked ? c.primary : c.textSecondary}
+            />
+            <View style={styles.consentBody}>
+              <Text style={[styles.consentLabel, { color: c.text }]}>민감정보 수집·이용에 동의합니다</Text>
+              <Text style={[styles.consentNote, { color: c.textSecondary }]}>
+                종교와 정치 성향은 개인정보보호법이 민감정보로 정한 항목이라 따로 동의를 받아요.
+                프로필에 공개할 목적으로만 쓰고, 언제든 지울 수 있어요(지울 때는 동의가 필요 없어요).
+              </Text>
+            </View>
+          </Pressable>
+        )}
+      </FactSection>
+    </View>
+  );
+}
+
+function FactSection({
+  title,
+  hint,
+  c,
+  children,
+}: {
+  title: string;
+  hint: string;
+  c: ThemeColors;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.section, { backgroundColor: c.backgroundElement }]}>
+      <Text style={[styles.sectionTitle, { color: c.text }]}>{title}</Text>
+      <Text style={[styles.sectionHint, { color: c.textSecondary }]}>{hint}</Text>
+      <View style={styles.sectionBody}>{children}</View>
     </View>
   );
 }
@@ -152,15 +184,17 @@ function Group({
   value,
   onChange,
   c,
+  last = false,
 }: {
   title: string;
   options: { key: string; label: string }[];
   value: string | null;
   onChange: (value: string | null) => void;
   c: ThemeColors;
+  last?: boolean;
 }) {
   return (
-    <View style={styles.group}>
+    <View style={!last && styles.group}>
       <Text style={[styles.groupTitle, { color: c.text }]}>{title}</Text>
       <View style={styles.chips}>
         {options.map((option) => {
@@ -186,13 +220,17 @@ function Group({
 }
 
 const styles = StyleSheet.create({
+  section: { borderRadius: Radius.lg, padding: 18, marginBottom: 16 },
+  sectionTitle: { ...Type.title },
+  sectionHint: { ...Type.caption, marginTop: 3 },
+  sectionBody: { marginTop: 20 },
   group: { marginBottom: 24 },
   groupTitle: { ...Type.label, marginBottom: 10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 9 },
   chipText: { ...Type.body, fontWeight: '600' },
 
-  consent: { flexDirection: 'row', gap: 12, borderWidth: 1, borderRadius: Radius.md, padding: 16, marginBottom: 8 },
+  consent: { flexDirection: 'row', gap: 12, borderWidth: 1, borderRadius: Radius.md, padding: 16, marginTop: 20 },
   consentBody: { flex: 1 },
   consentLabel: { ...Type.body, fontWeight: '600' },
   consentNote: { ...Type.caption, marginTop: 6 },
