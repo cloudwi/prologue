@@ -13,7 +13,8 @@ import java.util.concurrent.Executors
  * 피드용 프로필 사진 미리보기.
  *
  * 원본 URL을 앱에 내려 화면에서만 흐리면 개발자 도구나 네트워크 기록에서 원본을 꺼낼 수 있다.
- * 서버가 12×15 픽셀로 먼저 줄인 바이트만 내려서, 잉크로 열기 전에는 원본을 복원할 수 없게 한다.
+ * 서버가 24×30 픽셀로 먼저 줄인 바이트만 내려서, 잉크로 열기 전에는 원본을 복원할 수 없게 한다.
+ * 4:5 비율을 유지해 작은 피드 사진에서도 인물이 옆으로 눌려 보이지 않는다.
  */
 @Service
 class FeedPhotoPreviewService(
@@ -62,7 +63,7 @@ class FeedPhotoPreviewService(
             if (!originalUrl.startsWith(originalPrefix) || originalUrl.contains('?')) return null
             val renderPrefix = "$base/storage/v1/render/image/public/$bucket/"
             return originalUrl.replaceFirst(originalPrefix, renderPrefix) +
-                "?width=12&height=15&resize=cover&quality=20"
+                "?width=24&height=30&resize=cover&quality=25"
         }
     }
 }

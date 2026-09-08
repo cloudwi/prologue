@@ -109,7 +109,7 @@ function FeedBoard() {
                           source={{ uri: post.photoPreview }}
                           style={StyleSheet.absoluteFill}
                           contentFit="cover"
-                          blurRadius={8}
+                          blurRadius={5}
                           accessibilityLabel={`${post.nickname}님의 흐린 프로필 사진`}
                         />
                         <View style={[StyleSheet.absoluteFill, { backgroundColor: c.background, opacity: 0.18 }]} />
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   sort: { flexDirection: 'row', padding: 3, borderRadius: Radius.pill }, sortButton: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill }, sortLabel: { ...Type.caption, fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 }, retry: { ...Type.button }, list: { paddingHorizontal: 16, gap: 14 },
   empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: 30 }, emptyTitle: { ...Type.title, marginTop: 18 }, emptyBody: { ...Type.body, textAlign: 'center', marginTop: 8 },
-  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg, padding: 18 }, authorRow: { flexDirection: 'row', alignItems: 'center' }, authorPhoto: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg, padding: 18 }, authorRow: { flexDirection: 'row', alignItems: 'center' }, authorPhoto: { width: 40, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   authorText: { flex: 1, marginLeft: 10 }, nickname: { ...Type.label }, kind: { ...Type.caption, marginTop: 1 }, prompt: { ...Type.caption, marginTop: 22 }, answer: { ...Type.read, marginTop: 8 },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth }, action: { flexDirection: 'row', alignItems: 'center', minWidth: 52 }, count: { ...Type.caption, marginLeft: 5 },
   profileAction: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5 }, profileLabel: { ...Type.caption, fontWeight: '600' },
