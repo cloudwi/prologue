@@ -163,6 +163,7 @@ function Navigation() {
         {/* 모임만 쓰던 회원이 소개팅을 켜는 자리 — 민감정보 동의를 여기서 받는다 */}
         <Stack.Screen name="my/start-dating" />
         <Stack.Screen name="peer" />
+        <Stack.Screen name="demo-profile" />
         <Stack.Screen name="past-peers" />
         <Stack.Screen name="meetup/[id]" />
         <Stack.Screen name="meetup-member/[id]" />

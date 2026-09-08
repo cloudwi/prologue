@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
@@ -45,6 +46,7 @@ export function ProfileInvitation({
   onUnlock,
   unlockPrice,
   unlocking,
+  notice,
 }: {
   nickname: string | null;
   meta: string;
@@ -54,7 +56,7 @@ export function ProfileInvitation({
   jobVerified?: boolean;
   /** 인증한 회사 이메일 도메인 — 있으면 배지에 도메인을 그대로 쓴다("jobplanet.com 인증"). */
   jobDomain?: string | null;
-  photoUrls: string[];
+  photoUrls: (string | number)[];
   letters: InvitationLetter[];
   keywords: string[];
   /**
@@ -83,6 +85,8 @@ export function ProfileInvitation({
   unlockPrice?: number;
   /** 지금 여는 중인 질문 id — 버튼을 두 번 누르지 못하게. */
   unlocking?: number | null;
+  /** 데모처럼 실제 회원과 구분해야 하는 프로필의 상시 표시. */
+  notice?: string;
 }) {
   const [cover, ...restPhotos] = photoUrls;
   const photoSlots = scatter(restPhotos.length, letters.length, seed);
@@ -90,8 +94,15 @@ export function ProfileInvitation({
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {cover && (
-        <Image source={{ uri: cover }} style={[styles.photo, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+        <Image source={typeof cover === 'string' ? { uri: cover } : cover} style={[styles.photo, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
       )}
+
+      {notice ? (
+        <View style={[styles.notice, { backgroundColor: c.backgroundElement, borderColor: c.primary + '55' }]}>
+          <Ionicons name="sparkles" size={14} color={c.primaryStrong} />
+          <Text style={[styles.noticeText, { color: c.text }]}>{notice}</Text>
+        </View>
+      ) : null}
 
       {/* 표지 — 이름과 한 줄 정보, 그 아래 키워드. 긴 글 전에 훑는 요약은 표지 몫이다. */}
       <View style={styles.cover}>
@@ -190,8 +201,8 @@ export function ProfileInvitation({
             .filter(({ slot }) => slot === i)
             .map(({ photoIndex }) => (
               <Image
-                key={restPhotos[photoIndex]}
-                source={{ uri: restPhotos[photoIndex] }}
+                key={String(restPhotos[photoIndex])}
+                source={typeof restPhotos[photoIndex] === 'string' ? { uri: restPhotos[photoIndex] } : restPhotos[photoIndex]}
                 style={[styles.photo, styles.interPhoto, { backgroundColor: c.backgroundSelected }]}
                 contentFit="cover"
                 transition={150}
@@ -204,8 +215,8 @@ export function ProfileInvitation({
       {letters.length === 0 &&
         restPhotos.map((url) => (
           <Image
-            key={url}
-            source={{ uri: url }}
+            key={String(url)}
+            source={typeof url === 'string' ? { uri: url } : url}
             style={[styles.photo, styles.interPhoto, { backgroundColor: c.backgroundSelected }]}
             contentFit="cover"
             transition={150}
@@ -260,6 +271,8 @@ function Divider({ c }: { c: ThemeColors }) {
 }
 
 const styles = StyleSheet.create({
+  notice: { marginHorizontal: 20, marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderWidth: 1, borderRadius: Radius.pill, alignSelf: 'flex-start' },
+  noticeText: { fontSize: 13, fontWeight: '700' },
   shared: { marginTop: 18, marginHorizontal: 20, borderRadius: Radius.md, padding: 16 },
   sharedTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.2 },
   sharedRow: { marginTop: 12 },

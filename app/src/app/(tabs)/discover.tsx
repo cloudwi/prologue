@@ -42,46 +42,11 @@ import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
 import type { Gender } from '@/lib/member';
+import { DEMO_PROFILES } from '@/lib/demo-profiles';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 10;
 const ANSWER_MAX = 500;
-
-/**
- * 실제 후보가 없는 동안 제품의 프로필 경험만 보여주는 허구의 인물들.
- *
- * 계정이나 답변을 DB에 만들지 않는다. 그래야 추천 후보·통계·편지·신고 어디에도 섞이지 않는다.
- * 사진과 이름도 모두 데모이며, 카드는 눌리지 않고 매 장에 AI 이미지라는 표시를 남긴다.
- */
-const DEMO_PROFILES = [
-  {
-    id: 'seoyun',
-    source: require('../../../assets/images/demo-profiles/demo-seoyun.jpg'),
-    name: '서윤',
-    age: 27,
-    region: '마포구',
-    answer: '낯선 동네를 천천히 걷다가 마음에 드는 작은 가게를 발견하는 하루를 좋아해요.',
-    tags: ['동네 산책', '전시', '커피'],
-  },
-  {
-    id: 'jihye',
-    source: require('../../../assets/images/demo-profiles/demo-jihye.jpg'),
-    name: '지혜',
-    age: 31,
-    region: '성동구',
-    answer: '주말 아침에는 한강을 가볍게 달려요. 같이 움직이고 맛있는 걸 먹는 데이트가 좋아요.',
-    tags: ['러닝', '한강', '요리'],
-  },
-  {
-    id: 'minseo',
-    source: require('../../../assets/images/demo-profiles/demo-minseo.jpg'),
-    name: '민서',
-    age: 24,
-    region: '종로구',
-    answer: '좋아하는 책 이야기를 오래 나누고 각자 새로 발견한 문장을 주고받고 싶어요.',
-    tags: ['책방', '사진', '여행'],
-  },
-] as const;
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
@@ -614,8 +579,9 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
   );
 }
 
-/** 실제 소개 카드의 모양만 미리 보는 비대화형 데모 캐러셀. */
+/** 실제 소개 카드의 모양을 미리 보고, 완성된 데모 상세로 들어가는 캐러셀. */
 function DemoProfileCarousel({ c }: { c: ThemeColors }) {
+  const router = useRouter();
   const [width, setWidth] = useState(0);
   const cardWidth = width - 28;
 
@@ -632,14 +598,19 @@ function DemoProfileCarousel({ c }: { c: ThemeColors }) {
           contentContainerStyle={styles.carouselContent}
         >
           {DEMO_PROFILES.map((profile) => (
-            <View
+            <Pressable
               key={profile.id}
-              accessible
-              accessibilityLabel={`AI 이미지로 만든 데모 프로필, ${profile.name} ${profile.age}세`}
-              style={[styles.peerCard, styles.demoCard, { width: cardWidth, backgroundColor: c.backgroundElement }]}
+              onPress={() => router.push({ pathname: '/demo-profile', params: { id: profile.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={`AI 이미지로 만든 데모 프로필, ${profile.nickname} ${profile.age}세 자세히 보기`}
+              style={({ pressed }) => [
+                styles.peerCard,
+                styles.demoCard,
+                { width: cardWidth, backgroundColor: c.backgroundElement, opacity: pressed ? 0.92 : 1 },
+              ]}
             >
               <View>
-                <Image source={profile.source} style={[styles.peerPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" />
+                <Image source={profile.photos[0]} style={[styles.peerPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" />
                 <View style={[styles.demoBadge, { backgroundColor: c.background }]}>
                   <Ionicons name="sparkles" size={12} color={c.primaryStrong} />
                   <Text style={[styles.demoBadgeText, { color: c.text }]}>데모 · AI 이미지</Text>
@@ -647,21 +618,24 @@ function DemoProfileCarousel({ c }: { c: ThemeColors }) {
               </View>
               <View style={styles.demoBody}>
                 <View style={styles.demoNameRow}>
-                  <Text style={[styles.peerName, { color: c.text, fontFamily: Fonts.serif }]}>{profile.name}</Text>
-                  <Text style={[styles.peerMeta, { color: c.textSecondary }]}>{profile.age}세 · {profile.region}</Text>
+                  <Text style={[styles.peerName, { color: c.text, fontFamily: Fonts.serif }]}>{profile.nickname}</Text>
+                  <Text style={[styles.peerMeta, { color: c.textSecondary }]}>{profile.age}세 · {profile.region.split(' ').at(-1)}</Text>
                 </View>
                 <Text style={[styles.demoAnswer, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={3}>
-                  {profile.answer}
+                  {profile.letters[0].content}
                 </Text>
                 <View style={styles.peerChips}>
-                  {profile.tags.map((tag) => (
+                  {profile.hobbies.slice(0, 3).map((tag) => (
                     <View key={tag} style={[styles.peerChip, { borderColor: c.border }]}>
                       <Text style={[styles.peerChipText, { color: c.textSecondary }]}>{tag}</Text>
                     </View>
                   ))}
                 </View>
+                <View style={[styles.demoDetail, { backgroundColor: c.backgroundSelected }]}>
+                  <Text style={[styles.demoDetailText, { color: c.text }]}>프로필 보기</Text>
+                </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       ) : null}
@@ -1095,6 +1069,8 @@ const styles = StyleSheet.create({
   demoHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 14 },
   demoHintDot: { width: 6, height: 6, borderRadius: 3 },
   demoHintText: { ...Type.caption },
+  demoDetail: { alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 13, paddingVertical: 8, borderRadius: Radius.pill },
+  demoDetailText: { ...Type.label },
 
   // 빈 상태 — 상대 카드와 같은 면 위에 마크 하나와 한 줄.
   emptyCard: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 28 },

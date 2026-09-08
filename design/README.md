@@ -317,7 +317,8 @@ canvas.save('web/public/favicon.png'); canvas.save('app/assets/images/favicon.pn
 
 - 이미지: `app/assets/images/demo-profiles/`의 4:5 세로 사진
 - 인물·이름·나이·답변: 모두 허구
-- 동작: 상세 화면과 연락 행동이 없는 비대화형 카드
+- 동작: 카드를 누르면 사진 3장·자기소개·프로필 문답·생활/신념 태그가 채워진 데모 상세 화면을 연다.
+  상세에는 편지·하트·신고 같은 실제 회원 행동이 없다.
 - 노출 조건: 여성 소개를 선택한 회원에게 `/daily/today/peers`의 `peers`가 빈 배열일 때만
 
 배경색이 박혀 있는 파일은 `icon.png`와 `android-icon-background.png` 둘뿐이고,
