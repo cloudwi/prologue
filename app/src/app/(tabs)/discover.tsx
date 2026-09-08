@@ -462,30 +462,36 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
              *
              * 처음엔 답 쓰기 아래의 작은 글씨 한 줄이었는데, 작은 글씨는 아무도 안 누른다.
              * 카드로 세워야 "여기 할 게 하나 더 있다"가 보이고, 남은 장수를 적어 두면
-             * 다 넘기지 않은 사람에게 돌아올 이유가 생긴다. 다 넘겼으면 사라진다 —
-             * 할 일이 없는 자리를 남겨두면 화면만 길어진다.
+             * 다 넘기지 않은 사람에게 돌아올 이유가 생긴다. 다 넘긴 뒤에도 진입점은 남긴다 —
+             * 그래야 갑자기 사라진 이유를 알 수 있고, 오늘 고른 카드를 다시 열어볼 수 있다.
              */}
-            {tasteDeck && tasteDeck.cards.length > 0 && (
+            {tasteDeck && (
               <Pressable
                 onPress={() => router.push('/taste-cards')}
                 accessibilityRole="button"
+                accessibilityLabel={tasteDeck.cards.length === 0 ? '오늘의 취향 10개 답변 완료, 답변 다시 보기' : '취향 카드 답하기'}
                 style={({ pressed }) => [
                   styles.tasteCard,
                   {
                     backgroundColor: c.backgroundElement,
-                    borderColor: c.primary + '55',
+                    borderColor: tasteDeck.cards.length === 0 ? c.border : c.primary + '55',
                     opacity: pressed ? 0.9 : 1,
                   },
                 ]}
               >
-                <View style={[styles.tasteIcon, { backgroundColor: c.primary + '1F' }]}>
-                  <Ionicons name="albums" size={16} color={c.primaryStrong} />
+                <View style={[styles.tasteIcon, { backgroundColor: tasteDeck.cards.length === 0 ? c.backgroundSelected : c.primary + '1F' }]}>
+                  <Ionicons
+                    name={tasteDeck.cards.length === 0 ? 'checkmark' : 'albums'}
+                    size={16}
+                    color={tasteDeck.cards.length === 0 ? c.textSecondary : c.primaryStrong}
+                  />
                 </View>
                 <View style={styles.tasteBody}>
-                  <Text style={[styles.tasteTitle, { color: c.text }]}>취향 카드</Text>
-                  {/* 장수는 적지 않는다 — 남은 개수가 보이면 넘기기가 채워야 할 진도표가 된다. */}
+                  <Text style={[styles.tasteTitle, { color: c.text }]}>오늘의 취향</Text>
                   <Text style={[styles.tasteSub, { color: c.textSecondary }]}>
-                    카드 10개에 답하면 한 명 더 소개해 드려요
+                    {tasteDeck.cards.length === 0
+                      ? '10개 답변 완료 · 누르면 다시 볼 수 있어요'
+                      : '카드 10개에 답하면 한 명 더 소개해 드려요'}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={c.textSecondary} />
