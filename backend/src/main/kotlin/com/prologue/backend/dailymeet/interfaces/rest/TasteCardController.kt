@@ -49,7 +49,7 @@ class TasteCardController(
         val progress = request.sessionId?.let { sessions.choose(accountId, it, cardId, request.option, request.note) }
             ?: tasteCardService.choose(accountId, cardId, request.option, request.note)
         val peerArrived = progress.milestoneReached && peerMatchingService.consumeExtraReveals(accountId)
-        return TasteProgressResponse.from(progress.copy(reward = request.sessionId?.let { sessions.get(accountId, it).reward }
+        return TasteProgressResponse.from(progress.copy(reward = request.sessionId?.let { sessions.rewardStatus(accountId, it) }
             ?: tasteCardService.rewardStatus(accountId)), peerArrived)
     }
 

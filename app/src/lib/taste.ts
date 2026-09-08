@@ -7,6 +7,8 @@ export type TasteCard = {
   optionA: string;
   optionB: string;
   options?: { id: TasteOption; label: string }[];
+  myOption?: TasteOption | null;
+  optionPercentages?: Partial<Record<TasteOption, number>> | null;
 };
 
 export type TasteOption = 'A' | 'B' | 'C' | 'D';
@@ -22,6 +24,7 @@ export type TasteReward = {
 export type TasteDeck = {
   /** 아직 안 고른 카드. 다 넘기면 빈 배열이 온다. */
   cards: TasteCard[];
+  sessionCards?: TasteCard[];
   sessionId?: string;
   resetsAt?: string;
   answered: number;

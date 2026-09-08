@@ -29,7 +29,11 @@ class TasteSessionServiceIT : PostgresRepositoryTest() {
         assertEquals(noon, deck.resetsAt)
         service.choose(me, deck.sessionId!!, deck.cards.first().id, TasteOption.A, null, before)
         assertEquals(0, service.preview(me, noon).answered)
-        assertEquals(1, service.get(me, deck.sessionId).answered)
+        val restored = service.get(me, deck.sessionId)
+        assertEquals(1, restored.answered)
+        assertEquals(10, restored.sessionCards.size)
+        assertEquals(TasteOption.A, restored.sessionCards.first().myOption)
+        assertNull(restored.sessionCards[1].optionPercentages)
         deck.cards.drop(1).forEach { service.choose(me, deck.sessionId, it.id, TasteOption.B, null, noon) }
         assertEquals(1, rewards.pendingCount(me))
         assertFalse(service.choose(me, deck.sessionId, deck.cards.last().id, TasteOption.A, null, noon).milestoneReached)
@@ -71,6 +75,7 @@ class TasteSessionServiceIT : PostgresRepositoryTest() {
         assertEquals(0, result.optionPercentages[TasteOption.C])
         assertEquals(90, service.choose(me, deck.sessionId, id, TasteOption.A, null, noon).selectedPercentage)
         assertEquals(10, sessions.statistics(id).values.sum())
+        assertEquals(90, service.get(me, deck.sessionId).sessionCards.first().optionPercentages!![TasteOption.A])
         assertEquals(1, service.get(me, deck.sessionId).answered)
     }
 

@@ -195,6 +195,7 @@ data class TasteDeckView(
     val reward: TasteRewardView,
     val sessionId: UUID? = null,
     val resetsAt: Instant? = null,
+    val sessionCards: List<TasteCardView> = emptyList(),
 )
 
 data class TasteCardView(
@@ -207,6 +208,7 @@ data class TasteCardView(
     val myNote: String?,
     val optionC: String? = null,
     val optionD: String? = null,
+    val optionPercentages: Map<TasteOption, Int>? = null,
 )
 
 /** 한 장을 고른 결과. [milestoneReached]가 true면 이번 장으로 추가 소개 조건을 달성했다. */

@@ -29,7 +29,7 @@ import { chooseTaste, startTasteSession, getTasteSession, type TasteReward, TAST
  * 오늘의 문답은 열 자면 되지만, 막는 건 분량이 아니라 빈 화면이다. 카드는 탭 하나로 시작하게 하고,
  * 고르고 난 자리에 한 줄 칸을 열어둔다. 고른 다음의 한 줄은 백지 앞의 한 줄보다 훨씬 쉽다.
  *
- * 고른 뒤 통계를 읽고 직접 다음 장으로 넘어간다.
+ * 고른 뒤 통계를 잠깐 보여주고 자동 이동한다. 상단 카드 칸을 눌러 이전 답변을 다시 볼 수 있다.
  * 한 줄은 쓰고 싶은 사람만, 한 번 더 눌러서.
  *
  * 잉크는 여기서 나오지 않는다. 잉크는 글(오늘의 문답)의 몫이고, 카드가 돌려주는 것은
@@ -45,11 +45,14 @@ export default function TasteCardsScreen() {
   const { intro } = useLocalSearchParams<{ intro?: string }>();
   const isIntro = intro === '1';
 
+  const autoAdvance = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alive = useRef(true);
   const sessionId = useRef<string | undefined>(undefined);
   const [percentages, setPercentages] = useState<Partial<Record<TasteOption, number>> | null>(null);
   const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
+  const [reviewing, setReviewing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   /** 방금 고른 쪽 — 카드가 넘어가기 전 잠깐 색이 차오르는 자리. */
@@ -66,9 +69,15 @@ export default function TasteCardsScreen() {
 
   const apply = useCallback((deck: TasteDeck) => {
     sessionId.current = deck.sessionId;
-    setCards(deck.cards);
+    const all = deck.sessionCards?.length ? deck.sessionCards : deck.cards;
+    setCards(all);
     setRewardStatus(deck.reward ?? null);
-    setIndex(0);
+    const first = all.findIndex((item) => !item.myOption);
+    setIndex(first >= 0 ? first : all.length);
+    setChosen(null);
+    setReviewing(false);
+    setStatistic(null);
+    setPercentages(null);
     setFailed(false);
   }, []);
 
@@ -84,6 +93,7 @@ export default function TasteCardsScreen() {
   }, [apply]);
 
   useEffect(() => {
+    alive.current = true;
     track('taste_deck_opened');
     let active = true;
     startTasteSession()
@@ -92,6 +102,8 @@ export default function TasteCardsScreen() {
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
+      alive.current = false;
+      if (autoAdvance.current) clearTimeout(autoAdvance.current);
     };
   }, [apply]);
 
@@ -109,6 +121,7 @@ export default function TasteCardsScreen() {
    * 가입 직후(intro)만 예외다: 그때는 뒤가 온보딩이라 돌아갈 곳이 아니고, 발견 탭이 목적지다.
    */
   const done = () => {
+    if (autoAdvance.current) clearTimeout(autoAdvance.current);
     if (isIntro) {
       router.replace('/discover' as never);
       return;
@@ -121,19 +134,27 @@ export default function TasteCardsScreen() {
     router.replace('/my' as never);
   };
 
-  /** 다음 장으로. 묶음을 다 넘겼으면 서버에서 다음 묶음을 받아온다. */
-  function advance() {
-    setStatistic(null);
-    setPercentages(null);
+  function navigateTo(next: number, snapshot = cards, fromHistory = false) {
+    if (autoAdvance.current) clearTimeout(autoAdvance.current);
+    autoAdvance.current = null;
+    const target = snapshot[next];
+    setIndex(next);
+    setReviewing(fromHistory && !!target?.myOption);
+    setChosen(target?.myOption ?? null);
+    setPercentages(target?.optionPercentages ?? null);
+    setStatistic(target?.myOption ? target.optionPercentages?.[target.myOption] ?? null : null);
     setNote('');
     setNoteOpen(false);
-    setChosen(null);
-    if (index + 1 < cards.length) {
-      setIndex(index + 1);
-    } else {
-      setLoading(true);
-      void load();
-    }
+  }
+
+  function nextUnanswered(snapshot = cards) {
+    const after = snapshot.findIndex((item, i) => i > index && !item.myOption);
+    const next = after >= 0 ? after : snapshot.findIndex((item) => !item.myOption);
+    return next >= 0 ? next : snapshot.length;
+  }
+
+  function advance() {
+    navigateTo(nextUnanswered());
   }
 
   async function choose(option: TasteOption) {
@@ -145,10 +166,16 @@ export default function TasteCardsScreen() {
     try {
       if (!sessionId.current) throw new Error('Missing taste session');
       const progress = await chooseTaste(card.id, option, note.trim() || undefined, sessionId.current);
+      if (!alive.current) return;
+      const updated = cards.map((item) => item.id === card.id
+        ? { ...item, myOption: option, optionPercentages: progress.optionPercentages ?? null }
+        : item);
+      setCards(updated);
       setStatistic(progress.selectedPercentage ?? null);
       setPercentages(progress.optionPercentages ?? null);
-      setRewardStatus(progress.reward ?? null);
+      setRewardStatus(progress.reward ?? rewardStatus);
       track('taste_card_chosen', { noted });
+      autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 1600);
       if (progress.milestoneReached) {
         haptics.success();
         setReward(progress.peerArrived ? 'arrived' : 'pending');
@@ -158,7 +185,7 @@ export default function TasteCardsScreen() {
       setChosen(null);
       Alert.alert('저장하지 못했어요', '선택이 저장됐는지 확인하지 못했어요. 같은 선택을 다시 눌러주세요.');
     } finally {
-      setSaving(false);
+      if (alive.current) setSaving(false);
     }
   }
 
@@ -203,16 +230,20 @@ export default function TasteCardsScreen() {
             </View>
           </View>
           <View style={styles.journeyTrack}>
-            <View style={styles.progressGroup} accessible accessibilityRole="progressbar"
-              accessibilityLabel="취향 카드 완료. 10개를 모두 답하면 한 명 추가 소개"
-              accessibilityValue={{ min: 0, max: 10, now: 10 - rewardStatus.remaining }}>
+            <View style={styles.progressGroup}>
               <View style={styles.stamps}>
                 {Array.from({ length: 10 }, (_, i) => (
-                  <View key={i} style={[styles.stamp, {
-                    backgroundColor: i < 10 - rewardStatus.remaining ? c.text : c.backgroundSelected,
-                  }]}>
-                    {i < 10 - rewardStatus.remaining && <Ionicons name="checkmark" size={12} color={c.background} />}
-                  </View>
+                  <Pressable key={i} disabled={saving || !cards[i]} onPress={() => navigateTo(i, cards, true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${i + 1}번 카드${cards[i]?.myOption ? ', 답변 완료' : ''}`}
+                    accessibilityState={{ selected: index === i, disabled: saving || !cards[i] }}
+                    style={[styles.stampTarget, { borderBottomColor: index === i ? c.primaryStrong : 'transparent' }]}>
+                    <View style={[styles.stamp, {
+                      backgroundColor: cards[i]?.myOption ? c.text : c.backgroundSelected,
+                    }]}>
+                      {cards[i]?.myOption && <Ionicons name="checkmark" size={12} color={c.background} />}
+                    </View>
+                  </Pressable>
                 ))}
               </View>
               <Text style={[styles.progressCount, { color: c.textSecondary }]}>{10 - rewardStatus.remaining} / 10</Text>
@@ -356,9 +387,9 @@ export default function TasteCardsScreen() {
             </ScrollView>
 
             <View style={styles.footer}>
-              <Pressable onPress={advance} disabled={saving} hitSlop={12} style={chosen != null ? [styles.nextButton, { backgroundColor: c.text }] : styles.headerButton}>
-                <Text style={[styles.headerAction, { color: chosen != null ? c.background : c.textSecondary }]}>{chosen != null ? '다음 카드' : '이 카드는 넘기기'}</Text>
-              </Pressable>
+              {(chosen == null || reviewing) && <Pressable onPress={advance} disabled={saving} hitSlop={12} style={chosen != null ? [styles.nextButton, { backgroundColor: c.text }] : styles.headerButton}>
+                <Text style={[styles.headerAction, { color: chosen != null ? c.background : c.textSecondary }]}>{chosen != null ? (rewardStatus?.remaining === 0 ? '완료' : '이어서 답하기') : '이 카드는 넘기기'}</Text>
+              </Pressable>}
             </View>
           </View>
         )}
@@ -385,7 +416,8 @@ const styles = StyleSheet.create({
   journeyTrack: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   progressGroup: { flex: 1 },
   stamps: { flexDirection: 'row', gap: 4 },
-  stamp: { flex: 1, height: 28, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
+  stampTarget: { flex: 1, minHeight: 44, justifyContent: 'center', borderBottomWidth: 2 },
+  stamp: { width: '100%', height: 28, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
   progressCount: { ...Type.caption, marginTop: 8 },
   destination: { alignItems: 'center', gap: 8 },
   personCircle: { width: 48, height: 48, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
@@ -410,7 +442,7 @@ const styles = StyleSheet.create({
   noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
 
   nextButton: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: Radius.pill },
-  footer: { alignItems: 'center', paddingBottom: 12 },
+  footer: { minHeight: 64, alignItems: 'center', paddingBottom: 12 },
   skip: { ...Type.caption },
 
   retry: { ...Type.label, marginTop: 12 },

@@ -17,6 +17,7 @@ data class TasteDeckResponse(
     val reward: TasteRewardView,
     val sessionId: java.util.UUID? = null,
     val resetsAt: Instant? = null,
+    val sessionCards: List<Card> = emptyList(),
 ) {
     data class Card(
         val id: Long,
@@ -24,17 +25,22 @@ data class TasteDeckResponse(
         val optionA: String,
         val optionB: String,
         val options: List<Option>,
+        val myOption: TasteOption? = null,
+        val optionPercentages: Map<TasteOption, Int>? = null,
     )
 
     data class Option(val id: TasteOption, val label: String)
 
     companion object {
+        private fun card(view: com.prologue.backend.dailymeet.application.service.TasteCardView) = Card(
+            view.id, view.prompt, view.optionA, view.optionB, listOfNotNull(
+                Option(TasteOption.A, view.optionA), Option(TasteOption.B, view.optionB),
+                view.optionC?.let { Option(TasteOption.C, it) }, view.optionD?.let { Option(TasteOption.D, it) },
+            ), view.myOption, view.optionPercentages,
+        )
         fun from(view: TasteDeckView): TasteDeckResponse = TasteDeckResponse(
-            cards = view.cards.map { Card(it.id, it.prompt, it.optionA, it.optionB, listOfNotNull(
-                Option(TasteOption.A, it.optionA), Option(TasteOption.B, it.optionB),
-                it.optionC?.let { label -> Option(TasteOption.C, label) },
-                it.optionD?.let { label -> Option(TasteOption.D, label) },
-            )) },
+            cards = view.cards.map(::card),
+            sessionCards = view.sessionCards.map(::card),
             answered = view.answered,
             total = view.total,
             reward = view.reward,
