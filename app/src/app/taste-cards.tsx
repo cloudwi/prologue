@@ -21,6 +21,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import { chooseTaste, startTasteSession, getTasteSession, type TasteReward, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
+import { publishTasteToFeed } from '@/lib/feed';
+import { showToast } from '@/components/toast';
 
 /**
  * 취향 카드 — 3~4개 중 하나를 고르는 가벼운 문답.
@@ -69,6 +71,8 @@ export default function TasteCardsScreen() {
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [publishedCardIds, setPublishedCardIds] = useState<ReadonlySet<number>>(() => new Set());
+  const [publishingCardId, setPublishingCardId] = useState<number | null>(null);
 
   const apply = useCallback((deck: TasteDeck) => {
     sessionId.current = deck.sessionId;
@@ -226,6 +230,19 @@ export default function TasteCardsScreen() {
     }
   }
 
+  async function publishCurrent() {
+    if (!card?.myOption || publishingCardId != null || publishedCardIds.has(card.id)) return;
+    setPublishingCardId(card.id);
+    try {
+      await publishTasteToFeed(card.id);
+      setPublishedCardIds((current) => new Set(current).add(card.id));
+      haptics.success();
+      showToast('피드에 올렸어요');
+    } catch (e) {
+      Alert.alert('올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally { setPublishingCardId(null); }
+  }
+
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -371,8 +388,11 @@ export default function TasteCardsScreen() {
                     </View>
               </View>
               <View testID="taste-card-meta" style={styles.cardMeta}>
-                    {chosen != null && !currentCardSaving && statistic == null && (
-                      <Text accessibilityLiveRegion="polite" style={[styles.feedbackHint, { color: c.textSecondary }]}>아직 응답을 모으고 있어요</Text>
+                    {chosen != null && !currentCardSaving && (
+                      <Pressable onPress={() => void publishCurrent()} disabled={publishedCardIds.has(card.id) || publishingCardId === card.id} hitSlop={10} style={styles.feedPublish}>
+                        <Ionicons name={publishedCardIds.has(card.id) ? 'checkmark-circle-outline' : 'newspaper-outline'} size={16} color={c.textSecondary} />
+                        <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>{publishedCardIds.has(card.id) ? '피드에 올림' : publishingCardId === card.id ? '올리는 중' : '이 답을 피드에 올리기'}</Text>
+                      </Pressable>
                     )}
 
                     {chosen == null && (noteOpen ? (
@@ -466,11 +486,11 @@ const styles = StyleSheet.create({
 
   cardMeta: { minHeight: 50, justifyContent: 'center' },
   noteOpen: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  feedPublish: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   noteOpenLabel: { ...Type.caption },
   noteBox: { paddingTop: 12 },
   noteInput: { borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, ...Type.body },
   noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
-  feedbackHint: { ...Type.caption, textAlign: 'center' },
 
   footer: { minHeight: 76, alignItems: 'center', justifyContent: 'center', paddingBottom: 12 },
   pager: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 5, borderWidth: 1, borderRadius: Radius.pill },

@@ -15,12 +15,13 @@ const REASONS = [
   { key: 'OTHER', label: '기타' },
 ] as const;
 
-async function sendReport(target: { peerAnswerId?: string; mailId?: string }, reason: string): Promise<void> {
-  await authedRequest<void>('POST', '/reports', { ...target, reason });
+async function sendReport(target: { peerAnswerId?: string; mailId?: string; feedPostId?: string }, reason: string): Promise<void> {
+  if (target.feedPostId) await authedRequest<void>('POST', `/feed/${target.feedPostId}/report`, { reason });
+  else await authedRequest<void>('POST', '/reports', { ...target, reason });
 }
 
 /** 사유를 고르게 한 뒤 신고를 보낸다 — 별도 화면 없이 시스템 다이얼로그로 가볍게. */
-export function promptReport(target: { peerAnswerId?: string; mailId?: string }) {
+export function promptReport(target: { peerAnswerId?: string; mailId?: string; feedPostId?: string }) {
   Alert.alert('신고하기', '어떤 문제가 있나요?', [
     ...REASONS.map((r) => ({
       text: r.label,

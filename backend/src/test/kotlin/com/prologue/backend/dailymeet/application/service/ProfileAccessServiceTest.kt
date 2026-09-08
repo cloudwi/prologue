@@ -180,4 +180,36 @@ class ProfileAccessServiceTest {
 
         assertFailsWith<DailyMeetException> { service.unlock(me, peerAnswerId) }
     }
+
+    @Test
+    fun `피드 프로필은 소개 이력 없이 잉크로 연다`() {
+        every { profileUnlockRepository.findPeerAccountIds(me) } returns emptySet()
+        every { profileUnlockRepository.saveIfNew(any()) } returns true
+        every { inkService.balance(me) } returns 42
+
+        val result = service.unlockFeedProfile(me, peer)
+
+        assertTrue(result.spent)
+        assertEquals(42, result.balance)
+        verify(exactly = 1) { inkService.spend(me, InkPrice.PROFILE_UNLOCK, InkService.REASON_PROFILE_UNLOCK) }
+        verify(exactly = 0) { dailyRevealRepository.findLastRevealedAtBetween(any(), any()) }
+    }
+
+    @Test
+    fun `이미 연 피드 프로필은 잉크를 다시 쓰지 않는다`() {
+        every { profileUnlockRepository.findPeerAccountIds(me) } returns setOf(peer)
+        every { inkService.balance(me) } returns 42
+
+        assertFalse(service.unlockFeedProfile(me, peer).spent)
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
+    }
+
+    @Test
+    fun `피드에서 내 프로필을 볼 때는 잉크를 쓰지 않는다`() {
+        every { inkService.balance(me) } returns 42
+
+        assertFalse(service.unlockFeedProfile(me, me).spent)
+        verify(exactly = 0) { profileUnlockRepository.saveIfNew(any()) }
+        verify(exactly = 0) { inkService.spend(any(), any(), any()) }
+    }
 }

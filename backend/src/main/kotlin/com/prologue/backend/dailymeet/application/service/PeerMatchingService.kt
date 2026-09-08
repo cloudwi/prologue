@@ -424,6 +424,31 @@ class PeerMatchingService(
         )
     }
 
+    /** 피드에서 잉크로 연 프로필. 피드 글 자체가 공개 의사이므로 소개 이력과 문답 교환 조건은 묻지 않는다. */
+    @Transactional(readOnly = true)
+    fun feedProfile(accountId: UUID, peerAccountId: UUID): PeerView {
+        if (peerAccountId != accountId && peerAccountId !in profileAccessService.unlockedPeers(accountId)) {
+            throw DailyMeetException("프로필을 먼저 열어주세요")
+        }
+        val questions = questionRepository.findAllOrdered()
+        val latest = answerRepository.findAllByAccountId(peerAccountId).maxByOrNull { it.createdAt }
+        if (latest != null) return peerView(accountId, latest, answered = true, questions, withRecentAnswers = true, withSharedTastes = true)
+
+        val p = memberQueryService.findProfile(peerAccountId) ?: throw DailyMeetException("프로필을 찾을 수 없어요")
+        val jobDomain = jobVerificationService.verifiedDomain(peerAccountId)
+        return PeerView(
+            peerAnswerId = null, peerAnswer = null, question = null, answerUnlocked = true,
+            photoUrls = p.photoUrls, nickname = p.nickname, letters = profileLetterService.lettersOf(peerAccountId),
+            gender = p.gender, age = p.age(), region = p.region, bio = p.bio, heightCm = p.heightCm,
+            bodyType = p.bodyType, religion = p.religion, politicalLeaning = p.politicalLeaning,
+            smoking = p.smoking, drinking = p.drinking, meetFrequency = p.meetFrequency,
+            contactFrequency = p.contactFrequency, hobbies = p.hobbies, interests = p.interests,
+            strengths = p.strengths, avatarId = p.avatarId,
+            lastActive = LastActiveBucket.of(lastSeenService.lastSeenAt(peerAccountId)),
+            jobVerified = jobDomain != null, jobDomain = jobDomain,
+        )
+    }
+
     /**
      * 상대 프로필(사진·닉네임 포함, 생년월일 등 원본은 비공개) + 답변(잠금 시 null).
      * 질문 목록을 인자로 받는다 — 상대마다 다시 읽으면 사람 수만큼 질문 테이블을 훑게 된다.

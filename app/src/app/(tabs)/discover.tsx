@@ -31,6 +31,7 @@ import { track } from '@/lib/analytics';
 import { answerToday, getPastPeers, getPeers, getToday, unlockAnswers, type Peer } from '@/lib/daily';
 import { getInkBalance, INK_PRICE } from '@/lib/ink';
 import { getTasteDeck } from '@/lib/taste';
+import { publishDailyToFeed } from '@/lib/feed';
 import { writeLetter } from '@/lib/letters';
 import { useTheme } from '@/hooks/use-theme';
 import { haptics } from '@/lib/haptics';
@@ -129,6 +130,8 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
   const [answerExpanded, setAnswerExpanded] = useState(false);
   // 이번 세션에 답변으로 고인 잉크 — 저장 직후 "✓ 오늘 답변했어요" 옆에 잠시 붙여 보여준다.
   const [inkEarnedNote, setInkEarnedNote] = useState(0);
+  const [feedPublished, setFeedPublished] = useState(false);
+  const [publishingFeed, setPublishingFeed] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -261,6 +264,20 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
     } catch (e) {
       Alert.alert('올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     }
+  }
+
+  async function publishToFeed() {
+    if (!today?.questionId || publishingFeed) return;
+    setPublishingFeed(true);
+    try {
+      await publishDailyToFeed(today.questionId);
+      setFeedPublished(true);
+      void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      haptics.success();
+      showToast('피드에 올렸어요');
+    } catch (e) {
+      Alert.alert('올리지 못했어요', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+    } finally { setPublishingFeed(false); }
   }
 
   function startEdit() {
@@ -450,6 +467,11 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
                       </Pressable>
                       <Pressable onPress={promoteToProfile} hitSlop={8}>
                         <Text style={[styles.link, { color: c.primaryStrong }]}>프로필에 올리기</Text>
+                      </Pressable>
+                      <Pressable onPress={() => void publishToFeed()} disabled={publishingFeed || feedPublished} hitSlop={8}>
+                        <Text style={[styles.link, { color: feedPublished ? c.textSecondary : c.primaryStrong }]}>
+                          {feedPublished ? '피드에 올림' : publishingFeed ? '올리는 중' : '피드에 올리기'}
+                        </Text>
                       </Pressable>
                     </View>
                   </View>

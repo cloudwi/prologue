@@ -94,6 +94,19 @@ class ProfileAccessService(
         inkService.spend(accountId, InkPrice.PROFILE_UNLOCK, InkService.REASON_PROFILE_UNLOCK)
         return UnlockResult(spent = true, balance = inkService.balance(accountId))
     }
+
+    /** 피드에서 발견한 사람의 프로필을 연다. 공개 글이 연결의 입구이므로 기존 소개 이력은 요구하지 않는다. */
+    @Transactional
+    fun unlockFeedProfile(accountId: UUID, peerAccountId: UUID): UnlockResult {
+        if (peerAccountId == accountId) return UnlockResult(spent = false, balance = inkService.balance(accountId))
+        if (peerAccountId in profileUnlockRepository.findPeerAccountIds(accountId)) {
+            return UnlockResult(spent = false, balance = inkService.balance(accountId))
+        }
+        val opened = profileUnlockRepository.saveIfNew(ProfileUnlock.open(accountId, peerAccountId))
+        if (!opened) return UnlockResult(spent = false, balance = inkService.balance(accountId))
+        inkService.spend(accountId, InkPrice.PROFILE_UNLOCK, InkService.REASON_PROFILE_UNLOCK)
+        return UnlockResult(spent = true, balance = inkService.balance(accountId))
+    }
 }
 
 /** 열람권 구매 결과 — [spent]가 false면 이미 열려 있어 잉크를 쓰지 않았다는 뜻. */
