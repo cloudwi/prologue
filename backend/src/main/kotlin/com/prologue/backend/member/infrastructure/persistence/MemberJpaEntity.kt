@@ -2,6 +2,7 @@ package com.prologue.backend.member.infrastructure.persistence
 
 import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.ContactFrequency
 import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.Smoking
 import com.prologue.backend.member.domain.model.PoliticalLeaning
@@ -96,6 +97,10 @@ class MemberJpaEntity(
     @Enumerated(EnumType.STRING)
     @Column(name = "meet_frequency", length = 20)
     var meetFrequency: MeetFrequency? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contact_frequency", length = 20)
+    var contactFrequency: ContactFrequency? = null,
 
     /** 사진 공개 URL 목록(콤마 조인, 등록 순). 최대 6장. */
     @Column(name = "photo_urls", columnDefinition = "text")

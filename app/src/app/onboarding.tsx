@@ -33,7 +33,7 @@ import { Fonts, type ThemeColors } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearConsent, getConsent } from '@/lib/consent';
 import { getLetterQuestions, writeLetter, LETTER_MIN_LENGTH, LETTER_MAX_LENGTH, type LetterQuestion } from '@/lib/letters';
-import { completeOnboarding, updateBeliefs, updateLifestyle, type Gender } from '@/lib/member';
+import { completeOnboarding, updateBeliefs, updateContactFrequency, updateLifestyle, type Gender } from '@/lib/member';
 import { SESSION_QUERY_KEY } from '@/lib/session';
 import { uploadPhoto } from '@/lib/photo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -117,7 +117,7 @@ export default function OnboardingScreen() {
   const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
   /**
-   * 한 줄로 답하는 항목들 — 담배·술·만나는 빈도·종교·정치.
+   * 한 줄로 답하는 항목들 — 담배·술·만남 빈도·연락 빈도·종교·정치.
    * 가입할 때 한자리에서 받는다(유저 결정 2026-09-02) — 나중에 MY에서 찾아 들어가는 사람은 드물다.
    * 저장 경로는 프로필과 다르므로(전체 덮어쓰기에 실을 수 없다) 제출 때 따로 보낸다.
    */
@@ -409,7 +409,7 @@ export default function OnboardingScreen() {
     {
       /*
        * 한 줄로 답하는 것들을 한 화면에 모은다. 흩어 놓으면 나중에 찾아 들어가는 사람이 드물고,
-       * 이 다섯은 "만나기 전에 알았으면" 소리가 가장 많이 나오는 항목이라 비어 있으면 손해가 크다.
+       * 이 여섯 항목은 "만나기 전에 알았으면" 소리가 많이 나오는 정보라 비어 있으면 손해가 크다.
        * 그래도 전부 선택이다 — 건너뛰기로 넘어갈 수 있다.
        */
       key: 'facts',
@@ -420,6 +420,7 @@ export default function OnboardingScreen() {
         facts.smoking != null ||
         facts.drinking != null ||
         facts.meetFrequency != null ||
+        facts.contactFrequency != null ||
         hasBeliefs(facts),
       // 신념을 골랐다면 동의 없이는 넘어가지 못한다 — 서버가 막는 것을 화면이 먼저 말해준다.
       valid: !hasBeliefs(facts) || factsConsent,
@@ -538,9 +539,10 @@ export default function OnboardingScreen() {
     if (ok) done();
   }
 
-  /** 담배·술·만나는 빈도·종교·정치를 저장한다. 아무것도 안 골랐으면 부르지 않는다. */
+  /** 담배·술·만남 빈도·연락 빈도·종교·정치를 저장한다. 아무것도 안 골랐으면 부르지 않는다. */
   async function saveFacts() {
     const lifestylePicked = facts.smoking != null || facts.drinking != null || facts.meetFrequency != null;
+    const contactPicked = facts.contactFrequency != null;
     try {
       if (lifestylePicked) {
         await updateLifestyle({
@@ -549,6 +551,7 @@ export default function OnboardingScreen() {
           meetFrequency: facts.meetFrequency,
         });
       }
+      if (contactPicked) await updateContactFrequency(facts.contactFrequency);
       if (hasBeliefs(facts) && factsConsent) {
         await updateBeliefs({
           religion: facts.religion,

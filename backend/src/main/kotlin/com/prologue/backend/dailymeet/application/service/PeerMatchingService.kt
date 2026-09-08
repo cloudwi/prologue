@@ -462,6 +462,7 @@ class PeerMatchingService(
             smoking = p?.smoking,
             drinking = p?.drinking,
             meetFrequency = p?.meetFrequency,
+            contactFrequency = p?.contactFrequency,
             hobbies = p?.hobbies ?: emptyList(),
             interests = p?.interests ?: emptyList(),
             strengths = p?.strengths ?: emptyList(),

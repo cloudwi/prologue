@@ -15,7 +15,7 @@ import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
 import { getPeerProfile, sendHeart, unlockAnswers, unlockPeer, type PastAnswer, type Peer } from '@/lib/daily';
 import { INK_PRICE } from '@/lib/ink';
-import { profileTags } from '@/lib/profile-form';
+import { profileFactGroups } from '@/lib/profile-form';
 import { promptReport } from '@/lib/reports';
 import { showToast } from '@/components/toast';
 
@@ -301,7 +301,7 @@ export default function PeerDetailScreen() {
           photoUrls={peer.photoUrls}
           letters={letters}
           keywords={[...peer.interests, ...peer.hobbies, ...peer.strengths]}
-          tags={profileTags(peer)}
+          factGroups={profileFactGroups(peer)}
           sharedTastes={peer.sharedTastes}
           onUnlock={confirmAnswerUnlock}
           unlockPrice={INK_PRICE.ANSWER_UNLOCK}

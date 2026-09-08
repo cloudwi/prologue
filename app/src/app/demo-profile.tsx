@@ -5,7 +5,7 @@ import { ProfileInvitation } from '@/components/profile-invitation';
 import { SubScreen } from '@/components/sub-screen';
 import { useTheme } from '@/hooks/use-theme';
 import { findDemoProfile } from '@/lib/demo-profiles';
-import { profileTags } from '@/lib/profile-form';
+import { profileFactGroups } from '@/lib/profile-form';
 
 /** 실제 프로필과 같은 조판을 끝까지 채운 비대화형 데모. */
 export default function DemoProfileScreen() {
@@ -31,7 +31,7 @@ export default function DemoProfileScreen() {
         photoUrls={profile.photos}
         letters={[{ key: 'bio', question: null, content: profile.bio }, ...profile.letters]}
         keywords={[...profile.interests, ...profile.hobbies, ...profile.strengths]}
-        tags={profileTags(profile.facts)}
+        factGroups={profileFactGroups(profile.facts)}
         seed={profile.id}
         notice="데모 프로필 · AI 생성 이미지"
         c={c}

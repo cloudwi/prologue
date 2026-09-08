@@ -6,6 +6,7 @@ import com.prologue.backend.dailymeet.application.service.TodayPeersView
 import com.prologue.backend.member.domain.model.BodyType
 import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.ContactFrequency
 import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.PoliticalLeaning
 import com.prologue.backend.member.domain.model.Religion
@@ -35,10 +36,12 @@ data class PeerResponse(
     /** 상대가 적어 공개하기로 한 종교·정치 성향. 안 적었으면 null. */
     val religion: Religion?,
     val politicalLeaning: PoliticalLeaning?,
-    /** 상대가 고른 생활 습관 — 흡연·음주·만나는 빈도. 안 골랐으면 null. */
+    /** 상대가 고른 생활 습관 — 흡연·음주·만남 빈도. 안 골랐으면 null. */
     val smoking: Smoking?,
     val drinking: Drinking?,
     val meetFrequency: MeetFrequency?,
+    /** 상대가 선호하는 연락 빈도. 안 골랐으면 null. */
+    val contactFrequency: ContactFrequency?,
     val hobbies: List<String>,
     val interests: List<String>,
     val strengths: List<String>,
@@ -96,6 +99,7 @@ data class PeerResponse(
                 smoking = view.smoking,
                 drinking = view.drinking,
                 meetFrequency = view.meetFrequency,
+                contactFrequency = view.contactFrequency,
                 hobbies = view.hobbies,
                 interests = view.interests,
                 strengths = view.strengths,

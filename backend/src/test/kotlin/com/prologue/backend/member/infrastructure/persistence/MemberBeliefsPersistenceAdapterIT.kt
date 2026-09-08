@@ -1,6 +1,7 @@
 package com.prologue.backend.member.infrastructure.persistence
 
 import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.ContactFrequency
 import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.Member
@@ -91,6 +92,7 @@ class MemberBeliefsPersistenceAdapterIT : PostgresRepositoryTest() {
         // V62의 세 열이 엔티티와 맞는지(ddl-auto validate), 그리고 전체 덮어쓰기에 살아남는지.
         val member = newMember().apply {
             updateLifestyle(Smoking.NONE, Drinking.SOMETIMES, MeetFrequency.TWO_TO_THREE)
+            updateContactFrequency(ContactFrequency.DAILY)
         }
         members.save(member)
 
@@ -109,6 +111,7 @@ class MemberBeliefsPersistenceAdapterIT : PostgresRepositoryTest() {
         assertEquals(Smoking.NONE, after.smoking)
         assertEquals(Drinking.SOMETIMES, after.drinking)
         assertEquals(MeetFrequency.TWO_TO_THREE, after.meetFrequency)
+        assertEquals(ContactFrequency.DAILY, after.contactFrequency)
     }
 
     @Test

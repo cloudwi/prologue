@@ -1,8 +1,12 @@
 import {
+  CONTACT_FREQUENCY_TAGS,
+  DRINKING_LABELS,
   DRINKING_TAGS,
   MEET_FREQUENCY_TAGS,
+  POLITICAL_LABELS,
   POLITICAL_TAGS,
   RELIGION_LABELS,
+  SMOKING_LABELS,
   SMOKING_TAGS,
 } from '@/constants/profile';
 
@@ -36,22 +40,23 @@ export function toRequest(p: MemberProfile, patch: Partial<OnboardingProfile> = 
 }
 
 /**
- * 프로필에 붙는 작은 태그들 — 흡연·음주·만나는 빈도·종교·정치 성향.
+ * 프로필에 붙는 작은 태그들 — 흡연·음주·만남 빈도·연락 빈도·종교·정치 성향.
  *
- * 다섯 항목을 편지 본문처럼 늘어놓으면 프로필이 설문지가 된다. 한 줄짜리 사실은 한 줄짜리
+ * 여섯 항목을 편지 본문처럼 늘어놓으면 프로필이 설문지가 된다. 한 줄짜리 사실은 한 줄짜리
  * 태그로 보여주고, 지면은 그 사람이 직접 쓴 글에 내준다.
  *
  * 안 고른 항목은 아예 빠진다 — "무응답" 태그를 만들면 비워둔 것 자체가 정보가 되고,
  * 비워둔 사람에게 빈칸을 들이대는 꼴이 된다. 모르는 값도 조용히 버린다(서버에 새 값이 생겨도
  * 구버전 앱이 빈 태그를 그리지 않게).
  *
- * 순서는 자리 잡기 쉬운 것부터: 생활 습관 셋 → 신념 둘. 신념은 따로 동의하고 적은 값이라
+ * 순서는 자리 잡기 쉬운 것부터: 생활 습관 → 관계 리듬 → 신념. 신념은 따로 동의하고 적은 값이라
  * 가장 뒤에 두되 빠지지는 않는다.
  */
 export function profileTags(p: {
   smoking?: string | null;
   drinking?: string | null;
   meetFrequency?: string | null;
+  contactFrequency?: string | null;
   religion?: string | null;
   politicalLeaning?: string | null;
 }): string[] {
@@ -59,9 +64,71 @@ export function profileTags(p: {
     p.smoking ? SMOKING_TAGS[p.smoking] : null,
     p.drinking ? DRINKING_TAGS[p.drinking] : null,
     p.meetFrequency ? MEET_FREQUENCY_TAGS[p.meetFrequency] : null,
+    p.contactFrequency ? CONTACT_FREQUENCY_TAGS[p.contactFrequency] : null,
     p.religion ? RELIGION_LABELS[p.religion] : null,
     p.politicalLeaning ? POLITICAL_TAGS[p.politicalLeaning] : null,
   ].filter((tag): tag is string => !!tag);
+}
+
+export type ProfileFactGroup = {
+  key: 'lifestyle' | 'rhythm' | 'values';
+  label: string;
+  values: string[];
+};
+
+const MEETING_PROFILE_LABELS: Record<string, string> = {
+  ONCE: '만남 · 주 1회',
+  TWO_TO_THREE: '만남 · 주 2~3회',
+  FOUR_PLUS: '만남 · 주 4회 이상',
+  FLEXIBLE: '만남 · 일정에 맞춰서',
+};
+
+const CONTACT_PROFILE_LABELS: Record<string, string> = {
+  FREQUENT: '연락 · 틈틈이 자주',
+  DAILY: '연락 · 하루에 한두 번',
+  FEW_TIMES_WEEK: '연락 · 일주일에 몇 번',
+  FLEXIBLE: '연락 · 서로 편한 대로',
+};
+
+/** 상세 프로필용 사실 묶음 — 생활 습관, 만남의 리듬, 가치관을 서로 섞지 않는다. */
+export function profileFactGroups(p: {
+  smoking?: string | null;
+  drinking?: string | null;
+  meetFrequency?: string | null;
+  contactFrequency?: string | null;
+  religion?: string | null;
+  politicalLeaning?: string | null;
+}): ProfileFactGroup[] {
+  const groups: ProfileFactGroup[] = [
+    {
+      key: 'lifestyle',
+      label: '생활',
+      values: [
+        p.smoking && SMOKING_LABELS[p.smoking] ? `흡연 · ${SMOKING_LABELS[p.smoking]}` : null,
+        p.drinking && DRINKING_LABELS[p.drinking] ? `음주 · ${DRINKING_LABELS[p.drinking]}` : null,
+      ].filter((value): value is string => !!value),
+    },
+    {
+      key: 'rhythm',
+      label: '관계 리듬',
+      values: [
+        p.meetFrequency ? MEETING_PROFILE_LABELS[p.meetFrequency] : null,
+        p.contactFrequency ? CONTACT_PROFILE_LABELS[p.contactFrequency] : null,
+      ].filter((value): value is string => !!value),
+    },
+    {
+      key: 'values',
+      label: '가치관',
+      values: [
+        p.religion && RELIGION_LABELS[p.religion] ? `종교 · ${RELIGION_LABELS[p.religion]}` : null,
+        p.politicalLeaning && POLITICAL_LABELS[p.politicalLeaning]
+          ? `정치 · ${POLITICAL_LABELS[p.politicalLeaning]}`
+          : null,
+      ].filter((value): value is string => !!value),
+    },
+  ];
+
+  return groups.filter((group) => group.values.length > 0);
 }
 
 export type NextStep = { label: string; hint: string; href: string };
@@ -123,10 +190,10 @@ export function profileChecklist(p: MemberProfile, letters?: number): ChecklistI
     },
     {
       key: 'lifestyle',
-      label: '담배·술·만나는 빈도 알려주기',
-      hint: '만나기 전에 알고 싶은 것들이에요',
+      label: '생활과 관계 리듬 알려주기',
+      hint: '흡연과 음주, 만남과 연락 빈도를 알려주세요',
       href: '/my/edit-detail',
-      done: !!(p.smoking || p.drinking || p.meetFrequency),
+      done: !!(p.smoking || p.drinking || p.meetFrequency || p.contactFrequency),
     },
     {
       key: 'avatar',

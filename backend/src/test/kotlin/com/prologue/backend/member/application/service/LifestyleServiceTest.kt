@@ -1,6 +1,7 @@
 package com.prologue.backend.member.application.service
 
 import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.ContactFrequency
 import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.Member
@@ -77,6 +78,20 @@ class LifestyleServiceTest {
         assertEquals(Smoking.QUITTING, m.smoking)
         assertEquals(Drinking.RARELY, m.drinking)
         assertEquals(MeetFrequency.ONCE, m.meetFrequency)
+    }
+
+    @Test
+    fun `연락 빈도는 구버전 생활 습관 저장과 독립적으로 유지된다`() {
+        val m = member()
+        every { memberRepository.findByAccountId(accountId) } returns m
+        every { memberRepository.save(any()) } answers { firstArg() }
+
+        service.updateContactFrequency(accountId, ContactFrequency.DAILY)
+        service.update(accountId, Smoking.NONE, Drinking.RARELY, MeetFrequency.ONCE)
+
+        assertEquals(ContactFrequency.DAILY, m.contactFrequency)
+        service.updateContactFrequency(accountId, null)
+        assertNull(m.contactFrequency)
     }
 
     @Test

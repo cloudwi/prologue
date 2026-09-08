@@ -14,6 +14,7 @@ export type Gender = 'MALE' | 'FEMALE';
 export type Smoking = 'NONE' | 'QUITTING' | 'SOMETIMES' | 'REGULAR';
 export type Drinking = 'NONE' | 'RARELY' | 'SOMETIMES' | 'OFTEN';
 export type MeetFrequency = 'ONCE' | 'TWO_TO_THREE' | 'FOUR_PLUS' | 'FLEXIBLE';
+export type ContactFrequency = 'FREQUENT' | 'DAILY' | 'FEW_TIMES_WEEK' | 'FLEXIBLE';
 
 export type Religion = 'NONE' | 'CHRISTIAN' | 'CATHOLIC' | 'BUDDHIST' | 'WON_BUDDHIST' | 'ISLAM' | 'OTHER';
 
@@ -85,6 +86,7 @@ export type MemberProfile = Required<
   smoking: Smoking | null;
   drinking: Drinking | null;
   meetFrequency: MeetFrequency | null;
+  contactFrequency: ContactFrequency | null;
 };
 
 export type Lifestyle = {
@@ -92,6 +94,16 @@ export type Lifestyle = {
   drinking: Drinking | null;
   meetFrequency: MeetFrequency | null;
 };
+
+/** 선호 연락 빈도 — 구버전 생활 습관 저장과 분리된 전용 경로. */
+export async function updateContactFrequency(contactFrequency: ContactFrequency | null): Promise<ContactFrequency | null> {
+  const res = await authedRequest<{ contactFrequency: ContactFrequency | null }>(
+    'PUT',
+    '/members/me/contact-frequency',
+    { contactFrequency },
+  );
+  return res.contactFrequency;
+}
 
 /** 내 생활 습관 (GET /members/me/lifestyle). */
 export async function getLifestyle(): Promise<Lifestyle> {

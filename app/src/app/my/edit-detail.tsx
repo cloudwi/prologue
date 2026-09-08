@@ -20,6 +20,7 @@ import {
   getBeliefs,
   getMyProfile,
   updateBeliefs,
+  updateContactFrequency,
   updateLifestyle,
   type MemberProfile,
 } from '@/lib/member';
@@ -37,7 +38,7 @@ export default function EditDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [base, setBase] = useState<MemberProfile | null>(null);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY);
-  /** 한 줄로 답하는 항목들 — 담배·술·만나는 빈도·종교·정치. 저장 경로가 프로필과 다르다. */
+  /** 한 줄로 답하는 항목들 — 담배·술·만남 빈도·연락 빈도·종교·정치. 저장 경로가 프로필과 다르다. */
   const [facts, setFacts] = useState<ProfileFacts>(EMPTY_FACTS);
   const [consented, setConsented] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
@@ -58,6 +59,7 @@ export default function EditDetailScreen() {
           smoking: p.smoking ?? null,
           drinking: p.drinking ?? null,
           meetFrequency: p.meetFrequency ?? null,
+          contactFrequency: p.contactFrequency ?? null,
           religion: p.religion ?? null,
           politicalLeaning: p.politicalLeaning ?? null,
         });
@@ -99,6 +101,7 @@ export default function EditDetailScreen() {
         drinking: facts.drinking,
         meetFrequency: facts.meetFrequency,
       });
+      await updateContactFrequency(facts.contactFrequency);
       await updateBeliefs({
         religion: facts.religion,
         politicalLeaning: facts.politicalLeaning,

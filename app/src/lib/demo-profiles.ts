@@ -1,4 +1,4 @@
-import type { Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from './member';
+import type { ContactFrequency, Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from './member';
 
 export type DemoProfile = {
   id: string;
@@ -15,6 +15,7 @@ export type DemoProfile = {
     smoking: Smoking;
     drinking: Drinking;
     meetFrequency: MeetFrequency;
+    contactFrequency: ContactFrequency;
     religion: Religion;
     politicalLeaning: PoliticalLeaning;
   };
@@ -38,7 +39,7 @@ export const DEMO_PROFILES: DemoProfile[] = [
     hobbies: ['도예', '동네 산책', '공연·전시'],
     interests: ['디자인', '커피'],
     strengths: ['차분함', '경청'],
-    facts: { smoking: 'NONE', drinking: 'SOMETIMES', meetFrequency: 'TWO_TO_THREE', religion: 'NONE', politicalLeaning: 'CENTER' },
+    facts: { smoking: 'NONE', drinking: 'SOMETIMES', meetFrequency: 'TWO_TO_THREE', contactFrequency: 'DAILY', religion: 'NONE', politicalLeaning: 'CENTER' },
     letters: [
       { key: 'weekend', question: '쉬는 날에는 주로 무엇을 하나요?', content: '늦은 아침을 먹고 목적지 없이 걷는 편이에요. 마음에 드는 카페나 소품 가게를 찾으면 사진을 한 장 남겨요.' },
       { key: 'relationship', question: '어떤 관계를 기대하나요?', content: '각자의 일을 존중하면서도 오늘 어땠는지 자연스럽게 묻는 사이요. 말이 없는 시간도 편했으면 좋겠어요.' },
@@ -60,7 +61,7 @@ export const DEMO_PROFILES: DemoProfile[] = [
     hobbies: ['러닝', '요리', '맛집'],
     interests: ['건강', '음식'],
     strengths: ['긍정적', '책임감'],
-    facts: { smoking: 'NONE', drinking: 'RARELY', meetFrequency: 'TWO_TO_THREE', religion: 'CHRISTIAN', politicalLeaning: 'APOLITICAL' },
+    facts: { smoking: 'NONE', drinking: 'RARELY', meetFrequency: 'TWO_TO_THREE', contactFrequency: 'FREQUENT', religion: 'CHRISTIAN', politicalLeaning: 'APOLITICAL' },
     letters: [
       { key: 'energy', question: '언제 가장 나다운가요?', content: '아침 공기를 마시며 달릴 때요. 기록보다는 어제보다 몸이 가벼운지 느끼면서 천천히 뛰는 편이에요.' },
       { key: 'date', question: '함께 보내고 싶은 하루는?', content: '낮에는 같이 움직이고 저녁에는 맛있는 걸 먹고 싶어요. 거창한 계획보다 둘 다 편안한 하루가 좋아요.' },
@@ -82,7 +83,7 @@ export const DEMO_PROFILES: DemoProfile[] = [
     hobbies: ['독서', '사진', '여행'],
     interests: ['문화예술', '글쓰기'],
     strengths: ['호기심 많음', '공감 능력'],
-    facts: { smoking: 'NONE', drinking: 'NONE', meetFrequency: 'ONCE', religion: 'BUDDHIST', politicalLeaning: 'CENTER_LEFT' },
+    facts: { smoking: 'NONE', drinking: 'NONE', meetFrequency: 'ONCE', contactFrequency: 'FEW_TIMES_WEEK', religion: 'BUDDHIST', politicalLeaning: 'CENTER_LEFT' },
     letters: [
       { key: 'book', question: '최근 마음에 남은 것은?', content: '문장 하나가 사람의 하루를 오래 붙잡아 줄 수 있다는 내용의 에세이를 읽었어요. 좋아하는 구절을 메모하는 습관이 생겼습니다.' },
       { key: 'travel', question: '여행에서는 무엇을 중요하게 보나요?', content: '유명한 장소를 많이 보는 것보다 한 동네를 오래 걷는 걸 좋아해요. 바람이 센 날의 제주 바다를 특히 좋아합니다.' },

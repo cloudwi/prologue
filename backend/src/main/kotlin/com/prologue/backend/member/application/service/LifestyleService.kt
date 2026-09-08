@@ -1,6 +1,7 @@
 package com.prologue.backend.member.application.service
 
 import com.prologue.backend.member.domain.model.Drinking
+import com.prologue.backend.member.domain.model.ContactFrequency
 import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.MemberDomainException
 import com.prologue.backend.member.domain.model.Smoking
@@ -34,6 +35,13 @@ class LifestyleService(
         return LifestyleView(member.smoking, member.drinking, member.meetFrequency)
     }
 
+    @Transactional(readOnly = true)
+    fun contactFrequency(accountId: UUID): ContactFrequency? {
+        val member = memberRepository.findByAccountId(accountId)
+            ?: throw MemberDomainException("프로필을 먼저 만들어주세요")
+        return member.contactFrequency
+    }
+
     /** 셋을 한 번에 저장한다. 보낸 값이 그대로 저장되고, null은 "안 고름"이다. */
     @Transactional
     fun update(
@@ -47,5 +55,14 @@ class LifestyleService(
         member.updateLifestyle(smoking, drinking, meetFrequency)
         memberRepository.save(member)
         return LifestyleView(smoking, drinking, meetFrequency)
+    }
+
+    @Transactional
+    fun updateContactFrequency(accountId: UUID, contactFrequency: ContactFrequency?): ContactFrequency? {
+        val member = memberRepository.findByAccountId(accountId)
+            ?: throw MemberDomainException("프로필을 먼저 만들어주세요")
+        member.updateContactFrequency(contactFrequency)
+        memberRepository.save(member)
+        return member.contactFrequency
     }
 }

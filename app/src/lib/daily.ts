@@ -1,5 +1,5 @@
 import { authedRequest } from './api';
-import type { Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from './member';
+import type { ContactFrequency, Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from './member';
 
 export type Today = {
   questionId: number;
@@ -70,6 +70,7 @@ export type Peer = {
   smoking?: Smoking | null;
   drinking?: Drinking | null;
   meetFrequency?: MeetFrequency | null;
+  contactFrequency?: ContactFrequency | null;
   avatarId: number | null;
   /** 내가 이 상대에게 이미 편지를 보냈는지 — true면 편지 쓰기 대신 보낸 편지 확인. */
   mailSent: boolean;

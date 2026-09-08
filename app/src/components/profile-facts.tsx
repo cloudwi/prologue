@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   DRINKING_LABELS,
   DRINKING_ORDER,
+  CONTACT_FREQUENCY_LABELS,
+  CONTACT_FREQUENCY_ORDER,
   MEET_FREQUENCY_LABELS,
   MEET_FREQUENCY_ORDER,
   POLITICAL_LABELS,
@@ -14,16 +16,16 @@ import {
   SMOKING_ORDER,
 } from '@/constants/profile';
 import { Radius, Type, type ThemeColors } from '@/constants/theme';
-import type { Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from '@/lib/member';
+import type { ContactFrequency, Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from '@/lib/member';
 
 /**
- * 한 줄로 답하는 프로필 항목들 — 담배·술·만나는 빈도·종교·정치 성향.
+ * 한 줄로 답하는 프로필 항목들 — 담배·술·만남 빈도·연락 빈도·종교·정치 성향.
  *
  * 화면마다 흩어 놓았더니 MY 탭이 항목 목록이 됐다(유저 지적 2026-09-02). 한자리에 모으고,
  * 가입할 때와 나중에 고칠 때가 **같은 화면 조각**을 쓰도록 컴포넌트로 뺀다 — 두 벌로 두면
  * 한쪽에만 항목이 늘어나는 날이 온다.
  *
- * 다섯 다 선택이고, 고른 것을 다시 누르면 해제된다. '밝히지 않음' 칸을 두지 않는 이유는
+ * 여섯 항목 모두 선택이고, 고른 것을 다시 누르면 해제된다. '밝히지 않음' 칸을 두지 않는 이유는
  * 그 칸이 있으면 그것도 하나의 답처럼 읽히기 때문이다.
  *
  * 종교·정치는 민감정보(개인정보보호법 23조)라 **적을 때 따로 동의를 받는다**. 그 동의 안내는
@@ -33,6 +35,7 @@ export type ProfileFacts = {
   smoking: Smoking | null;
   drinking: Drinking | null;
   meetFrequency: MeetFrequency | null;
+  contactFrequency: ContactFrequency | null;
   religion: Religion | null;
   politicalLeaning: PoliticalLeaning | null;
 };
@@ -41,6 +44,7 @@ export const EMPTY_FACTS: ProfileFacts = {
   smoking: null,
   drinking: null,
   meetFrequency: null,
+  contactFrequency: null,
   religion: null,
   politicalLeaning: null,
 };
@@ -89,6 +93,13 @@ export function ProfileFactsFields({
         options={MEET_FREQUENCY_ORDER.map((key) => ({ key, label: MEET_FREQUENCY_LABELS[key] }))}
         value={value.meetFrequency}
         onChange={(v) => onChange({ meetFrequency: v as MeetFrequency | null })}
+        c={c}
+      />
+      <Group
+        title="얼마나 자주 연락하고 싶나요"
+        options={CONTACT_FREQUENCY_ORDER.map((key) => ({ key, label: CONTACT_FREQUENCY_LABELS[key] }))}
+        value={value.contactFrequency}
+        onChange={(v) => onChange({ contactFrequency: v as ContactFrequency | null })}
         c={c}
       />
       <Group

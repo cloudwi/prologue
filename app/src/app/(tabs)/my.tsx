@@ -409,6 +409,7 @@ function factsLabel(profile: MemberProfile | null): string {
     smoking: profile?.smoking,
     drinking: profile?.drinking,
     meetFrequency: profile?.meetFrequency,
+    contactFrequency: profile?.contactFrequency,
     religion: profile?.religion,
     politicalLeaning: profile?.politicalLeaning,
   });

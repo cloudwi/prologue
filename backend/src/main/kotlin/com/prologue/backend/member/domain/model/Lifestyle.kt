@@ -52,3 +52,15 @@ enum class MeetFrequency {
     /** 그때그때 달라요. */
     FLEXIBLE,
 }
+
+/** 서로 어느 정도 자주 연락하고 싶은가. 만남 횟수와 별개로 관계의 일상적인 리듬을 나타낸다. */
+enum class ContactFrequency {
+    /** 하루 중 틈틈이 자주. */
+    FREQUENT,
+    /** 하루에 한두 번. */
+    DAILY,
+    /** 일주일에 몇 번. */
+    FEW_TIMES_WEEK,
+    /** 서로 편한 대로. */
+    FLEXIBLE,
+}

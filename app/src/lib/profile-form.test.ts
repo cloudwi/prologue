@@ -1,4 +1,4 @@
-import { profileTags } from './profile-form';
+import { profileFactGroups, profileTags } from './profile-form';
 
 describe('profileTags', () => {
   it('고른 항목만 짧은 태그가 된다', () => {
@@ -33,5 +33,31 @@ describe('profileTags', () => {
   it('모르는 값은 조용히 버린다', () => {
     // 서버에 새 값이 생겨도 구버전 앱이 빈 태그를 그리지 않아야 한다.
     expect(profileTags({ religion: 'ZOROASTRIAN', smoking: 'VAPING' })).toEqual([]);
+  });
+});
+
+describe('profileFactGroups', () => {
+  it('서로 다른 성격의 정보를 문맥이 있는 묶음으로 나눈다', () => {
+    expect(
+      profileFactGroups({
+        smoking: 'NONE',
+        drinking: 'SOMETIMES',
+        meetFrequency: 'TWO_TO_THREE',
+        contactFrequency: 'DAILY',
+        religion: 'BUDDHIST',
+        politicalLeaning: 'CENTER',
+      }),
+    ).toEqual([
+      { key: 'lifestyle', label: '생활', values: ['흡연 · 안 피워요', '음주 · 가끔 마셔요'] },
+      { key: 'rhythm', label: '관계 리듬', values: ['만남 · 주 2~3회', '연락 · 하루에 한두 번'] },
+      { key: 'values', label: '가치관', values: ['종교 · 불교', '정치 · 중도'] },
+    ]);
+  });
+
+  it('고르지 않은 묶음과 모르는 값은 숨긴다', () => {
+    expect(profileFactGroups({ contactFrequency: 'FLEXIBLE' })).toEqual([
+      { key: 'rhythm', label: '관계 리듬', values: ['연락 · 서로 편한 대로'] },
+    ]);
+    expect(profileFactGroups({ contactFrequency: 'UNKNOWN' })).toEqual([]);
   });
 });

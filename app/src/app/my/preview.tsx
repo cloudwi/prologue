@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { getJobStatus } from '@/lib/job';
 import { getMyLetters, type ProfileLetter } from '@/lib/letters';
 import { getMyProfile, type MemberProfile } from '@/lib/member';
-import { ageFrom, profileTags } from '@/lib/profile-form';
+import { ageFrom, profileFactGroups } from '@/lib/profile-form';
 
 /**
  * 상대에게 보이는 화면 — 상대 상세와 같은 청첩장 렌더러를 그대로 쓴다.
@@ -84,7 +84,7 @@ export default function PreviewScreen() {
         photoUrls={p.photoUrls ?? []}
         letters={letters}
         keywords={[...(p.interests ?? []), ...(p.hobbies ?? []), ...(p.strengths ?? [])]}
-        tags={profileTags(p)}
+        factGroups={profileFactGroups(p)}
         seed={p.nickname}
         c={c}
       />

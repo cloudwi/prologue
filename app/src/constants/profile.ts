@@ -96,6 +96,15 @@ export const SMOKING_ORDER = ['NONE', 'QUITTING', 'SOMETIMES', 'REGULAR'] as con
 export const DRINKING_ORDER = ['NONE', 'RARELY', 'SOMETIMES', 'OFTEN'] as const;
 export const MEET_FREQUENCY_ORDER = ['ONCE', 'TWO_TO_THREE', 'FOUR_PLUS', 'FLEXIBLE'] as const;
 
+export const CONTACT_FREQUENCY_LABELS: Record<string, string> = {
+  FREQUENT: '하루 중 틈틈이 자주',
+  DAILY: '하루에 한두 번',
+  FEW_TIMES_WEEK: '일주일에 몇 번',
+  FLEXIBLE: '서로 편한 대로',
+};
+
+export const CONTACT_FREQUENCY_ORDER = ['FREQUENT', 'DAILY', 'FEW_TIMES_WEEK', 'FLEXIBLE'] as const;
+
 /**
  * 프로필에 붙는 태그 문구 — 한 줄에 여럿이 늘어서므로 최대한 짧게.
  * 홀로 있어도 무슨 항목인지 읽혀야 해서, 애매한 값에만 앞말을 붙인다("중도"는 그대로 두되
@@ -120,6 +129,13 @@ export const MEET_FREQUENCY_TAGS: Record<string, string> = {
   TWO_TO_THREE: '주 2~3회',
   FOUR_PLUS: '주 4회+',
   FLEXIBLE: '만남 그때그때',
+};
+
+export const CONTACT_FREQUENCY_TAGS: Record<string, string> = {
+  FREQUENT: '연락 자주',
+  DAILY: '연락 하루 1~2번',
+  FEW_TIMES_WEEK: '연락 주 몇 회',
+  FLEXIBLE: '연락 서로 편하게',
 };
 
 export const POLITICAL_TAGS: Record<string, string> = {

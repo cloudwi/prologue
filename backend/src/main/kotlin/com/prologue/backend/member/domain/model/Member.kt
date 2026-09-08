@@ -38,6 +38,7 @@ class Member private constructor(
     smoking: Smoking?,
     drinking: Drinking?,
     meetFrequency: MeetFrequency?,
+    contactFrequency: ContactFrequency?,
 ) {
     var nickname: String = nickname
         private set
@@ -119,12 +120,19 @@ class Member private constructor(
         private set
     var meetFrequency: MeetFrequency? = meetFrequency
         private set
+    var contactFrequency: ContactFrequency? = contactFrequency
+        private set
 
     /** 생활 습관을 적거나 지운다. 셋 다 null이면 지우는 것이다. */
     fun updateLifestyle(smoking: Smoking?, drinking: Drinking?, meetFrequency: MeetFrequency?) {
         this.smoking = smoking
         this.drinking = drinking
         this.meetFrequency = meetFrequency
+    }
+
+    /** 연락 빈도는 구버전 생활 습관 저장이 지우지 않도록 별도 경로에서 바꾼다. */
+    fun updateContactFrequency(contactFrequency: ContactFrequency?) {
+        this.contactFrequency = contactFrequency
     }
 
     /** 프로필 사진 URL 목록(등록 순 = 노출 순). 최대 [MAX_PHOTOS]장, 전용 업로드 엔드포인트에서 갱신된다. */
@@ -281,6 +289,7 @@ class Member private constructor(
                 smoking = null,
                 drinking = null,
                 meetFrequency = null,
+                contactFrequency = null,
             )
         }
 
@@ -310,10 +319,11 @@ class Member private constructor(
             smoking: Smoking? = null,
             drinking: Drinking? = null,
             meetFrequency: MeetFrequency? = null,
+            contactFrequency: ContactFrequency? = null,
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
             bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
-            phone, kakaoId, minAge, maxAge, religion, politicalLeaning, smoking, drinking, meetFrequency,
+            phone, kakaoId, minAge, maxAge, religion, politicalLeaning, smoking, drinking, meetFrequency, contactFrequency,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =
