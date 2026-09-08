@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import TasteCardsScreen from '../app/taste-cards';
+import TasteCardsScreen, { tasteSwipeTarget } from '../app/taste-cards';
 import { chooseTaste, startTasteSession, getTasteSession, type TasteDeck } from '../lib/taste';
 
 jest.mock('../global.css', () => ({}));
@@ -134,6 +134,18 @@ it('앞 카드가 저장 중이어도 다른 카드로 이동해 바로 답할 �
   await waitFor(() => expect(screen.getByText('55%')).toBeTruthy());
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1000)); });
   expect(screen.getByText('카드를 다 넘겼어요')).toBeTruthy();
+});
+
+it('카드를 왼쪽이나 오른쪽으로 밀 수 있는 접근성 이동도 함께 제공한다', async () => {
+  await render(<TasteCardsScreen />);
+  const swipeArea = await screen.findByTestId('taste-card-swipe-area');
+  expect(tasteSwipeTarget(0, 2, -80, -0.5)).toBe(1);
+  expect(tasteSwipeTarget(1, 2, 80, 0.5)).toBe(0);
+  expect(tasteSwipeTarget(0, 2, -10, -0.1)).toBeNull();
+  await act(async () => { swipeArea.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }); });
+  await screen.findByText('다음 질문');
+  await act(async () => { screen.getByTestId('taste-card-swipe-area').props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } }); });
+  await screen.findByText('쉬는 날에는?');
 });
 
 it('재입장해도 이미 답한 카드를 상단에서 다시 볼 수 있다', async () => {

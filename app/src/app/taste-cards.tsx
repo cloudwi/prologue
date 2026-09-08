@@ -4,16 +4,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated as NativeAnimated,
   ScrollView,
   KeyboardAvoidingView,
+  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { Fonts, Radius, Type } from '@/constants/theme';
@@ -37,10 +40,20 @@ import { chooseTaste, startTasteSession, getTasteSession, type TasteReward, TAST
  */
 /** 보상 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
 const REWARD_SHOWN_MS = 2600;
+const AUTO_ADVANCE_MS = 500;
+const SWIPE_DISTANCE = 44;
+const SWIPE_VELOCITY = 0.35;
+
+export function tasteSwipeTarget(index: number, count: number, dx: number, vx: number): number | null {
+  if (Math.abs(dx) < SWIPE_DISTANCE && Math.abs(vx) < SWIPE_VELOCITY) return null;
+  const target = index + (dx < 0 ? 1 : -1);
+  return target >= 0 && target < count ? target : null;
+}
 
 export default function TasteCardsScreen() {
   const c = useTheme();
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
   /** intro=1이면 가입 직후다 — 첫 화면에 왜 넘기는지 한 줄을 붙이고, 마치면 발견 탭으로 보낸다. */
   const { intro } = useLocalSearchParams<{ intro?: string }>();
   const isIntro = intro === '1';
@@ -51,6 +64,7 @@ export default function TasteCardsScreen() {
   const visibleIndex = useRef(0);
   const manualNavigationVersion = useRef(0);
   const pendingCardIds = useRef(new Set<number>());
+  const [dragX] = useState(() => new NativeAnimated.Value(0));
   const [percentages, setPercentages] = useState<Partial<Record<TasteOption, number>> | null>(null);
   const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
@@ -167,6 +181,7 @@ export default function TasteCardsScreen() {
 
   function openCard(next: number) {
     manualNavigationVersion.current += 1;
+    haptics.select();
     navigateTo(next, cards, true);
   }
 
@@ -202,7 +217,7 @@ export default function TasteCardsScreen() {
       }
       track('taste_card_chosen', { noted });
       if (manualNavigationVersion.current === navigationVersion) {
-        autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 800);
+        autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), AUTO_ADVANCE_MS);
       }
       if (progress.milestoneReached) {
         haptics.success();
@@ -230,6 +245,40 @@ export default function TasteCardsScreen() {
       }
     }
   }
+
+  const settleSwipe = () => NativeAnimated.spring(dragX, {
+    toValue: 0,
+    speed: 28,
+    bounciness: 4,
+    useNativeDriver: true,
+  }).start();
+
+  // PanResponder only stores these handlers; it does not invoke them while rendering.
+  // eslint-disable-next-line react-hooks/refs
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) =>
+      Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.35,
+    onMoveShouldSetPanResponderCapture: (_, gesture) =>
+      Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.35,
+    onPanResponderMove: (_, gesture) => dragX.setValue(gesture.dx),
+    onPanResponderRelease: (_, gesture) => {
+      const target = tasteSwipeTarget(index, cards.length, gesture.dx, gesture.vx);
+      dragX.setValue(0);
+      if (target != null) {
+        openCard(target);
+        return;
+      }
+      settleSwipe();
+    },
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderTerminate: settleSwipe,
+  });
+
+  const swipeOpacity = dragX.interpolate({
+    inputRange: [-Math.min(windowWidth, 560), 0, Math.min(windowWidth, 560)],
+    outputRange: [0.68, 1, 0.68],
+    extrapolate: 'clamp',
+  });
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
@@ -328,83 +377,99 @@ export default function TasteCardsScreen() {
         ) : (
           <View style={styles.flex}>
             <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-              {/* 가입 직후 첫 장에서만 왜 넘기는지 한 줄 — 두 번째 장부터는 카드가 스스로 말한다. */}
-              {isIntro && index === 0 && (
-                <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
-                  고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
-                </Animated.Text>
-              )}
-              {/* 카드 한 장이 통째로 갈린다 — 물음만 바뀌면 같은 종이에 글자만 바뀐 것처럼 보인다. */}
-              <Animated.View key={card.id} entering={FadeInDown.duration(240)} exiting={FadeOut.duration(120)}>
-                <Text style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}>{card.prompt}</Text>
+              <View style={styles.swipeViewport}>
+                {index > 0 && <View pointerEvents="none" style={[styles.cardPeek, styles.cardPeekLeft, { backgroundColor: c.backgroundSelected, borderColor: c.border }]} />}
+                {index < cards.length - 1 && <View pointerEvents="none" style={[styles.cardPeek, styles.cardPeekRight, { backgroundColor: c.backgroundSelected, borderColor: c.border }]} />}
+                <NativeAnimated.View
+                  testID="taste-card-swipe-area"
+                  accessibilityActions={[
+                    ...(index > 0 ? [{ name: 'decrement' as const, label: '이전 카드' }] : []),
+                    ...(index < cards.length - 1 ? [{ name: 'increment' as const, label: '다음 카드' }] : []),
+                  ]}
+                  onAccessibilityAction={({ nativeEvent }) => {
+                    if (nativeEvent.actionName === 'increment' && index < cards.length - 1) openCard(index + 1);
+                    if (nativeEvent.actionName === 'decrement' && index > 0) openCard(index - 1);
+                  }}
+                  {...panResponder.panHandlers}
+                  style={{ opacity: swipeOpacity, transform: [{ translateX: dragX }] }}
+                >
+                  {/* 가입 직후 첫 장에서만 왜 넘기는지 한 줄 — 두 번째 장부터는 카드가 스스로 말한다. */}
+                  {isIntro && index === 0 && (
+                    <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
+                      고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
+                    </Animated.Text>
+                  )}
+                  <View key={card.id}>
+                    <Text style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}>{card.prompt}</Text>
 
-                <View style={styles.options}>
-                  {(card.options ?? [{ id: 'A' as const, label: card.optionA }, { id: 'B' as const, label: card.optionB }]).map(({ id: option, label }) => {
-                    const picked = chosen === option;
-                    const percentage = chosen != null ? percentages?.[option] ?? (picked ? statistic : null) : null;
-                    return (
-                      <Pressable
-                        key={option}
-                        onPress={() => void choose(option)}
-                        disabled={currentCardSaving || chosen != null}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: picked }}
-                        style={({ pressed }) => [
-                          styles.option,
-                          {
-                            // 고른 쪽은 색이 차오르고, 고르지 않은 쪽은 조용히 물러난다.
-                            backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
-                            borderColor: picked ? c.primary : c.border,
-                            opacity: 1,
-                            transform: [{ scale: pressed ? 0.99 : 1 }],
-                          },
-                        ]}
-                      >
-                        {percentage != null && (
-                          <View pointerEvents="none"
-                            style={[styles.voteFill, { width: `${percentage}%`, backgroundColor: picked ? c.primary : c.textSecondary }]} />
-                        )}
-                        <View style={styles.optionRow}>
-                          <Text style={[styles.optionText, { color: c.text }]}>{label}</Text>
-                          <View style={styles.voteLabel}>
-                            {picked && <Ionicons name="checkmark-circle" size={18} color={c.primaryStrong} />}
+                    <View style={styles.options}>
+                      {(card.options ?? [{ id: 'A' as const, label: card.optionA }, { id: 'B' as const, label: card.optionB }]).map(({ id: option, label }) => {
+                        const picked = chosen === option;
+                        const optionLocked = currentCardSaving || chosen != null;
+                        const percentage = chosen != null ? percentages?.[option] ?? (picked ? statistic : null) : null;
+                        return (
+                          <Pressable
+                            key={option}
+                            onPress={() => void choose(option)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: picked, disabled: optionLocked }}
+                            style={({ pressed }) => [
+                              styles.option,
+                              {
+                                backgroundColor: pressed && !optionLocked ? c.backgroundSelected : c.backgroundElement,
+                                borderColor: picked ? c.primary : c.border,
+                                opacity: 1,
+                                transform: [{ scale: pressed ? 0.99 : 1 }],
+                              },
+                            ]}
+                          >
                             {percentage != null && (
-                              <Text accessibilityLabel={`${label}, ${percentage}% 선택`} style={[styles.headerAction, { color: c.textSecondary }]}>{percentage}%</Text>
+                              <View pointerEvents="none"
+                                style={[styles.voteFill, { width: `${percentage}%`, backgroundColor: picked ? c.primary : c.textSecondary }]} />
                             )}
-                          </View>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </Animated.View>
-              <View testID="taste-card-meta" style={styles.cardMeta}>
-                {chosen != null && !currentCardSaving && statistic == null && (
-                  <Text accessibilityLiveRegion="polite" style={[styles.feedbackHint, { color: c.textSecondary }]}>아직 응답을 모으고 있어요</Text>
-                )}
+                            <View style={styles.optionRow}>
+                              <Text style={[styles.optionText, { color: c.text }]}>{label}</Text>
+                              <View style={styles.voteLabel}>
+                                {picked && <Ionicons name="checkmark-circle" size={18} color={c.primaryStrong} />}
+                                {percentage != null && (
+                                  <Text accessibilityLabel={`${label}, ${percentage}% 선택`} style={[styles.headerAction, { color: c.textSecondary }]}>{percentage}%</Text>
+                                )}
+                              </View>
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <View testID="taste-card-meta" style={styles.cardMeta}>
+                    {chosen != null && !currentCardSaving && statistic == null && (
+                      <Text accessibilityLiveRegion="polite" style={[styles.feedbackHint, { color: c.textSecondary }]}>아직 응답을 모으고 있어요</Text>
+                    )}
 
-                {chosen == null && (noteOpen ? (
-                  <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
-                    <PlaceholderInput
-                      value={note}
-                      onChangeText={setNote}
-                      placeholder="예) 새벽이 제일 조용해서요"
-                      placeholderTextColor={c.textSecondary}
-                      maxLength={TASTE_NOTE_MAX}
-                      autoFocus
-                      style={[
-                        styles.noteInput,
-                        { backgroundColor: c.backgroundElement, borderColor: c.border, color: c.text },
-                      ]}
-                    />
-                    <Text style={[styles.noteHint, { color: c.textSecondary }]}>위에서 고르면 이 한 줄까지 함께 남아요.</Text>
-                  </Animated.View>
-                ) : (
-                  <Pressable onPress={() => setNoteOpen(true)} hitSlop={10} style={styles.noteOpen}>
-                    <Ionicons name="create-outline" size={15} color={c.textSecondary} />
-                    <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
-                  </Pressable>
-                ))}
+                    {chosen == null && (noteOpen ? (
+                      <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
+                        <PlaceholderInput
+                          value={note}
+                          onChangeText={setNote}
+                          placeholder="예) 새벽이 제일 조용해서요"
+                          placeholderTextColor={c.textSecondary}
+                          maxLength={TASTE_NOTE_MAX}
+                          autoFocus
+                          style={[
+                            styles.noteInput,
+                            { backgroundColor: c.backgroundElement, borderColor: c.border, color: c.text },
+                          ]}
+                        />
+                        <Text style={[styles.noteHint, { color: c.textSecondary }]}>위에서 고르면 이 한 줄까지 함께 남아요.</Text>
+                      </Animated.View>
+                    ) : (
+                      <Pressable onPress={() => setNoteOpen(true)} hitSlop={10} style={styles.noteOpen}>
+                        <Ionicons name="create-outline" size={15} color={c.textSecondary} />
+                        <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </NativeAnimated.View>
               </View>
             </ScrollView>
 
@@ -444,6 +509,10 @@ const styles = StyleSheet.create({
   voteLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   body: { flexGrow: 1, paddingTop: 20, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
+  swipeViewport: { position: 'relative' },
+  cardPeek: { position: 'absolute', top: '50%', marginTop: -44, width: 14, height: 88, borderWidth: 1, borderRadius: 8, opacity: 0.72 },
+  cardPeekLeft: { left: -18 },
+  cardPeekRight: { right: -18 },
   intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },
   prompt: { ...Type.display, textAlign: 'center' },
 
