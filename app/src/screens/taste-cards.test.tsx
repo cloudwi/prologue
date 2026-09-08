@@ -66,7 +66,8 @@ it('저장 실패 시 같은 카드에 남아 다시 시도할 수 있다', asyn
 it('소개할 후보가 없으면 자동 소개 안내만 보이고 수령 버튼이나 보유 수량은 없다', async () => {
   jest.mocked(startTasteSession).mockResolvedValue({ ...deck, cards: [], reward: { ...deck.reward!, pending: 1, remaining: 0 } });
   await render(<TasteCardsScreen />);
-  await screen.findByText('인연 찾는 중');
+  await screen.findByText('카드를 다 넘겼어요');
+  expect(screen.queryByText('추가 소개')).toBeNull();
   expect(screen.getByLabelText('매일 정오에 새 카드 10개')).toBeTruthy();
   expect(screen.queryByText(/소개권/)).toBeNull();
   expect(screen.queryByText(/보유/)).toBeNull();

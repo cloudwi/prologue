@@ -229,8 +229,7 @@ export default function TasteCardsScreen() {
               <Text style={[styles.skip, { color: c.textSecondary }]}>12:00</Text>
             </View>
           </View>
-          <View style={styles.journeyTrack}>
-            <View style={styles.progressGroup}>
+          <View style={styles.progressGroup}>
               <View style={styles.stamps}>
                 {Array.from({ length: 10 }, (_, i) => (
                   <Pressable key={i} disabled={saving || !cards[i]} onPress={() => navigateTo(i, cards, true)}
@@ -247,20 +246,6 @@ export default function TasteCardsScreen() {
                 ))}
               </View>
               <Text style={[styles.progressCount, { color: c.textSecondary }]}>{10 - rewardStatus.remaining} / 10</Text>
-            </View>
-            <Ionicons name="arrow-forward" size={18} color={c.textSecondary} />
-            <View style={styles.destination} accessible accessibilityLabel={rewardStatus.remaining > 0
-              ? '완료하면 한 명 추가 소개' : rewardStatus.pending > 0 ? '완료. 소개할 상대를 찾는 중' : '추가 소개 완료'}>
-              <View style={[styles.personCircle, { backgroundColor: c.backgroundSelected }]}>
-                <Ionicons name={rewardStatus.remaining === 0 && rewardStatus.pending > 0 ? 'hourglass-outline' : 'person-outline'} size={24} color={c.text} />
-                <View style={[styles.personBadge, { backgroundColor: c.text }]}>
-                  {rewardStatus.remaining === 0 && rewardStatus.pending === 0
-                    ? <Ionicons name="checkmark" size={12} color={c.background} />
-                    : <Text style={[styles.badgeText, { color: c.background }]}>+1</Text>}
-                </View>
-              </View>
-              <Text style={[styles.skip, { color: c.textSecondary }]}>{rewardStatus.remaining === 0 && rewardStatus.pending > 0 ? '인연 찾는 중' : '추가 소개'}</Text>
-            </View>
           </View>
         </View>
       )}
@@ -413,16 +398,11 @@ const styles = StyleSheet.create({
   journey: { marginHorizontal: 24, paddingVertical: 12 },
   journeyLabels: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   clockLabel: { flexDirection: 'row', gap: 4, alignItems: 'center' },
-  journeyTrack: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   progressGroup: { flex: 1 },
   stamps: { flexDirection: 'row', gap: 4 },
   stampTarget: { flex: 1, minHeight: 44, justifyContent: 'center', borderBottomWidth: 2 },
   stamp: { width: '100%', height: 28, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
   progressCount: { ...Type.caption, marginTop: 8 },
-  destination: { alignItems: 'center', gap: 8 },
-  personCircle: { width: 48, height: 48, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  personBadge: { position: 'absolute', right: -4, bottom: -2, borderRadius: Radius.pill, minWidth: 24, height: 20, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { ...Type.caption, fontWeight: '600' },
   voteFill: { position: 'absolute', left: 0, top: 0, bottom: 0, opacity: 0.16 },
   voteLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
