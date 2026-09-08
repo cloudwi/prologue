@@ -15,6 +15,8 @@ data class TasteDeckResponse(
     val answered: Int,
     val total: Int,
     val reward: TasteRewardView,
+    val sessionId: java.util.UUID? = null,
+    val resetsAt: Instant? = null,
 ) {
     data class Card(
         val id: Long,
@@ -36,6 +38,8 @@ data class TasteDeckResponse(
             answered = view.answered,
             total = view.total,
             reward = view.reward,
+            sessionId = view.sessionId,
+            resetsAt = view.resetsAt,
         )
     }
 }
@@ -45,20 +49,22 @@ data class TasteChoiceRequest(
     val option: TasteOption,
     @field:Size(max = TasteChoice.NOTE_MAX_LENGTH, message = "한 줄은 ${TasteChoice.NOTE_MAX_LENGTH}자까지 적을 수 있어요")
     val note: String? = null,
+    val sessionId: java.util.UUID? = null,
 )
 
 data class TasteProgressResponse(
     val answered: Int,
     val total: Int,
-    /** 이번 장으로 이정표를 밟았는지 — 추가 소개권 한 장이 적립됐다는 뜻. */
+    /** 이번 장으로 이정표를 밟았는지 — 추가 소개 조건을 달성했다는 뜻. */
     val milestoneReached: Boolean,
-    /** 그 표가 그 자리에서 소개로 바뀌었는지. 후보가 없으면 false고, 표는 남아 다음에 쓰인다. */
+    /** 추가 상대가 도착했는지. 후보가 없으면 이후 자동으로 소개한다. */
     val peerArrived: Boolean,
     val reward: TasteRewardView? = null,
+    val selectedPercentage: Int? = null,
 ) {
     companion object {
         fun from(progress: TasteDeckProgress, peerArrived: Boolean): TasteProgressResponse =
-            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived, progress.reward)
+            TasteProgressResponse(progress.answered, progress.total, progress.milestoneReached, peerArrived, progress.reward, progress.selectedPercentage)
     }
 }
 

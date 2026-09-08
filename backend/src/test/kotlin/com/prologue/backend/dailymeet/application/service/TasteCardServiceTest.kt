@@ -24,6 +24,7 @@ class TasteCardServiceTest {
     private val cardRepository = mockk<TasteCardRepository>()
     private val choiceRepository = mockk<TasteChoiceRepository>()
     private val rewardRepository = mockk<TasteRewardRepository> {
+        every { lockAccount(any()) } returns Unit
         every { claimEarned(any(), any(), any(), any()) } returns false
         every { claimedMilestones(any()) } returns emptyList()
         every { pendingCount(any()) } returns 0

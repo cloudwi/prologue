@@ -34,7 +34,7 @@ class TasteChoicePersistenceAdapter(
         val entity = jpa.findById(id).orElse(null)
             ?.apply { this.choice = choice.option.name; this.note = choice.note }
             ?: TasteChoiceJpaEntity(id, choice.option.name, choice.note, choice.createdAt)
-        return jpa.save(entity).toDomain()
+        return jpa.saveAndFlush(entity).toDomain()
     }
 
     private fun TasteChoiceJpaEntity.toDomain(): TasteChoice =

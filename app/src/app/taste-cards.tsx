@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +20,7 @@ import { Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { haptics } from '@/lib/haptics';
-import { chooseTaste, getTasteDeck, type TasteReward, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
+import { chooseTaste, startTasteSession, getTasteSession, type TasteReward, TASTE_NOTE_MAX, type TasteCard, type TasteDeck, type TasteOption } from '@/lib/taste';
 
 /**
  * 취향 카드 — 3~4개 중 하나를 고르는 가벼운 문답.
@@ -39,7 +39,7 @@ import { chooseTaste, getTasteDeck, type TasteReward, TASTE_NOTE_MAX, type Taste
  * 고른 뒤 카드가 머무는 시간(ms). 짧으면 무엇을 골랐는지 눈에 안 남고, 길면 빠르게 넘기는
  * 맛이 사라진다 — 손이 다음 카드를 누르러 가기 직전이 이 언저리다.
  */
-const HOLD_MS = 260;
+const HOLD_MS = 1200;
 
 /** 보상 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
 const REWARD_SHOWN_MS = 2600;
@@ -51,6 +51,8 @@ export default function TasteCardsScreen() {
   const { intro } = useLocalSearchParams<{ intro?: string }>();
   const isIntro = intro === '1';
 
+  const sessionId = useRef<string | undefined>(undefined);
+  const [statistic, setStatistic] = useState<string | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,7 @@ export default function TasteCardsScreen() {
   const [failed, setFailed] = useState(false);
 
   const apply = useCallback((deck: TasteDeck) => {
+    sessionId.current = deck.sessionId;
     setCards(deck.cards);
     setRewardStatus(deck.reward ?? null);
     setIndex(0);
@@ -77,7 +80,7 @@ export default function TasteCardsScreen() {
   /** 다음 묶음을 받아온다. 스피너를 켜는 건 부르는 쪽 몫이다 — 마운트 시엔 이미 켜져 있다. */
   const load = useCallback(async () => {
     try {
-      apply(await getTasteDeck());
+      apply(await (sessionId.current ? getTasteSession(sessionId.current) : startTasteSession()));
     } catch {
       setFailed(true);
     } finally {
@@ -88,7 +91,7 @@ export default function TasteCardsScreen() {
   useEffect(() => {
     track('taste_deck_opened');
     let active = true;
-    getTasteDeck()
+    startTasteSession()
       .then((deck) => active && apply(deck))
       .catch(() => active && setFailed(true))
       .finally(() => active && setLoading(false));
@@ -125,6 +128,7 @@ export default function TasteCardsScreen() {
 
   /** 다음 장으로. 묶음을 다 넘겼으면 서버에서 다음 묶음을 받아온다. */
   function advance() {
+    setStatistic(null);
     setNote('');
     setNoteOpen(false);
     setChosen(null);
@@ -143,10 +147,12 @@ export default function TasteCardsScreen() {
     haptics.select();
     const noted = note.trim().length > 0;
     try {
-      const [progress] = await Promise.all([
-        chooseTaste(card.id, option, note.trim() || undefined),
-        new Promise((resolve) => setTimeout(resolve, HOLD_MS)),
-      ]);
+      if (!sessionId.current) throw new Error('Missing taste session');
+      const progress = await chooseTaste(card.id, option, note.trim() || undefined, sessionId.current);
+      setStatistic(progress.selectedPercentage != null
+        ? `${progress.selectedPercentage}%가 같은 취향을 골랐어요`
+        : '아직 취향이 모이고 있어요');
+      await new Promise((resolve) => setTimeout(resolve, HOLD_MS));
       setRewardStatus(progress.reward ?? null);
       track('taste_card_chosen', { noted });
       if (progress.milestoneReached) {
@@ -196,10 +202,10 @@ export default function TasteCardsScreen() {
       {rewardStatus && (
         <View style={[styles.rewardPanel, { backgroundColor: c.backgroundElement }]}>
           <Text style={[styles.rewardTitle, { color: c.text }]}>
-            {`${rewardStatus.remaining}장 더 답하면 한 명 더 소개해 드려요`}
+            {rewardStatus.remaining === 0 ? '오늘의 취향 10개를 모두 남겼어요' : `${rewardStatus.remaining}장 더 답하면 한 명 더 소개해 드려요`}
           </Text>
           <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
-            매일 정오에 한 명 · 카드 {rewardStatus.every}개마다 추가 한 명
+            매일 정오에 새 카드 10개 · 모두 답하면 추가 한 명
           </Text>
           {rewardStatus.pending > 0 && (
             <Text style={[styles.rewardHint, { color: c.textSecondary }]}>
@@ -232,7 +238,7 @@ export default function TasteCardsScreen() {
             <Ionicons name="checkmark-circle-outline" size={44} color={c.primary} />
             <Text style={[styles.emptyTitle, { color: c.text, fontFamily: Fonts.serif }]}>카드를 다 넘겼어요</Text>
             <Text style={[styles.emptyHint, { color: c.textSecondary }]}>
-              겹치는 취향이 있는 사람이{'\n'}먼저 소개돼요.
+              다음 정오에 새 카드 10개가 도착해요.
             </Text>
             <Pressable
               onPress={done}
@@ -292,6 +298,10 @@ export default function TasteCardsScreen() {
                   })}
                 </View>
               </Animated.View>
+
+              {statistic && (
+                <Text accessibilityLiveRegion="polite" style={[styles.noteHint, { color: c.textSecondary }]}>{statistic}</Text>
+              )}
 
               {noteOpen ? (
                 <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>

@@ -21,6 +21,7 @@ class TasteCardService(
     private val tasteCardRepository: TasteCardRepository,
     private val tasteChoiceRepository: TasteChoiceRepository,
     private val tasteRewardRepository: TasteRewardRepository,
+    private val tasteSessionRepository: com.prologue.backend.dailymeet.domain.repository.TasteSessionRepository? = null,
 ) {
     /**
      * 아직 안 고른 카드 한 묶음.
@@ -44,6 +45,7 @@ class TasteCardService(
     /** 카드 한 장을 고른다(수정 포함). 한 줄([note])은 선택이다. */
     @Transactional
     fun choose(accountId: UUID, cardId: Long, option: TasteOption, note: String?): TasteDeckProgress {
+        tasteRewardRepository.lockAccount(accountId)
         val cards = tasteCardRepository.findAllOrdered()
         val card = cards.find { it.id == cardId } ?: throw DailyMeetException("없는 카드예요")
         card.labelOf(option) // 해당 카드에 실제로 존재하는 선택지만 저장한다.
@@ -152,6 +154,8 @@ class TasteCardService(
         claimEarnedReward(accountId, tasteChoiceRepository.findAllByAccountId(accountId).size)
 
     private fun claimEarnedReward(accountId: UUID, answered: Int): Boolean {
+        tasteRewardRepository.lockAccount(accountId)
+        if (tasteSessionRepository?.hasSessions(accountId) == true) return false
         var accrued = false
         // 과거 하루 제한으로 밀린 분량도 자동으로 인정한다. 같은 이정표는 한 번뿐이다.
         repeat(answered / TasteReward.EVERY) {
@@ -189,6 +193,8 @@ data class TasteDeckView(
     val answered: Int,
     val total: Int,
     val reward: TasteRewardView,
+    val sessionId: UUID? = null,
+    val resetsAt: Instant? = null,
 )
 
 data class TasteCardView(
@@ -207,6 +213,7 @@ data class TasteCardView(
 data class TasteDeckProgress(
     val answered: Int, val total: Int, val milestoneReached: Boolean = false,
     val reward: TasteRewardView? = null,
+    val selectedPercentage: Int? = null,
 )
 
 data class TasteRewardView(

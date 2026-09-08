@@ -17,16 +17,13 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
-/**
- * 취향 카드. 인증 필요(JWT).
- *
- * 오늘의 문답과 달리 날짜에 매이지 않는다 — 언제든 열어 남은 카드를 넘긴다.
- */
+/** 취향 카드와 정오 기준 하루 묶음. 인증 필요. */
 @RestController
 @RequestMapping("/taste-cards")
 class TasteCardController(
     private val tasteCardService: TasteCardService,
     private val peerMatchingService: PeerMatchingService,
+    private val sessions: com.prologue.backend.dailymeet.application.service.TasteSessionService,
 ) {
     /** 아직 안 고른 카드 한 묶음. */
     @GetMapping
@@ -37,17 +34,11 @@ class TasteCardController(
     ): TasteDeckResponse {
         val accountId = UUID.fromString(authentication.name)
         return TasteDeckResponse.from(
-            tasteCardService.deck(accountId, limit ?: TasteCardService.DECK_SIZE, if (version >= 2) 2 else 1),
+            if (version >= 3) sessions.preview(accountId) else tasteCardService.deck(accountId, limit ?: TasteCardService.DECK_SIZE, if (version >= 2) 2 else 1),
         )
     }
 
-    /**
-     * 카드 한 장을 고른다(다시 고르면 덮어쓴다).
-     *
-     * 이정표를 밟았으면 그 자리에서 소개권을 써본다. 두 서비스를 여기서 잇는 이유는
-     * 서로를 참조하지 않게 하기 위해서다 — 소개는 취향을 알지만(매칭 점수), 취향은 소개를
-     * 몰라야 한다. 후보가 없어 지금 못 만나면 표는 남아 다음에 쓰인다.
-     */
+    /** 답변을 저장하고 10개 달성 시 추가 소개를 시도한다. */
     @PostMapping("/{cardId}/choice")
     fun choose(
         authentication: Authentication,
@@ -55,10 +46,20 @@ class TasteCardController(
         @Valid @RequestBody request: TasteChoiceRequest,
     ): TasteProgressResponse {
         val accountId = UUID.fromString(authentication.name)
-        val progress = tasteCardService.choose(accountId, cardId, request.option, request.note)
+        val progress = request.sessionId?.let { sessions.choose(accountId, it, cardId, request.option, request.note) }
+            ?: tasteCardService.choose(accountId, cardId, request.option, request.note)
         val peerArrived = progress.milestoneReached && peerMatchingService.consumeExtraReveals(accountId)
-        return TasteProgressResponse.from(progress.copy(reward = tasteCardService.rewardStatus(accountId)), peerArrived)
+        return TasteProgressResponse.from(progress.copy(reward = request.sessionId?.let { sessions.get(accountId, it).reward }
+            ?: tasteCardService.rewardStatus(accountId)), peerArrived)
     }
+
+    @PostMapping("/sessions")
+    fun start(authentication: Authentication): TasteDeckResponse =
+        TasteDeckResponse.from(sessions.start(UUID.fromString(authentication.name)))
+
+    @GetMapping("/sessions/{sessionId}")
+    fun session(authentication: Authentication, @PathVariable sessionId: UUID): TasteDeckResponse =
+        TasteDeckResponse.from(sessions.get(UUID.fromString(authentication.name), sessionId))
 
     @PostMapping("/rewards/claim")
     fun claimReward(authentication: Authentication): TasteProgressResponse {

@@ -50,7 +50,7 @@ interface TasteRewardJpaRepository : JpaRepository<TasteRewardJpaEntity, TasteRe
     @Query("select r.id.milestone from TasteRewardJpaEntity r where r.id.accountId = :accountId")
     fun findMilestones(@Param("accountId") accountId: UUID): List<Int>
 
-    @Query("select r from TasteRewardJpaEntity r where r.id.accountId = :accountId and r.grantedAt is null order by r.id.milestone asc")
+    @Query("select r from TasteRewardJpaEntity r where r.id.accountId = :accountId and r.grantedAt is null order by r.createdAt asc, r.id.milestone asc")
     fun findPending(@Param("accountId") accountId: UUID): List<TasteRewardJpaEntity>
 
     @Query("select count(r) from TasteRewardJpaEntity r where r.id.accountId = :accountId and r.createdAt >= :since")

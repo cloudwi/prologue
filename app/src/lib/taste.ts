@@ -1,12 +1,6 @@
 import { authedRequest } from './api';
 
-/**
- * 취향 카드 — 선택지 중 하나를 고르는 가벼운 문답.
- *
- * 오늘의 문답과 **다른 더미**다. 날짜에 매이지 않아 언제든 몇 장이든 넘길 수 있고,
- * 잉크는 주지 않는다 — 보상은 재화가 아니라 사람이다. 정해진 장수를 넘기면 오늘의 상대가
- * 한 명 더 오고, 겹치는 선택은 매칭 점수에 실려 상대 카드에 "둘 다 이걸 골랐어요"로 걸린다.
- */
+/** 정오마다 10개. 시작한 묶음은 새 묶음을 받을 때까지 이어서 답할 수 있다. */
 export type TasteCard = {
   id: number;
   prompt: string;
@@ -28,6 +22,8 @@ export type TasteReward = {
 export type TasteDeck = {
   /** 아직 안 고른 카드. 다 넘기면 빈 배열이 온다. */
   cards: TasteCard[];
+  sessionId?: string;
+  resetsAt?: string;
   answered: number;
   total: number;
   reward?: TasteReward;
@@ -35,10 +31,19 @@ export type TasteDeck = {
 
 /** 아직 안 고른 카드 한 묶음 (GET /taste-cards). */
 export async function getTasteDeck(limit?: number): Promise<TasteDeck> {
-  return authedRequest<TasteDeck>('GET', `/taste-cards?version=2${limit ? `&limit=${limit}` : ''}`);
+  return authedRequest<TasteDeck>('GET', `/taste-cards?version=3${limit ? `&limit=${limit}` : ''}`);
+}
+
+export async function startTasteSession(): Promise<TasteDeck> {
+  return authedRequest<TasteDeck>('POST', '/taste-cards/sessions');
+}
+
+export async function getTasteSession(id: string): Promise<TasteDeck> {
+  return authedRequest<TasteDeck>('GET', `/taste-cards/sessions/${id}`);
 }
 
 export type TasteProgress = {
+  selectedPercentage?: number | null;
   answered: number;
   total: number;
   reward?: TasteReward;
@@ -52,8 +57,8 @@ export type TasteProgress = {
  * 카드 한 장을 고른다 (POST /taste-cards/{id}/choice).
  * [note]는 선택지 뒤에 덧붙이는 한 줄 — 없어도 된다.
  */
-export async function chooseTaste(cardId: number, option: TasteOption, note?: string): Promise<TasteProgress> {
-  return authedRequest<TasteProgress>('POST', `/taste-cards/${cardId}/choice`, { option, note: note || null });
+export async function chooseTaste(cardId: number, option: TasteOption, note?: string, sessionId?: string): Promise<TasteProgress> {
+  return authedRequest<TasteProgress>('POST', `/taste-cards/${cardId}/choice`, { option, note: note || null, sessionId });
 }
 
 export type MyTaste = {
