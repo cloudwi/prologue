@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import { authedRequest } from './api';
+import { track } from './analytics';
 
 /**
  * expo-notifications는 게을리 읽는다. 네이티브 모듈이 없는 환경(Expo Go, 이 모듈이 추가되기 전에 만든
@@ -31,6 +32,7 @@ function loadNotifications(): NotificationsModule | null {
  * 기기에도 껐다는 사실을 남긴다. 남기지 않으면 다음 실행 때 자동 등록이 다시 켜버린다.
  */
 const DISABLED_KEY = 'prologue.notificationsDisabled';
+const REGISTERED_KEY = 'prologue.notificationsRegistered';
 const isWeb = Platform.OS === 'web';
 
 export type NotificationRoute = '/mails' | '/discover' | '/feed' | '/meetups' | '/my/events' | '/my/ink';
@@ -83,7 +85,10 @@ export function listenForNotificationOpens(open: (route: NotificationRoute) => v
     if (!active || handled.has(id)) return;
     handled.add(id);
     const route = notificationRoute(response.notification.request.content.data ?? {});
-    if (route) open(route);
+    if (route) {
+      track('notification_opened', { screen: String(response.notification.request.content.data?.screen) });
+      open(route);
+    }
   };
   const subscription = Notifications.addNotificationResponseReceivedListener(handle);
   void Notifications.getLastNotificationResponseAsync()
@@ -112,14 +117,32 @@ async function writeDisabled(disabled: boolean): Promise<void> {
   await SecureStore.setItemAsync(DISABLED_KEY, v);
 }
 
+async function readRegistered(): Promise<boolean> {
+  const v = isWeb ? localStorage.getItem(REGISTERED_KEY) : await SecureStore.getItemAsync(REGISTERED_KEY);
+  return v === 'true';
+}
+
+async function writeRegistered(registered: boolean): Promise<void> {
+  const v = String(registered);
+  if (isWeb) {
+    localStorage.setItem(REGISTERED_KEY, v);
+    return;
+  }
+  await SecureStore.setItemAsync(REGISTERED_KEY, v);
+}
+
 /** 이 기기의 푸시 토큰. 시뮬레이터·웹처럼 받을 수 없는 환경이면 null. */
 async function pushToken(): Promise<string | null> {
   if (isWeb || !Device.isDevice) return null;
   const Notifications = loadNotifications();
   if (!Notifications) return null;
   const existing = await Notifications.getPermissionsAsync();
-  const granted =
-    existing.granted || (await Notifications.requestPermissionsAsync()).granted;
+  let granted = existing.granted;
+  if (!granted) {
+    track('notification_permission_prompted');
+    granted = (await Notifications.requestPermissionsAsync()).granted;
+    track('notification_permission_result', { granted });
+  }
   if (!granted) return null;
   try {
     const { data } = await Notifications.getExpoPushTokenAsync();
@@ -139,6 +162,10 @@ export async function enableNotifications(): Promise<boolean> {
       token,
       platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
     });
+    if (!(await readRegistered())) {
+      await writeRegistered(true);
+      track('notification_registered');
+    }
     return true;
   } catch {
     return false;
@@ -148,6 +175,8 @@ export async function enableNotifications(): Promise<boolean> {
 /** 알림 끄기 — 서버에서 이 기기를 지우고, 기기에도 껐다고 남긴다. */
 export async function disableNotifications(): Promise<void> {
   await writeDisabled(true);
+  await writeRegistered(false);
+  track('notification_disabled');
   const token = await pushToken();
   if (!token) return;
   try {

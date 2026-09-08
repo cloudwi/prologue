@@ -235,6 +235,7 @@ export default function TasteCardsScreen() {
     setPublishingCardId(card.id);
     try {
       await publishTasteToFeed(card.id);
+      track('feed_post_published', { source: 'taste' });
       setPublishedCardIds((current) => new Set(current).add(card.id));
       haptics.success();
       showToast('피드에 올렸어요');

@@ -55,6 +55,18 @@ type AnalyticsEvent =
   | 'meetup_followed'        // 모임 따라가기 — 다음 회차 알림 신청(연속 참여 의사)
   | 'meetup_created'         // 모임 열기 — 유저가 모임장이 된 순간
   | 'meetup_shared'          // 초대장 전하기 — 자리를 채우는 유일한 손
+  // 푸시 알림
+  | 'notification_permission_prompted' // OS 알림 권한을 처음 물음
+  | 'notification_permission_result'   // 권한 응답(granted)
+  | 'notification_registered'          // 이 기기의 푸시 토큰이 서버에 처음 연결됨
+  | 'notification_disabled'            // MY에서 알림을 끔
+  | 'notification_opened'              // 푸시를 눌러 앱 화면으로 이동(screen)
+  // 피드
+  | 'feed_opened'                      // 피드 탭 진입
+  | 'feed_sort_changed'                 // 최신·인기 정렬 전환(sort)
+  | 'feed_heart_toggled'                // 피드 답변 하트 변경(liked)
+  | 'feed_profile_opened'               // 피드에서 프로필 열람(spent)
+  | 'feed_post_published'               // 답변을 피드에 공개(source)
   // 두 단 가입(1.3) — 모임으로 들어와 소개팅으로 넘어가는 길
   | 'guest_browsed'          // 가입 없이 모임 둘러보기 시작
   | 'guest_signup_prompted'  // 손님이 잠긴 문을 두드림(가입 유도 노출)

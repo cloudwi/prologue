@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,6 +14,7 @@ import { useSession } from '@/lib/session';
 import { SignupGate } from '@/components/signup-gate';
 import { ScreenLoadError } from '@/components/screen-load-error';
 import { promptReport } from '@/lib/reports';
+import { track } from '@/lib/analytics';
 
 export default function FeedScreen() {
   const session = useSession();
@@ -32,6 +33,8 @@ function FeedBoard() {
   const feed = useQuery({ queryKey: ['feed', sort], queryFn: () => getFeed(sort) });
   const [opening, setOpening] = useState<string | null>(null);
 
+  useEffect(() => { track('feed_opened'); }, []);
+
   const refresh = useCallback(() => void feed.refetch(), [feed]);
 
   function openProfile(post: FeedPost) {
@@ -40,6 +43,7 @@ function FeedBoard() {
       setOpening(post.id);
       try {
         const result = await unlockFeedProfile(post.id);
+        track('feed_profile_opened', { spent: result.spent });
         queryClient.setQueryData<FeedPost[]>(['feed', sort], (old) => old?.map((p) => p.id === post.id ? { ...p, profileUnlocked: true } : p));
         router.push({ pathname: '/peer', params: { data: JSON.stringify(result.peer), question: post.prompt } });
       } catch (e) {
@@ -63,7 +67,11 @@ function FeedBoard() {
     queryClient.setQueryData<FeedPost[]>(['feed', sort], (old) => old?.map((p) => p.id === post.id
       ? { ...p, hearted: liked, heartCount: Math.max(0, p.heartCount + (liked ? 1 : -1)) } : p));
     if (liked) haptics.select();
-    try { await setFeedHeart(post.id, liked); if (sort === 'hearts') void feed.refetch(); }
+    try {
+      await setFeedHeart(post.id, liked);
+      track('feed_heart_toggled', { liked });
+      if (sort === 'hearts') void feed.refetch();
+    }
     catch { void feed.refetch(); }
   }
 
@@ -82,7 +90,7 @@ function FeedBoard() {
       <View style={styles.header}>
         <View><Text style={[styles.title, { color: c.text }]}>피드</Text><Text style={[styles.subtitle, { color: c.textSecondary }]}>서로의 답에서 시작하는 이야기</Text></View>
         <View style={[styles.sort, { backgroundColor: c.backgroundSelected }]}>
-          {(['latest', 'hearts'] as const).map((value) => <Pressable key={value} onPress={() => setSort(value)} style={[styles.sortButton, sort === value && { backgroundColor: c.backgroundElement }]}><Text style={[styles.sortLabel, { color: sort === value ? c.text : c.textSecondary }]}>{value === 'latest' ? '최신' : '인기'}</Text></Pressable>)}
+          {(['latest', 'hearts'] as const).map((value) => <Pressable key={value} onPress={() => { if (value !== sort) { setSort(value); track('feed_sort_changed', { sort: value }); } }} style={[styles.sortButton, sort === value && { backgroundColor: c.backgroundElement }]}><Text style={[styles.sortLabel, { color: sort === value ? c.text : c.textSecondary }]}>{value === 'latest' ? '최신' : '인기'}</Text></Pressable>)}
         </View>
       </View>
       {feed.isPending ? <View style={styles.center}><ActivityIndicator color={c.primary} /></View> : feed.isError ? (

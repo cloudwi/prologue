@@ -271,6 +271,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
     setPublishingFeed(true);
     try {
       await publishDailyToFeed(today.questionId);
+      track('feed_post_published', { source: 'daily' });
       setFeedPublished(true);
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
       haptics.success();
