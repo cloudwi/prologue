@@ -102,19 +102,33 @@ it('묶음을 다 넘겨도 같은 묶음의 남은 카드만 읽는다', async 
   expect(startTasteSession).toHaveBeenCalledTimes(1);
 });
 
-it('상단 카드 칸으로 이전 답변을 보고 자동 이동을 멈춘다', async () => {
+it('상단 카드 칸으로 이전 답변을 보고 다른 칸으로 바로 이동한다', async () => {
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42, optionPercentages: { A: 25, B: 33, C: 42, D: 0 } });
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('취미'));
   await screen.findByText('42%');
   await fireEvent.press(screen.getByLabelText('1번 카드, 답변 완료'));
-  await screen.findByText('이어서 답하기');
+  expect(screen.queryByText('이어서 답하기')).toBeNull();
+  expect(screen.queryByText('완료')).toBeNull();
   await new Promise((resolve) => setTimeout(resolve, 1000));
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
   expect(screen.getByText('42%')).toBeTruthy();
   expect(chooseTaste).toHaveBeenCalledTimes(1);
-  await fireEvent.press(screen.getByText('이어서 답하기'));
+  await fireEvent.press(screen.getByLabelText('2번 카드'));
   await screen.findByText('다음 질문');
+});
+
+it('답변 저장 중에도 상단의 다른 카드 칸으로 바로 이동한다', async () => {
+  let finishSaving!: (value: Awaited<ReturnType<typeof chooseTaste>>) => void;
+  jest.mocked(chooseTaste).mockReturnValue(new Promise((resolve) => { finishSaving = resolve; }));
+  await render(<TasteCardsScreen />);
+  await fireEvent.press(await screen.findByText('취미'));
+  await fireEvent.press(screen.getByLabelText('2번 카드'));
+  await screen.findByText('다음 질문');
+  finishSaving({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42, optionPercentages: { A: 25, B: 33, C: 42, D: 0 } });
+  await waitFor(() => expect(chooseTaste).toHaveBeenCalledTimes(1));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  expect(screen.getByText('다음 질문')).toBeTruthy();
 });
 
 it('재입장해도 이미 답한 카드를 상단에서 다시 볼 수 있다', async () => {

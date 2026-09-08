@@ -48,6 +48,8 @@ export default function TasteCardsScreen() {
   const autoAdvance = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const sessionId = useRef<string | undefined>(undefined);
+  const visibleIndex = useRef(0);
+  const manualNavigationVersion = useRef(0);
   const [percentages, setPercentages] = useState<Partial<Record<TasteOption, number>> | null>(null);
   const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
@@ -73,7 +75,9 @@ export default function TasteCardsScreen() {
     setCards(all);
     setRewardStatus(deck.reward ?? null);
     const first = all.findIndex((item) => !item.myOption);
-    setIndex(first >= 0 ? first : all.length);
+    const initialIndex = first >= 0 ? first : all.length;
+    visibleIndex.current = initialIndex;
+    setIndex(initialIndex);
     setChosen(null);
     setReviewing(false);
     setStatistic(null);
@@ -138,6 +142,7 @@ export default function TasteCardsScreen() {
     if (autoAdvance.current) clearTimeout(autoAdvance.current);
     autoAdvance.current = null;
     const target = snapshot[next];
+    visibleIndex.current = next;
     setIndex(next);
     setReviewing(fromHistory && !!target?.myOption);
     setChosen(target?.myOption ?? null);
@@ -157,8 +162,15 @@ export default function TasteCardsScreen() {
     navigateTo(nextUnanswered());
   }
 
+  function openCard(next: number) {
+    manualNavigationVersion.current += 1;
+    navigateTo(next, cards, true);
+  }
+
   async function choose(option: TasteOption) {
-    if (!card || saving || chosen != null) return;
+    if (!card || card.myOption || saving || chosen != null) return;
+    const answeredIndex = index;
+    const navigationVersion = manualNavigationVersion.current;
     setSaving(true);
     setChosen(option);
     haptics.select();
@@ -171,11 +183,17 @@ export default function TasteCardsScreen() {
         ? { ...item, myOption: option, optionPercentages: progress.optionPercentages ?? null }
         : item);
       setCards(updated);
-      setStatistic(progress.selectedPercentage ?? null);
-      setPercentages(progress.optionPercentages ?? null);
+      const stayedOnAnsweredCard = visibleIndex.current === answeredIndex;
+      if (manualNavigationVersion.current === navigationVersion || stayedOnAnsweredCard) {
+        setChosen(option);
+        setStatistic(progress.selectedPercentage ?? null);
+        setPercentages(progress.optionPercentages ?? null);
+      }
       setRewardStatus(progress.reward ?? rewardStatus);
       track('taste_card_chosen', { noted });
-      autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 800);
+      if (manualNavigationVersion.current === navigationVersion) {
+        autoAdvance.current = setTimeout(() => navigateTo(nextUnanswered(updated), updated), 800);
+      }
       if (progress.milestoneReached) {
         haptics.success();
         setReward(progress.peerArrived ? 'arrived' : 'pending');
@@ -232,10 +250,10 @@ export default function TasteCardsScreen() {
           <View style={styles.progressGroup}>
               <View style={styles.stamps}>
                 {Array.from({ length: 10 }, (_, i) => (
-                  <Pressable key={i} disabled={saving || !cards[i]} onPress={() => navigateTo(i, cards, true)}
+                  <Pressable key={i} disabled={!cards[i]} onPress={() => openCard(i)}
                     accessibilityRole="button"
                     accessibilityLabel={`${i + 1}번 카드${cards[i]?.myOption ? ', 답변 완료' : ''}`}
-                    accessibilityState={{ selected: index === i, disabled: saving || !cards[i] }}
+                    accessibilityState={{ selected: index === i, disabled: !cards[i] }}
                     style={[styles.stampTarget, { borderBottomColor: index === i ? c.primaryStrong : 'transparent' }]}>
                     <View style={[styles.stamp, {
                       backgroundColor: cards[i]?.myOption ? c.text : c.backgroundSelected,
@@ -367,8 +385,8 @@ export default function TasteCardsScreen() {
             </ScrollView>
 
             <View style={styles.footer}>
-              {(chosen == null || reviewing) && <Pressable onPress={advance} disabled={saving} hitSlop={12} style={chosen != null ? [styles.nextButton, { backgroundColor: c.text }] : styles.headerButton}>
-                <Text style={[styles.headerAction, { color: chosen != null ? c.background : c.textSecondary }]}>{chosen != null ? (rewardStatus?.remaining === 0 ? '완료' : '이어서 답하기') : '이 카드는 넘기기'}</Text>
+              {chosen == null && !reviewing && <Pressable onPress={advance} disabled={saving} hitSlop={12} style={styles.headerButton}>
+                <Text style={[styles.headerAction, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
               </Pressable>}
             </View>
           </View>
@@ -418,7 +436,6 @@ const styles = StyleSheet.create({
   noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
   feedbackHint: { ...Type.caption, textAlign: 'center' },
 
-  nextButton: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: Radius.pill },
   footer: { minHeight: 64, alignItems: 'center', paddingBottom: 12 },
   skip: { ...Type.caption },
 
