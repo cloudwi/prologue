@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
-import { Fonts, Radius, type ThemeColors } from '@/constants/theme';
+import { Fonts, Radius, Type, type ThemeColors } from '@/constants/theme';
 import type { LastActive, SharedTaste } from '@/lib/daily';
 import type { ProfileFactGroup } from '@/lib/profile-form';
 
@@ -102,6 +102,7 @@ export function ProfileInvitation({
 
       {/* 표지 — 이름과 한 줄 정보, 그 아래 키워드. 긴 글 전에 훑는 요약은 표지 몫이다. */}
       <View style={styles.cover}>
+        <Text style={[styles.coverEyebrow, { color: c.textSecondary }]}>PROFILE</Text>
         {nickname ? <Text style={[styles.name, { color: c.text, fontFamily: Fonts.serif }]}>{nickname}</Text> : null}
         <Text style={[styles.meta, { color: c.textSecondary }]}>{meta}</Text>
         {(jobVerified || lastActive) && (
@@ -121,18 +122,29 @@ export function ProfileInvitation({
 
       {factGroups && factGroups.length > 0 && (
         <View style={styles.factGroups}>
-          {factGroups.map((group) => (
-            <View key={group.key} style={styles.factRow}>
-              <Text style={[styles.factLabel, { color: c.textSecondary }]}>{group.label}</Text>
-              <View style={styles.factValues}>
-                {group.values.map((value) => (
-                  <View key={value} style={[styles.factChip, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
-                    <Text style={[styles.factValue, { color: c.text }]}>{value}</Text>
-                  </View>
-                ))}
+          <Text style={[styles.factEyebrow, { color: c.textSecondary }]}>ABOUT ME</Text>
+          <Text style={[styles.factTitle, { color: c.text }]}>저를 소개할게요</Text>
+          <View style={[styles.factCard, { backgroundColor: c.backgroundElement }]}>
+            {factGroups.map((group, index) => (
+              <View
+                key={group.key}
+                style={[
+                  styles.factRow,
+                  index < factGroups.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: c.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.factLabel, { color: c.textSecondary }]}>{group.label}</Text>
+                <View style={styles.factValues}>
+                  {group.values.map((value) => (
+                    <Text key={value} style={[styles.factValue, { color: c.text }]}>{value}</Text>
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       )}
 
@@ -288,7 +300,8 @@ const styles = StyleSheet.create({
   interPhoto: { marginBottom: 34 },
 
   cover: { alignItems: 'center', paddingHorizontal: 28, paddingTop: 32 },
-  name: { fontSize: 30, fontWeight: '700', letterSpacing: 1 },
+  coverEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 4 },
+  name: { fontSize: 30, fontWeight: '700', letterSpacing: 1, marginTop: 14 },
   meta: { fontSize: 14, letterSpacing: 1, marginTop: 10 },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
   activity: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 28, borderRadius: Radius.pill },
@@ -306,13 +319,15 @@ const styles = StyleSheet.create({
   unlockButton: { alignSelf: 'center', marginTop: 14, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 18, paddingVertical: 9 },
   unlockLabel: { fontSize: 14, fontWeight: '600' },
 
-  // 사실은 성격이 다른 세 줄로 분리한다. 왼쪽 분류명이 짧은 값에도 문맥을 붙인다.
-  factGroups: { marginTop: 20, marginHorizontal: 24, gap: 10 },
-  factRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  factLabel: { width: 42, fontSize: 12.5, lineHeight: 28, fontWeight: '700' },
-  factValues: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  factChip: { minHeight: 28, justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: StyleSheet.hairlineWidth },
-  factValue: { fontSize: 12.5, lineHeight: 18 },
+  // 청첩장의 안내 절처럼 영문 눈썹과 한 장의 면으로 묶고, 줄은 여백과 hairline으로만 가른다.
+  factGroups: { alignItems: 'center', marginTop: 38, marginHorizontal: 24 },
+  factEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 3 },
+  factTitle: { ...Type.title, marginTop: 8, marginBottom: 20 },
+  factCard: { width: '100%', borderRadius: Radius.lg, paddingHorizontal: 20, paddingVertical: 4 },
+  factRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 20, paddingVertical: 14 },
+  factLabel: { width: 56, ...Type.body },
+  factValues: { flex: 1, alignItems: 'flex-end', gap: 3 },
+  factValue: { ...Type.body, fontWeight: '600', textAlign: 'right' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
   skeletonLines: { width: '100%', marginTop: 14 },
@@ -339,9 +354,15 @@ export function ProfileInvitationSkeleton({ c }: { c: ThemeColors }) {
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Skeleton c={c} width="100%" height={undefined} radius={0} style={styles.photo} />
       <View style={styles.cover}>
-        <Skeleton c={c} width={132} height={30} />
+        <Skeleton c={c} width={58} height={11} />
+        <Skeleton c={c} width={132} height={30} style={{ marginTop: 14 }} />
         <Skeleton c={c} width={96} height={14} style={{ marginTop: 12 }} />
         <Skeleton c={c} width={104} height={23} radius={999} style={{ marginTop: 14 }} />
+      </View>
+      <View style={styles.factGroups}>
+        <Skeleton c={c} width={66} height={11} />
+        <Skeleton c={c} width={126} height={24} style={{ marginTop: 8 }} />
+        <Skeleton c={c} width="100%" height={142} radius={Radius.lg} style={{ marginTop: 20 }} />
       </View>
       <View style={styles.chipWrap}>
         {[74, 58, 88, 66].map((w) => (
