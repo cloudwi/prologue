@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image as NativeImage, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JobBadge } from '@/components/job-badge';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
@@ -29,6 +30,28 @@ export type InvitationLetter = {
   /** 그날의 질문 id. 잠긴 문답을 잉크로 열 때 [onUnlock]에 넘길 값이다. */
   questionId?: number;
 };
+
+type ProfilePhoto = string | number;
+
+/** 사진마다 실제 가로세로 비율을 써서 얼굴과 배경이 눌리거나 늘어나지 않게 한다. */
+function NaturalPhoto({ source, inter, backgroundColor }: { source: ProfilePhoto; inter?: boolean; backgroundColor: string }) {
+  const local = typeof source === 'number' ? NativeImage.resolveAssetSource(source) : null;
+  const [ratio, setRatio] = useState(
+    local?.width && local?.height ? local.width / local.height : 4 / 5,
+  );
+
+  return (
+    <Image
+      source={typeof source === 'string' ? { uri: source } : source}
+      style={[styles.photo, inter && styles.interPhoto, { aspectRatio: ratio, backgroundColor }]}
+      contentFit="contain"
+      transition={150}
+      onLoad={({ source: loaded }) => {
+        if (loaded.width > 0 && loaded.height > 0) setRatio(loaded.width / loaded.height);
+      }}
+    />
+  );
+}
 
 export function ProfileInvitation({
   nickname,
@@ -90,7 +113,7 @@ export function ProfileInvitation({
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {cover && (
-        <Image source={typeof cover === 'string' ? { uri: cover } : cover} style={[styles.photo, { backgroundColor: c.backgroundSelected }]} contentFit="cover" transition={150} />
+        <NaturalPhoto source={cover} backgroundColor={c.backgroundSelected} />
       )}
 
       {notice ? (
@@ -215,12 +238,11 @@ export function ProfileInvitation({
             .map((slot, photoIndex) => ({ slot, photoIndex }))
             .filter(({ slot }) => slot === i)
             .map(({ photoIndex }) => (
-              <Image
+              <NaturalPhoto
                 key={String(restPhotos[photoIndex])}
-                source={typeof restPhotos[photoIndex] === 'string' ? { uri: restPhotos[photoIndex] } : restPhotos[photoIndex]}
-                style={[styles.photo, styles.interPhoto, { backgroundColor: c.backgroundSelected }]}
-                contentFit="cover"
-                transition={150}
+                source={restPhotos[photoIndex]}
+                inter
+                backgroundColor={c.backgroundSelected}
               />
             ))}
         </View>
@@ -229,12 +251,11 @@ export function ProfileInvitation({
       {/* 문답이 없어 자리를 못 얻은 사진들은 키워드 앞에 이어 붙인다 */}
       {letters.length === 0 &&
         restPhotos.map((url) => (
-          <Image
+          <NaturalPhoto
             key={String(url)}
-            source={typeof url === 'string' ? { uri: url } : url}
-            style={[styles.photo, styles.interPhoto, { backgroundColor: c.backgroundSelected }]}
-            contentFit="cover"
-            transition={150}
+            source={url}
+            inter
+            backgroundColor={c.backgroundSelected}
           />
         ))}
 
@@ -296,8 +317,8 @@ const styles = StyleSheet.create({
   sharedNote: { fontSize: 14, lineHeight: 20, marginTop: 4 },
   content: { paddingBottom: 64 },
 
-  // 원본은 4:5 세로 사진이다. 폭을 화면 끝까지 늘리면 태블릿·웹에서 사진이 프로필보다 커지므로
-  // 종이 안에 사진을 얹듯 좌우 숨을 두고 최대 폭을 제한한다.
+  // 4:5는 원격 사진의 크기를 읽기 전 잠깐 쓰는 자리다. 로드 뒤에는 각 사진의 실제 비율로 덮어쓴다.
+  // 폭을 화면 끝까지 늘리면 태블릿·웹에서 사진이 프로필보다 커지므로 최대 폭은 유지한다.
   photo: { alignSelf: 'center', width: '92%', maxWidth: 520, aspectRatio: 4 / 5, borderRadius: Radius.md },
   interPhoto: { marginBottom: 34 },
 
