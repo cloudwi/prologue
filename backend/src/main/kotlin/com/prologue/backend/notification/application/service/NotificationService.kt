@@ -66,6 +66,29 @@ class NotificationService(
         ),
     )
 
+    @Async
+    @Transactional(readOnly = true)
+    fun mutualHeartArrived(recipientAccountId: UUID) = notify(
+        recipientAccountId,
+        PushMessage(
+            title = "서로의 마음이 닿았어요",
+            body = "편지함에서 이어진 인연을 확인해 보세요.",
+            data = mapOf("screen" to "mails"),
+        ),
+    )
+
+    /** 피드의 가벼운 반응은 건마다 울리지 않고 하루 동안 모인 마음을 한 번만 전한다. */
+    @Async
+    @Transactional(readOnly = true)
+    fun feedHeartsGathered(accountId: UUID, count: Int) = notify(
+        accountId,
+        PushMessage(
+            title = "남긴 답에 마음이 모였어요",
+            body = "피드에서 새 하트 ${count}개를 받았어요.",
+            data = mapOf("screen" to "feed"),
+        ),
+    )
+
     /** 모임장이 자리를 확정했다 — 입금 확인이 끝났다는 뜻이라 신청자가 가장 기다리는 소식. */
     @Async
     @Transactional(readOnly = true)

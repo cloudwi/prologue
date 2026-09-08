@@ -68,6 +68,8 @@ class HeartServiceTest {
         assertTrue(result.hearted)
         assertFalse(result.matched)
         verify { heartRepository.save(any<Heart>()) }
+        verify(exactly = 1) { notificationService.heartArrived(peer) }
+        verify(exactly = 0) { notificationService.mutualHeartArrived(any()) }
     }
 
     @Test
@@ -79,6 +81,8 @@ class HeartServiceTest {
         val result = service.heart(me, peerAnswerId)
 
         assertTrue(result.matched)
+        verify(exactly = 1) { notificationService.mutualHeartArrived(peer) }
+        verify(exactly = 0) { notificationService.heartArrived(any()) }
     }
 
     // ── 받은 하트 목록 ──

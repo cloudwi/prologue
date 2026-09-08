@@ -10,6 +10,7 @@ import { authedRequest } from './api';
  */
 type NotificationsModule = typeof import('expo-notifications');
 let notificationsModule: NotificationsModule | null | undefined;
+let presentationConfigured = false;
 function loadNotifications(): NotificationsModule | null {
   if (notificationsModule !== undefined) return notificationsModule;
   try {
@@ -31,6 +32,71 @@ function loadNotifications(): NotificationsModule | null {
  */
 const DISABLED_KEY = 'prologue.notificationsDisabled';
 const isWeb = Platform.OS === 'web';
+
+export type NotificationRoute = '/mails' | '/discover' | '/feed' | '/meetups' | '/my/events' | '/my/ink';
+
+/** 서버 payload의 screen만 허용된 앱 경로로 바꾼다. 임의 경로를 푸시가 열게 두지 않는다. */
+export function notificationRoute(data: Record<string, unknown>): NotificationRoute | null {
+  switch (data.screen) {
+    case 'mails': return '/mails';
+    case 'discover': return '/discover';
+    case 'feed': return '/feed';
+    case 'meetups': return '/meetups';
+    case 'my-meetups': return '/my/events';
+    case 'ink': return '/my/ink';
+    default: return null;
+  }
+}
+
+/** 앱을 보고 있는 동안 도착해도 상단 배너와 알림 목록에 표시한다. */
+export function configureNotificationPresentation(): void {
+  if (isWeb || presentationConfigured) return;
+  const Notifications = loadNotifications();
+  if (!Notifications) return;
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+  if (Platform.OS === 'android') {
+    void Notifications.setNotificationChannelAsync('default', {
+      name: '프롤로그 알림',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'default',
+    }).catch(() => {});
+  }
+  presentationConfigured = true;
+}
+
+/** 실행 중 탭과 종료 상태에서 앱을 연 푸시를 모두 같은 방식으로 처리한다. */
+export function listenForNotificationOpens(open: (route: NotificationRoute) => void): () => void {
+  if (isWeb) return () => {};
+  const Notifications = loadNotifications();
+  if (!Notifications) return () => {};
+  let active = true;
+  const handled = new Set<string>();
+  const handle = (response: import('expo-notifications').NotificationResponse) => {
+    const id = response.notification.request.identifier;
+    if (!active || handled.has(id)) return;
+    handled.add(id);
+    const route = notificationRoute(response.notification.request.content.data ?? {});
+    if (route) open(route);
+  };
+  const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+  void Notifications.getLastNotificationResponseAsync()
+    .then((response) => {
+      if (response) handle(response);
+      Notifications.clearLastNotificationResponse();
+    })
+    .catch(() => {});
+  return () => {
+    active = false;
+    subscription.remove();
+  };
+}
 
 async function readDisabled(): Promise<boolean> {
   const v = isWeb ? localStorage.getItem(DISABLED_KEY) : await SecureStore.getItemAsync(DISABLED_KEY);

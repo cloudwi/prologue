@@ -47,8 +47,13 @@ class HeartService(
         if (!heartRepository.existsFromTo(fromAccountId, toAccountId)) {
             val saved = heartRepository.save(Heart.send(fromAccountId, toAccountId, peerAnswer.questionId))
             growthEvents.record(fromAccountId, GrowthEvent.HEART_SENT, "heart:${saved.id}")
-            // 처음 보낸 하트일 때만 알린다 — 하트는 1인 1회라 두 번 울릴 일이 없다.
-            notificationService.heartArrived(toAccountId)
+            // 상대가 먼저 마음을 보낸 상태라면 일반 호감보다 중요한 소식이다.
+            // 두 번째 하트를 보낸 사람은 응답 화면에서 바로 알게 되고, 먼저 보낸 사람에게만 푸시한다.
+            if (heartRepository.existsFromTo(toAccountId, fromAccountId)) {
+                notificationService.mutualHeartArrived(toAccountId)
+            } else {
+                notificationService.heartArrived(toAccountId)
+            }
         }
 
         return HeartResult(
