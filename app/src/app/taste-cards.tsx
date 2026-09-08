@@ -29,18 +29,12 @@ import { chooseTaste, startTasteSession, getTasteSession, type TasteReward, TAST
  * 오늘의 문답은 열 자면 되지만, 막는 건 분량이 아니라 빈 화면이다. 카드는 탭 하나로 시작하게 하고,
  * 고르고 난 자리에 한 줄 칸을 열어둔다. 고른 다음의 한 줄은 백지 앞의 한 줄보다 훨씬 쉽다.
  *
- * 그래서 이 화면은 **빠르게 넘어가는 것**을 가장 중요하게 친다 — 고르면 곧장 다음 장이다.
+ * 고른 뒤 통계를 읽고 직접 다음 장으로 넘어간다.
  * 한 줄은 쓰고 싶은 사람만, 한 번 더 눌러서.
  *
  * 잉크는 여기서 나오지 않는다. 잉크는 글(오늘의 문답)의 몫이고, 카드가 돌려주는 것은
  * 더 맞는 상대다 — 겹치는 선택이 소개 순서에 실린다.
  */
-/**
- * 고른 뒤 카드가 머무는 시간(ms). 짧으면 무엇을 골랐는지 눈에 안 남고, 길면 빠르게 넘기는
- * 맛이 사라진다 — 손이 다음 카드를 누르러 가기 직전이 이 언저리다.
- */
-const HOLD_MS = 1200;
-
 /** 보상 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
 const REWARD_SHOWN_MS = 2600;
 
@@ -141,7 +135,7 @@ export default function TasteCardsScreen() {
   }
 
   async function choose(option: TasteOption) {
-    if (!card || saving) return;
+    if (!card || saving || chosen != null) return;
     setSaving(true);
     setChosen(option);
     haptics.select();
@@ -151,15 +145,12 @@ export default function TasteCardsScreen() {
       const progress = await chooseTaste(card.id, option, note.trim() || undefined, sessionId.current);
       setStatistic(progress.selectedPercentage ?? null);
       setRewardStatus(progress.reward ?? null);
-      await new Promise((resolve) => setTimeout(resolve, HOLD_MS));
-      setRewardStatus(progress.reward ?? null);
       track('taste_card_chosen', { noted });
       if (progress.milestoneReached) {
         haptics.success();
         setReward(progress.peerArrived ? 'arrived' : 'pending');
         if (progress.peerArrived) track('taste_peer_rewarded');
       }
-      advance();
     } catch {
       setChosen(null);
       Alert.alert('저장하지 못했어요', '선택이 저장됐는지 확인하지 못했어요. 같은 선택을 다시 눌러주세요.');
@@ -294,7 +285,7 @@ export default function TasteCardsScreen() {
                       <Pressable
                         key={option}
                         onPress={() => void choose(option)}
-                        disabled={saving}
+                        disabled={saving || chosen != null}
                         accessibilityRole="button"
                         accessibilityState={{ selected: picked }}
                         style={({ pressed }) => [
@@ -334,7 +325,13 @@ export default function TasteCardsScreen() {
 
 
 
-              {noteOpen ? (
+              {chosen != null && !saving && (
+                <Text accessibilityLiveRegion="polite" style={[styles.noteHint, { color: c.textSecondary }]}>
+                  {statistic != null ? `이 답변을 고른 사람은 ${statistic}%예요` : '아직 응답을 모으고 있어요'}
+                </Text>
+              )}
+
+              {chosen == null && (noteOpen ? (
                 <Animated.View entering={FadeIn.duration(160)} style={styles.noteBox}>
                   <PlaceholderInput
                     value={note}
@@ -357,12 +354,12 @@ export default function TasteCardsScreen() {
                   <Ionicons name="create-outline" size={15} color={c.textSecondary} />
                   <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
                 </Pressable>
-              )}
+              ))}
             </ScrollView>
 
             <View style={styles.footer}>
-              <Pressable onPress={advance} disabled={saving} hitSlop={12} style={styles.headerButton}>
-                <Text style={[styles.skip, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
+              <Pressable onPress={advance} disabled={saving} hitSlop={12} style={chosen != null ? [styles.nextButton, { backgroundColor: c.text }] : styles.headerButton}>
+                <Text style={[styles.headerAction, { color: chosen != null ? c.background : c.textSecondary }]}>{chosen != null ? '다음 카드' : '이 카드는 넘기기'}</Text>
               </Pressable>
             </View>
           </View>
@@ -414,6 +411,7 @@ const styles = StyleSheet.create({
   noteInput: { borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, ...Type.body },
   noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
 
+  nextButton: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: Radius.pill },
   footer: { alignItems: 'center', paddingBottom: 12 },
   skip: { ...Type.caption },
 

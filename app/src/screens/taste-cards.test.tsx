@@ -45,7 +45,8 @@ it('네 번째 선택지를 저장하고 다음 세 선택지 카드로 넘어�
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, reward: { ...deck.reward!, remaining: 9 } });
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('친구 만나기'));
-  await screen.findByText('다음 질문', {}, { timeout: 2500 });
+  await fireEvent.press(await screen.findByText('다음 카드'));
+  await screen.findByText('다음 질문');
   expect(chooseTaste).toHaveBeenCalledWith(1001, 'D', undefined, 'daily-session');
   expect(screen.getByText('1 / 10')).toBeTruthy();
   expect(screen.getByText('오후')).toBeTruthy();
@@ -80,7 +81,11 @@ it('선택 후에만 집계된 취향을 조용히 보여준다', async () => {
   await fireEvent.press(screen.getByText('취미'));
   await screen.findByText('42%');
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
-  await screen.findByText('다음 질문', {}, { timeout: 2500 });
+  expect(screen.getByText('이 답변을 고른 사람은 42%예요')).toBeTruthy();
+  await fireEvent.press(screen.getByText('취미'));
+  expect(chooseTaste).toHaveBeenCalledTimes(1);
+  await fireEvent.press(await screen.findByText('다음 카드'));
+  await screen.findByText('다음 질문');
   expect(startTasteSession).toHaveBeenCalledTimes(1);
 });
 
@@ -90,7 +95,8 @@ it('묶음을 다 넘겨도 같은 묶음의 남은 카드만 읽는다', async 
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 10, total: 10, milestoneReached: true, peerArrived: false });
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('취미'));
-  await screen.findByText('카드를 다 넘겼어요', {}, { timeout: 2500 });
+  await fireEvent.press(await screen.findByText('다음 카드'));
+  await screen.findByText('카드를 다 넘겼어요');
   expect(getTasteSession).toHaveBeenCalledWith('daily-session');
   expect(startTasteSession).toHaveBeenCalledTimes(1);
 });
