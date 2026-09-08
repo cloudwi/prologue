@@ -4,15 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated as NativeAnimated,
   ScrollView,
   KeyboardAvoidingView,
-  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,19 +38,10 @@ import { chooseTaste, startTasteSession, getTasteSession, type TasteReward, TAST
 /** 보상 배지가 떠 있는 시간(ms). 계속 붙어 있으면 그게 진행 표시가 된다. */
 const REWARD_SHOWN_MS = 2600;
 const AUTO_ADVANCE_MS = 500;
-const SWIPE_DISTANCE = 44;
-const SWIPE_VELOCITY = 0.35;
-
-export function tasteSwipeTarget(index: number, count: number, dx: number, vx: number): number | null {
-  if (Math.abs(dx) < SWIPE_DISTANCE && Math.abs(vx) < SWIPE_VELOCITY) return null;
-  const target = index + (dx < 0 ? 1 : -1);
-  return target >= 0 && target < count ? target : null;
-}
 
 export default function TasteCardsScreen() {
   const c = useTheme();
   const router = useRouter();
-  const { width: windowWidth } = useWindowDimensions();
   /** intro=1이면 가입 직후다 — 첫 화면에 왜 넘기는지 한 줄을 붙이고, 마치면 발견 탭으로 보낸다. */
   const { intro } = useLocalSearchParams<{ intro?: string }>();
   const isIntro = intro === '1';
@@ -64,12 +52,10 @@ export default function TasteCardsScreen() {
   const visibleIndex = useRef(0);
   const manualNavigationVersion = useRef(0);
   const pendingCardIds = useRef(new Set<number>());
-  const [dragX] = useState(() => new NativeAnimated.Value(0));
   const [percentages, setPercentages] = useState<Partial<Record<TasteOption, number>> | null>(null);
   const [statistic, setStatistic] = useState<number | null>(null);
   const [cards, setCards] = useState<TasteCard[]>([]);
   const [index, setIndex] = useState(0);
-  const [reviewing, setReviewing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingCardIds, setSavingCardIds] = useState<ReadonlySet<number>>(() => new Set());
   /** 방금 고른 쪽 — 카드가 넘어가기 전 잠깐 색이 차오르는 자리. */
@@ -94,7 +80,6 @@ export default function TasteCardsScreen() {
     visibleIndex.current = initialIndex;
     setIndex(initialIndex);
     setChosen(null);
-    setReviewing(false);
     setStatistic(null);
     setPercentages(null);
     setFailed(false);
@@ -154,13 +139,12 @@ export default function TasteCardsScreen() {
     router.replace('/my' as never);
   };
 
-  function navigateTo(next: number, snapshot = cards, fromHistory = false) {
+  function navigateTo(next: number, snapshot = cards) {
     if (autoAdvance.current) clearTimeout(autoAdvance.current);
     autoAdvance.current = null;
     const target = snapshot[next];
     visibleIndex.current = next;
     setIndex(next);
-    setReviewing(fromHistory && !!target?.myOption);
     setChosen(target?.myOption ?? null);
     setPercentages(target?.optionPercentages ?? null);
     setStatistic(target?.myOption ? target.optionPercentages?.[target.myOption] ?? null : null);
@@ -175,14 +159,10 @@ export default function TasteCardsScreen() {
     return next >= 0 ? next : snapshot.length;
   }
 
-  function advance() {
-    navigateTo(nextUnanswered());
-  }
-
   function openCard(next: number) {
     manualNavigationVersion.current += 1;
     haptics.select();
-    navigateTo(next, cards, true);
+    navigateTo(next, cards);
   }
 
   async function choose(option: TasteOption) {
@@ -246,40 +226,6 @@ export default function TasteCardsScreen() {
     }
   }
 
-  const settleSwipe = () => NativeAnimated.spring(dragX, {
-    toValue: 0,
-    speed: 28,
-    bounciness: 4,
-    useNativeDriver: true,
-  }).start();
-
-  // PanResponder only stores these handlers; it does not invoke them while rendering.
-  // eslint-disable-next-line react-hooks/refs
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) =>
-      Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.35,
-    onMoveShouldSetPanResponderCapture: (_, gesture) =>
-      Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.35,
-    onPanResponderMove: (_, gesture) => dragX.setValue(gesture.dx),
-    onPanResponderRelease: (_, gesture) => {
-      const target = tasteSwipeTarget(index, cards.length, gesture.dx, gesture.vx);
-      dragX.setValue(0);
-      if (target != null) {
-        openCard(target);
-        return;
-      }
-      settleSwipe();
-    },
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderTerminate: settleSwipe,
-  });
-
-  const swipeOpacity = dragX.interpolate({
-    inputRange: [-Math.min(windowWidth, 560), 0, Math.min(windowWidth, 560)],
-    outputRange: [0.68, 1, 0.68],
-    extrapolate: 'clamp',
-  });
-
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -323,17 +269,15 @@ export default function TasteCardsScreen() {
           <View style={styles.progressGroup}>
               <View style={styles.stamps}>
                 {Array.from({ length: 10 }, (_, i) => (
-                  <Pressable key={i} disabled={!cards[i]} onPress={() => openCard(i)}
-                    accessibilityRole="button"
+                  <View key={i}
+                    accessible
                     accessibilityLabel={`${i + 1}번 카드${cards[i]?.myOption ? ', 답변 완료' : ''}`}
-                    accessibilityState={{ selected: index === i, disabled: !cards[i] }}
-                    style={[styles.stampTarget, { borderBottomColor: index === i ? c.primaryStrong : 'transparent' }]}>
+                    accessibilityState={{ selected: index === i }}
+                    style={styles.stampTarget}>
                     <View style={[styles.stamp, {
-                      backgroundColor: cards[i]?.myOption ? c.text : c.backgroundSelected,
-                    }]}>
-                      {cards[i]?.myOption && <Ionicons name="checkmark" size={12} color={c.background} />}
-                    </View>
-                  </Pressable>
+                      backgroundColor: index === i ? c.primaryStrong : cards[i]?.myOption ? c.textSecondary : c.backgroundSelected,
+                    }]} />
+                  </View>
                 ))}
               </View>
               <Text style={[styles.progressCount, { color: c.textSecondary }]}>{10 - rewardStatus.remaining} / 10</Text>
@@ -367,39 +311,23 @@ export default function TasteCardsScreen() {
               ☀ 12:00  ↻
             </Text>
             <Pressable
-              onPress={done}
+              onPress={() => isIntro ? done() : openCard(Math.max(0, cards.length - 1))}
               style={[styles.primaryButton, { backgroundColor: c.primary }]}
               accessibilityRole="button"
             >
-              <Text style={[styles.primaryLabel, { color: c.primaryText }]}>돌아가기</Text>
+              <Text style={[styles.primaryLabel, { color: c.primaryText }]}>{isIntro ? '발견으로 가기' : '답변 다시보기'}</Text>
             </Pressable>
           </View>
         ) : (
           <View style={styles.flex}>
             <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-              <View style={styles.swipeViewport}>
-                {index > 0 && <View pointerEvents="none" style={[styles.cardPeek, styles.cardPeekLeft, { backgroundColor: c.backgroundSelected, borderColor: c.border }]} />}
-                {index < cards.length - 1 && <View pointerEvents="none" style={[styles.cardPeek, styles.cardPeekRight, { backgroundColor: c.backgroundSelected, borderColor: c.border }]} />}
-                <NativeAnimated.View
-                  testID="taste-card-swipe-area"
-                  accessibilityActions={[
-                    ...(index > 0 ? [{ name: 'decrement' as const, label: '이전 카드' }] : []),
-                    ...(index < cards.length - 1 ? [{ name: 'increment' as const, label: '다음 카드' }] : []),
-                  ]}
-                  onAccessibilityAction={({ nativeEvent }) => {
-                    if (nativeEvent.actionName === 'increment' && index < cards.length - 1) openCard(index + 1);
-                    if (nativeEvent.actionName === 'decrement' && index > 0) openCard(index - 1);
-                  }}
-                  {...panResponder.panHandlers}
-                  style={{ opacity: swipeOpacity, transform: [{ translateX: dragX }] }}
-                >
-                  {/* 가입 직후 첫 장에서만 왜 넘기는지 한 줄 — 두 번째 장부터는 카드가 스스로 말한다. */}
-                  {isIntro && index === 0 && (
-                    <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
-                      고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
-                    </Animated.Text>
-                  )}
-                  <View key={card.id}>
+              {/* 가입 직후 첫 장에서만 왜 넘기는지 한 줄 — 두 번째 장부터는 카드가 스스로 말한다. */}
+              {isIntro && index === 0 && (
+                <Animated.Text entering={FadeIn} style={[styles.intro, { color: c.textSecondary }]}>
+                  고르기만 하면 돼요. 겹치는 취향이 있는 사람이 먼저 소개돼요.
+                </Animated.Text>
+              )}
+              <View key={card.id}>
                     <Text style={[styles.prompt, { color: c.text, fontFamily: Fonts.serif }]}>{card.prompt}</Text>
 
                     <View style={styles.options}>
@@ -411,12 +339,13 @@ export default function TasteCardsScreen() {
                           <Pressable
                             key={option}
                             onPress={() => void choose(option)}
+                            disabled={optionLocked}
                             accessibilityRole="button"
                             accessibilityState={{ selected: picked, disabled: optionLocked }}
                             style={({ pressed }) => [
                               styles.option,
                               {
-                                backgroundColor: pressed && !optionLocked ? c.backgroundSelected : c.backgroundElement,
+                                backgroundColor: pressed ? c.backgroundSelected : c.backgroundElement,
                                 borderColor: picked ? c.primary : c.border,
                                 opacity: 1,
                                 transform: [{ scale: pressed ? 0.99 : 1 }],
@@ -440,8 +369,8 @@ export default function TasteCardsScreen() {
                         );
                       })}
                     </View>
-                  </View>
-                  <View testID="taste-card-meta" style={styles.cardMeta}>
+              </View>
+              <View testID="taste-card-meta" style={styles.cardMeta}>
                     {chosen != null && !currentCardSaving && statistic == null && (
                       <Text accessibilityLiveRegion="polite" style={[styles.feedbackHint, { color: c.textSecondary }]}>아직 응답을 모으고 있어요</Text>
                     )}
@@ -468,15 +397,33 @@ export default function TasteCardsScreen() {
                         <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>한 줄 덧붙이기 (선택)</Text>
                       </Pressable>
                     ))}
-                  </View>
-                </NativeAnimated.View>
               </View>
             </ScrollView>
 
             <View style={styles.footer}>
-              {chosen == null && !reviewing && <Pressable onPress={advance} disabled={currentCardSaving} hitSlop={12} style={styles.headerButton}>
-                <Text style={[styles.headerAction, { color: c.textSecondary }]}>이 카드는 넘기기</Text>
-              </Pressable>}
+              <View style={[styles.pager, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+                <Pressable
+                  onPress={() => openCard(index - 1)}
+                  disabled={index === 0}
+                  accessibilityRole="button"
+                  accessibilityLabel="이전 카드"
+                  accessibilityState={{ disabled: index === 0 }}
+                  style={({ pressed }) => [styles.pagerButton, { backgroundColor: pressed ? c.backgroundSelected : 'transparent', opacity: index === 0 ? 0.28 : 1 }]}
+                >
+                  <Ionicons name="chevron-back" size={21} color={c.text} />
+                </Pressable>
+                <Text style={[styles.pagerCount, { color: c.textSecondary }]}>{index + 1} / {cards.length}</Text>
+                <Pressable
+                  onPress={() => openCard(index + 1)}
+                  disabled={index === cards.length - 1}
+                  accessibilityRole="button"
+                  accessibilityLabel="다음 카드"
+                  accessibilityState={{ disabled: index === cards.length - 1 }}
+                  style={({ pressed }) => [styles.pagerButton, { backgroundColor: pressed ? c.backgroundSelected : 'transparent', opacity: index === cards.length - 1 ? 0.28 : 1 }]}
+                >
+                  <Ionicons name="chevron-forward" size={21} color={c.text} />
+                </Pressable>
+              </View>
             </View>
           </View>
         )}
@@ -502,17 +449,13 @@ const styles = StyleSheet.create({
   clockLabel: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   progressGroup: { flex: 1 },
   stamps: { flexDirection: 'row', gap: 4 },
-  stampTarget: { flex: 1, minHeight: 44, justifyContent: 'center', borderBottomWidth: 2 },
-  stamp: { width: '100%', height: 28, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
+  stampTarget: { flex: 1, height: 14, justifyContent: 'center' },
+  stamp: { width: '100%', height: 6, borderRadius: 3 },
   progressCount: { ...Type.caption, marginTop: 8 },
   voteFill: { position: 'absolute', left: 0, top: 0, bottom: 0, opacity: 0.16 },
   voteLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   body: { flexGrow: 1, paddingTop: 20, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
-  swipeViewport: { position: 'relative' },
-  cardPeek: { position: 'absolute', top: '50%', marginTop: -44, width: 14, height: 88, borderWidth: 1, borderRadius: 8, opacity: 0.72 },
-  cardPeekLeft: { left: -18 },
-  cardPeekRight: { right: -18 },
   intro: { ...Type.body, textAlign: 'center', marginBottom: 20 },
   prompt: { ...Type.display, textAlign: 'center' },
 
@@ -529,7 +472,10 @@ const styles = StyleSheet.create({
   noteHint: { ...Type.caption, marginTop: 8, textAlign: 'center' },
   feedbackHint: { ...Type.caption, textAlign: 'center' },
 
-  footer: { minHeight: 64, alignItems: 'center', paddingBottom: 12 },
+  footer: { minHeight: 76, alignItems: 'center', justifyContent: 'center', paddingBottom: 12 },
+  pager: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 5, borderWidth: 1, borderRadius: Radius.pill },
+  pagerButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  pagerCount: { ...Type.caption, minWidth: 46, textAlign: 'center', fontWeight: '700', fontVariant: ['tabular-nums'] },
   skip: { ...Type.caption },
 
   retry: { ...Type.label, marginTop: 12 },

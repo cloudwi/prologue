@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import TasteCardsScreen, { tasteSwipeTarget } from '../app/taste-cards';
+import TasteCardsScreen from '../app/taste-cards';
 import { chooseTaste, startTasteSession, getTasteSession, type TasteDeck } from '../lib/taste';
 
 jest.mock('../global.css', () => ({}));
@@ -64,13 +64,17 @@ it('저장 실패 시 같은 카드에 남아 다시 시도할 수 있다', asyn
 });
 
 it('소개할 후보가 없으면 자동 소개 안내만 보이고 수령 버튼이나 보유 수량은 없다', async () => {
-  jest.mocked(startTasteSession).mockResolvedValue({ ...deck, cards: [], reward: { ...deck.reward!, pending: 1, remaining: 0 } });
+  jest.mocked(startTasteSession).mockResolvedValue({ ...deck, cards: [],
+    sessionCards: deck.cards.map((card) => ({ ...card, myOption: 'A' })),
+    reward: { ...deck.reward!, pending: 1, remaining: 0 } });
   await render(<TasteCardsScreen />);
   await screen.findByText('카드를 다 넘겼어요');
   expect(screen.queryByText('추가 소개')).toBeNull();
   expect(screen.getByLabelText('매일 정오에 새 카드 10개')).toBeTruthy();
   expect(screen.queryByText(/소개권/)).toBeNull();
   expect(screen.queryByText(/보유/)).toBeNull();
+  await fireEvent.press(screen.getByText('답변 다시보기'));
+  expect(screen.getByText('다음 질문')).toBeTruthy();
 });
 
 it('선택 후에만 집계된 취향을 조용히 보여준다', async () => {
@@ -102,19 +106,20 @@ it('묶음을 다 넘겨도 같은 묶음의 남은 카드만 읽는다', async 
   expect(startTasteSession).toHaveBeenCalledTimes(1);
 });
 
-it('상단 카드 칸으로 이전 답변을 보고 다른 칸으로 바로 이동한다', async () => {
+it('하단 화살표로 이전 답변과 다음 카드를 바로 오간다', async () => {
   jest.mocked(chooseTaste).mockResolvedValue({ answered: 1, total: 10, milestoneReached: false, peerArrived: false, selectedPercentage: 42, optionPercentages: { A: 25, B: 33, C: 42, D: 0 } });
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('취미'));
   await screen.findByText('42%');
-  await fireEvent.press(screen.getByLabelText('1번 카드, 답변 완료'));
+  await screen.findByText('다음 질문', {}, { timeout: 2000 });
+  expect(screen.queryByRole('button', { name: '1번 카드, 답변 완료' })).toBeNull();
+  await fireEvent.press(screen.getByLabelText('이전 카드'));
   expect(screen.queryByText('이어서 답하기')).toBeNull();
   expect(screen.queryByText('완료')).toBeNull();
-  await new Promise((resolve) => setTimeout(resolve, 1000));
   expect(screen.getByText('쉬는 날에는?')).toBeTruthy();
   expect(screen.getByText('42%')).toBeTruthy();
   expect(chooseTaste).toHaveBeenCalledTimes(1);
-  await fireEvent.press(screen.getByLabelText('2번 카드'));
+  await fireEvent.press(screen.getByLabelText('다음 카드'));
   await screen.findByText('다음 질문');
 });
 
@@ -123,7 +128,7 @@ it('앞 카드가 저장 중이어도 다른 카드로 이동해 바로 답할 �
   jest.mocked(chooseTaste).mockImplementation(() => new Promise((resolve) => { finishSaving.push(resolve); }));
   await render(<TasteCardsScreen />);
   await fireEvent.press(await screen.findByText('취미'));
-  await fireEvent.press(screen.getByLabelText('2번 카드'));
+  await fireEvent.press(screen.getByLabelText('다음 카드'));
   await screen.findByText('다음 질문');
   await fireEvent.press(screen.getByText('밤'));
   expect(chooseTaste).toHaveBeenCalledTimes(2);
@@ -136,25 +141,13 @@ it('앞 카드가 저장 중이어도 다른 카드로 이동해 바로 답할 �
   expect(screen.getByText('카드를 다 넘겼어요')).toBeTruthy();
 });
 
-it('카드를 왼쪽이나 오른쪽으로 밀 수 있는 접근성 이동도 함께 제공한다', async () => {
-  await render(<TasteCardsScreen />);
-  const swipeArea = await screen.findByTestId('taste-card-swipe-area');
-  expect(tasteSwipeTarget(0, 2, -80, -0.5)).toBe(1);
-  expect(tasteSwipeTarget(1, 2, 80, 0.5)).toBe(0);
-  expect(tasteSwipeTarget(0, 2, -10, -0.1)).toBeNull();
-  await act(async () => { swipeArea.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }); });
-  await screen.findByText('다음 질문');
-  await act(async () => { screen.getByTestId('taste-card-swipe-area').props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } }); });
-  await screen.findByText('쉬는 날에는?');
-});
-
-it('재입장해도 이미 답한 카드를 상단에서 다시 볼 수 있다', async () => {
+it('재입장해도 하단 화살표로 이미 답한 카드를 다시 볼 수 있다', async () => {
   jest.mocked(startTasteSession).mockResolvedValue({ ...deck, cards: [deck.cards[1]], answered: 1,
     sessionCards: [{ ...deck.cards[0], myOption: 'C', optionPercentages: { A: 25, B: 33, C: 42, D: 0 } }, deck.cards[1]],
     reward: { ...deck.reward!, remaining: 9 } });
   await render(<TasteCardsScreen />);
   await screen.findByText('다음 질문');
-  await fireEvent.press(screen.getByLabelText('1번 카드, 답변 완료'));
+  await fireEvent.press(screen.getByLabelText('이전 카드'));
   await screen.findByText('쉬는 날에는?');
   expect(screen.getByText('42%')).toBeTruthy();
   expect(chooseTaste).not.toHaveBeenCalled();
