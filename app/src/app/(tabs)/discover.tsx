@@ -41,10 +41,47 @@ import { useSession } from '@/lib/session';
 import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
+import type { Gender } from '@/lib/member';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 10;
 const ANSWER_MAX = 500;
+
+/**
+ * 실제 후보가 없는 동안 제품의 프로필 경험만 보여주는 허구의 인물들.
+ *
+ * 계정이나 답변을 DB에 만들지 않는다. 그래야 추천 후보·통계·편지·신고 어디에도 섞이지 않는다.
+ * 사진과 이름도 모두 데모이며, 카드는 눌리지 않고 매 장에 AI 이미지라는 표시를 남긴다.
+ */
+const DEMO_PROFILES = [
+  {
+    id: 'seoyun',
+    source: require('../../../assets/images/demo-profiles/demo-seoyun.jpg'),
+    name: '서윤',
+    age: 27,
+    region: '마포구',
+    answer: '낯선 동네를 천천히 걷다가 마음에 드는 작은 가게를 발견하는 하루를 좋아해요.',
+    tags: ['동네 산책', '전시', '커피'],
+  },
+  {
+    id: 'jihye',
+    source: require('../../../assets/images/demo-profiles/demo-jihye.jpg'),
+    name: '지혜',
+    age: 31,
+    region: '성동구',
+    answer: '주말 아침에는 한강을 가볍게 달려요. 같이 움직이고 맛있는 걸 먹는 데이트가 좋아요.',
+    tags: ['러닝', '한강', '요리'],
+  },
+  {
+    id: 'minseo',
+    source: require('../../../assets/images/demo-profiles/demo-minseo.jpg'),
+    name: '민서',
+    age: 24,
+    region: '종로구',
+    answer: '좋아하는 책 이야기를 오래 나누고 각자 새로 발견한 문장을 주고받고 싶어요.',
+    tags: ['책방', '사진', '여행'],
+  },
+] as const;
 
 function peerMetaLabel(peer: Peer): string {
   const parts: string[] = [];
@@ -104,10 +141,10 @@ export default function DiscoverScreen() {
     );
   }
 
-  return <DiscoverBoard />;
+  return <DiscoverBoard preferredGender={session.profile?.preferredGender ?? null} />;
 }
 
-function DiscoverBoard() {
+function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) {
   const c = useTheme();
   const isDark = useAppearance().scheme === 'dark';
   const insets = useSafeAreaInsets();
@@ -274,6 +311,8 @@ function DiscoverBoard() {
 
   // 아직 오늘 답하지 않아 지난번 상대가 그 자리를 지키고 있는 상태. 서버가 판정해 내려준다.
   const carriedOver = (peersData?.carriedOver ?? false) && (peersData?.peers.length ?? 0) > 0;
+  // 지금 준비한 데모는 여성 프로필뿐이라 여성을 찾는 회원에게만 보여준다.
+  const showingDemoProfiles = preferredGender === 'FEMALE' && peersData != null && peersData.peers.length === 0;
 
   const isEditing = !today?.answered || editing;
   const editorOpen = isEditing && (today?.answered ? true : composing);
@@ -494,7 +533,7 @@ function DiscoverBoard() {
               {/* 부제는 뺐다 — "답을 남기면 새로 도착해요"는 바로 아래 카드가 이미 말한다. */}
               <View style={styles.peerHeader}>
                 <Text style={[styles.peerEyebrow, { color: c.text }]}>
-                  {carriedOver ? '지난번에 만난 사람' : '오늘의 상대'}
+                  {carriedOver ? '지난번에 만난 사람' : showingDemoProfiles ? '프로필 미리보기' : '오늘의 상대'}
                 </Text>
               </View>
 
@@ -528,12 +567,13 @@ function DiscoverBoard() {
                   onWriteAnswer={() => setComposing(true)}
                   onUnlock={confirmAnswerUnlock}
                 />
+              ) : showingDemoProfiles ? (
+                // 실제 후보가 없을 때만 허구의 데모를 보여준다. 계정이 아니라 정적 카드라
+                // 추천·통계·편지에는 들어가지 않고, 실제 소개가 도착하는 즉시 이 자리를 내준다.
+                <DemoProfileCarousel c={c} />
               ) : !peersData || !peersData.answerUnlocked ? (
-                // 기본 소개는 정오, 카드 추가 소개는 달성 직후다.
                 <EmptyPeer c={c} title="매일 정오에 한 사람을 소개해 드려요" body="카드 10개에 답하면 한 명을 더 만날 수 있어요." action="취향 카드 답하기" onAction={() => router.push('/taste-cards')} />
               ) : (
-                // 하루 한 명이라 후보가 없는 날이 생긴다. 서버는 조회할 때마다 빈자리를 채우므로
-                // "오늘은 끝"이 아니라 "아직"이라는 걸 알려준다 — 저녁에 답한 사람이 생기면 그때 소개된다.
                 <EmptyPeer c={c} title="오늘은 아직 인연이 닿지 않았어요" body="답을 남긴 분이 생기면 바로 소개해 드릴게요." />
               )}
             </View>
@@ -570,6 +610,65 @@ function DiscoverBoard() {
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+/** 실제 소개 카드의 모양만 미리 보는 비대화형 데모 캐러셀. */
+function DemoProfileCarousel({ c }: { c: ThemeColors }) {
+  const [width, setWidth] = useState(0);
+  const cardWidth = width - 28;
+
+  return (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={cardWidth + 12}
+          decelerationRate="fast"
+          disableIntervalMomentum
+          style={styles.carouselScroll}
+          contentContainerStyle={styles.carouselContent}
+        >
+          {DEMO_PROFILES.map((profile) => (
+            <View
+              key={profile.id}
+              accessible
+              accessibilityLabel={`AI 이미지로 만든 데모 프로필, ${profile.name} ${profile.age}세`}
+              style={[styles.peerCard, styles.demoCard, { width: cardWidth, backgroundColor: c.backgroundElement }]}
+            >
+              <View>
+                <Image source={profile.source} style={[styles.peerPhoto, { backgroundColor: c.backgroundSelected }]} contentFit="cover" />
+                <View style={[styles.demoBadge, { backgroundColor: c.background }]}>
+                  <Ionicons name="sparkles" size={12} color={c.primaryStrong} />
+                  <Text style={[styles.demoBadgeText, { color: c.text }]}>데모 · AI 이미지</Text>
+                </View>
+              </View>
+              <View style={styles.demoBody}>
+                <View style={styles.demoNameRow}>
+                  <Text style={[styles.peerName, { color: c.text, fontFamily: Fonts.serif }]}>{profile.name}</Text>
+                  <Text style={[styles.peerMeta, { color: c.textSecondary }]}>{profile.age}세 · {profile.region}</Text>
+                </View>
+                <Text style={[styles.demoAnswer, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={3}>
+                  {profile.answer}
+                </Text>
+                <View style={styles.peerChips}>
+                  {profile.tags.map((tag) => (
+                    <View key={tag} style={[styles.peerChip, { borderColor: c.border }]}>
+                      <Text style={[styles.peerChipText, { color: c.textSecondary }]}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      ) : null}
+      <View style={styles.demoHint}>
+        <View style={[styles.demoHintDot, { backgroundColor: c.primary }]} />
+        <Text style={[styles.demoHintText, { color: c.textSecondary }]}>실제 소개가 도착하면 이 자리에 보여요</Text>
+      </View>
     </View>
   );
 }
@@ -985,6 +1084,17 @@ const styles = StyleSheet.create({
   peerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   peerChip: { paddingHorizontal: 10, height: 26, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   peerChipText: { ...Type.caption },
+
+  // 실제 후보가 없을 때만 보이는 데모 — 사진 위 배지가 실제 회원 카드와 즉시 구분해 준다.
+  demoCard: { flexShrink: 0 },
+  demoBadge: { position: 'absolute', left: 12, top: 12, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 6, borderRadius: Radius.pill, opacity: 0.94 },
+  demoBadgeText: { ...Type.caption, fontWeight: '700' },
+  demoBody: { padding: 18 },
+  demoNameRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  demoAnswer: { ...Type.read, marginTop: 12 },
+  demoHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 14 },
+  demoHintDot: { width: 6, height: 6, borderRadius: 3 },
+  demoHintText: { ...Type.caption },
 
   // 빈 상태 — 상대 카드와 같은 면 위에 마크 하나와 한 줄.
   emptyCard: { alignItems: 'center', paddingVertical: 34, paddingHorizontal: 28 },

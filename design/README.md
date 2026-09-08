@@ -309,6 +309,17 @@ canvas.save('web/public/favicon.png'); canvas.save('app/assets/images/favicon.pn
 봉투의 크림 면(`#FAF6F0` 계열)은 그대로 둡니다 — 차가운 바탕 위에 놓인 따뜻한 편지가 브랜드의 그림입니다.
 크림 바탕이던 시절에는 봉투 면과 배경이 같은 색이라 외곽선만 보였습니다.
 
+## 데모 프로필
+
+실제 소개 후보가 없을 때 발견 탭에는 정적 데모 프로필을 보여줍니다. 데모는 운영 DB의 회원이나
+답변으로 만들지 않으며, 추천·통계·편지·하트·신고에 참여하지 않습니다. 사진마다
+`데모 · AI 이미지` 배지를 표시하고, 실제 소개가 도착하면 데모 캐러셀 전체가 사라집니다.
+
+- 이미지: `app/assets/images/demo-profiles/`의 4:5 세로 사진
+- 인물·이름·나이·답변: 모두 허구
+- 동작: 상세 화면과 연락 행동이 없는 비대화형 카드
+- 노출 조건: 여성 소개를 선택한 회원에게 `/daily/today/peers`의 `peers`가 빈 배열일 때만
+
 배경색이 박혀 있는 파일은 `icon.png`와 `android-icon-background.png` 둘뿐이고,
 `brand-mark.png`·`splash.png`·`favicon.png`는 투명이라 배경색을 바꿔도 그대로 씁니다.
 
