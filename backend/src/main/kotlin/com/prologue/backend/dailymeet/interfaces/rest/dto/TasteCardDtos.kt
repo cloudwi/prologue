@@ -27,20 +27,25 @@ data class TasteDeckResponse(
         val options: List<Option>,
         val myOption: TasteOption? = null,
         val optionPercentages: Map<TasteOption, Int>? = null,
+        /** 이 카드의 답을 이미 피드에 올렸는지. 앱이 "피드에 올림"을 유지하려면 필요하다. */
+        val feedPublished: Boolean = false,
     )
 
     data class Option(val id: TasteOption, val label: String)
 
     companion object {
-        private fun card(view: com.prologue.backend.dailymeet.application.service.TasteCardView) = Card(
+        private fun card(
+            view: com.prologue.backend.dailymeet.application.service.TasteCardView,
+            publishedCardIds: Set<String>,
+        ) = Card(
             view.id, view.prompt, view.optionA, view.optionB, listOfNotNull(
                 Option(TasteOption.A, view.optionA), Option(TasteOption.B, view.optionB),
                 view.optionC?.let { Option(TasteOption.C, it) }, view.optionD?.let { Option(TasteOption.D, it) },
-            ), view.myOption, view.optionPercentages,
+            ), view.myOption, view.optionPercentages, view.id.toString() in publishedCardIds,
         )
-        fun from(view: TasteDeckView): TasteDeckResponse = TasteDeckResponse(
-            cards = view.cards.map(::card),
-            sessionCards = view.sessionCards.map(::card),
+        fun from(view: TasteDeckView, publishedCardIds: Set<String> = emptySet()): TasteDeckResponse = TasteDeckResponse(
+            cards = view.cards.map { card(it, publishedCardIds) },
+            sessionCards = view.sessionCards.map { card(it, publishedCardIds) },
             answered = view.answered,
             total = view.total,
             reward = view.reward,

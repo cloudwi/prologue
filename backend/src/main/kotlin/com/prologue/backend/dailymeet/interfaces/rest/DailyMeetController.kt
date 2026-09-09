@@ -2,6 +2,8 @@ package com.prologue.backend.dailymeet.interfaces.rest
 
 import com.prologue.backend.dailymeet.application.service.AnswerAccessService
 import com.prologue.backend.dailymeet.application.service.DailyAnswerService
+import com.prologue.backend.dailymeet.application.service.FeedService
+import com.prologue.backend.dailymeet.application.service.FeedSourceType
 import com.prologue.backend.dailymeet.application.service.PeerMatchingService
 import com.prologue.backend.dailymeet.application.service.ProfileAccessService
 import com.prologue.backend.dailymeet.application.service.HeartService
@@ -37,12 +39,13 @@ class DailyMeetController(
     private val heartService: HeartService,
     private val profileAccessService: ProfileAccessService,
     private val answerAccessService: AnswerAccessService,
+    private val feedService: FeedService,
 ) {
     /** 오늘의 질문 + 내 답변 여부. */
     @GetMapping("/today")
     fun today(authentication: Authentication): TodayResponse {
         val accountId = UUID.fromString(authentication.name)
-        return TodayResponse.from(dailyAnswerService.today(accountId))
+        return todayResponse(accountId)
     }
 
     /** 오늘의 상대 목록 (매일 정오 공개, 최대 2명, 답변은 내가 먼저 답해야 열람 가능). */
@@ -128,7 +131,19 @@ class DailyMeetController(
     ): TodayResponse {
         val accountId = UUID.fromString(authentication.name)
         val result = dailyAnswerService.answerToday(accountId, request.content)
-        return TodayResponse.from(dailyAnswerService.today(accountId), inkEarned = result.inkEarned)
+        return todayResponse(accountId, inkEarned = result.inkEarned)
+    }
+
+    /**
+     * 오늘 현황에 "이미 피드에 올렸는지"를 붙인다.
+     *
+     * 합성을 여기서 하는 이유는 [DailyAnswerService]가 피드를 몰라도 되게 두기 위해서다.
+     * 문답과 피드는 서로를 모른 채 각자 완결되고, 화면 하나에 필요한 조합만 이 가장자리에서 만든다.
+     */
+    private fun todayResponse(accountId: UUID, inkEarned: Int = 0): TodayResponse {
+        val view = dailyAnswerService.today(accountId)
+        val published = feedService.publishedSourceKeys(accountId, FeedSourceType.DAILY)
+        return TodayResponse.from(view, inkEarned, feedPublished = view.questionId.toString() in published)
     }
 
     /** 익명 상대 답변에 하트. 상호 하트면 매칭 성립. */

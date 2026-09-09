@@ -99,6 +99,18 @@ class FeedService(
         }
     }
 
+    /**
+     * 이 사람이 이미 피드에 올린 원본 키.
+     *
+     * 앱은 "피드에 올림" 표시를 화면 안 상태로만 들고 있어서, 탭을 옮기거나 앱을 다시 켜면
+     * 이미 올린 답에 다시 "피드에 올리기"가 떴다. 올린 사실은 서버가 알고 있으니 서버가 알려준다.
+     */
+    @Transactional(readOnly = true)
+    fun publishedSourceKeys(accountId: UUID, type: FeedSourceType): Set<String> = jdbc.query(
+        "select source_key from feed_posts where author_account_id = ? and source_type = ?",
+        { rs, _ -> rs.getString(1) }, accountId, type.name,
+    ).toSet()
+
     @Transactional
     fun publishDaily(accountId: UUID, questionId: Long) {
         val answer = answers.findByAccountIdAndQuestionId(accountId, questionId)

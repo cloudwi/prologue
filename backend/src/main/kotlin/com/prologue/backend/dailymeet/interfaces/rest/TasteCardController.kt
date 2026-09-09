@@ -24,7 +24,12 @@ class TasteCardController(
     private val tasteCardService: TasteCardService,
     private val peerMatchingService: PeerMatchingService,
     private val sessions: com.prologue.backend.dailymeet.application.service.TasteSessionService,
+    private val feedService: com.prologue.backend.dailymeet.application.service.FeedService,
 ) {
+    /** 취향 카드도 피드에 올린 사실은 피드가 안다 — 화면 하나에 필요한 조합만 여기서 만든다. */
+    private fun publishedCardIds(accountId: UUID) =
+        feedService.publishedSourceKeys(accountId, com.prologue.backend.dailymeet.application.service.FeedSourceType.TASTE)
+
     /** 아직 안 고른 카드 한 묶음. */
     @GetMapping
     fun deck(
@@ -35,6 +40,7 @@ class TasteCardController(
         val accountId = UUID.fromString(authentication.name)
         return TasteDeckResponse.from(
             if (version >= 3) sessions.preview(accountId) else tasteCardService.deck(accountId, limit ?: TasteCardService.DECK_SIZE, if (version >= 2) 2 else 1),
+            publishedCardIds(accountId),
         )
     }
 
@@ -54,12 +60,16 @@ class TasteCardController(
     }
 
     @PostMapping("/sessions")
-    fun start(authentication: Authentication): TasteDeckResponse =
-        TasteDeckResponse.from(sessions.start(UUID.fromString(authentication.name)))
+    fun start(authentication: Authentication): TasteDeckResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return TasteDeckResponse.from(sessions.start(accountId), publishedCardIds(accountId))
+    }
 
     @GetMapping("/sessions/{sessionId}")
-    fun session(authentication: Authentication, @PathVariable sessionId: UUID): TasteDeckResponse =
-        TasteDeckResponse.from(sessions.get(UUID.fromString(authentication.name), sessionId))
+    fun session(authentication: Authentication, @PathVariable sessionId: UUID): TasteDeckResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return TasteDeckResponse.from(sessions.get(accountId, sessionId), publishedCardIds(accountId))
+    }
 
     @PostMapping("/rewards/claim")
     fun claimReward(authentication: Authentication): TasteProgressResponse {
