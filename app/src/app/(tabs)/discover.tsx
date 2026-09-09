@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -43,7 +43,7 @@ import { Skeleton, SkeletonLines } from '@/components/skeleton';
 import { useAppearance } from '@/lib/appearance';
 import { showToast } from '@/components/toast';
 import type { Gender } from '@/lib/member';
-import { DEMO_PROFILES } from '@/lib/demo-profiles';
+import { pickDemoProfiles, type DemoProfile } from '@/lib/demo-profiles';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
 const ANSWER_MIN = 10;
@@ -296,8 +296,10 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
 
   // 아직 오늘 답하지 않아 지난번 상대가 그 자리를 지키고 있는 상태. 서버가 판정해 내려준다.
   const carriedOver = (peersData?.carriedOver ?? false) && (peersData?.peers.length ?? 0) > 0;
-  // 지금 준비한 데모는 여성 프로필뿐이라 여성을 찾는 회원에게만 보여준다.
-  const showingDemoProfiles = preferredGender === 'FEMALE' && peersData != null && peersData.peers.length === 0;
+  // 선호 성별에 맞는 데모만, 그중 오늘 몫으로 뽑힌 몇 명만 온다. 없는 성별이면 빈 배열이라
+  // 여기서 성별을 따로 따지지 않는다 — 준비되는 대로 저절로 열린다.
+  const demoProfiles = useMemo(() => pickDemoProfiles(preferredGender), [preferredGender]);
+  const showingDemoProfiles = demoProfiles.length > 0 && peersData != null && peersData.peers.length === 0;
 
   const isEditing = !today?.answered || editing;
   const editorOpen = isEditing && (today?.answered ? true : composing);
@@ -566,7 +568,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
               ) : showingDemoProfiles ? (
                 // 실제 후보가 없을 때만 허구의 데모를 보여준다. 계정이 아니라 정적 카드라
                 // 추천·통계·편지에는 들어가지 않고, 실제 소개가 도착하는 즉시 이 자리를 내준다.
-                <DemoProfileCarousel c={c} />
+                <DemoProfileCarousel profiles={demoProfiles} c={c} />
               ) : !peersData || !peersData.answerUnlocked ? (
                 <EmptyPeer c={c} title="매일 정오에 한 사람을 소개해 드려요" body="카드 10개에 답하면 한 명을 더 만날 수 있어요." action="취향 카드 답하기" onAction={() => router.push('/taste-cards')} />
               ) : (
@@ -611,7 +613,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
 }
 
 /** 실제 소개 카드의 모양을 미리 보고, 완성된 데모 상세로 들어가는 캐러셀. */
-function DemoProfileCarousel({ c }: { c: ThemeColors }) {
+function DemoProfileCarousel({ profiles, c }: { profiles: DemoProfile[]; c: ThemeColors }) {
   const router = useRouter();
   const [width, setWidth] = useState(0);
   const cardWidth = width - 28;
@@ -628,7 +630,7 @@ function DemoProfileCarousel({ c }: { c: ThemeColors }) {
           style={styles.carouselScroll}
           contentContainerStyle={styles.carouselContent}
         >
-          {DEMO_PROFILES.map((profile) => (
+          {profiles.map((profile) => (
             <Pressable
               key={profile.id}
               onPress={() => router.push({ pathname: '/demo-profile', params: { id: profile.id } })}
