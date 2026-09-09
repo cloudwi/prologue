@@ -9,6 +9,8 @@ export type TasteCard = {
   options?: { id: TasteOption; label: string }[];
   myOption?: TasteOption | null;
   optionPercentages?: Partial<Record<TasteOption, number>> | null;
+  /** 이 카드의 답을 이미 피드에 올렸는지. 구버전 서버는 안 내려주므로 옵셔널. */
+  feedPublished?: boolean;
 };
 
 export type TasteOption = 'A' | 'B' | 'C' | 'D';

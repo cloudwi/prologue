@@ -28,7 +28,7 @@ import { JobBadge } from '@/components/job-badge';
 import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, Type, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
-import { answerToday, getPastPeers, getPeers, getToday, unlockAnswers, type Peer } from '@/lib/daily';
+import { answerToday, getPastPeers, getPeers, getToday, unlockAnswers, type Peer, type Today } from '@/lib/daily';
 import { getInkBalance, INK_PRICE } from '@/lib/ink';
 import { getTasteDeck } from '@/lib/taste';
 import { publishDailyToFeed } from '@/lib/feed';
@@ -130,7 +130,6 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
   const [answerExpanded, setAnswerExpanded] = useState(false);
   // 이번 세션에 답변으로 고인 잉크 — 저장 직후 "✓ 오늘 답변했어요" 옆에 잠시 붙여 보여준다.
   const [inkEarnedNote, setInkEarnedNote] = useState(0);
-  const [feedPublished, setFeedPublished] = useState(false);
   const [publishingFeed, setPublishingFeed] = useState(false);
 
   const queryClient = useQueryClient();
@@ -150,6 +149,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
   const tasteDeck = tasteQuery.data;
 
   const today = todayQuery.data ?? null;
+  const feedPublished = today?.feedPublished ?? false;
   const peersData = peersQuery.data ?? null;
   const pastPeers = pastQuery.data ?? [];
   const peersLoading = peersQuery.isPending;
@@ -272,7 +272,9 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
     try {
       await publishDailyToFeed(today.questionId);
       track('feed_post_published', { source: 'daily' });
-      setFeedPublished(true);
+      // 올렸다는 사실의 주인은 서버다. 화면이 먼저 반응하도록 같은 질의를 고쳐두고, 곧바로 확인받는다.
+      queryClient.setQueryData<Today>(['daily', 'today'], (old) => old && { ...old, feedPublished: true });
+      void queryClient.invalidateQueries({ queryKey: ['daily', 'today'] });
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
       haptics.success();
       showToast('피드에 올렸어요');

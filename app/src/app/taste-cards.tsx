@@ -71,7 +71,6 @@ export default function TasteCardsScreen() {
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [publishedCardIds, setPublishedCardIds] = useState<ReadonlySet<number>>(() => new Set());
   const [publishingCardId, setPublishingCardId] = useState<number | null>(null);
 
   const apply = useCallback((deck: TasteDeck) => {
@@ -231,12 +230,13 @@ export default function TasteCardsScreen() {
   }
 
   async function publishCurrent() {
-    if (!card?.myOption || publishingCardId != null || publishedCardIds.has(card.id)) return;
+    if (!card?.myOption || publishingCardId != null || card.feedPublished) return;
     setPublishingCardId(card.id);
     try {
       await publishTasteToFeed(card.id);
       track('feed_post_published', { source: 'taste' });
-      setPublishedCardIds((current) => new Set(current).add(card.id));
+      // 올렸다는 사실은 카드 레코드가 들고 있다 — 서버가 다음 묶음에도 같은 값을 실어 준다.
+      setCards((current) => current.map((item) => item.id === card.id ? { ...item, feedPublished: true } : item));
       haptics.success();
       showToast('피드에 올렸어요');
     } catch (e) {
@@ -390,9 +390,9 @@ export default function TasteCardsScreen() {
               </View>
               <View testID="taste-card-meta" style={styles.cardMeta}>
                     {chosen != null && !currentCardSaving && (
-                      <Pressable onPress={() => void publishCurrent()} disabled={publishedCardIds.has(card.id) || publishingCardId === card.id} hitSlop={10} style={styles.feedPublish}>
-                        <Ionicons name={publishedCardIds.has(card.id) ? 'checkmark-circle-outline' : 'newspaper-outline'} size={16} color={c.textSecondary} />
-                        <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>{publishedCardIds.has(card.id) ? '피드에 올림' : publishingCardId === card.id ? '올리는 중' : '이 답을 피드에 올리기'}</Text>
+                      <Pressable onPress={() => void publishCurrent()} disabled={card.feedPublished || publishingCardId === card.id} hitSlop={10} style={styles.feedPublish}>
+                        <Ionicons name={card.feedPublished ? 'checkmark-circle-outline' : 'newspaper-outline'} size={16} color={c.textSecondary} />
+                        <Text style={[styles.noteOpenLabel, { color: c.textSecondary }]}>{card.feedPublished ? '피드에 올림' : publishingCardId === card.id ? '올리는 중' : '이 답을 피드에 올리기'}</Text>
                       </Pressable>
                     )}
 

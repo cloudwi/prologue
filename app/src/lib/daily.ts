@@ -8,6 +8,8 @@ export type Today = {
   myAnswer: string | null;
   /** 이번 요청으로 고인 잉크 — 답변 저장 응답에서 하루 한 번 0보다 크다. 조회는 늘 0. */
   inkEarned: number;
+  /** 오늘 답을 이미 피드에 올렸는지. 구버전 서버는 안 내려주므로 옵셔널. */
+  feedPublished?: boolean;
 };
 
 /** 오늘의 질문 + 내 답변 여부 (GET /daily/today). */
