@@ -33,6 +33,7 @@ function FeedBoard() {
   const [sort, setSort] = useState<FeedSort>('latest');
   const feed = useQuery({ queryKey: ['feed', sort], queryFn: () => getFeed(sort) });
   const [opening, setOpening] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => { track('feed_opened'); }, []);
 
@@ -45,7 +46,10 @@ function FeedBoard() {
       try {
         const result = await unlockFeedProfile(post.id);
         track('feed_profile_opened', { spent: result.spent });
-        queryClient.setQueryData<FeedPost[]>(['feed', sort], (old) => old?.map((p) => p.id === post.id ? { ...p, profileUnlocked: true } : p));
+        // 정렬 탭마다 캐시가 따로라 전부 표시를 바꾸고, 선명한 사진은 서버가 다시 내려줘야 하므로 재조회한다.
+        queryClient.setQueriesData<FeedPost[]>({ queryKey: ['feed'] }, (old) => old?.map((p) => p.id === post.id ? { ...p, profileUnlocked: true } : p));
+        void queryClient.invalidateQueries({ queryKey: ['feed'] });
+        if (result.spent) void queryClient.invalidateQueries({ queryKey: ['ink', 'balance'] });
         router.push({ pathname: '/peer', params: { data: JSON.stringify(result.peer), question: post.prompt } });
       } catch (e) {
         const message = e instanceof Error ? e.message : '잠시 후 다시 시도해주세요';
@@ -103,7 +107,14 @@ function FeedBoard() {
               <View key={post.id} style={[styles.card, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
                 <View style={styles.authorRow}>
                   <View style={[styles.authorPhoto, { backgroundColor: c.backgroundSelected }]}>
-                    {post.photoPreview ? (
+                    {post.photoUrl ? (
+                      <Image
+                        source={{ uri: post.photoUrl }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        accessibilityLabel={`${post.nickname}님의 프로필 사진`}
+                      />
+                    ) : post.photoPreview ? (
                       <>
                         <Image
                           source={{ uri: post.photoPreview }}
@@ -120,7 +131,12 @@ function FeedBoard() {
                   <Pressable onPress={() => post.mine ? remove(post) : promptReport({ feedPostId: post.id })} hitSlop={10} accessibilityLabel={post.mine ? '내 피드 글 관리' : '피드 글 신고'}><Ionicons name="ellipsis-horizontal" size={20} color={c.textSecondary} /></Pressable>
                 </View>
                 <Text style={[styles.prompt, { color: c.textSecondary }]}>{post.prompt}</Text>
-                <Text style={[styles.answer, { color: c.text }]}>{post.content}</Text>
+                <Text numberOfLines={expanded[post.id] ? undefined : 6} style={[styles.answer, { color: c.text }]}>{post.content}</Text>
+                {isLong(post.content) && (
+                  <Pressable onPress={() => setExpanded((v) => ({ ...v, [post.id]: !v[post.id] }))} hitSlop={6} style={styles.moreBtn}>
+                    <Text style={[styles.link, { color: c.primaryStrong }]}>{expanded[post.id] ? '접기' : '더보기'}</Text>
+                  </Pressable>
+                )}
                 <View style={[styles.actions, { borderTopColor: c.border }]}>
                   <Pressable onPress={() => void toggleHeart(post)} style={styles.action} accessibilityLabel={post.hearted ? '하트 취소' : '하트'}><Ionicons name={post.hearted ? 'heart' : 'heart-outline'} size={21} color={post.hearted ? c.primary : c.textSecondary} /><Text style={[styles.count, { color: post.hearted ? c.primaryStrong : c.textSecondary }]}>{post.heartCount || ''}</Text></Pressable>
                   {!post.mine && <Pressable onPress={() => openProfile(post)} disabled={opening === post.id} style={styles.profileAction}><Ionicons name={post.profileUnlocked ? 'person-outline' : 'water-outline'} size={17} color={c.textSecondary} /><Text style={[styles.profileLabel, { color: c.textSecondary }]}>{opening === post.id ? '여는 중' : post.profileUnlocked ? '프로필 보기' : `프로필 · ${INK_PRICE.PROFILE_UNLOCK}`}</Text></Pressable>}
@@ -131,6 +147,16 @@ function FeedBoard() {
       )}
     </SafeAreaView>
   );
+}
+
+/**
+ * 6줄에서 잘릴 만한 글인지.
+ *
+ * 글자 수만 세면 "선택지\n메모" 형태의 취향 카드 답변처럼 짧지만 줄이 많은 글을 놓쳐서,
+ * 본문이 잘렸는데도 더보기가 안 뜬다. 줄 수도 함께 본다.
+ */
+function isLong(content: string) {
+  return content.length > 140 || content.split('\n').length > 6;
 }
 
 function relativeTime(value: string) {
@@ -148,6 +174,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: 30 }, emptyTitle: { ...Type.title, marginTop: 18 }, emptyBody: { ...Type.body, textAlign: 'center', marginTop: 8 },
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg, padding: 18 }, authorRow: { flexDirection: 'row', alignItems: 'center' }, authorPhoto: { width: 40, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   authorText: { flex: 1, marginLeft: 10 }, nickname: { ...Type.label }, kind: { ...Type.caption, marginTop: 1 }, prompt: { ...Type.caption, marginTop: 22 }, answer: { ...Type.read, marginTop: 8 },
+  moreBtn: { marginTop: 8, alignSelf: 'flex-start' }, link: { ...Type.label },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth }, action: { flexDirection: 'row', alignItems: 'center', minWidth: 52 }, count: { ...Type.caption, marginLeft: 5 },
   profileAction: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5 }, profileLabel: { ...Type.caption, fontWeight: '600' },
 });

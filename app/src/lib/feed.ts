@@ -13,7 +13,10 @@ export type FeedPost = {
   hearted: boolean;
   mine: boolean;
   profileUnlocked: boolean;
+  /** 아직 열지 않은 프로필의 흐린 미리보기. 연 프로필에는 null. */
   photoPreview: string | null;
+  /** 잉크로 연(또는 내) 프로필의 선명한 사진. 잠긴 프로필에는 null. */
+  photoUrl: string | null;
 };
 
 export type FeedSort = 'latest' | 'hearts';
