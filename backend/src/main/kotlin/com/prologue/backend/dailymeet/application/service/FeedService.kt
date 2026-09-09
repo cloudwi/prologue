@@ -30,7 +30,10 @@ data class FeedPostView(
     val hearted: Boolean,
     val mine: Boolean,
     val profileUnlocked: Boolean,
+    /** 아직 열지 않은 프로필의 흐린 미리보기. 연 프로필에는 없다. */
     val photoPreview: String?,
+    /** 잉크로 연(또는 내) 프로필의 선명한 사진 주소. 잠긴 프로필에는 없다. */
+    val photoUrl: String?,
 )
 
 @Service
@@ -81,9 +84,18 @@ class FeedService(
             if (raw.authorId != accountId && exclusion.excludes(author)) return@mapNotNull null
             raw to author.photoUrls.firstOrNull()
         }
-        val previews = photoPreviews.previewDataUris(visible.mapNotNull { it.second })
+        val opened = { authorId: UUID -> authorId == accountId || authorId in unlocked }
+        val previews = photoPreviews.previewDataUris(
+            visible.filterNot { (raw, _) -> opened(raw.authorId) }.mapNotNull { it.second },
+        )
         return visible.map { (raw, photoUrl) ->
-            raw.toView(accountId, raw.authorId in unlocked, photoUrl?.let(previews::get))
+            val open = opened(raw.authorId)
+            raw.toView(
+                viewer = accountId,
+                unlocked = raw.authorId in unlocked,
+                photoPreview = if (open) null else photoUrl?.let(previews::get),
+                photoUrl = if (open) photoPreviews.unlockedPhotoUrl(photoUrl) else null,
+            )
         }
     }
 
@@ -163,10 +175,10 @@ class FeedService(
         val gender: Gender, val prompt: String, val content: String, val createdAt: Instant,
         val heartCount: Int, val hearted: Boolean,
     ) {
-        fun toView(viewer: UUID, unlocked: Boolean, photoPreview: String?) = FeedPostView(
+        fun toView(viewer: UUID, unlocked: Boolean, photoPreview: String?, photoUrl: String?) = FeedPostView(
             id, sourceType, nickname, gender, prompt, content, createdAt, heartCount, hearted,
             mine = authorId == viewer, profileUnlocked = authorId == viewer || unlocked,
-            photoPreview = photoPreview,
+            photoPreview = photoPreview, photoUrl = photoUrl,
         )
     }
 }

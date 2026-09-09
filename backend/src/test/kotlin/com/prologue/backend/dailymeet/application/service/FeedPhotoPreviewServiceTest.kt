@@ -21,4 +21,18 @@ class FeedPhotoPreviewServiceTest {
     fun `외부 사진 주소는 가져오지 않는다`() {
         assertNull(FeedPhotoPreviewService.previewUrl("https://example.com/photo.jpg", base, "profile-photos"))
     }
+
+    @Test
+    fun `연 프로필은 흐리지 않은 크기로 요청한다`() {
+        assertEquals(
+            "$base/storage/v1/render/image/public/profile-photos/account/photo" +
+                "?width=120&height=150&resize=cover&quality=70",
+            FeedPhotoPreviewService.unlockedUrl(original, base, "profile-photos"),
+        )
+    }
+
+    @Test
+    fun `스토리지 주소가 없으면 연 프로필 주소도 만들지 않는다`() {
+        assertNull(FeedPhotoPreviewService.unlockedUrl(original, "", "profile-photos"))
+    }
 }
