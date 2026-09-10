@@ -76,7 +76,7 @@ export default function MailViewScreen() {
   return (
     <SubScreen title="보낸 편지" c={c}>
       {loading ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           <SkeletonTextCard c={c} bodyLines={4} />
         </SkeletonList>
       ) : !mail ? (

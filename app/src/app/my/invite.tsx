@@ -57,9 +57,9 @@ export default function InviteScreen() {
   return (
     <SubScreen title="친구 초대" c={c}>
       {loading || !referral ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           {/* 초대 코드 카드 — 머리글 한 줄, 코드 큰 글자, 설명. */}
-          <SkeletonCard c={c} background={c.backgroundElement}>
+          <SkeletonCard background={c.backgroundElement}>
             <Skeleton c={c} width={72} height={12} />
             <Skeleton c={c} width={148} height={30} style={styles.skeletonCode} />
             <Skeleton c={c} width="78%" height={12} style={styles.skeletonCodeDesc} />

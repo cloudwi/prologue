@@ -34,12 +34,21 @@ export type InvitationLetter = {
 type ProfilePhoto = string | number;
 
 /**
+ * 사진이 아직 없을 때 가정하는 세로 비율.
+ *
+ * [NaturalPhoto]의 초기값이자 [ProfileInvitationSkeleton]이 표지 자리를 잡는 값이다. 한 곳에
+ * 두는 이유는 하나다 — 두 수가 갈라지면 스켈레톤이 예고한 높이와 사진이 차지하는 높이가
+ * 달라지고, 그 차이만큼 화면이 튄다.
+ */
+const COVER_RATIO = 4 / 5;
+
+/**
  * 사진마다 생성 원본의 가로세로 비율을 그대로 쓴다.
  * 데모 자산은 resolveAssetSource로 첫 화면부터 알고, 원격 사진은 로드된 실제 크기로 맞춘다.
  */
 function NaturalPhoto({ source, inter, backgroundColor }: { source: ProfilePhoto; inter?: boolean; backgroundColor: string }) {
   const local = typeof source === 'number' ? NativeImage.resolveAssetSource(source) : null;
-  const [ratio, setRatio] = useState(local?.width && local?.height ? local.width / local.height : 4 / 5);
+  const [ratio, setRatio] = useState(local?.width && local?.height ? local.width / local.height : COVER_RATIO);
 
   return (
     <Image
@@ -354,6 +363,8 @@ const styles = StyleSheet.create({
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, paddingHorizontal: 28, marginTop: 20 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: Radius.pill },
   skeletonLines: { width: '100%', marginTop: 14 },
+  // 진짜 표지(styles.photo)와 같은 자리·같은 상한. 비율만 프로퍼티로 따로 받는다.
+  skeletonPhoto: { alignSelf: 'center', maxWidth: 400 },
 
   signature: { alignItems: 'center', marginTop: 44 },
   signatureLead: { fontSize: 13.5, letterSpacing: 0.5 },
@@ -371,11 +382,17 @@ const styles = StyleSheet.create({
  * 그 모양을 미리 그려두면 무엇이 올지 읽히고, 채워질 때 화면이 튀지 않는다.
  *
  * 치수는 진짜 조판에서 그대로 가져온다 — 자리가 어긋나면 스켈레톤이 오히려 화면을 흔든다.
+ * 표지 사진이 특히 그렇다. 예전에는 여기에 높이를 넘기지 않아 [Skeleton]의 기본값(글줄 한 줄)이
+ * 적용됐고, 높이가 정해지자 Yoga가 `aspectRatio`를 무시해 **400px 사진 자리가 16px 실선**으로
+ * 그려졌다. 들어오는 순간 화면이 384px 뛰었다. 그래서 지금은 비율을 프로퍼티로 넘긴다.
+ *
+ * 아래쪽(구분선·본문 사이 사진들·서명)은 일부러 그리지 않는다. 그 길이는 사람마다 몇 배씩
+ * 달라서, 있지도 않을 자리를 길게 예고하면 채워질 때 오히려 화면이 줄어드는 인상을 준다.
  */
 export function ProfileInvitationSkeleton({ c }: { c: ThemeColors }) {
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Skeleton c={c} width="100%" height={undefined} radius={0} style={styles.photo} />
+      <Skeleton c={c} width="82%" aspectRatio={COVER_RATIO} radius={Radius.md} style={styles.skeletonPhoto} />
       <View style={styles.cover}>
         <Skeleton c={c} width={58} height={11} />
         <Skeleton c={c} width={132} height={30} style={{ marginTop: 14 }} />

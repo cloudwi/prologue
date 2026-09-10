@@ -72,6 +72,11 @@ function todayCaption(): string {
  * 쿼리가 먼저 나가고, 손님에게는 그게 403으로 돌아와 세션 만료로 읽혀 로그인 화면으로
  * 튕겨나간다. 둘러보러 온 사람을 문 밖으로 밀어내는 셈이다. 그래서 여기서 갈라선다.
  */
+/**
+ * 상대 카드 사진의 비율. 실제 카드와 그 자리 표시가 같은 수를 봐야 화면이 튀지 않는다.
+ */
+const PEER_PHOTO_RATIO = 4 / 5;
+
 export default function DiscoverScreen() {
   const session = useSession();
 
@@ -329,7 +334,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
               <View style={styles.peerHeader}>
                 <Skeleton c={c} width={72} height={14} />
               </View>
-              <Skeleton c={c} height={260} radius={Radius.lg} />
+              <PeerCardSkeleton c={c} />
             </View>
           </View>
         </SafeAreaView>
@@ -536,8 +541,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
               </View>
 
               {peersLoading && !peersData ? (
-                // 상대 카드가 들어올 자리 — 사진 한 장 크기의 면 하나로 둔다.
-                <Skeleton c={c} height={260} radius={Radius.lg} />
+                <PeerCardSkeleton c={c} />
               ) : carriedOver ? (
                 // 답하기 전 — 자리를 비우지 않고 지난번에 만난 사람이 지킨다.
                 // 카드 위 한 줄이 "이건 어제 것"임을 알리고, 아래 한 줄이 다음 행동을 준다.
@@ -778,6 +782,37 @@ function EmptyPeer({
 }
 
 /** 상대 카드 캐러셀 — 옆 카드가 살짝 보이게 가로로 넘긴다. 한 명이면 그냥 꽉 채운다. */
+/**
+ * 상대 카드가 들어올 자리 — 실제 [PeerCard]와 **같은 조판**을 회색으로 세운다.
+ *
+ * 예전에는 높이 260짜리 사각형 하나였다. 실제 카드는 답변 블록 + 4:5 사진 + 이름·칩 바디라
+ * 700px이 넘고, 로딩이 끝나면 그 아래 모든 것이 한 화면 넘게 밀렸다. 사각형 하나로는
+ * 자리를 예고할 수 없다 — 예고가 틀리면 스켈레톤이 없느니만 못하다.
+ *
+ * 사진 비율은 실제 스타일(styles.peerPhoto)이 정하는 4:5를 따른다. 고정 픽셀로 적으면
+ * 기기 폭이 바뀔 때마다 어긋난다.
+ */
+function PeerCardSkeleton({ c }: { c: ThemeColors }) {
+  return (
+    <View style={[styles.peerCard, { backgroundColor: c.backgroundElement }]}>
+      <View style={styles.peerAnswerBlock}>
+        <Skeleton c={c} width="54%" height={12} />
+        <SkeletonLines c={c} lines={3} lineHeight={13} gap={9} style={styles.skeletonPeerAnswer} />
+      </View>
+      <Skeleton c={c} aspectRatio={PEER_PHOTO_RATIO} radius={0} />
+      <View style={styles.peerBody}>
+        <Skeleton c={c} width={118} height={22} />
+        <Skeleton c={c} width={152} height={14} style={styles.skeletonPeerMeta} />
+        <View style={styles.peerChips}>
+          {[64, 48, 72].map((w) => (
+            <Skeleton key={w} c={c} width={w} height={26} radius={Radius.pill} />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function PeerCarousel({
   peers,
   question,
@@ -1077,7 +1112,9 @@ const styles = StyleSheet.create({
   maskPanel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 26, borderRadius: Radius.sm + 2 },
   revealHintText: { ...Type.label },
   // 4:5 세로 사진 — 소개팅 프로필의 표준 비율. 카드 폭을 꽉 채운다.
-  peerPhoto: { width: '100%', aspectRatio: 4 / 5 },
+  peerPhoto: { width: '100%', aspectRatio: PEER_PHOTO_RATIO },
+  skeletonPeerAnswer: { marginTop: 12 },
+  skeletonPeerMeta: { marginTop: 10 },
   photoBadge: { position: 'absolute', right: 10, bottom: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.pill, opacity: 0.92 },
   photoBadgeText: { ...Type.caption, fontWeight: '600' },
   peerBody: { padding: 18, paddingTop: 16 },

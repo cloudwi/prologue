@@ -38,9 +38,9 @@ export default function InkScreen() {
   return (
     <SubScreen title="잉크" c={c}>
       {loading ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           {/* 잔액 카드 — 이 화면의 주인공. 아이콘 하나와 큰 숫자, 그 아래 설명 두 줄. */}
-          <SkeletonCard c={c} background={c.backgroundElement}>
+          <SkeletonCard background={c.backgroundElement}>
             <View style={styles.skeletonBalance}>
               <Skeleton c={c} width={36} height={36} radius={18} />
               <Skeleton c={c} width={92} height={42} style={styles.skeletonBalanceNumber} />

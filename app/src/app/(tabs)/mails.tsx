@@ -14,7 +14,7 @@ import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { SignupGate } from '@/components/signup-gate';
 import { ScreenLoadError } from '@/components/screen-load-error';
 import { useSession } from '@/lib/session';
-import { Skeleton, SkeletonCard } from '@/components/skeleton';
+import { Skeleton, SkeletonCard, SkeletonScreen } from '@/components/skeleton';
 import { isSessionExpired } from '@/lib/api';
 import { getPeerProfile, getReceivedHearts, getSentHearts, type ReceivedHeart } from '@/lib/daily';
 import { declineMail, getReceivedMails, openMail, type ReceivedMail } from '@/lib/mails';
@@ -309,21 +309,29 @@ function MailsInbox() {
       <SafeAreaView style={styles.flex} edges={['top']}>
         {inboxQuery.isPending && !inboxQuery.data ? (
           /*
-           * 생애 첫 로딩 — 카드 세 장이 들어올 자리만 비워 둔다.
+           * 생애 첫 로딩 — 이 탭이 실제로 어떤 모양인지를 미리 세운다.
            *
            * 제목과 부제는 회색으로 덮지 않는다. "편지함"은 서버에서 오는 글자가 아니고,
            * 부제도 아직 셀 것이 없을 뿐이지 할 말이 없는 게 아니다. 기다리는 동안 회색 막대를
            * 보여주면 어느 탭에 서 있는지조차 알 수 없다 — 기다림은 모르는 것에만 걸어야 한다.
+           *
+           * 예전에는 봉투 세 장을 깔았다. 편지는 잉크를 써야 오는 귀한 일이라 대다수의 편지함은
+           * 0통이고, 실제로 그 자리에 오는 것은 섹션 머리글과 **호감 목록**이다. 오지 않을 것을
+           * 셋이나 예고하면 채워질 때 화면이 줄어들고, 있어야 할 머리글은 위에서 밀고 들어온다.
+           * 그래서 봉투는 한 장만 두고 머리글과 호감 목록의 자리를 함께 세운다.
            */
           <View style={styles.content}>
             <View style={styles.header}>
               <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>편지함</Text>
               <Text style={[styles.subtitle, { color: c.textSecondary }]}>마음이 닿은 흔적이 여기에 도착해요</Text>
             </View>
-            {/* 봉투가 들어올 자리 — 면 색까지 봉투의 것이라야 채워질 때 배경이 바뀌지 않는다. */}
-            <View style={styles.skeletonList}>
-              {[0, 1, 2].map((i) => (
-                <SkeletonCard key={i} c={c} background={c.primary + '14'}>
+            <SkeletonScreen style={styles.skeletonList}>
+              {/* 받은 편지 — 머리글 한 줄과 봉투 한 장. 면 색까지 봉투의 것이라야 배경이 안 바뀐다. */}
+              <View style={styles.section}>
+                <View style={styles.sectionHead}>
+                  <Skeleton c={c} width={62} height={13} />
+                </View>
+                <SkeletonCard background={c.primary + '14'} padding={18}>
                   <View style={styles.skeletonEnvelope}>
                     <Skeleton c={c} width={44} height={55} radius={Radius.sm} />
                     <View style={styles.flex}>
@@ -332,8 +340,25 @@ function MailsInbox() {
                     </View>
                   </View>
                 </SkeletonCard>
-              ))}
-            </View>
+              </View>
+              {/* 나에게 온 호감 — 흰 카드 하나 안에 행들이 묶인 형태 그대로. */}
+              <View style={styles.section}>
+                <View style={styles.sectionHead}>
+                  <Skeleton c={c} width={86} height={13} />
+                </View>
+                <View style={[styles.listCard, { backgroundColor: c.backgroundElement }]}>
+                  {[0, 1, 2].map((i) => (
+                    <View key={i} style={styles.heartRow}>
+                      <Skeleton c={c} width={44} height={55} radius={Radius.sm} />
+                      <View style={[styles.flex, styles.skeletonHeartBody]}>
+                        <Skeleton c={c} width={i % 2 === 0 ? '38%' : '46%'} height={15} />
+                        <Skeleton c={c} width="64%" height={12} style={styles.skeletonEnvelopeMeta} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </SkeletonScreen>
           </View>
         ) : (
           <ScrollView
@@ -571,7 +596,8 @@ const styles = StyleSheet.create({
   skeletonSub: { marginTop: 10 },
   skeletonEnvelope: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   skeletonEnvelopeMeta: { marginTop: 8 },
-  skeletonList: { gap: 12, marginTop: 20 },
+  skeletonList: { marginTop: 20 },
+  skeletonHeartBody: { marginLeft: 12 },
   content: { paddingHorizontal: 20, paddingTop: 8 },
 
   header: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 18 },

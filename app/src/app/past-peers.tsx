@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 
-import { SkeletonList, SkeletonRow } from '@/components/skeleton';
+import { Skeleton, SkeletonScreen } from '@/components/skeleton';
 import { Avatar } from '@/components/avatar';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius, type ThemeColors } from '@/constants/theme';
@@ -37,11 +37,7 @@ export default function PastPeersScreen() {
   return (
     <SubScreen title="지난 상대" c={c}>
       {loading ? (
-        <SkeletonList c={c}>
-          <SkeletonRow c={c} avatar />
-          <SkeletonRow c={c} avatar />
-          <SkeletonRow c={c} avatar />
-        </SkeletonList>
+        <PastPeerGridSkeleton c={c} />
       ) : peers.length === 0 ? (
         <View style={[styles.flex, styles.center, styles.emptyPad]}>
           <Text style={[styles.emptyText, { color: c.textSecondary }]}>
@@ -75,6 +71,38 @@ function remainingLabel(closesAt: string): string {
   return `${Math.floor(hours / 24)}일 남음`;
 }
 
+/**
+ * 그리드가 들어올 자리 — 실제와 **같은 3열 격자**로 세운다.
+ *
+ * 예전에는 아바타(원형 44)와 글줄 두 개짜리 목록 행 셋을 깔았다. 실제로 오는 것은 세로 4:5
+ * 사진이 세 줄로 늘어선 격자라, 로딩이 끝나면 화면 모양이 통째로 바뀌었다 — "다른 화면이
+ * 잠깐 스쳤다"는 인상은 대개 여기서 온다. 개수·모양·배치가 다르면 자리를 예고한 게 아니다.
+ *
+ * 폭은 실제 격자와 같은 식으로 잰다. 칸 수와 간격이 한 곳(PAST_GRID_*)에서 나오므로
+ * 열을 늘려도 자리 표시가 따라온다.
+ */
+function PastPeerGridSkeleton({ c }: { c: ThemeColors }) {
+  const [width, setWidth] = useState(0);
+  const cardWidth = (width - PAST_GRID_GAP * (PAST_GRID_COLUMNS - 1)) / PAST_GRID_COLUMNS;
+
+  return (
+    <SkeletonScreen style={styles.content}>
+      {/* 안내 한 줄도 자리를 차지한다 — 빼두면 격자가 통째로 위로 당겨진다. */}
+      <Skeleton c={c} width="62%" height={14} style={styles.skeletonSub} />
+      <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        {width > 0 &&
+          Array.from({ length: PAST_GRID_COLUMNS * 2 }, (_, i) => (
+            <View key={i} style={{ width: cardWidth }}>
+              <Skeleton c={c} width={cardWidth} height={cardWidth * PAST_PHOTO_RATIO} radius={Radius.md} />
+              <Skeleton c={c} width={cardWidth * 0.7} height={14} style={styles.skeletonName} />
+              <Skeleton c={c} width={cardWidth * 0.52} height={12} style={styles.skeletonRemain} />
+            </View>
+          ))}
+      </View>
+    </SkeletonScreen>
+  );
+}
+
 /** 지난 상대 그리드 — 한 줄 세 명씩 세로로 쌓는다. */
 function PastPeerGrid({ items, c }: { items: PastPeer[]; c: ThemeColors }) {
   const [width, setWidth] = useState(0);
@@ -90,6 +118,8 @@ function PastPeerGrid({ items, c }: { items: PastPeer[]; c: ThemeColors }) {
 
 const PAST_GRID_COLUMNS = 3;
 const PAST_GRID_GAP = 12;
+/** 격자 한 칸의 사진 높이 배수 — 카드와 그 자리 표시가 같은 수를 본다. */
+const PAST_PHOTO_RATIO = 1.25;
 
 /**
  * 지난 상대 미니 카드 — 사진과 이름, 그리고 내가 이 사람에게 무엇을 건넸는지(하트·편지) 작은 표시.
@@ -104,7 +134,7 @@ function PastPeerCard({ item, width, c }: { item: PastPeer; width: number; c: Th
   const photo = item.peer.photoUrls[0];
   const unlockedCount = (item.answers ?? []).filter((a) => a.unlocked && a.content).length;
   // 가로 카드 시절의 104×130 비율을 그대로 가져간다.
-  const photoSize = { width, height: width * 1.25 };
+  const photoSize = { width, height: width * PAST_PHOTO_RATIO };
 
   function openDetail() {
     router.push({
@@ -167,5 +197,8 @@ const styles = StyleSheet.create({
   badge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   badgeIcon: { width: 12, height: 12 },
   name: { fontSize: 14.5, fontWeight: '600', marginTop: 7 },
+  skeletonSub: { marginBottom: 14 },
+  skeletonName: { marginTop: 7 },
+  skeletonRemain: { marginTop: 4 },
   day: { fontSize: 13, marginTop: 2 },
 });

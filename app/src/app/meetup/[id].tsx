@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Radius } from '@/constants/theme';
-import { SkeletonList, Skeleton, SkeletonTextCard } from '@/components/skeleton';
+import { Skeleton, SkeletonScreen, SkeletonTextCard } from '@/components/skeleton';
 import { ImageViewerModal } from '@/components/image-viewer';
 import { MeetupInvitation } from '@/components/meetup-invitation';
 import { SubScreen } from '@/components/sub-screen';
@@ -170,10 +170,22 @@ export default function MeetupDetailScreen() {
       c={c}
     >
       {loading ? (
-        <SkeletonList c={c}>
-          <Skeleton c={c} height={200} radius={Radius.lg} />
-          <SkeletonTextCard c={c} bodyLines={3} />
-        </SkeletonList>
+        /*
+         * 초대장의 커버는 **화면 끝까지 닿는 4:3 사진**이다(MeetupInvitation).
+         *
+         * 예전에는 좌우 20 안쪽에 높이 200짜리 면을 뒀다. 로딩이 끝나면 커버가 좌우로 20씩
+         * 넓어지면서 아래로도 90px 넘게 밀렸다 — 이모지 배너 모임에서만 우연히 높이가 맞았다.
+         * 사진 모임이 기본이므로 비율을 그쪽에 맞추고, 좌우 여백은 커버에서 뺀다.
+         */
+        <SkeletonScreen>
+          <Skeleton c={c} aspectRatio={MEETUP_COVER_RATIO} radius={0} />
+          <View style={styles.skeletonBody}>
+            <Skeleton c={c} width="78%" height={26} />
+            <Skeleton c={c} width="52%" height={15} style={styles.skeletonMeta} />
+            <Skeleton c={c} width="44%" height={15} style={styles.skeletonMetaTight} />
+            <SkeletonTextCard c={c} bodyLines={4} />
+          </View>
+        </SkeletonScreen>
       ) : meetup == null ? (
         <View style={[styles.flex, styles.center]}>
           <Text style={{ color: c.textSecondary, fontSize: 15 }}>모임을 찾을 수 없어요 — 마감됐거나 취소됐을 수 있어요.</Text>
@@ -216,7 +228,14 @@ export default function MeetupDetailScreen() {
   );
 }
 
+/** 초대장 커버의 비율 — MeetupInvitation의 PhotoPager와 같은 수여야 자리가 맞는다. */
+const MEETUP_COVER_RATIO = 4 / 3;
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  // 커버 아래 본문 — 초대장의 여백(20)을 그대로 쓴다.
+  skeletonBody: { padding: 20 },
+  skeletonMeta: { marginTop: 14 },
+  skeletonMetaTight: { marginTop: 8, marginBottom: 20 },
 });

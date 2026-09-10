@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { SkeletonList, SkeletonRow } from '@/components/skeleton';
+import { Skeleton, SkeletonScreen } from '@/components/skeleton';
 import { SubScreen } from '@/components/sub-screen';
 import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -61,10 +61,22 @@ export default function EventsScreen() {
   return (
     <SubScreen title="이벤트" c={c}>
       {loading ? (
-        <SkeletonList c={c}>
-          <SkeletonRow c={c} />
-          <SkeletonRow c={c} />
-        </SkeletonList>
+        /*
+         * 이 화면에 오는 것은 목록이 아니라 **카드 한 장짜리 폼**이다.
+         *
+         * 예전에는 바탕 위에 목록 행 둘을 깔았다. 실제로는 흰 카드 안에 제목·설명·입력칸·버튼이
+         * 들어오므로, 배경색부터 요소 종류까지 전부 달랐다 — 로딩이 끝나면 다른 화면으로
+         * 갈아치우는 것처럼 보인다. 같은 카드 안에 같은 순서로 세운다.
+         */
+        <SkeletonScreen style={styles.content}>
+          <View style={[styles.eventCard, { backgroundColor: c.backgroundElement }]}>
+            <Skeleton c={c} width={128} height={17} />
+            <Skeleton c={c} width="92%" height={14} style={styles.skeletonEventDesc} />
+            <Skeleton c={c} width="74%" height={14} style={styles.skeletonEventLine} />
+            <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonEventInput} />
+            <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonEventInput} />
+          </View>
+        </SkeletonScreen>
       ) : (
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -156,6 +168,9 @@ const styles = StyleSheet.create({
   eventTitle: { fontSize: 17, fontWeight: '700' },
   eventDesc: { fontSize: 14, lineHeight: 21, marginTop: 6 },
   eventInput: { height: 46, borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: 14, fontSize: 15, marginTop: 14 },
+  skeletonEventDesc: { marginTop: 8 },
+  skeletonEventLine: { marginTop: 6 },
+  skeletonEventInput: { marginTop: 14 },
   eventSubmit: { height: 46, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   eventSubmitText: { fontSize: 15.5, fontWeight: '700' },
   eventPending: { borderRadius: Radius.md, paddingVertical: 14, alignItems: 'center', marginTop: 14 },

@@ -28,6 +28,14 @@ export const Colors = {
     primaryStrong: '#C25539',
     primaryText: '#FFFFFF',
     border: '#E3E8EE',
+    /**
+     * 로딩 자리 표시의 면.
+     *
+     * backgroundSelected(#EDF1F5)를 쓰던 시절에는 바탕(#F6F8FA) 위에서 밝기 차가 3%밖에 나지
+     * 않아, 카드 안에서는 보이고 바탕 위에서는 있는지도 몰랐다. 스켈레톤은 두 면 **모두** 위에
+     * 놓이므로 둘 다에서 읽히는 한 단계 진한 회색을 따로 둔다.
+     */
+    skeleton: '#E1E7EE',
   },
   dark: {
     text: '#EAEFF4',
@@ -39,6 +47,8 @@ export const Colors = {
     primaryStrong: '#E07A5C', // 어두운 면 위에서는 primary가 이미 5.7:1이라 따로 진하게 하지 않는다
     primaryText: '#101418',
     border: '#28303A',
+    /** 바탕(#101418)과 카드(#181D22) 양쪽에서 읽히는 한 단계 밝은 회색. */
+    skeleton: '#262E38',
   },
 } as const;
 
