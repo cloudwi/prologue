@@ -1,7 +1,7 @@
 # 데모 프로필 사진 프롬프트
 
-새 인물 여섯 명 × 세 장 = 열여덟 장. 기존 세 명의 교체분은 맨 아래에 따로 있다.
-규칙과 슬롯의 뜻은 [README](README.md)를 먼저 본다.
+새 인물 여섯 명 × 세 장 = 열여덟 장. 뒤이어 남성 셋(잔디냄새·나무결·완행열차)이 아홉 장 더 있고,
+기존 세 명의 교체분은 맨 아래에 따로 있다. 규칙과 슬롯의 뜻은 [README](README.md)를 먼저 본다.
 
 2026-09-09에 전수 조사하고 다시 썼다. 무엇이 왜 틀렸는지는 아래 "자연스러움을 깨는 일곱 가지"에
 남겼다 — 새 인물을 추가할 때 같은 함정을 다시 파지 않기 위해서다.
@@ -307,6 +307,125 @@ Use case: photorealistic-natural.
 Different clothes from the reference photo: a checked shirt under a dark jacket. The same Korean man standing just outside a small independent cinema at night, posters and a lit box office behind him on a Seoul side street, hands in his jacket pockets.
 Pose and gaze: framed from the knees up so he fills most of the frame. Standing still, both feet planted, head turned three-quarters back over his shoulder toward the doors, still thinking about the film.
 Camera: low, near waist height, close, street lights soft behind.
+```
+
+---
+
+## 남성 셋 더 — 잔디냄새 · 나무결 · 완행열차
+
+2026-09-10에 남성 데모를 여섯으로 채우려고 세 사람을 더 썼다(글은 [profiles.md](profiles.md)의
+"남성 셋"). 위의 **만드는 순서·공통 꼬리말·일곱 가지를 그대로 따른다** — 새로 파는 함정이
+아니라 이미 판 함정을 피하는 게 목적이다.
+
+### 1번(카드) 배분 — 새 셋
+
+| 인물 | 거리 | 시선 | 찍은 사람 | 카메라 높이 |
+| --- | --- | --- | --- | --- |
+| 잔디냄새 | 가슴 위, 서서 | 렌즈 | 팀 동료 | 눈높이 |
+| 나무결 | 허리 위, 작업대 앞 | 렌즈 | 공방 동료 | 눈높이보다 살짝 위 |
+| 완행열차 | 얼굴~가슴, 앉아서 | 렌즈 | 맞은편에 앉은 친구 | 눈높이보다 낮게 |
+
+세 사람 다 한 장은 눈높이보다 낮은 카메라를 쓰는데(3번 함정), 그게 몇 번째 장인지는 사람마다
+다르다 — 잔디냄새는 2번, 나무결은 3번, 완행열차는 1번이다. 손은 기본이 화면 밖이고, 프레임
+안에 남긴 손은 셋뿐이다(공 하나, 컵 하나, 가방끈 하나) — 전부 어깨에서 손까지 경로가 짧다.
+
+---
+
+## 잔디냄새 — `demo-grassscent-{1,2,3}.jpg`
+
+**인상**: Korean man, age 28, compact athletic build, short black hair damp at the hairline, thick straight eyebrows, tanned skin, clean-shaven.
+
+**옷·때**: ①수요일 밤 풋살장 — 남색 무지 유니폼 티셔츠 ②토요일 낮 동네 식당 — 흰 티셔츠 위에
+열어 놓은 데님 셔츠 ③평일 저녁 구장 앞 — 회색 트레이닝 후드 집업.
+
+### 1번 — 가슴 위 / 렌즈를 본다, 팀 동료가 찍음
+```text
+Use case: photorealistic-natural.
+A candid portrait of a Korean man, age 28 — compact athletic build, short black hair damp at the hairline, thick straight eyebrows, tanned skin, clean-shaven, a plain navy football shirt with no lettering. He stands on an empty artificial-turf futsal pitch at night, floodlights high behind him, the goal and the green fencing far back and out of focus. The pitch is empty; nobody else is on it.
+Pose and gaze: chest-up framing. Standing still, shoulders square and level, both arms hanging at his sides with the hands below the bottom edge. He looks straight into the lens, breathing out, a wide closed-mouth grin, face still flushed from playing.
+Camera: at his eye level, held by a teammate a couple of steps away. The floodlights rim his shoulders and one side of his face; the pitch behind him falls away dark.
+```
+
+### 2번 — 얼굴 중심 / 시선은 화면 밖
+```text
+Use case: photorealistic-natural.
+Different clothes from the reference photo: a white t-shirt under an open denim shirt. The same Korean man on a Saturday afternoon, sitting at a window table in a small old neighbourhood restaurant on another day, the table and everything on it below the bottom edge of the frame. Daylight through the window; the street outside is soft and has no people in it.
+Pose and gaze: head and shoulders, both hands below the bottom edge of the frame. He looks off to the side out of the window, mouth closed, eyebrows relaxed, in the middle of a thought.
+Camera: from across the table, below his eye level looking slightly up, so the ceiling and the top of the window show behind him.
+```
+
+### 3번 — 무릎 위 / 구장 앞
+```text
+Use case: photorealistic-natural.
+Different clothes from the reference photo: a grey zip-up training hoodie over shorts. The same Korean man stopped at the open gate of a fenced neighbourhood pitch on a weekday evening, a scuffed ball tucked under one arm against his ribs, that elbow bent and close to his body, the other arm hanging free. Green fencing and an empty pitch behind him, the floodlights just switched on against a sky that is still blue.
+Pose and gaze: framed from the knees up so he fills most of the frame. Both feet planted, weight on the back foot, upper body turned three-quarters away, his face in profile looking down the empty pitch, mouth closed.
+Camera: a little above his eye level, close, the fencing compressed and softly out of focus behind him.
+```
+
+---
+
+## 나무결 — `demo-woodgrain-{1,2,3}.jpg`
+
+**인상**: Korean man, age 33, tall and solidly built, black hair pushed back off the forehead, a broad jaw, clean-shaven, no glasses, faint lines at the eyes, tanned forearms.
+
+**옷·때**: ①토요일 낮 공방 — 소매를 팔꿈치까지 걷어올린 회색 워크 셔츠 ②일요일 아침 집 —
+남색 니트 ③늦은 오후 공방 문 앞 — 검정 티셔츠와 청바지.
+
+### 1번 — 허리 위 / 렌즈를 본다, 공방 동료가 찍음
+```text
+Use case: photorealistic-natural.
+A candid portrait of a Korean man, age 33 — tall and solidly built, black hair pushed back off his forehead, a broad jaw, clean-shaven, no glasses, tanned forearms. He stands at a workbench in a small woodworking shop on a Saturday, a grey work shirt with the sleeves rolled to the elbow, fine sawdust caught on his shoulders. Hand tools hang on a board behind him, softly out of focus. Nobody else in the shop.
+Pose and gaze: framed from the waist up. Standing still, squared to the camera, both arms hanging at his sides with the hands below the bottom edge. He looks straight into the lens, chin level, a small closed-mouth smile of someone just interrupted at work.
+Camera: slightly above his eye level, daylight from a high side window, dust visible in the beam.
+```
+
+### 2번 — 얼굴 중심 / 시선은 화면 밖
+```text
+Use case: photorealistic-natural.
+Different clothes from the reference photo: a navy knit jumper. The same Korean man at home on a Sunday morning, standing by a window holding a plain mug at chest height in one hand, that elbow bent and close to his body, exactly five fingers around the mug, one cuff at that wrist. His other arm hangs down outside the frame. A quiet living room behind him, out of focus.
+Pose and gaze: head and shoulders, the mug at the very bottom edge of the frame and well below his chin, nothing near his face. He looks out of the window away from the camera, eyes half-lowered, mouth closed, a slack unposed expression.
+Camera: from his side at his eye level, flat morning light across his face.
+```
+
+### 3번 — 무릎 위 / 공방 문 앞
+```text
+Use case: photorealistic-natural.
+Different clothes from the reference photo: a black t-shirt and jeans. The same Korean man standing in the open doorway of the workshop in the late afternoon, a finished small side table on the ground beside him, one hand laid flat on its top at hip height with that elbow bent. Low sun across the yard, a sawhorse and offcuts behind him, nobody else around.
+Pose and gaze: framed from the knees up so he fills most of the frame. Both feet planted, body turned three-quarters away, head down looking at the table, mouth closed.
+Camera: low, near hip height, looking slightly up at him, close.
+```
+
+---
+
+## 완행열차 — `demo-slowtrain-{1,2,3}.jpg`
+
+**인상**: Korean man, age 26, lean, straight black hair cut short and parted at the side with nothing falling over the forehead, slightly hollow cheeks, a small mole under one eye, clean-shaven, no glasses.
+
+**옷·때**: ①토요일 아침 기차 안 — 베이지색 코듀로이 셔츠 ②평일 밤 동네 카페 — 짙은 남색 니트
+③낯선 소도시의 낮 — 검정 바람막이와 작은 백팩.
+
+### 1번 — 얼굴~가슴 / 앉은 채 렌즈를 본다, 맞은편 친구가 찍음
+```text
+Use case: photorealistic-natural.
+A candid portrait of a Korean man, age 26 — lean, straight black hair cut short and parted at the side with nothing falling over his forehead, slightly hollow cheeks, a small mole under one eye, clean-shaven, a beige corduroy shirt. He sits by the window of a Korean intercity train on a Saturday morning, the carriage seats empty behind him, fields passing the window as a soft blur.
+Pose and gaze: head and upper chest, both hands below the bottom edge of the frame. He has turned from the window back to the person sitting opposite and looks into the lens, eyebrows slightly raised, a small closed-mouth smile.
+Camera: from the facing seat, a little below his eye level. Morning light from the window on one side of his face, the aisle dark behind him.
+```
+
+### 2번 — 얼굴 중심 / 시선은 화면 밖
+```text
+Use case: photorealistic-natural.
+Different clothes from the reference photo: a dark navy knit jumper. The same Korean man on a weekday night at the corner table of a small cafe, an open notebook and a pen on the table below the bottom edge of the frame. Warm light from a single ceiling lamp; the rest of the room dim and empty.
+Pose and gaze: head and shoulders, both hands below the bottom edge of the frame. He looks down at the notebook, eyes lowered, brow slightly drawn, mouth closed.
+Camera: from his side, slightly above his eye level, the room falling into soft darkness behind him.
+```
+
+### 3번 — 무릎 위 / 낯선 역
+```text
+Use case: photorealistic-natural.
+Different clothes from the reference photo: a black windbreaker over a t-shirt, a small backpack on one shoulder. The same Korean man standing still on the platform of a small country station in the early afternoon, one hand hooked over the backpack strap at his chest, that elbow bent and close to his body. A painted platform edge, a low canopy on iron posts, green hills beyond; the platform is empty.
+Pose and gaze: framed from the knees up so he fills most of the frame. Both feet planted, head turned three-quarters away, looking down the empty track, mouth closed.
+Camera: at his eye level, close, the platform compressed behind him.
 ```
 
 ---
