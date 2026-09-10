@@ -30,10 +30,42 @@ class PeerScoreTest {
     )
 
     @Test
-    fun `같은 시군구는 만점, 같은 시도는 부분 점수, 다른 시도는 0점`() {
+    fun `같은 시군구는 만점이고 아주 먼 다른 시도는 0점`() {
         assertEquals(1.0, PeerScore.regionScore("서울 성동구", "서울 성동구"))
-        assertEquals(0.6, PeerScore.regionScore("서울 성동구", "서울 마포구"))
         assertEquals(0.0, PeerScore.regionScore("서울 성동구", "부산 해운대구"))
+    }
+
+    @Test
+    fun `같은 시도 안에서도 가까울수록 높다`() {
+        // 예전에는 서울 안이면 어디든 똑같이 0.6이었다.
+        assertTrue(
+            PeerScore.regionScore("서울 강남구", "서울 서초구") >
+                PeerScore.regionScore("서울 강남구", "서울 도봉구"),
+        )
+    }
+
+    @Test
+    fun `시도가 달라도 가까우면 서울 반대편보다 높다`() {
+        // 이 줄이 이번 변경의 핵심이다 — 강남에서 분당은 20분, 도봉은 그보다 멀다.
+        // 예전에는 시도가 다르다는 이유로 성남시가 0점이었다.
+        val bundang = PeerScore.regionScore("서울 강남구", "경기 성남시")
+        val dobong = PeerScore.regionScore("서울 강남구", "서울 도봉구")
+
+        assertTrue(bundang > 0.7, "강남 ↔ 성남 = $bundang")
+        assertTrue(bundang > dobong, "강남 ↔ 성남($bundang)이 강남 ↔ 도봉($dobong)보다 낮다")
+    }
+
+    @Test
+    fun `같은 시도라도 멀면 바닥 점수까지 떨어진다`() {
+        // 연천과 평택은 둘 다 경기지만 두 시간 거리다 — 예전에는 0.6을 받았다.
+        assertEquals(0.4, PeerScore.regionScore("경기 연천군", "경기 평택시"))
+    }
+
+    @Test
+    fun `좌표를 모르는 지역은 옛 방식으로 폴백한다`() {
+        // 앱의 지역 목록이 앞서 나갔거나 옛 데이터가 남은 경우.
+        assertEquals(0.6, PeerScore.regionScore("서울 새로생긴구", "서울 강남구"))
+        assertEquals(0.0, PeerScore.regionScore("화성 세종기지", "서울 강남구"))
     }
 
     @Test

@@ -33,6 +33,15 @@ object PeerScore {
     /** 이 이상 나이가 벌어지면 나이 점수는 0. */
     private const val AGE_TOLERANCE = 10.0
 
+    /** 이만큼 떨어지면 지역 점수는 0. 왕복 두 시간쯤 되는 거리로 잡았다. */
+    private const val REGION_FULL_DISTANCE_KM = 60.0
+
+    /** 아무리 멀어도 같은 시도면 이만큼은 준다 — 행정구역도 생활권 신호이긴 하다. */
+    private const val SAME_PROVINCE_FLOOR = 0.4
+
+    /** 좌표를 모르는 지역끼리의 폴백. [RegionGeo]에 없는 문자열이 와도 옛 방식으로 동작한다. */
+    private const val UNKNOWN_SAME_PROVINCE = 0.6
+
     /** 이만큼 겹치면 관심사 점수 만점. */
     private const val KEYWORD_FULL_MATCH = 3.0
 
@@ -54,14 +63,30 @@ object PeerScore {
             FAIRNESS_WEIGHT * fairnessScore(exposureCount)
 
     /**
-     * 지역 근접도. 지역은 "서울 성동구"처럼 시도와 시군구가 한 문자열로 온다.
-     * 같은 동네면 만나기 쉽고, 같은 시도면 그럭저럭, 다르면 아예 점수를 주지 않는다.
+     * 지역 근접도 — 행정구역이 아니라 **거리**로 잰다.
+     *
+     * 시도 경계는 거리와 무관하다. 예전처럼 경계로만 재면 강남구와 성남시(차로 20분)가 0점인데
+     * 연천군과 평택시(두 시간)는 0.6점을 받았다. 같은 서울 안에서도 옆 구와 반대편 끝이 똑같았다.
+     * 그래서 [RegionGeo]의 시군구 대표 좌표로 실제 거리를 구해 [REGION_FULL_DISTANCE_KM]까지
+     * 선형으로 깎는다.
+     *
+     * 다만 거리만 보면 인구가 흩어진 도(道)의 회원이 지역 점수를 영영 못 받는다. 같은 시도끼리는
+     * [SAME_PROVINCE_FLOOR]를 바닥으로 깔아, 거리가 있어도 아주 버려지지는 않게 했다.
+     *
+     * 좌표를 모르는 문자열(앱의 지역 목록이 앞서 나갔거나 옛 데이터)은 예전 방식으로 폴백한다.
      */
-    internal fun regionScore(mine: String, theirs: String): Double = when {
-        mine.isBlank() || theirs.isBlank() -> 0.0
-        mine.trim() == theirs.trim() -> 1.0
-        province(mine) == province(theirs) -> 0.6
-        else -> 0.0
+    internal fun regionScore(mine: String, theirs: String): Double {
+        if (mine.isBlank() || theirs.isBlank()) return 0.0
+        val a = mine.trim()
+        val b = theirs.trim()
+        if (a == b) return 1.0
+
+        val sameProvince = province(a) == province(b)
+        val km = RegionGeo.distanceKm(a, b)
+            ?: return if (sameProvince) UNKNOWN_SAME_PROVINCE else 0.0
+
+        val byDistance = max(0.0, 1.0 - km / REGION_FULL_DISTANCE_KM)
+        return if (sameProvince) max(SAME_PROVINCE_FLOOR, byDistance) else byDistance
     }
 
     private fun province(region: String): String = region.trim().substringBefore(' ')
@@ -72,7 +97,12 @@ object PeerScore {
         return max(0.0, 1.0 - diff / AGE_TOLERANCE)
     }
 
-    /** 취미·관심사가 겹치는 정도. 한쪽이라도 비어 있으면 0 — 없는 걸 벌주지는 않고 가산점만 없앤다. */
+    /**
+     * 취미·관심사가 겹치는 정도. 한쪽이라도 비어 있으면 0 — 없는 걸 벌주지는 않고 가산점만 없앤다.
+     *
+     * 장점(`strengths`)은 **일부러 뺐다.** 온보딩은 셋을 한 화면에서 받지만, 장점은 자기 PR이라
+     * 다들 비슷한 말을 적어 두 사람을 가르지 못한다([TasteAffinity]가 인기 선택지를 깎는 것과 같은 이유).
+     */
     internal fun keywordScore(me: Member, peer: Member): Double {
         val mine = keywordsOf(me)
         val theirs = keywordsOf(peer)
