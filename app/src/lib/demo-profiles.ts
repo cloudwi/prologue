@@ -35,9 +35,9 @@ export const DEMO_PROFILES: DemoProfile[] = [
     region: '서울 마포구',
     bio: '새로운 동네를 천천히 걷고 작은 가게를 발견하는 걸 좋아해요. 평일에는 제품을 만들고, 주말에는 흙을 만지거나 전시를 봅니다. 서로의 하루를 다정하게 물어보는 관계를 만나고 싶어요.',
     photos: [
-      require('../../assets/images/demo-profiles/demo-afternoonwalk-1-v4.jpg'),
+      require('../../assets/images/demo-profiles/demo-afternoonwalk-1-v5.jpg'),
       require('../../assets/images/demo-profiles/demo-afternoonwalk-2-v4.jpg'),
-      require('../../assets/images/demo-profiles/demo-afternoonwalk-3-v4.jpg'),
+      require('../../assets/images/demo-profiles/demo-afternoonwalk-3-v5.jpg'),
     ],
     hobbies: ['도예', '동네 산책', '공연·전시'],
     interests: ['디자인', '커피'],
@@ -83,7 +83,7 @@ export const DEMO_PROFILES: DemoProfile[] = [
     photos: [
       require('../../assets/images/demo-profiles/demo-bookmark-1-v4.jpg'),
       require('../../assets/images/demo-profiles/demo-bookmark-2-v4.jpg'),
-      require('../../assets/images/demo-profiles/demo-bookmark-3-v4.jpg'),
+      require('../../assets/images/demo-profiles/demo-bookmark-3-v5.jpg'),
     ],
     hobbies: ['독서', '사진', '여행'],
     interests: ['문화예술', '글쓰기'],
