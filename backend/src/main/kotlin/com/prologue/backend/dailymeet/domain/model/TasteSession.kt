@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
-/** 사용자가 시작한 10장을 고정한다. 정오가 지나도 새 묶음을 시작하기 전까지 유효하다. */
+/** 사용자가 시작한 한 벌을 고정한다. 정오가 지나도 새 묶음을 시작하기 전까지 유효하다. */
 data class TasteSession(
     val id: UUID,
     val accountId: UUID,
@@ -19,13 +19,21 @@ data class TasteSession(
 
 data class TasteSessionCard(val cardId: Long, val option: TasteOption?)
 
-/** 문답의 새벽 5시 경계와 별개인 카드 전용 정오 경계. */
+/**
+ * 카드 한 벌의 하루 — 문답과 **같은** 경계를 쓴다([ServiceDay], 정오).
+ *
+ * 한때는 문답이 새벽 5시, 카드가 정오로 경계가 둘이었다. 지금은 하나다. 그래서 이 객체는
+ * 자기 달력을 갖지 않고 [ServiceDay]에 물어본다 — 두 벌의 날짜 계산이 남아 있으면
+ * 언젠가 한쪽만 고쳐지고, 그날 두 화면이 다른 날을 가리킨다.
+ */
 object TasteDay {
-    val ZONE: ZoneId = ZoneId.of("Asia/Seoul")
-    const val SIZE = 10
-    fun of(now: Instant): LocalDate {
-        val local = now.atZone(ZONE)
-        return if (local.hour < 12) local.toLocalDate().minusDays(1) else local.toLocalDate()
-    }
-    fun resetsAt(day: LocalDate): Instant = day.plusDays(1).atTime(12, 0).atZone(ZONE).toInstant()
+    val ZONE: ZoneId = ServiceDay.ZONE
+
+    /** 한 벌의 장수. 소개 한 명을 받는 데 드는 카드 수이기도 하다([TasteReward.EVERY]). */
+    const val SIZE = 5
+
+    fun of(now: Instant): LocalDate = ServiceDay.of(now.atZone(ZONE))
+
+    /** 이 벌이 새 벌로 갈리는 시각 — 다음 서비스 하루가 시작되는 순간. */
+    fun resetsAt(day: LocalDate): Instant = ServiceDay.startOf(day.plusDays(1))
 }

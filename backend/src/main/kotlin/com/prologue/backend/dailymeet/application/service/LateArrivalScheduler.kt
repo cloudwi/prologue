@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
-/** 정오에 기본 소개, 이후 매시간 후보 부족으로 미뤄진 소개를 재시도한다. */
+/** 정오에 새 질문의 도착을 알리고, 이후 매시간 후보 부족으로 미뤄진 소개를 재시도한다. */
 @Component
 class LateArrivalScheduler(
     private val peerMatchingService: PeerMatchingService,
@@ -19,27 +19,29 @@ class LateArrivalScheduler(
     private val notificationService: NotificationService,
     private val deviceTokenRepository: DeviceTokenRepository,
 ) {
-    /** 새 상대가 실제로 도착한 계정에만 알린다. */
-    @Scheduled(cron = "0 0 12 * * *", zone = KST_ID)
-    fun revealAndNotifyUnanswered() {
-        val questions = questionRepository.findAllOrdered()
-        if (questions.isEmpty()) return
-        val today = QuestionRotation.of(questions, ServiceDay.now())
-        val answered = answerRepository.findAllByQuestionId(today.id).map { it.accountId }.toSet()
-        var arrived = 0
+    /**
+     * 정오 — 하루가 갈리는 순간. 새 질문이 열렸다고 알린다.
+     *
+     * 이제 소개는 시계가 아니라 답변이 연다. 그래서 정오에 보낼 것은 도착이 아니라 초대다 —
+     * 오늘의 질문이 바뀌었고, 답을 남기면 사람이 온다는 말.
+     *
+     * 경계보다 1분 늦게 도는 이유가 있다. [ServiceDay]의 하루도 정오에 넘어가므로 정각에
+     * 돌면 스케줄러가 어제의 질문을 집을 수 있다. 1분이면 그 애매함이 사라진다.
+     */
+    @Scheduled(cron = "0 1 12 * * *", zone = KST_ID)
+    fun announceNewQuestion() {
+        if (questionRepository.findAllOrdered().isEmpty()) return
+        var invited = 0
         deviceTokenRepository.findAllAccountIds().distinct().forEach { accountId ->
             try {
-                if (peerMatchingService.fillLockedArrival(accountId)) {
-                    if (accountId in answered) notificationService.peerArrived(accountId)
-                    else notificationService.lockedPeerArrived(accountId)
-                    arrived++
-                }
+                notificationService.newQuestionArrived(accountId)
+                invited++
             } catch (e: RuntimeException) {
-                // 프로필이 없거나(온보딩 중단) 한 사람의 실패가 나머지의 도착을 막으면 안 된다
-                log.warn("정오 도착 채우기 실패 — account={}", accountId, e)
+                // 한 사람의 실패가 나머지의 알림을 막으면 안 된다
+                log.warn("새 질문 알림 실패 — account={}", accountId, e)
             }
         }
-        if (arrived > 0) log.info("정오에 {}명에게 오늘의 상대를 보냈다", arrived)
+        if (invited > 0) log.info("정오에 {}명에게 새 질문을 알렸다", invited)
     }
 
     /** 새 상대가 실제로 도착한 계정에만 알린다. */

@@ -4,6 +4,7 @@ import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.TasteCard
 import com.prologue.backend.dailymeet.domain.model.TasteChoice
 import com.prologue.backend.dailymeet.domain.model.TasteOption
+import com.prologue.backend.dailymeet.domain.model.TasteReward.EVERY
 import com.prologue.backend.dailymeet.domain.repository.TasteCardRepository
 import com.prologue.backend.dailymeet.domain.repository.TasteChoiceRepository
 import com.prologue.backend.dailymeet.domain.repository.TasteRewardRepository
@@ -126,14 +127,14 @@ class TasteCardServiceTest {
         every { cardRepository.findAllOrdered() } returns cards
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
-        every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(EVERY) { choice(it + 1L, TasteOption.A) }
 
-        every { rewardRepository.claimEarned(accountId, 10, any(), Int.MAX_VALUE) } returns true
+        every { rewardRepository.claimEarned(accountId, EVERY, any(), Int.MAX_VALUE) } returns true
 
         val progress = service.choose(accountId, 1L, TasteOption.A, null)
 
         assertTrue(progress.milestoneReached)
-        verify(exactly = 1) { rewardRepository.claimEarned(accountId, 10, any(), Int.MAX_VALUE) }
+        verify(exactly = 1) { rewardRepository.claimEarned(accountId, EVERY, any(), Int.MAX_VALUE) }
     }
 
     @Test
@@ -148,11 +149,11 @@ class TasteCardServiceTest {
     }
 
     @Test
-    fun `같은 날 스무 장이면 추가 두 명을 모두 자동 인정한다`() {
-        every { choiceRepository.findAllByAccountId(accountId) } returns List(20) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimEarned(accountId, 20, any(), Int.MAX_VALUE) } returnsMany listOf(true, true)
+    fun `같은 날 두 벌을 채우면 추가 두 명을 모두 자동 인정한다`() {
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(EVERY * 2) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimEarned(accountId, EVERY * 2, any(), Int.MAX_VALUE) } returnsMany listOf(true, true)
         assertTrue(service.accrueRewards(accountId))
-        verify(exactly = 2) { rewardRepository.claimEarned(accountId, 20, any(), Int.MAX_VALUE) }
+        verify(exactly = 2) { rewardRepository.claimEarned(accountId, EVERY * 2, any(), Int.MAX_VALUE) }
     }
 
     @Test
@@ -161,8 +162,8 @@ class TasteCardServiceTest {
         every { cardRepository.findAllOrdered() } returns cards
         every { choiceRepository.findByAccountIdAndCardId(accountId, 1L) } returns null
         every { choiceRepository.save(any()) } answers { firstArg() }
-        every { choiceRepository.findAllByAccountId(accountId) } returns List(10) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimEarned(accountId, 10, any(), Int.MAX_VALUE) } returns false
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(EVERY) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimEarned(accountId, EVERY, any(), Int.MAX_VALUE) } returns false
 
         assertFalse(service.choose(accountId, 1L, TasteOption.A, null).milestoneReached)
     }
@@ -199,13 +200,14 @@ class TasteCardServiceTest {
 
     @Test
     fun `초과 달성 보상과 다음 보상까지 남은 장수를 함께 보여준다`() {
-        every { choiceRepository.findAllByAccountId(accountId) } returns List(35) { choice(it + 1L, TasteOption.A) }
-        every { rewardRepository.claimedMilestones(accountId) } returns listOf(10)
+        // 세 벌을 채우고 두 장이 남은 상태에서 첫 벌만 이미 수령했다.
+        every { choiceRepository.findAllByAccountId(accountId) } returns List(EVERY * 3 + 2) { choice(it + 1L, TasteOption.A) }
+        every { rewardRepository.claimedMilestones(accountId) } returns listOf(EVERY)
         every { rewardRepository.pendingCount(accountId) } returns 1
         every { rewardRepository.claimedSince(accountId, any()) } returns 1
         val status = service.rewardStatus(accountId)
         assertEquals(2, status.unclaimed)
-        assertEquals(5, status.remaining)
+        assertEquals(EVERY - 2, status.remaining)
         assertEquals(1, status.pending)
         assertFalse(status.dailyLimitReached)
     }

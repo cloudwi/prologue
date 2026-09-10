@@ -1,6 +1,6 @@
 import { authedRequest } from './api';
 
-/** 정오마다 10개. 시작한 묶음은 새 묶음을 받을 때까지 이어서 답할 수 있다. */
+/** 정오마다 한 벌. 장수는 서버가 total로 알려준다. 시작한 묶음은 새 묶음을 받을 때까지 이어서 답할 수 있다. */
 export type TasteCard = {
   id: number;
   prompt: string;

@@ -110,7 +110,7 @@ export type TodayPeers = {
   peers: Peer[];
 };
 
-/** 오늘의 상대 목록 (정오 기본 한 명과 카드 답변에 따른 추가 소개, GET /daily/today/peers). */
+/** 오늘의 상대 목록 (문답에 답하면 한 명, 카드 한 벌에 한 명, GET /daily/today/peers). */
 export async function getPeers(): Promise<TodayPeers> {
   return authedRequest<TodayPeers>('GET', '/daily/today/peers');
 }

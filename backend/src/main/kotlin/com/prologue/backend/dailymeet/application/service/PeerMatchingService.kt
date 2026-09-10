@@ -94,11 +94,9 @@ class PeerMatchingService(
      * 그 사이 상대가 새 답을 남겼을 때만 쓰인다([PeerEligibility.canReintroduce]).
      */
     @param:Value("\${daily.reintroduce-after-days:14}") private val reintroduceAfterDays: Long = 14,
-    /** 기본 소개 시각(KST). 답변 작성은 소개 시각을 앞당기지 않는다. */
-    @param:Value("\${daily.locked-reveal-hour:12}") private val lockedRevealHour: Int = 12,
     private val growthEvents: GrowthEvents = GrowthEvents.NONE,
 ) {
-    /** 정오에 기본 한 명, 카드 10개마다 추가 한 명. 답변 작성 여부는 글 열람만 결정한다. */
+    /** 문답에 답하면 한 명, 카드 한 벌을 채우면 한 명. 두 몫은 서로를 기다리지 않는다. */
     @Transactional
     fun todayPeers(accountId: UUID): TodayPeersView {
         val view = loadTodayPeers(accountId)
@@ -116,7 +114,7 @@ class PeerMatchingService(
         // 잉크로 산 열람권도 답을 쓴 것과 같은 자격이다 — 규칙이 아니라 값의 문제다.
         val canRead = answered || question.id in answerAccessService.unlockedQuestions(accountId)
 
-        val revealed = fillRevealedWithRewards(accountId, question, questions)
+        val revealed = fillRevealedWithRewards(accountId, question, questions, answered)
         if (revealed.isNotEmpty()) return TodayPeersView(
             open = true, answerUnlocked = canRead, carriedOver = false,
             peers = revealed.map {
@@ -130,15 +128,27 @@ class PeerMatchingService(
         )
     }
 
-    /** 후보가 생긴 만큼 자동 소개하고, 실제 추가 소개만 내부 달성 기록에 반영한다. */
-    private fun fillRevealedWithRewards(accountId: UUID, question: Question, questions: List<Question>): List<Answer> {
+    /**
+     * 오늘 받을 몫만큼 채우고, 실제로 늘어난 자리 중 카드 몫만 달성 기록에 반영한다.
+     *
+     * 몫은 둘이고 서로 독립이다 — 문답에 답했으면 [revealCount]명, 카드 한 벌마다 한 명.
+     * 카드로 먼저 한 명을 만났어도 답을 쓰면 한 명이 더 오고, 답을 먼저 썼어도 카드를
+     * 채우면 또 한 명이 온다. 답을 쓰지 않았다면 문답 몫은 0이다 — 시계가 아니라 쓴 글이
+     * 자리를 연다.
+     */
+    private fun fillRevealedWithRewards(
+        accountId: UUID,
+        question: Question,
+        questions: List<Question>,
+        answered: Boolean,
+    ): List<Answer> {
         tasteRewardRepository.lockAccount(accountId)
         tasteCardService.accrueRewards(accountId)
         val pending = tasteRewardRepository.pendingCount(accountId)
         val grantedToday = tasteRewardRepository.grantedSince(accountId, ServiceDay.startOfToday())
-        val base = if (afterLockedRevealTime()) revealCount else 0
+        val base = if (answered) revealCount else 0
         val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
-        // 오전에 카드로 1명을 만났어도 정오의 기본 1명은 별도로 남아 있다.
+        // 카드로 먼저 한 명을 만났어도 문답 몫 한 명은 별도로 남아 있다.
         val baseAlready = (before - grantedToday).coerceIn(0, revealCount)
         val baseNeeded = (base - baseAlready).coerceAtLeast(0)
         val revealed = fillRevealed(accountId, question, questions, target = maxOf(before, base + grantedToday) + pending)
@@ -147,26 +157,13 @@ class PeerMatchingService(
         return revealed
     }
 
-    /** 카드 답변 직후 추가 소개를 시도한다. 정오 전에는 기본 몫을 미리 지급하지 않는다. */
+    /** 카드 한 벌을 채운 직후 그 몫의 소개를 시도한다. 문답 몫은 답을 썼을 때만 함께 온다. */
     @Transactional
-    fun consumeExtraReveals(accountId: UUID): Boolean {
-        tasteRewardRepository.lockAccount(accountId)
-        val questions = questionRepository.findAllOrdered()
-        val question = QuestionRotation.of(questions, ServiceDay.now())
-        val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
-        return fillRevealedWithRewards(accountId, question, questions).size > before
-    }
+    fun consumeExtraReveals(accountId: UUID): Boolean = fillNow(accountId)
 
-    /**
-     * 답하지 않은 사람의 자리가 열리는 시각을 지났는가(KST).
-     *
-     * 하루의 경계는 새벽 5시라([ServiceDay]) 자정~5시는 아직 어제다. 그 시간대에는 어제 몫이
-     * 이미 도착해 있으므로 시계를 다시 묻지 않는다 — 여기서는 벽시계의 시(hour)만 본다.
-     */
-    private fun afterLockedRevealTime(): Boolean =
-        lockedRevealHour < 24 && !java.time.ZonedDateTime.now(ServiceDay.ZONE).toInstant().isBefore(
-            ServiceDay.now().atTime(lockedRevealHour, 0).atZone(ServiceDay.ZONE).toInstant(),
-        )
+    /** 오늘의 문답에 답을 남겼는가 — 문답 몫 한 명의 유일한 조건. */
+    private fun hasAnswered(accountId: UUID, question: Question): Boolean =
+        answerRepository.findByAccountIdAndQuestionId(accountId, question.id) != null
 
     /**
      * 답을 남기기 전에 오늘의 자리를 지키는 사람 — 지난번에 만난 상대.
@@ -302,26 +299,22 @@ class PeerMatchingService(
     private fun fallbackDays(): List<Int> =
         candidateFallbackDays.split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it > candidateDays }.sorted()
 
-    /** 정오 이후 후보가 생기면 기본 및 카드 추가 소개의 빈자리를 자동으로 채운다. */
+    /**
+     * 후보가 생기면 오늘 받을 몫의 빈자리를 채운다. 실제로 새 상대가 도착했으면 true.
+     *
+     * 사람이 적어 문답에 답하고도 그 자리에서 만나지 못하는 날이 있다. 스케줄러가 시간을
+     * 두고 다시 부르는 이유가 그것이다 — 자격을 갖췄는데 후보가 없었을 뿐인 사람에게.
+     */
     @Transactional
-    fun fillLateArrival(accountId: UUID): Boolean {
-        tasteRewardRepository.lockAccount(accountId)
-        if (!afterLockedRevealTime()) return false
-        val questions = questionRepository.findAllOrdered()
-        val question = QuestionRotation.of(questions, ServiceDay.now())
-        val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
-        return fillRevealedWithRewards(accountId, question, questions).size > before
-    }
+    fun fillLateArrival(accountId: UUID): Boolean = fillNow(accountId)
 
-    /** 답변 작성 여부와 무관하게 정오의 기본 소개를 채운다. */
-    @Transactional
-    fun fillLockedArrival(accountId: UUID): Boolean {
+    /** 지금 시점의 몫대로 채운다. 답변 여부는 그때그때 원장에서 읽는다. */
+    private fun fillNow(accountId: UUID): Boolean {
         tasteRewardRepository.lockAccount(accountId)
-        if (!afterLockedRevealTime()) return false
         val questions = questionRepository.findAllOrdered()
         val question = QuestionRotation.of(questions, ServiceDay.now())
         val before = dailyRevealRepository.findAllByViewerAndQuestion(accountId, question.id).size
-        return fillRevealedWithRewards(accountId, question, questions).size > before
+        return fillRevealedWithRewards(accountId, question, questions, hasAnswered(accountId, question)).size > before
     }
 
     /** 자격을 통과한 후보 하나 — 프로필과 오늘의 노출 횟수를 함께 들고 다닌다. */

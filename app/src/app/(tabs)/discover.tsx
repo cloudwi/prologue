@@ -496,7 +496,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
               <Pressable
                 onPress={() => router.push('/taste-cards')}
                 accessibilityRole="button"
-                accessibilityLabel={tasteDeck.cards.length === 0 ? '오늘의 취향 10개 답변 완료, 답변 다시 보기' : '취향 카드 답하기'}
+                accessibilityLabel={tasteDeck.cards.length === 0 ? `오늘의 취향 ${tasteDeck.total}장 답변 완료, 답변 다시 보기` : '취향 카드 답하기'}
                 style={({ pressed }) => [
                   styles.tasteCard,
                   {
@@ -517,8 +517,8 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
                   <Text style={[styles.tasteTitle, { color: c.text }]}>오늘의 취향</Text>
                   <Text style={[styles.tasteSub, { color: c.textSecondary }]}>
                     {tasteDeck.cards.length === 0
-                      ? '10개 답변 완료 · 누르면 다시 볼 수 있어요'
-                      : '카드 10개에 답하면 한 명 더 소개해 드려요'}
+                      ? `${tasteDeck.total}장 답변 완료 · 누르면 다시 볼 수 있어요`
+                      : `카드 ${tasteDeck.total}장에 답하면 한 명 더 소개해 드려요`}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={c.textSecondary} />
@@ -570,7 +570,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
                 // 추천·통계·편지에는 들어가지 않고, 실제 소개가 도착하는 즉시 이 자리를 내준다.
                 <DemoProfileCarousel profiles={demoProfiles} c={c} />
               ) : !peersData || !peersData.answerUnlocked ? (
-                <EmptyPeer c={c} title="매일 정오에 한 사람을 소개해 드려요" body="카드 10개에 답하면 한 명을 더 만날 수 있어요." action="취향 카드 답하기" onAction={() => router.push('/taste-cards')} />
+                <EmptyPeer c={c} title="답을 남기면 한 사람을 소개해 드려요" body={`취향 카드 ${tasteDeck?.total ?? 5}장에 답해도 한 명을 더 만날 수 있어요.`} action="취향 카드 답하기" onAction={() => router.push('/taste-cards')} />
               ) : (
                 <EmptyPeer c={c} title="오늘은 아직 인연이 닿지 않았어요" body="답을 남긴 분이 생기면 바로 소개해 드릴게요." />
               )}

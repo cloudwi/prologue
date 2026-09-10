@@ -70,7 +70,7 @@ it('소개할 후보가 없으면 자동 소개 안내만 보이고 수령 버�
   await render(<TasteCardsScreen />);
   await screen.findByText('카드를 다 넘겼어요');
   expect(screen.queryByText('추가 소개')).toBeNull();
-  expect(screen.getByLabelText('매일 정오에 새 카드 10개')).toBeTruthy();
+  expect(screen.getByLabelText('매일 정오에 새 카드 10장')).toBeTruthy();
   expect(screen.queryByText(/소개권/)).toBeNull();
   expect(screen.queryByText(/보유/)).toBeNull();
   await fireEvent.press(screen.getByText('답변 다시보기'));
