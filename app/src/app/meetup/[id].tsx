@@ -170,7 +170,7 @@ export default function MeetupDetailScreen() {
       c={c}
     >
       {loading ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           <Skeleton c={c} height={200} radius={Radius.lg} />
           <SkeletonTextCard c={c} bodyLines={3} />
         </SkeletonList>

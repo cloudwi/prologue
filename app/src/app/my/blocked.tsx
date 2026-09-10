@@ -85,7 +85,7 @@ export default function BlockedScreen() {
   return (
     <SubScreen title="지인 차단" c={c}>
       {blocks == null ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           <SkeletonRow c={c} trailing />
           <SkeletonRow c={c} trailing />
           <SkeletonRow c={c} trailing />

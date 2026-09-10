@@ -100,7 +100,7 @@ export default function LettersScreen() {
   if (loading) {
     return (
       <SubScreen title="프로필 문답" c={c}>
-        <SkeletonList c={c}>
+        <SkeletonList>
           <SkeletonTextCard c={c} bodyLines={3} />
           <SkeletonTextCard c={c} bodyLines={2} />
         </SkeletonList>

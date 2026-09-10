@@ -28,7 +28,7 @@ import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { SignupGate } from '@/components/signup-gate';
 import { ScreenLoadError } from '@/components/screen-load-error';
 import { useSession } from '@/lib/session';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, SkeletonScreen } from '@/components/skeleton';
 
 /**
  * MY 허브 — 조회 전용.
@@ -41,6 +41,21 @@ import { Skeleton } from '@/components/skeleton';
  * 소개팅이 꺼진 회원은 여기 들어와야 한다. 프로필도 모임 이력도 이 탭에 있고,
  * 무엇보다 소개팅을 켜는 문이 여기 있기 때문이다(아래 '매칭' 구획).
  */
+/**
+ * 히어로 사진 자리의 비율 — [PhotoPager]의 기본값과 같은 수여야 한다.
+ * 갈라지면 스켈레톤이 예고한 높이와 사진이 차지하는 높이가 달라지고, 그 차이만큼 화면이 튄다.
+ */
+const HERO_RATIO = 4 / 5;
+
+/**
+ * 지난번에 이 계정에 사진이 있었는가 — 다음 로딩의 카드 높이를 잡는 단서.
+ *
+ * 히어로는 사진이 있으면 500px이 넘고 없으면 90px 남짓이라, 하나로 대표할 수가 없다. 처음
+ * 켠 사람에게는 알 길이 없으니 짧은 쪽으로 본다 — 짧게 잡았다 늘어나는 편이 길게 잡았다
+ * 줄어드는 것보다 눈에 덜 띈다. 탭을 다시 열 때부터는 맞는 높이로 선다.
+ */
+let lastHadPhoto = false;
+
 export default function MyScreen() {
   const session = useSession();
 
@@ -146,23 +161,53 @@ function MyHub() {
     return <ScreenLoadError title="내 정보를 불러오지 못했어요" onRetry={refresh} retrying={meQuery.isFetching} />;
   }
 
+  const hadPhoto = lastHadPhoto;
+
   if (meQuery.isPending && !meQuery.data) {
-    // 생애 첫 로딩 — 프로필 카드와 메뉴 줄들이 들어올 자리.
+    /*
+     * 생애 첫 로딩 — 프로필 카드와 메뉴 줄들이 들어올 자리.
+     *
+     * 히어로는 실제 카드(styles.hero)를 그대로 쓴다. 예전에는 높이 168짜리 막대를 바탕 위에
+     * 맨몸으로 뒀는데, 실제 카드는 좌우 20 안쪽에 있고 사진이 있으면 500px이 넘는다. 로딩이
+     * 끝나면 블록이 좌우로 좁아지면서 아래로 350px 밀렸다 — 스켈레톤이 자리를 예고한 게
+     * 아니라 화면을 흔든 셈이다.
+     *
+     * 사진 유무로 높이가 87과 525로 갈리므로, 마지막으로 본 값을 단서로 쓴다. 처음 온 사람은
+     * 사진이 없는 쪽(짧은 카드)으로 본다 — 짧게 잡았다 늘어나는 편이 길게 잡았다 줄어드는
+     * 것보다 눈에 덜 띈다.
+     *
+     * 메뉴도 바탕 위 맨 조각이 아니라 실제와 같은 흰 카드 안에 넣는다. 채워질 때 바뀌는 것이
+     * 글자뿐이어야 조용하다.
+     */
     return (
       <View style={[styles.root, { backgroundColor: c.background }]}>
         <SafeAreaView style={styles.flex} edges={['top']}>
-          <View style={styles.content}>
-            <Skeleton c={c} height={168} radius={Radius.lg} />
-            {/* 메뉴 줄 — 왼쪽 라벨과 오른쪽 값이 마주 본다. 막대 하나로는 그 결이 안 산다. */}
-            <View style={styles.skeletonMenu}>
-              {[0, 1, 2, 3].map((i) => (
-                <View key={i} style={styles.skeletonMenuRow}>
-                  <Skeleton c={c} width={i % 2 === 0 ? 84 : 68} height={15} />
-                  <Skeleton c={c} width={i % 2 === 0 ? 52 : 40} height={13} />
+          <SkeletonScreen style={styles.content}>
+            <View style={[styles.hero, { backgroundColor: c.backgroundElement }]}>
+              {hadPhoto && <Skeleton c={c} aspectRatio={HERO_RATIO} radius={0} />}
+              <View style={styles.heroText}>
+                {!hadPhoto && <Skeleton c={c} width={52} height={52} radius={Radius.sm} />}
+                <View style={styles.flex}>
+                  <Skeleton c={c} width={112} height={24} />
+                  <Skeleton c={c} width={168} height={14} style={styles.skeletonHeroMeta} />
                 </View>
-              ))}
+              </View>
             </View>
-          </View>
+            {/* 섹션 머리글 + 흰 카드 안의 줄들 — 실제 Section/Row와 같은 결. */}
+            {[3, 4].map((rows, si) => (
+              <View key={si} style={styles.section}>
+                <Skeleton c={c} width={si === 0 ? 44 : 32} height={13} style={styles.skeletonSectionHead} />
+                <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
+                  {Array.from({ length: rows }, (_, i) => (
+                    <View key={i} style={styles.skeletonRowInner}>
+                      <Skeleton c={c} width={20} height={20} radius={Radius.sm} />
+                      <Skeleton c={c} width={i % 2 === 0 ? 96 : 74} height={16} />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </SkeletonScreen>
         </SafeAreaView>
       </View>
     );
@@ -181,6 +226,8 @@ function MyHub() {
   // 완성도는 목록과 같은 표에서 나온다 — 둘이 따로 세면 "100%인데 할 일이 남았다"가 된다.
   const completion = profile ? completionRate(profileChecklist(profile)) : 0;
   const hasPhoto = photos.length > 0;
+  // 다음 로딩이 카드 높이를 맞출 수 있게 남겨둔다 — 사진 유무로 87과 525로 갈리는 자리다.
+  lastHadPhoto = hasPhoto;
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
@@ -456,8 +503,10 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  skeletonMenuRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 17 },
-  skeletonMenu: { gap: 10, marginTop: 22, marginHorizontal: 20 },
+  // 실제 rowInner(paddingVertical 18, gap 12)와 같은 결. 아이콘 자리까지 둔다.
+  skeletonRowInner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 18, paddingHorizontal: 16 },
+  skeletonSectionHead: { marginBottom: 10, marginLeft: 4 },
+  skeletonHeroMeta: { marginTop: 10 },
   content: { paddingBottom: 40 }, // 실제 값은 렌더 시 탭바·세이프에어리어를 더해 덮어쓴다
 
   hero: {

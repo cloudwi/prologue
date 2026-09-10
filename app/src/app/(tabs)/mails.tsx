@@ -323,7 +323,7 @@ function MailsInbox() {
             {/* 봉투가 들어올 자리 — 면 색까지 봉투의 것이라야 채워질 때 배경이 바뀌지 않는다. */}
             <View style={styles.skeletonList}>
               {[0, 1, 2].map((i) => (
-                <SkeletonCard key={i} c={c} background={c.primary + '14'}>
+                <SkeletonCard key={i} background={c.primary + '14'}>
                   <View style={styles.skeletonEnvelope}>
                     <Skeleton c={c} width={44} height={55} radius={Radius.sm} />
                     <View style={styles.flex}>

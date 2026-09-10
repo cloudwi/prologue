@@ -36,7 +36,7 @@ export default function MyTastesScreen() {
   return (
     <SubScreen title="내가 고른 취향" c={c} onSave={() => router.push('/taste-cards')} saveLabel="더 넘기기">
       {loading ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           <Skeleton c={c} width={78} height={13} />
           <SkeletonTextCard c={c} bodyLines={2} />
           <SkeletonTextCard c={c} bodyLines={2} />

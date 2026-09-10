@@ -45,7 +45,7 @@ export default function MyAnswersScreen() {
   return (
     <SubScreen title="내가 남긴 답" c={c}>
       {loading ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           <Skeleton c={c} width={78} height={13} />
           <SkeletonTextCard c={c} bodyLines={3} />
           <SkeletonTextCard c={c} bodyLines={2} />

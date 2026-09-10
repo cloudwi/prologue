@@ -223,7 +223,7 @@ export default function MeetupsScreen() {
             {/* 모임 카드 — 사진이 위를 꽉 채우고 그 아래에 제목·한 줄 정보·칩이 온다. */}
             <View style={styles.skeletonList}>
               {[0, 1].map((i) => (
-                <SkeletonCard key={i} c={c} background={c.backgroundElement} clip>
+                <SkeletonCard key={i} background={c.backgroundElement} clip>
                   <Skeleton c={c} height={150} radius={0} />
                   <View style={styles.skeletonCardBody}>
                     <Skeleton c={c} width="66%" height={17} />

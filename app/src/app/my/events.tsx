@@ -61,7 +61,7 @@ export default function EventsScreen() {
   return (
     <SubScreen title="이벤트" c={c}>
       {loading ? (
-        <SkeletonList c={c}>
+        <SkeletonList>
           <SkeletonRow c={c} />
           <SkeletonRow c={c} />
         </SkeletonList>
