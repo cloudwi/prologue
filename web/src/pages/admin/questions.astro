@@ -4,12 +4,17 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
 <AdminLayout title="질문 관리">
   <div class="admin-field" style="margin: 0 0 12px;">
-    <input id="new-question" type="text" maxlength="500" placeholder="새 질문 (예: 요즘 가장 마음 쓰는 일은?)" />
+    <input id="new-question" type="text" maxlength="500" placeholder="새 질문 (예: 관계에서 끝까지 지키고 싶은 한 가지는 무엇인가요?)" />
     <button type="button" class="admin-btn" id="add-question">추가</button>
   </div>
   <p class="admin-desc" style="margin: 0 0 12px;">
     질문은 id 순서로 날짜에 따라 순환해요. 질문을 추가하면 주기가 바뀌어 오늘의 질문이 달라질 수 있어요. 삭제는 없고 문구 수정만 돼요(답변들이 질문을 참조해요).
   </p>
+  <div class="admin-field" style="margin: 0 0 8px;">
+    <input id="question-filter" type="search" placeholder="질문 찾기 (문구 또는 번호)" autocomplete="off" />
+    <button type="button" class="admin-btn ghost" id="goto-today">오늘의 질문</button>
+  </div>
+  <p class="admin-desc" id="question-count" style="margin: 0 0 12px;"></p>
   <div id="question-list" class="admin-card admin-list"></div>
 
   <script is:inline>
@@ -20,7 +25,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const done = window.admin.loading(listEl, {});
       try {
         const data = await api('/admin/questions');
-        render(data.questions);
+        window.__questions = data.questions;
+        applyFilter();
       } catch (e) {
         if (e.auth) return showLogin('어드민 권한이 있는 계정으로 로그인해 주세요.');
         window.admin.error(listEl, window.pageLoad);
@@ -33,9 +39,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     function render(items) {
       const { $ } = window.admin;
       const listEl = $('question-list');
+      const all = window.__questions || items;
+      $('question-count').textContent =
+        items.length === all.length
+          ? '질문 ' + all.length + '개'
+          : '질문 ' + all.length + '개 중 ' + items.length + '개';
       listEl.textContent = '';
       if (!items.length) {
-        window.admin.empty(listEl, '등록된 질문이 없어요.');
+        window.admin.empty(listEl, '찾는 질문이 없어요.');
         return;
       }
       for (const q of items) {
@@ -80,6 +91,24 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         btn.disabled = false;
       }
     }
+
+    // 풀이 1,000개라 전부 그려두고 화면에서만 걸러낸다 — 어드민은 문구 수정이 일이라
+    // 서버 검색까지 둘 만큼 무겁지 않다.
+    function applyFilter() {
+      const term = document.getElementById('question-filter').value.trim().toLowerCase();
+      const all = window.__questions || [];
+      if (!term) return render(all);
+      render(all.filter((q) => String(q.id) === term || q.content.toLowerCase().includes(term)));
+    }
+
+    document.getElementById('question-filter').addEventListener('input', applyFilter);
+
+    document.getElementById('goto-today').addEventListener('click', () => {
+      const today = (window.__questions || []).find((q) => q.isToday);
+      if (!today) return;
+      document.getElementById('question-filter').value = String(today.id);
+      applyFilter();
+    });
 
     document.getElementById('add-question').addEventListener('click', async () => {
       const { $, api, showLogin } = window.admin;
