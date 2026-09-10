@@ -11,7 +11,7 @@ import { BottomTabInset, Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useRefreshOnFocus, useSessionGuard } from '@/lib/query';
 import { useSession } from '@/lib/session';
-import { Skeleton, SkeletonCard } from '@/components/skeleton';
+import { Skeleton, SkeletonCard, SkeletonScreen } from '@/components/skeleton';
 import { ScreenLoadError } from '@/components/screen-load-error';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
@@ -212,19 +212,33 @@ export default function MeetupsScreen() {
       <SafeAreaView style={styles.flex} edges={['top']}>
         {boardQuery.isPending && !boardQuery.data ? (
           /*
-           * 생애 첫 로딩 — 검색줄과 카드 두 장이 들어올 자리만 비워 둔다.
+           * 생애 첫 로딩 — 검색줄·필터 칩·카드 두 장이 들어올 자리를 비워 둔다.
            * 제목과 부제는 서버를 기다리지 않는다. 기다림은 모르는 것에만 걸어야 한다.
+           *
+           * 커버 높이를 150으로 못박아 뒀던 것을 실제와 같은 16:9로 바꿨다. 고정 픽셀은
+           * 기기 폭이 바뀔 때마다 어긋나고, 390 폭에서는 실제가 197이라 카드마다 47px씩
+           * 밀렸다. 필터 칩 줄도 실제엔 항상 있는데 빠져 있어서 채워질 때 위에서 밀고 들어왔다.
            */
-          <View style={styles.content}>
+          <SkeletonScreen style={styles.content}>
             <View style={styles.header}>
               <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>모임</Text>
             </View>
-            <Skeleton c={c} height={46} radius={Radius.md} style={styles.skeletonSearch} />
+            <View style={styles.filterArea}>
+              <View style={styles.skeletonSearchRow}>
+                <Skeleton c={c} height={42} radius={Radius.pill} style={styles.flex} />
+                <Skeleton c={c} width={42} height={42} radius={Radius.pill} />
+              </View>
+              <View style={styles.filterChips}>
+                {[58, 82, 66].map((w) => (
+                  <Skeleton key={w} c={c} width={w} height={32} radius={Radius.pill} />
+                ))}
+              </View>
+            </View>
             {/* 모임 카드 — 사진이 위를 꽉 채우고 그 아래에 제목·한 줄 정보·칩이 온다. */}
             <View style={styles.skeletonList}>
               {[0, 1].map((i) => (
                 <SkeletonCard key={i} background={c.backgroundElement} clip>
-                  <Skeleton c={c} height={150} radius={0} />
+                  <Skeleton c={c} aspectRatio={MEETUP_CARD_COVER_RATIO} radius={0} />
                   <View style={styles.skeletonCardBody}>
                     <Skeleton c={c} width="66%" height={17} />
                     <Skeleton c={c} width="86%" height={13} style={styles.skeletonCardMeta} />
@@ -236,7 +250,7 @@ export default function MeetupsScreen() {
                 </SkeletonCard>
               ))}
             </View>
-          </View>
+          </SkeletonScreen>
         ) : (
           <ScrollView
             contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}
@@ -621,6 +635,9 @@ export default function MeetupsScreen() {
   );
 }
 
+/** 목록 카드 커버의 비율 — 카드와 그 자리 표시가 같은 수를 본다. */
+const MEETUP_CARD_COVER_RATIO = 16 / 9;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
@@ -636,7 +653,8 @@ const styles = StyleSheet.create({
 
   card: { borderRadius: Radius.lg, padding: 18, marginBottom: 12 },
   cardClip: { padding: 0, overflow: 'hidden' },
-  cardCover: { width: '100%', aspectRatio: 16 / 9 },
+  cardCover: { width: '100%', aspectRatio: MEETUP_CARD_COVER_RATIO },
+  skeletonSearchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardBody: { padding: 18 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   cardTitle: { ...Type.title, flexShrink: 1 },

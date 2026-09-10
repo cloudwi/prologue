@@ -3,7 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { SkeletonList, SkeletonRow } from '@/components/skeleton';
+import { Skeleton, SkeletonScreen } from '@/components/skeleton';
 import { PlaceholderInput } from '@/components/placeholder-input';
 import { SubScreen } from '@/components/sub-screen';
 import { Radius } from '@/constants/theme';
@@ -85,11 +85,29 @@ export default function BlockedScreen() {
   return (
     <SubScreen title="지인 차단" c={c}>
       {blocks == null ? (
-        <SkeletonList>
-          <SkeletonRow c={c} trailing />
-          <SkeletonRow c={c} trailing />
-          <SkeletonRow c={c} trailing />
-        </SkeletonList>
+        /*
+         * 이 화면의 위쪽은 목록이 아니다 — 안내문, 스위치가 든 카드, 전화번호 입력줄이 먼저 온다.
+         * 목록 행 셋을 깔아두면 로딩이 끝나는 순간 그 전부가 위에서 밀고 들어온다.
+         *
+         * 조건이 `blocks == null`이라 조회에 실패해도 이 자리가 그대로 남는다. 그때는 회색 조각이
+         * 영원히 숨쉬는 화면이 되므로, 실패를 따로 알리는 일은 별도 과제로 남겨둔다.
+         */
+        <SkeletonScreen style={styles.content}>
+          <Skeleton c={c} width="100%" height={14} />
+          <Skeleton c={c} width="72%" height={14} style={styles.skeletonDescLine} />
+          <Skeleton c={c} width={72} height={13} style={styles.skeletonSectionTitle} />
+          <View style={[styles.card, { backgroundColor: c.backgroundElement }]}>
+            <View style={styles.switchRow}>
+              <View style={styles.flex}>
+                <Skeleton c={c} width="46%" height={15} />
+                <Skeleton c={c} width="86%" height={12} style={styles.skeletonSwitchHint} />
+              </View>
+              <Skeleton c={c} width={51} height={31} radius={Radius.pill} />
+            </View>
+          </View>
+          <Skeleton c={c} width={64} height={13} style={styles.skeletonSectionTitle} />
+          <Skeleton c={c} height={50} radius={Radius.md} />
+        </SkeletonScreen>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={[styles.desc, { color: c.textSecondary }]}>
@@ -185,6 +203,9 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 13, lineHeight: 19, marginTop: 4 },
   addRow: { flexDirection: 'row', gap: 10 },
   input: { flex: 1, height: 50, borderRadius: Radius.md, paddingHorizontal: 14, fontSize: 16 },
+  skeletonDescLine: { marginTop: 8, marginBottom: 24 },
+  skeletonSectionTitle: { marginBottom: 8 },
+  skeletonSwitchHint: { marginTop: 8 },
   addBtn: { height: 50, paddingHorizontal: 20, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   addBtnText: { fontSize: 15.5, fontWeight: '700' },
   hint: { fontSize: 12.5, marginTop: 8, marginBottom: 16 },

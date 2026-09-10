@@ -3,10 +3,11 @@ import { Image } from 'expo-image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottomTabInset, Radius, Type } from '@/constants/theme';
+import { BottomTabInset, Radius, Type, type ThemeColors } from '@/constants/theme';
+import { Skeleton, SkeletonLines, SkeletonScreen } from '@/components/skeleton';
 import { useTheme } from '@/hooks/use-theme';
 import { deleteFeedPost, getFeed, setFeedHeart, unlockFeedProfile, type FeedPost, type FeedSort } from '@/lib/feed';
 import { haptics } from '@/lib/haptics';
@@ -98,7 +99,7 @@ function FeedBoard() {
           {(['latest', 'hearts'] as const).map((value) => <Pressable key={value} onPress={() => { if (value !== sort) { setSort(value); track('feed_sort_changed', { sort: value }); } }} style={[styles.sortButton, sort === value && { backgroundColor: c.backgroundElement }]}><Text style={[styles.sortLabel, { color: sort === value ? c.text : c.textSecondary }]}>{value === 'latest' ? '최신' : '인기'}</Text></Pressable>)}
         </View>
       </View>
-      {feed.isPending ? <View style={styles.center}><ActivityIndicator color={c.primary} /></View> : feed.isError ? (
+      {feed.isPending ? <FeedSkeleton c={c} /> : feed.isError ? (
         <View style={styles.center}><Text style={{ color: c.textSecondary }}>피드를 불러오지 못했어요</Text><Pressable onPress={refresh}><Text style={[styles.retry, { color: c.primaryStrong }]}>다시 시도</Text></Pressable></View>
       ) : (
         <ScrollView refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={refresh} tintColor={c.primary} />} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + BottomTabInset + 24 }]}>
@@ -155,6 +156,41 @@ function FeedBoard() {
  * 글자 수만 세면 "선택지\n메모" 형태의 취향 카드 답변처럼 짧지만 줄이 많은 글을 놓쳐서,
  * 본문이 잘렸는데도 더보기가 안 뜬다. 줄 수도 함께 본다.
  */
+/**
+ * 피드 카드가 들어올 자리.
+ *
+ * 다섯 탭 중 유일하게 스켈레톤이 없어 화면 정중앙에 스피너 하나만 돌던 곳이다. 스피너는
+ * 위치부터 틀렸다 — 카드는 위에서부터 쌓이는데 스피너는 한가운데 있으니, 채워지는 순간
+ * 화면이 통째로 갈아치워졌다. 정렬(최신/인기)을 바꿀 때마다 쿼리 키가 달라져 목록이 사라지고
+ * 다시 한가운데로 돌아가는 깜빡임도 여기서 났다.
+ *
+ * 카드 조판이 정형화돼 있어(사진 40×50 + 닉네임·종류 + 물음 + 본문 + 액션바) 자리를 그대로
+ * 세울 수 있다. 실제 card 스타일을 그대로 쓰므로 테두리와 여백이 저절로 맞는다.
+ */
+function FeedSkeleton({ c }: { c: ThemeColors }) {
+  return (
+    <SkeletonScreen style={styles.list}>
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={[styles.card, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+          <View style={styles.authorRow}>
+            <Skeleton c={c} width={40} height={50} radius={12} />
+            <View style={styles.authorText}>
+              <Skeleton c={c} width={i % 2 === 0 ? 84 : 66} height={15} />
+              <Skeleton c={c} width={128} height={12} style={styles.skeletonKind} />
+            </View>
+          </View>
+          <Skeleton c={c} width="58%" height={12} style={styles.skeletonPrompt} />
+          <SkeletonLines c={c} lines={i === 1 ? 2 : 4} lineHeight={14} gap={10} style={styles.skeletonAnswer} />
+          <View style={[styles.actions, { borderTopColor: c.border }]}>
+            <Skeleton c={c} width={44} height={18} />
+            <Skeleton c={c} width={44} height={18} style={styles.skeletonAction} />
+          </View>
+        </View>
+      ))}
+    </SkeletonScreen>
+  );
+}
+
 function isLong(content: string) {
   return content.length > 140 || content.split('\n').length > 6;
 }
@@ -176,5 +212,6 @@ const styles = StyleSheet.create({
   authorText: { flex: 1, marginLeft: 10 }, nickname: { ...Type.label }, kind: { ...Type.caption, marginTop: 1 }, prompt: { ...Type.caption, marginTop: 22 }, answer: { ...Type.read, marginTop: 8 },
   moreBtn: { marginTop: 8, alignSelf: 'flex-start' }, link: { ...Type.label },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth }, action: { flexDirection: 'row', alignItems: 'center', minWidth: 52 }, count: { ...Type.caption, marginLeft: 5 },
+  skeletonKind: { marginTop: 5 }, skeletonPrompt: { marginTop: 22 }, skeletonAnswer: { marginTop: 10 }, skeletonAction: { marginLeft: 24 },
   profileAction: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5 }, profileLabel: { ...Type.caption, fontWeight: '600' },
 });
