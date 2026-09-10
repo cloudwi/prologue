@@ -48,7 +48,7 @@ class DailyMeetController(
         return todayResponse(accountId)
     }
 
-    /** 오늘의 상대 목록 (매일 정오 공개, 최대 2명, 답변은 내가 먼저 답해야 열람 가능). */
+    /** 오늘의 상대 목록 (문답에 답하면 한 명, 취향 카드 한 벌에 한 명. 답을 써야 상대의 글이 열린다). */
     @GetMapping("/today/peers")
     fun peers(authentication: Authentication): PeersResponse {
         val accountId = UUID.fromString(authentication.name)
