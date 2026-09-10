@@ -1,5 +1,6 @@
 package com.prologue.backend.dailymeet.infrastructure.persistence
 
+import com.prologue.backend.dailymeet.domain.model.TasteDay.SIZE
 import com.prologue.backend.dailymeet.application.service.*
 import com.prologue.backend.dailymeet.domain.model.*
 import com.prologue.backend.support.PostgresRepositoryTest
@@ -25,13 +26,13 @@ class TasteSessionServiceIT : PostgresRepositoryTest() {
     @Test
     fun `정오 경계에서 미리보기는 기존 묶음을 만료시키지 않고 완료 보상은 한 번만 준다`() {
         val deck = service.start(me, before)
-        assertEquals(10, deck.cards.size)
+        assertEquals(SIZE, deck.cards.size)
         assertEquals(noon, deck.resetsAt)
         service.choose(me, deck.sessionId!!, deck.cards.first().id, TasteOption.A, null, before)
         assertEquals(0, service.preview(me, noon).answered)
         val restored = service.get(me, deck.sessionId)
         assertEquals(1, restored.answered)
-        assertEquals(10, restored.sessionCards.size)
+        assertEquals(SIZE, restored.sessionCards.size)
         assertEquals(TasteOption.A, restored.sessionCards.first().myOption)
         assertNull(restored.sessionCards[1].optionPercentages)
         deck.cards.drop(1).forEach { service.choose(me, deck.sessionId, it.id, TasteOption.B, null, noon) }
@@ -44,7 +45,7 @@ class TasteSessionServiceIT : PostgresRepositoryTest() {
         assertTrue(fresh.cards.none { card -> deck.cards.any { it.id == card.id } })
         fresh.cards.forEach { service.choose(me, fresh.sessionId!!, it.id, TasteOption.A, null, noon) }
         assertEquals(2, rewards.pendingCount(me))
-        assertEquals(10, service.start(me, noon.plusSeconds(600)).answered)
+        assertEquals(SIZE, service.start(me, noon.plusSeconds(600)).answered)
         assertTrue(service.start(me, noon).cards.isEmpty())
     }
 
@@ -81,10 +82,10 @@ class TasteSessionServiceIT : PostgresRepositoryTest() {
 
     @Test
     fun `이전 누적 보상은 전환 때 보존하고 이후에는 하루 묶음으로만 지급한다`() {
-        (1L..10L).forEach { choices.save(TasteChoice.choose(me, it, TasteOption.A)) }
+        (1L..SIZE.toLong()).forEach { choices.save(TasteChoice.choose(me, it, TasteOption.A)) }
         service.start(me, noon)
         assertEquals(1, rewards.pendingCount(me))
-        (11L..20L).forEach { choices.save(TasteChoice.choose(me, it, TasteOption.A)) }
+        (SIZE + 1L..SIZE * 2L).forEach { choices.save(TasteChoice.choose(me, it, TasteOption.A)) }
         assertFalse(legacy.accrueRewards(me))
         assertEquals(1, rewards.pendingCount(me))
     }

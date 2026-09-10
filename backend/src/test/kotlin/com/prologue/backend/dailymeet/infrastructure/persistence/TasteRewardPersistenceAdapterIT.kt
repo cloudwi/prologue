@@ -1,5 +1,6 @@
 package com.prologue.backend.dailymeet.infrastructure.persistence
 
+import com.prologue.backend.dailymeet.domain.model.TasteReward.EVERY
 import com.prologue.backend.support.PostgresRepositoryTest
 import java.util.UUID
 import kotlin.test.Test
@@ -80,20 +81,21 @@ class TasteRewardPersistenceAdapterIT : PostgresRepositoryTest() {
         assertEquals(1, rewards.pendingCount(someoneElse))
     }
     @Test
-    fun `정확히 열 번째 장이 아니어도 누락 이정표를 적립한다`() {
+    fun `한 벌 경계에 딱 맞지 않아도 누락 이정표를 적립한다`() {
         val since = java.time.Instant.now().minusSeconds(60)
-        assertTrue(rewards.claimEarned(me, 25, since, 1))
-        assertEquals(listOf(10), rewards.claimedMilestones(me))
-        assertFalse(rewards.claimEarned(me, 25, since, 1))
+        val answered = EVERY * 2 + 1 // 두 벌을 채우고 한 장이 더 있는 상태
+        assertTrue(rewards.claimEarned(me, answered, since, 1))
+        assertEquals(listOf(EVERY), rewards.claimedMilestones(me))
+        assertFalse(rewards.claimEarned(me, answered, since, 1))
         // 새 서비스 날짜를 모사한다. 이미 받은 이정표는 건너뛴다.
-        assertTrue(rewards.claimEarned(me, 25, java.time.Instant.now().plusSeconds(60), 1))
-        assertEquals(setOf(10, 20), rewards.claimedMilestones(me).toSet())
-        assertFalse(rewards.claimEarned(me, 25, java.time.Instant.now().plusSeconds(60), 1))
+        assertTrue(rewards.claimEarned(me, answered, java.time.Instant.now().plusSeconds(60), 1))
+        assertEquals(setOf(EVERY, EVERY * 2), rewards.claimedMilestones(me).toSet())
+        assertFalse(rewards.claimEarned(me, answered, java.time.Instant.now().plusSeconds(60), 1))
     }
 
     @Test
-    fun `열 장 미만이면 보상을 만들지 않는다`() {
-        assertFalse(rewards.claimEarned(me, 9, java.time.Instant.now().minusSeconds(60), 1))
+    fun `한 벌을 채우기 전에는 보상을 만들지 않는다`() {
+        assertFalse(rewards.claimEarned(me, EVERY - 1, java.time.Instant.now().minusSeconds(60), 1))
         assertEquals(0, rewards.pendingCount(me))
     }
 
@@ -126,9 +128,9 @@ class TasteRewardPersistenceAdapterIT : PostgresRepositoryTest() {
     @Test
     fun `하루 제한 없이 여러 달성을 기록하고 실제 소개한 수만 센다`() {
         val since = java.time.Instant.now().minusSeconds(60)
-        assertTrue(rewards.claimEarned(me, 20, since, Int.MAX_VALUE))
-        assertTrue(rewards.claimEarned(me, 20, since, Int.MAX_VALUE))
-        assertFalse(rewards.claimEarned(me, 20, since, Int.MAX_VALUE))
+        assertTrue(rewards.claimEarned(me, EVERY * 2, since, Int.MAX_VALUE))
+        assertTrue(rewards.claimEarned(me, EVERY * 2, since, Int.MAX_VALUE))
+        assertFalse(rewards.claimEarned(me, EVERY * 2, since, Int.MAX_VALUE))
         assertEquals(0, rewards.grantedSince(me, since))
         rewards.markGranted(me, 1)
         assertEquals(1, rewards.grantedSince(me, since))

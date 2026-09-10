@@ -55,7 +55,7 @@ class InkService(
     }
 
     /**
-     * 오늘의 답변 보상 — 서비스 하루([ServiceDay], 새벽 5시 경계)에 한 번만 [InkPrice.DAILY_ANSWER]을 지급한다.
+     * 오늘의 답변 보상 — 서비스 하루([ServiceDay], 정오 경계)에 한 번만 [InkPrice.DAILY_ANSWER]을 지급한다.
      *
      * 달력 자정이 아니라 질문이 바뀌는 경계를 쓴다 — 경계가 어긋나면 새벽 4시에 답한 사람이
      * 같은 질문으로 잉크를 두 번 받거나, 반대로 새 질문에 답하고도 못 받는다.

@@ -68,6 +68,8 @@ export default function TasteCardsScreen() {
    */
   const [reward, setReward] = useState<'arrived' | 'pending' | null>(null);
   const [rewardStatus, setRewardStatus] = useState<TasteReward | null>(null);
+  // 한 벌의 장수는 서버가 정한다. 앱이 숫자를 베끼면 규칙이 바뀐 날 화면만 옛말을 한다.
+  const [total, setTotal] = useState(0);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -77,6 +79,7 @@ export default function TasteCardsScreen() {
     sessionId.current = deck.sessionId;
     const all = deck.sessionCards?.length ? deck.sessionCards : deck.cards;
     setCards(all);
+    setTotal(deck.total || all.length);
     setRewardStatus(deck.reward ?? null);
     const first = all.findIndex((item) => !item.myOption);
     const initialIndex = first >= 0 ? first : all.length;
@@ -278,7 +281,7 @@ export default function TasteCardsScreen() {
         <View style={styles.journey}>
           <View style={styles.journeyLabels}>
             <Text style={[styles.headerAction, { color: c.text }]}>오늘의 취향</Text>
-            <View style={styles.clockLabel} accessible accessibilityLabel="매일 정오에 새 카드 10개">
+            <View style={styles.clockLabel} accessible accessibilityLabel={`매일 정오에 새 카드 ${total}장`}>
               <Ionicons name="refresh-outline" size={14} color={c.textSecondary} />
               <Ionicons name="sunny-outline" size={16} color={c.textSecondary} />
               <Text style={[styles.skip, { color: c.textSecondary }]}>12:00</Text>
@@ -286,7 +289,7 @@ export default function TasteCardsScreen() {
           </View>
           <View style={styles.progressGroup}>
               <View style={styles.stamps}>
-                {Array.from({ length: 10 }, (_, i) => (
+                {Array.from({ length: total }, (_, i) => (
                   <View key={i}
                     accessible
                     accessibilityLabel={`${i + 1}번 카드${cards[i]?.myOption ? ', 답변 완료' : ''}`}
