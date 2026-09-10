@@ -3,7 +3,7 @@
 새 인물 여섯 명 × 세 장 = 열여덟 장. 기존 세 명의 교체분은 맨 아래에 따로 있다.
 규칙과 슬롯의 뜻은 [README](README.md)를 먼저 본다.
 
-2026-09-09에 전수 조사하고 다시 썼다. 무엇이 왜 틀렸는지는 아래 "자연스러움을 깨는 여섯 가지"에
+2026-09-09에 전수 조사하고 다시 썼다. 무엇이 왜 틀렸는지는 아래 "자연스러움을 깨는 일곱 가지"에
 남겼다 — 새 인물을 추가할 때 같은 함정을 다시 파지 않기 위해서다.
 
 ## 만드는 순서
@@ -19,7 +19,7 @@
    정해 두고, 2·3번 프롬프트 안에 그 옷을 이름으로 박아 넣었다.
 4. 결과는 4:5로 뽑고, 파일명은 `demo-<id>-<번호>.jpg`로 저장한다.
 
-## 자연스러움을 깨는 여섯 가지
+## 자연스러움을 깨는 일곱 가지
 
 첫 판 열여덟 장을 다시 읽으면서 찾은 것들이다. 전부 "그럴듯한 문장"이었지만 이미지 모델에게는
 실패 지점이었다.
@@ -53,7 +53,13 @@ floured hands`(반죽 묻은 손이라 못 넘기는 머리카락) 같은 문장
 여섯 장이 된다. 지금은 **거리·시선·찍은 사람을 여섯 명 다 다르게** 배분했다(아래 표).
 눈맞춤이 카드에 유리한 건 맞지만, 여섯 장이 전부 같은 눈맞춤이면 그 이점이 사라진다.
 
-**6. 참조 이미지를 넣으면 옷이 따라와서 세 장이 같은 날이 된다.**
+**6. 배경에 사람이 또렷하게 있으면 그 사람이 부서진다.**
+`demo-afternoonwalk-1-v4`의 배경 보행자가 그렇다 — 배낭을 멘 등이 보이는데 머리는 정면이고,
+왼발은 걸어오는 방향과 반대로 꺾여 있다. 주인공만 보면 멀쩡한 사진인데 왼쪽 위에 사람 하나가
+망가져 있다. 같은 세트의 `demo-hangang-3-v4`는 배경 러너들이 충분히 흐려서 아무 문제가 없다 —
+차이는 **심도**다. 배경에는 사람을 두지 않거나, 두더라도 얼굴과 걸음이 안 읽힐 만큼 흐리게 둔다.
+
+**7. 참조 이미지를 넣으면 옷이 따라와서 세 장이 같은 날이 된다.**
 밤의라디오 세 장이 전부 검정 상의로 나왔다. 얼굴을 유지하려고 넣은 참조가 옷까지 유지해
 버린 것이다. 프로필 사진 석 장은 서로 다른 날의 사진이어야 한다 — 사람마다 **옷·때**를
 정해 두고 2·3번 프롬프트에 그 옷을 이름으로 적었다. 장소가 세 장 다 같던 두 사람
@@ -85,6 +91,7 @@ Realism: a believable everyday photo taken by a friend or by phone. Natural skin
 Subject is an entirely fictional person, not based on any real person or celebrity.
 Arms and hands: every visible arm must be readable — an unbroken shoulder to elbow to wrist path of plausible length, exactly five fingers on any visible hand. One visible arm is fine; in a selfie a single arm reaches toward the lens and that is correct. What is wrong is a sleeve running from shoulder to hand with no elbow in it, a hand further from its own shoulder than an arm can reach, a doubled cuff at one wrist, or an arm that disappears behind the torso while the other crosses the frame.
 Stillness: a held moment, not an action freeze. Both feet planted, mouth not stretched open.
+Background people: keep the background clear of people. If the location needs them, put them far away and clearly out of focus — never sharp enough to read a face or a stride. A legible background pedestrian comes out broken: head facing the camera on a torso that is turned away, feet pointing the wrong way.
 Constraints: no chin-up coy pose, no repeated head tilt, no glossy beauty-filter skin, no waxy airbrushed face, no doll-like enlarged eyes, no exaggerated smile, no glamour or sexualized posing, no school uniform, no other identifiable people in focus, no text, no letters, no logo, no watermark, no collage, no interface or screenshot. Do not place the subject small in the middle of a wide empty background.
 ```
 
@@ -321,7 +328,7 @@ Change her head and gaze: she now turns to the camera and looks straight into th
 Keep the shelves, the light and the clothing as they are.
 ```
 
-### 책갈피 3번 — 무릎 위로 다시 잡기
+### 책갈피 3번 — 무릎 위로 다시 잡기 (2026-09-10 크롭으로 처리함)
 ```text
 Use case: identity-preserve.
 Same fictional Korean woman as the supplied reference photo — keep her face, hair, beige jacket, grey top and jeans. Same Jeju coastal path with the basalt wall and the sea.
@@ -329,7 +336,24 @@ Reframe much closer: from the knees up, so she fills most of the frame and the b
 Do not place her small in a wide landscape, and do not show her walking.
 ```
 
-### 오후의산책 3번 — 무릎 위로 다시 잡기
+### 오후의산책 1번 — 배경 보행자 지우기 (2026-09-09 크롭으로 처리함)
+
+배경 왼쪽의 보행자가 머리와 몸이 반대로 붙어 있었다. 그 사람이 왼쪽 가장자리(x 77~130)에만
+있어서 **왼쪽 145px을 버리고 4:5를 다시 잡는 것으로 끝났다** — 다시 뽑지 않았다.
+`demo-afternoonwalk-1-v5.jpg`가 그 결과이고, 인물이 프레임을 더 채워 카드 대표 사진으로는
+오히려 나아졌다. 재생성이 답이 아닐 때가 있다: **망가진 게 가장자리에 있으면 자르는 게 싸고
+확실하다.**
+
+아래 프롬프트는 더 넓은 구도를 되찾고 싶을 때만 쓴다.
+
+```text
+Use case: identity-preserve.
+Same fictional Korean woman as the supplied reference photo — keep her face, hair, cream cardigan, jeans, bag and pose exactly as they are, and keep the same street, shopfront and warm afternoon light.
+Change only the background: remove the pedestrian with the backpack on the left side of the road entirely, and continue the empty road and crosswalk behind her in its place. Leave no person legible anywhere in the background.
+Throw the whole background further out of focus so the street, the parked cars and any distant figures read as soft shapes only. She stays sharp.
+```
+
+### 오후의산책 3번 — 무릎 위로 다시 잡기 (2026-09-10 크롭으로 처리함)
 ```text
 Use case: identity-preserve.
 Same fictional Korean woman as the supplied reference photo — keep her face, hair, dark jacket and wide trousers. Same bright gallery interior with the colourful hanging work behind.
