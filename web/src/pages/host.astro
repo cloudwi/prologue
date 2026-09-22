@@ -578,11 +578,19 @@ import Icon from '../components/Icon.astro';
     };
 
     let res = await send();
-    if (res.status === 401 && (await refreshTokens())) res = await send();
+    /*
+     * 401만 만료로 읽으면 안 된다. 서버(SecurityConfig)는 인증 진입점을 따로 두지 않아
+     * 토큰이 없거나 만료된 요청에 **403**을 돌려준다 — 앱(app/src/lib/api.ts)도 그래서 403을
+     * 세션 만료로 읽는다. 콘솔만 401을 기다리다가, 만료된 토큰으로 첫 요청이 403을 받으면
+     * 로그인 화면 대신 "화면을 불러오지 못했어요"에 갇혔다(2026-09-22). 갇히면 로그아웃
+     * 버튼도 가려져 있어 사용자가 스스로 풀 길이 없었다.
+     */
+    const expired = (r) => r.status === 401 || r.status === 403;
+    if (expired(res) && (await refreshTokens())) res = await send();
 
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
-    if (res.status === 401) { logout(); throw Object.assign(new Error('다시 로그인해 주세요'), { auth: true }); }
+    if (expired(res)) { logout(); throw Object.assign(new Error('다시 로그인해 주세요'), { auth: true }); }
     if (!res.ok) throw new Error(data?.message || `요청이 실패했어요 (${res.status})`);
     return data;
   }
