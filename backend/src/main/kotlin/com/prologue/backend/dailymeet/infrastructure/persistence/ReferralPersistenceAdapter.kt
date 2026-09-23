@@ -66,6 +66,9 @@ class ReferralJpaEntity(
     @Column(name = "invitee_account_id", nullable = false, updatable = false, unique = true) val inviteeAccountId: UUID,
     @Column(name = "code", updatable = false) val code: String?,
     @Column(name = "created_at", nullable = false, updatable = false) val createdAt: Instant,
+    /** 그때 실제 지급한 잉크 — V71 이전 행은 0. */
+    @Column(name = "invitee_reward", nullable = false, updatable = false) val inviteeReward: Int,
+    @Column(name = "inviter_reward", nullable = false, updatable = false) val inviterReward: Int,
 )
 
 interface ReferralJpaRepository : JpaRepository<ReferralJpaEntity, UUID> {
@@ -77,8 +80,8 @@ interface ReferralJpaRepository : JpaRepository<ReferralJpaEntity, UUID> {
     @Modifying
     @Query(
         value = """
-        insert into referrals (id, inviter_account_id, invitee_account_id, code, created_at)
-        values (:id, :inviterAccountId, :inviteeAccountId, :code, :createdAt)
+        insert into referrals (id, inviter_account_id, invitee_account_id, code, created_at, invitee_reward, inviter_reward)
+        values (:id, :inviterAccountId, :inviteeAccountId, :code, :createdAt, :inviteeReward, :inviterReward)
         on conflict (invitee_account_id) do nothing
         """,
         nativeQuery = true,
@@ -89,6 +92,8 @@ interface ReferralJpaRepository : JpaRepository<ReferralJpaEntity, UUID> {
         @Param("inviteeAccountId") inviteeAccountId: UUID,
         @Param("code") code: String,
         @Param("createdAt") createdAt: Instant,
+        @Param("inviteeReward") inviteeReward: Int,
+        @Param("inviterReward") inviterReward: Int,
     ): Int
 }
 
@@ -121,7 +126,10 @@ class ReferralPersistenceAdapter(
         ) == 1
 
     override fun saveIfNew(referral: Referral): Boolean =
-        referrals.insertIfNew(referral.id, referral.inviterAccountId, referral.inviteeAccountId, referral.code, referral.createdAt) == 1
+        referrals.insertIfNew(
+            referral.id, referral.inviterAccountId, referral.inviteeAccountId, referral.code, referral.createdAt,
+            referral.inviteeReward, referral.inviterReward,
+        ) == 1
 
     override fun countByInviterAndCode(inviterAccountId: UUID, code: String): Long =
         referrals.countByInviterAccountIdAndCode(inviterAccountId, code)

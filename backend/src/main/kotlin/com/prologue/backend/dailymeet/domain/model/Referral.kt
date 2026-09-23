@@ -83,14 +83,36 @@ class Referral private constructor(
     /** 어떤 코드로 들어왔는가 — 특별 코드의 사용 횟수를 세는 열쇠. */
     val code: String,
     val createdAt: Instant,
+    /**
+     * 그때 실제로 지급한 잉크 — 초대받은 쪽·초대한 쪽. 잉크 원장에도 남지만 원장은 "왜 이 액수였는지"를
+     * 초대 건과 잇지 못한다. 배수·상한이 바뀐 뒤에도 그 시점의 값을 되짚을 수 있게 여기에 박아 둔다.
+     * 초대한 쪽이 상한에 걸려 못 받았으면 0. 성별 같은 근거는 남기지 않는다 — 액수만으로 충분하다.
+     */
+    val inviteeReward: Int,
+    val inviterReward: Int,
 ) {
     companion object {
-        fun create(inviterAccountId: UUID, inviteeAccountId: UUID, code: String, now: Instant = Instant.now()): Referral {
+        fun create(
+            inviterAccountId: UUID,
+            inviteeAccountId: UUID,
+            code: String,
+            inviteeReward: Int,
+            inviterReward: Int,
+            now: Instant = Instant.now(),
+        ): Referral {
             if (inviterAccountId == inviteeAccountId) throw DailyMeetException("내 초대 코드는 내가 쓸 수 없어요")
-            return Referral(UUID.randomUUID(), inviterAccountId, inviteeAccountId, code, now)
+            if (inviteeReward < 0 || inviterReward < 0) throw DailyMeetException("초대 보상은 음수일 수 없어요")
+            return Referral(UUID.randomUUID(), inviterAccountId, inviteeAccountId, code, now, inviteeReward, inviterReward)
         }
 
-        fun reconstitute(id: UUID, inviterAccountId: UUID, inviteeAccountId: UUID, code: String, createdAt: Instant) =
-            Referral(id, inviterAccountId, inviteeAccountId, code, createdAt)
+        fun reconstitute(
+            id: UUID,
+            inviterAccountId: UUID,
+            inviteeAccountId: UUID,
+            code: String,
+            createdAt: Instant,
+            inviteeReward: Int = 0,
+            inviterReward: Int = 0,
+        ) = Referral(id, inviterAccountId, inviteeAccountId, code, createdAt, inviteeReward, inviterReward)
     }
 }

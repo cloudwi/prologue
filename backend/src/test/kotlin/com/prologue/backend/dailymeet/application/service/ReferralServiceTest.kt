@@ -8,6 +8,7 @@ import com.prologue.backend.auth.domain.repository.AccountRepository
 import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.InkPrice
 import com.prologue.backend.dailymeet.domain.model.InviteCode
+import com.prologue.backend.dailymeet.domain.model.Referral
 import com.prologue.backend.dailymeet.domain.model.ReferralPolicy
 import com.prologue.backend.dailymeet.domain.repository.InviteCodeRepository
 import com.prologue.backend.dailymeet.domain.repository.ReferralRepository
@@ -17,6 +18,7 @@ import com.prologue.backend.member.domain.model.Member
 import com.prologue.backend.notification.application.service.NotificationService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import java.time.Duration
 import java.time.Instant
@@ -47,14 +49,17 @@ class ReferralServiceTest {
     private fun account(id: UUID, createdAt: Instant) =
         Account.reconstitute(AccountId(id), "x@prologue.day", AccountStatus.ACTIVE, setOf(Role.USER), createdAt)
 
-    private fun member(id: UUID) =
-        Member.reconstitute(id, "닉", Gender.FEMALE, LocalDate.of(1996, 1, 1), Gender.MALE, "서울", Instant.now(), photoUrls = listOf("a", "b"))
+    private fun member(id: UUID, gender: Gender = Gender.MALE) =
+        Member.reconstitute(id, "닉", gender, LocalDate.of(1996, 1, 1), Gender.MALE, "서울", Instant.now(), photoUrls = listOf("a", "b"))
 
-    /** 초대받은 쪽이 막 가입했고 프로필도 있는, 정상 경로의 기본 무대. */
-    private fun freshInvitee(createdAgo: Duration = Duration.ofDays(1)) {
+    /** 여성이 초대받았을 때 둘이 각자 받는 잉크. */
+    private val femaleReward = InkPrice.REFERRAL * ReferralPolicy.FEMALE_INVITEE_MULTIPLIER
+
+    /** 초대받은 쪽이 막 가입했고 프로필도 있는, 정상 경로의 기본 무대. 기본은 남성 — 배수 없는 쪽이 기준선이다. */
+    private fun freshInvitee(createdAgo: Duration = Duration.ofDays(1), gender: Gender = Gender.MALE) {
         every { inviteCodeRepository.findByCode("P7K3MQ") } returns code
         every { accountRepository.findById(AccountId(invitee)) } returns account(invitee, Instant.now().minus(createdAgo))
-        every { memberQueryService.findProfile(invitee) } returns member(invitee)
+        every { memberQueryService.findProfile(invitee) } returns member(invitee, gender)
         every { referralRepository.saveIfNew(any()) } returns true
         every { referralRepository.countByInviterAndCode(inviter, "P7K3MQ") } returns 1
     }
@@ -72,6 +77,8 @@ class ReferralServiceTest {
         assertEquals(InviteCode.LENGTH, first.code.length)
         assertEquals("P7K3MQ", second.code)
         assertTrue(second.shareUrl.endsWith("/download?ref=P7K3MQ"))
+        assertEquals(InkPrice.REFERRAL, second.rewardInk)
+        assertEquals(femaleReward, second.femaleBonusInk) // 화면이 "여성이면 얼마"를 서버 값으로 말하게
         verify(exactly = 1) { inviteCodeRepository.saveIfCodeFree(any()) }
     }
 
@@ -88,14 +95,58 @@ class ReferralServiceTest {
     }
 
     @Test
+    fun `코드 쓰기 - 초대받은 쪽이 여성이면 둘 다 배수를 받고, 초대 건에 실제 지급액이 남는다`() {
+        freshInvitee(gender = Gender.FEMALE)
+        val saved = slot<Referral>()
+        every { referralRepository.saveIfNew(capture(saved)) } returns true
+
+        val granted = service.redeem(invitee, "P7K3MQ")
+
+        assertEquals(femaleReward, granted)
+        verify { inkService.grantTo(invitee, femaleReward, InkService.REASON_REFERRAL) }
+        verify { inkService.grantTo(inviter, femaleReward, InkService.REASON_REFERRAL) }
+        verify { notificationService.referralRewarded(inviter, femaleReward) } // 알림도 실제 지급액을 말한다
+        assertEquals(femaleReward, saved.captured.inviteeReward)
+        assertEquals(femaleReward, saved.captured.inviterReward)
+    }
+
+    @Test
+    fun `코드 쓰기 - 초대받은 쪽이 남성이면 기본 보상 그대로다`() {
+        freshInvitee(gender = Gender.MALE)
+        val saved = slot<Referral>()
+        every { referralRepository.saveIfNew(capture(saved)) } returns true
+
+        val granted = service.redeem(invitee, "P7K3MQ")
+
+        assertEquals(InkPrice.REFERRAL, granted)
+        verify(exactly = 0) { inkService.grantTo(any(), femaleReward, any()) }
+        assertEquals(InkPrice.REFERRAL, saved.captured.inviteeReward)
+        assertEquals(InkPrice.REFERRAL, saved.captured.inviterReward)
+    }
+
+    @Test
     fun `코드 쓰기 - 초대한 쪽은 상한까지만 받고 초대받은 쪽은 계속 받는다`() {
         freshInvitee()
-        every { referralRepository.countByInviterAndCode(inviter, "P7K3MQ") } returns (ReferralPolicy.MAX_REWARDED_INVITES + 1).toLong()
+        every { referralRepository.countByInviterAndCode(inviter, "P7K3MQ") } returns ReferralPolicy.MAX_REWARDED_INVITES.toLong()
+        val saved = slot<Referral>()
+        every { referralRepository.saveIfNew(capture(saved)) } returns true
 
         service.redeem(invitee, "P7K3MQ")
 
         verify(exactly = 1) { inkService.grantTo(invitee, InkPrice.REFERRAL, InkService.REASON_REFERRAL) }
         verify(exactly = 0) { inkService.grantTo(inviter, any(), any()) }
+        verify(exactly = 0) { notificationService.referralRewarded(any(), any()) }
+        assertEquals(0, saved.captured.inviterReward) // 못 받았으면 0으로 남긴다 — 나중에 되짚을 때 헷갈리지 않게
+    }
+
+    @Test
+    fun `코드 쓰기 - 상한 직전 한 명까지는 초대한 쪽도 받는다`() {
+        freshInvitee()
+        every { referralRepository.countByInviterAndCode(inviter, "P7K3MQ") } returns (ReferralPolicy.MAX_REWARDED_INVITES - 1).toLong()
+
+        service.redeem(invitee, "P7K3MQ")
+
+        verify(exactly = 1) { inkService.grantTo(inviter, InkPrice.REFERRAL, InkService.REASON_REFERRAL) }
     }
 
     @Test
@@ -132,7 +183,8 @@ class ReferralServiceTest {
         assertEquals("PROLOGUEFIRST", special.code)
         every { inviteCodeRepository.findByCode("PROLOGUEFIRST") } returns special
         every { accountRepository.findById(AccountId(invitee)) } returns account(invitee, Instant.now())
-        every { memberQueryService.findProfile(invitee) } returns member(invitee)
+        // 여성이 써도 특별 코드는 배수를 타지 않는다 — 운영자가 적은 액수가 곧 답이다
+        every { memberQueryService.findProfile(invitee) } returns member(invitee, Gender.FEMALE)
         every { referralRepository.saveIfNew(any()) } returns true
         every { referralRepository.countByCode("PROLOGUEFIRST") } returns 1
         // 운영자는 이미 상한을 넘겼어도 상관없다 — 특별 코드는 상한을 보지 않는다
@@ -143,6 +195,7 @@ class ReferralServiceTest {
         assertEquals(150, granted)
         verify { inkService.grantTo(invitee, 150, InkService.REASON_REFERRAL) }
         verify(exactly = 0) { inkService.grantTo(owner, any(), any()) } // inviterReward 0
+        verify(exactly = 0) { inkService.grantTo(any(), 300, any()) } // 150 × 2는 없다
 
         // 정원이 찼다
         every { referralRepository.countByCode("PROLOGUEFIRST") } returns 2

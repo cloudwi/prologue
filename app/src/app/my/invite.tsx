@@ -27,13 +27,18 @@ export default function InviteScreen() {
       .finally(() => setLoading(false));
   }, []);
 
+  // 여성 보너스는 서버가 내려줄 때만 말한다 — 구서버(값 없음)에서는 예전 문구 그대로
+  const femaleBonus = referral?.femaleBonusInk;
+
   async function share() {
     if (!referral) return;
     track('referral_share_opened');
     await Share.share({
       message:
         `하루 한 문답으로 만나는 소개팅, 프롤로그에 초대할게요.\n` +
-        `가입 후 MY > 친구 초대에서 내 코드 ${referral.code} 를 넣으면 우리 둘 다 잉크 ${referral.rewardInk}을 받아요.\n` +
+        `가입 후 MY > 친구 초대에서 내 코드 ${referral.code} 를 넣으면 우리 둘 다 잉크 ${referral.rewardInk}을 받아요.` +
+        (femaleBonus ? ` 여성 회원이면 ${femaleBonus}이에요.` : '') +
+        `\n` +
         referral.shareUrl,
     });
   }
@@ -77,6 +82,7 @@ export default function InviteScreen() {
             </Pressable>
             <Text style={[styles.desc, { color: c.textSecondary }]}>
               친구가 가입 후 7일 안에 이 코드를 넣으면{'\n'}친구도 나도 잉크 {referral.rewardInk}을 받아요.
+              {femaleBonus ? `\n초대한 친구가 여성이면 각자 ${femaleBonus}을 받아요.` : ''}
             </Text>
             <Pressable
               onPress={share}

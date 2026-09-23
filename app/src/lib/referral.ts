@@ -8,6 +8,8 @@ export type Referral = {
   code: string;
   invitedCount: number;
   rewardInk: number;
+  /** 초대받은 친구가 여성이면 둘이 각자 받는 잉크. 구서버는 안 내려주므로 없으면 보너스 문구를 감춘다. */
+  femaleBonusInk?: number;
   maxRewardedInvites: number;
   shareUrl: string;
   /** 내가 이미 누군가의 코드를 썼는지 — 썼으면 입력칸을 숨긴다. */

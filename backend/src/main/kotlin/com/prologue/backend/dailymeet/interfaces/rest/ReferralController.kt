@@ -19,6 +19,8 @@ data class ReferralResponse(
     val maxRewardedInvites: Int,
     val shareUrl: String,
     val redeemed: Boolean,
+    /** 초대받은 친구가 여성이면 둘이 각자 받는 잉크. 가산적 필드 — 구 앱은 무시한다. */
+    val femaleBonusInk: Int,
 )
 
 data class RedeemReferralRequest(
@@ -38,7 +40,7 @@ class ReferralController(
     @GetMapping
     fun mine(authentication: Authentication): ReferralResponse {
         val v = referralService.mine(UUID.fromString(authentication.name))
-        return ReferralResponse(v.code, v.invitedCount, v.rewardInk, v.maxRewardedInvites, v.shareUrl, v.redeemed)
+        return ReferralResponse(v.code, v.invitedCount, v.rewardInk, v.maxRewardedInvites, v.shareUrl, v.redeemed, v.femaleBonusInk)
     }
 
     @PostMapping("/redeem")

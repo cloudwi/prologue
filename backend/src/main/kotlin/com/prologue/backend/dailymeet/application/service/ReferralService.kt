@@ -10,6 +10,7 @@ import com.prologue.backend.dailymeet.domain.model.ReferralPolicy
 import com.prologue.backend.dailymeet.domain.repository.InviteCodeRepository
 import com.prologue.backend.dailymeet.domain.repository.ReferralRepository
 import com.prologue.backend.member.application.service.MemberQueryService
+import com.prologue.backend.member.domain.model.Gender
 import com.prologue.backend.notification.application.service.NotificationService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -23,6 +24,7 @@ import java.util.UUID
  * 초대받은 쪽은 가입 후 [ReferralPolicy.REDEEM_WINDOW] 안에, 프로필을 만든 뒤, 한 번만 쓸 수 있다.
  * 초대한 쪽은 [ReferralPolicy.MAX_REWARDED_INVITES]명까지만 보상받는다 — 가입을 찍어내 잉크를
  * 캐는 길을 좁히되, 진짜 친구를 데려오는 일은 막지 않는다.
+ * 초대받은 쪽이 여성이면 개인 코드 보상이 [ReferralPolicy.FEMALE_INVITEE_MULTIPLIER]배 — 이유는 [ReferralPolicy]에.
  */
 @Service
 class ReferralService(
@@ -42,6 +44,7 @@ class ReferralService(
             code = code.code,
             invitedCount = referralRepository.countByInviterAndCode(accountId, code.code).toInt(),
             rewardInk = InkPrice.REFERRAL,
+            femaleBonusInk = ReferralPolicy.rewardFor(InkPrice.REFERRAL, inviteeIsFemale = true),
             maxRewardedInvites = ReferralPolicy.MAX_REWARDED_INVITES,
             shareUrl = "$webBaseUrl/download?ref=${code.code}",
             redeemed = referralRepository.existsByInvitee(accountId),
@@ -63,30 +66,38 @@ class ReferralService(
         if (!ReferralPolicy.canRedeem(account.createdAt, now)) {
             throw DailyMeetException("초대 코드는 가입 후 ${ReferralPolicy.REDEEM_WINDOW.toDays()}일 안에만 쓸 수 있어요")
         }
-        if (memberQueryService.findProfile(accountId) == null) throw DailyMeetException("프로필을 먼저 완성해 주세요")
+        val member = memberQueryService.findProfile(accountId) ?: throw DailyMeetException("프로필을 먼저 완성해 주세요")
         // 특별 코드는 정원이 있다 — 뿌린 코드가 어디까지 퍼질지 운영자가 정한다
         invite.maxUses?.let { max ->
             if (referralRepository.countByCode(code) >= max) throw DailyMeetException("이 초대 코드는 마감됐어요")
         }
-        if (!referralRepository.saveIfNew(Referral.create(invite.accountId, accountId, code, now))) {
+
+        // 지급액은 저장 전에 정한다 — 초대 건에 그때의 실제 액수를 함께 박아 두기 위해
+        val inviteeIsFemale = member.gender == Gender.FEMALE
+        val inviteeReward = rewardFor(invite, invite.inviteeRewardOrDefault(), inviteeIsFemale)
+        val inviterReward = rewardFor(invite, invite.inviterRewardOrDefault(), inviteeIsFemale)
+            .takeIf { it > 0 && inviterRewarded(invite) } ?: 0
+
+        if (!referralRepository.saveIfNew(Referral.create(invite.accountId, accountId, code, inviteeReward, inviterReward, now))) {
             throw DailyMeetException("초대 코드는 한 번만 쓸 수 있어요")
         }
 
-        val inviteeReward = invite.inviteeRewardOrDefault()
         inkService.grantTo(accountId, inviteeReward, InkService.REASON_REFERRAL)
-
-        val inviterReward = invite.inviterRewardOrDefault()
-        if (inviterReward > 0 && inviterRewarded(invite)) {
+        if (inviterReward > 0) {
             inkService.grantTo(invite.accountId, inviterReward, InkService.REASON_REFERRAL)
             notificationService.referralRewarded(invite.accountId, inviterReward)
         }
         return inviteeReward
     }
 
-    /** 개인 코드는 상한을 탄다. 방금 저장한 한 건이 포함돼 있으니 "이전까지" 몇 명이었는지는 하나를 뺀다. */
+    /** 여성 가중은 개인 코드에만 — 특별 코드는 운영자가 적은 액수가 곧 답이다. */
+    private fun rewardFor(invite: InviteCode, base: Int, inviteeIsFemale: Boolean): Int =
+        if (invite.kind == InviteCode.Kind.SPECIAL) base else ReferralPolicy.rewardFor(base, inviteeIsFemale)
+
+    /** 개인 코드는 상한을 탄다. 아직 저장 전이라 지금 세는 수가 곧 "이전까지" 데려온 수다. */
     private fun inviterRewarded(invite: InviteCode): Boolean =
         invite.kind == InviteCode.Kind.SPECIAL ||
-            ReferralPolicy.inviterRewarded(referralRepository.countByInviterAndCode(invite.accountId, invite.code) - 1)
+            ReferralPolicy.inviterRewarded(referralRepository.countByInviterAndCode(invite.accountId, invite.code))
 
     /**
      * 운영자용 — 특별 초대 코드 발급. [ownerAccountId]가 "초대한 사람"으로 기록되고 [inviterReward]를 받는다.
@@ -118,6 +129,8 @@ data class ReferralView(
     val code: String,
     val invitedCount: Int,
     val rewardInk: Int,
+    /** 초대받은 친구가 여성이면 둘이 각자 받는 잉크 — [rewardInk]의 [ReferralPolicy.FEMALE_INVITEE_MULTIPLIER]배. */
+    val femaleBonusInk: Int,
     val maxRewardedInvites: Int,
     val shareUrl: String,
     /** 내가 이미 누군가의 코드를 썼는지 — 썼으면 입력칸을 숨긴다. */
