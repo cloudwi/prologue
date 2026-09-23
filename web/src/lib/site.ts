@@ -27,3 +27,11 @@ export const TAGLINE = '새로운 시작을 알리는 소개팅';
 export const DEFAULT_TITLE = '프롤로그 — 새로운 시작을 알리는 하루 한 문답 소개팅';
 export const DEFAULT_DESCRIPTION =
   '모든 이야기의 시작에는 프롤로그가 있습니다. 질문에 답을 남기면 그 자리에서 한 사람이 도착하는 하루 한 문답 소개팅 앱. 사진보다 생각이 먼저 닿는 새로운 시작을 App Store·Google Play에서 만나보세요.';
+
+/**
+ * 네이버 서치어드바이저 사이트 소유 확인 코드 — 발급받은 코드를 넣으면 된다.
+ * (서치어드바이저 > 사이트 등록 > HTML 태그 방식의 content 값.)
+ * 비어 있으면 Base.astro가 <meta name="naver-site-verification">을 아예 렌더하지 않는다.
+ * 구글 코드처럼 확인이 끝난 뒤에도 지우지 않는다.
+ */
+export const NAVER_SITE_VERIFICATION = '';

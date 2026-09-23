@@ -8,6 +8,7 @@ import {
   CONTACT_EMAIL,
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
+  NAVER_SITE_VERIFICATION,
   PLAY_STORE_URL,
   SITE_NAME,
   TAGLINE,
@@ -79,6 +80,8 @@ const baseJsonLd = [
       구글은 주기적으로 다시 확인하고, 사라지면 속성이 풀려 색인 보고가 끊긴다.
     */}
     <meta name="google-site-verification" content="hJ5AsTBDGWIwHlPls9X_wPvC8fPKQU3Jq8RQQnV74bU" />
+    {/* 네이버 서치어드바이저 소유 확인 — 코드는 site.ts의 NAVER_SITE_VERIFICATION에 넣는다. 비어 있으면 안 그린다. */}
+    {NAVER_SITE_VERIFICATION && <meta name="naver-site-verification" content={NAVER_SITE_VERIFICATION} />}
     {/* 주소창 색도 테마를 따라간다 — 하나만 두면 다크에서 위쪽만 하얗게 남는다. */}
     <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#101418" media="(prefers-color-scheme: dark)" />

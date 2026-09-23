@@ -26,7 +26,8 @@ const jsonLd = [
     inLanguage: 'ko-KR',
     mainEntityOfPage: pageUrl,
     url: pageUrl,
-    image: new URL('/og.png', Astro.site).toString(),
+    // Base.astro의 og:image와 같은 URL — 쿼리(캐시 버스터)까지 맞춰야 검색 엔진이 한 이미지로 읽는다.
+    image: new URL('/og.png?v=2', Astro.site).toString(),
     author: { '@type': 'Organization', name: `${SITE_NAME} 팀` },
     publisher: {
       '@type': 'Organization',
