@@ -32,6 +32,14 @@ import Icon from '../../components/Icon.astro';
           { label: '주간 활성', value: s.weeklyActive, hint: '최근 7일 접속 계정' },
           { label: '오늘 답변', value: s.answersToday, href: '/admin/answers' },
           { label: '오늘 소개 카드', value: s.revealsToday, hint: '0에 가까우면 성비·풀 부족 신호' },
+          // 성비 게이트 — 켜져 있을 때만 대기 인원이 뜻을 갖는다. 꺼져 있으면 "꺼짐"만 보여 켤지 판단하는 재료로 둔다.
+          {
+            label: '성비 게이트',
+            value: s.gateEnabled ? '대기 ' + (s.gateWaiting ?? 0) : '꺼짐',
+            hint: '활성 여 ' + (s.activeFemale ?? 0) + ' · 남 ' + (s.activeMale ?? 0) +
+              (s.gateEnabled ? ' · 지금 들일 수 있는 수 ' + (s.gateAdmittable ?? 0) : (s.gateWaiting ? ' · 대기 행 ' + s.gateWaiting : '')),
+            href: '/admin/members',
+          },
           { label: '대기 신고', value: s.pendingReports, alert: s.pendingReports > 0, href: '/admin/reports' },
           { label: '정지 계정', value: s.suspendedAccounts, href: '/admin/members' },
         ];

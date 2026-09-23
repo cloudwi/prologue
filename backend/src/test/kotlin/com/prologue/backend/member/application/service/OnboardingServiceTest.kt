@@ -14,6 +14,7 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -66,6 +67,34 @@ class OnboardingServiceTest {
         assertEquals(Gender.FEMALE, result.preferredGender)
         assertEquals("서울", result.region)
         verify(exactly = 1) { memberRepository.save(any()) }
+    }
+
+    @Test
+    fun `성비 게이트 - 최초 온보딩을 마친 회원만 줄 세우기를 묻는다`() {
+        val gate = mockk<MemberGateService>(relaxed = true)
+        val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate)
+        every { memberRepository.findByAccountId(accountId) } returns null
+        every { memberRepository.save(any()) } answers { firstArg() }
+
+        gated.complete(command)
+
+        verify(exactly = 1) { gate.enqueueIfNeeded(match { it.accountId == accountId && it.gender == Gender.MALE }, any()) }
+    }
+
+    @Test
+    fun `성별은 가입 후 바꿀 수 없다 - 같은 성별이면 수정되고 줄 세우기는 하지 않는다`() {
+        val gate = mockk<MemberGateService>(relaxed = true)
+        val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate)
+        every { memberRepository.findByAccountId(accountId) } returns existingMember()
+        every { memberRepository.save(any()) } answers { firstArg() }
+
+        assertFailsWith<com.prologue.backend.member.domain.model.MemberDomainException> {
+            gated.complete(command.copy(gender = Gender.FEMALE, preferredGender = Gender.MALE))
+        }
+        verify(exactly = 0) { memberRepository.save(any()) }
+
+        gated.complete(command) // 같은 성별이면 그대로 수정된다
+        verify(exactly = 0) { gate.enqueueIfNeeded(any(), any()) }
     }
 
     @Test

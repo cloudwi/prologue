@@ -839,6 +839,92 @@ class PeerMatchingServiceTest {
         verify(exactly = 0) { tasteRewardRepository.markGranted(any(), any()) }
     }
 
+    /** 게이트가 켜진 서비스 — 기다리는 계정 집합을 넣어 만든다. 나머지 의존성은 위와 같다. */
+    private fun gatedService(waiting: Set<UUID>): PeerMatchingService {
+        val gate = mockk<com.prologue.backend.member.application.service.MemberGateService> {
+            every { waitingIds() } returns waiting
+            every { statusOf(any()) } answers {
+                if (firstArg<UUID>() in waiting) com.prologue.backend.member.domain.model.GateStatus.WAITING else null
+            }
+            every { isWaiting(any()) } answers { firstArg<UUID>() in waiting }
+            every { waitingPosition(any()) } answers { if (firstArg<UUID>() in waiting) 1 else null }
+        }
+        return PeerMatchingService(
+            questionRepository, answerRepository, dailyRevealRepository, mailRepository, heartRepository,
+            memberQueryService, profileLetterService, profileAccessService, lastSeenService, jobVerificationService,
+            blockService, tasteCardService, answerAccessService, tasteRewardRepository, memberGateService = gate,
+        )
+    }
+
+    @Test
+    fun `성비 게이트 - 기다리는 남성은 답을 써도 오늘의 상대가 비어 있고 WAITING이 내려간다`() {
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val hers = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "그녀의 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { memberQueryService.findProfile(hers.accountId) } returns member(hers.accountId, Gender.FEMALE, Gender.MALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(hers)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, hers.id!!) } returns 0
+
+        val view = gatedService(waiting = setOf(accountId)).todayPeers(accountId)
+
+        assertTrue(view.peers.isEmpty())
+        assertEquals(com.prologue.backend.member.domain.model.GateStatus.WAITING, view.gateStatus)
+        assertEquals(1, view.waitingPosition)
+        assertTrue(view.answerUnlocked) // 답은 썼으니 열람 자격은 그대로다
+        assertFalse(view.carriedOver)
+        // 소개 기록을 남기지 않는다 — 풀 밖의 사람에게 자리를 채워 두면 스위치를 꺼도 되돌릴 수 없다
+        verify(exactly = 0) { dailyRevealRepository.save(any()) }
+    }
+
+    @Test
+    fun `성비 게이트 - 여성의 후보에서 기다리는 남성은 빠지고 입장한 남성만 남는다`() {
+        val her = UUID.randomUUID()
+        val waitingMan = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "기다리는 남자의 답", Instant.now())
+        val admittedMan = Answer.reconstitute(UUID.randomUUID(), UUID.randomUUID(), 1L, "들어온 남자의 답", Instant.now())
+        val mine = Answer.reconstitute(UUID.randomUUID(), her, 1L, "내 답변", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(her, 1L) } returns mine
+        every { dailyRevealRepository.findAllByViewerAndQuestion(her, 1L) } returns emptyList()
+        every { memberQueryService.findProfile(her) } returns member(her, Gender.FEMALE, Gender.MALE)
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), her) } returns listOf(waitingMan, admittedMan)
+        listOf(waitingMan, admittedMan).forEach {
+            every { memberQueryService.findProfile(it.accountId) } returns member(it.accountId, Gender.MALE, Gender.FEMALE)
+            every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, it.id!!) } returns 0
+        }
+        val saved = mutableListOf<DailyReveal>()
+        every { dailyRevealRepository.save(capture(saved)) } answers { saved.last() }
+
+        val view = gatedService(waiting = setOf(waitingMan.accountId)).todayPeers(her)
+
+        assertEquals(1, view.peers.size)
+        assertEquals("들어온 남자의 답", view.peers[0].peerAnswer)
+        assertNull(view.gateStatus) // 여성은 게이트와 무관하다
+        assertEquals(listOf(admittedMan.id), saved.map { it.peerAnswerId })
+    }
+
+    @Test
+    fun `성비 게이트 - 늦은 도착도 기다리는 남성에게는 채우지 않는다`() {
+        val lateAccount = UUID.randomUUID()
+        val mine = Answer.reconstitute(UUID.randomUUID(), accountId, 1L, "내 답변", Instant.now())
+        val theirs = Answer.reconstitute(UUID.randomUUID(), lateAccount, 1L, "저녁에 남긴 답", Instant.now())
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns mine
+        every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
+        every { memberQueryService.findProfile(lateAccount) } returns member(lateAccount, Gender.FEMALE, Gender.MALE)
+        every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
+        every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(theirs)
+        every { dailyRevealRepository.countByQuestionAndPeerAnswer(1L, theirs.id!!) } returns 0
+
+        assertFalse(gatedService(waiting = setOf(accountId)).fillLateArrival(accountId))
+        verify(exactly = 0) { dailyRevealRepository.save(any()) }
+        // 같은 조건에서 게이트가 비어 있으면(들어왔거나 꺼짐) 채운다
+        every { dailyRevealRepository.save(any()) } answers { firstArg() }
+        assertTrue(gatedService(waiting = emptySet()).fillLateArrival(accountId))
+    }
+
     @Test
     fun `스케줄러는 답한 사람의 빈자리를 채우고 답하지 않은 사람은 건너뛴다`() {
         // 후보가 없어 그 자리에서 만나지 못한 사람을 위해 시간을 두고 다시 부른다.

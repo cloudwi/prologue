@@ -27,11 +27,13 @@ object PeerEligibility {
         peer: Member,
         alreadyMet: Set<UUID>,
         today: LocalDate = LocalDate.now(KST),
+        waitingAtGate: Set<UUID> = emptySet(),
     ): Boolean =
         prefersEachOther(me, peer) &&
             withinEachOthersAgeRange(me, peer, today) &&
             hasEnoughPhotos(peer) &&
-            !alreadyMetBefore(peer, alreadyMet)
+            !alreadyMetBefore(peer, alreadyMet) &&
+            !waitingAtGate(peer, waitingAtGate)
 
     /**
      * 나는 상대의 성별을 원하고 상대도 내 성별을 원해야 한다 — 한쪽만이면 소개가 아니라 강요다.
@@ -69,6 +71,13 @@ object PeerEligibility {
     /** 한 번 소개된 사람은 다시 만나지 않는다 — 지나간 인연이 돌아오면 소개가 아니라 반복이다. */
     private fun alreadyMetBefore(peer: Member, alreadyMet: Set<UUID>): Boolean =
         peer.accountId in alreadyMet
+
+    /**
+     * 성비 게이트에서 기다리는 사람은 소개하지 않는다 — 본인이 오늘의 상대를 못 받는 것과 같은 규칙의 반대편.
+     * 한쪽만 막으면 대기 남성이 여성 화면에는 나타나 하트를 받고도 답할 자리가 없는 사람이 된다.
+     * (누가 기다리는지는 [com.prologue.backend.member.application.service.MemberGateService]가 한 번에 읽어 넘긴다.)
+     */
+    private fun waitingAtGate(peer: Member, waiting: Set<UUID>): Boolean = peer.accountId in waiting
 
     /**
      * 이미 만난 사람을 다시 소개해도 되는가 — 새 후보가 한 명도 없을 때만 묻는 예외 규칙.

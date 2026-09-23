@@ -296,6 +296,8 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
 
   // 아직 오늘 답하지 않아 지난번 상대가 그 자리를 지키고 있는 상태. 서버가 판정해 내려준다.
   const carriedOver = (peersData?.carriedOver ?? false) && (peersData?.peers.length ?? 0) > 0;
+  // 성비 게이트에서 차례를 기다리는 남성 — 서버가 판정해 내려준다. 이때 peers는 비어 있다.
+  const waitingAtGate = peersData?.gateStatus === 'WAITING';
   // 선호 성별에 맞는 데모만, 그중 오늘 몫으로 뽑힌 몇 명만 온다. 없는 성별이면 빈 배열이라
   // 여기서 성별을 따로 따지지 않는다 — 준비되는 대로 저절로 열린다.
   const demoProfiles = useMemo(() => pickDemoProfiles(preferredGender), [preferredGender]);
@@ -531,7 +533,13 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
               {/* 부제는 뺐다 — "답을 남기면 새로 도착해요"는 바로 아래 카드가 이미 말한다. */}
               <View style={styles.peerHeader}>
                 <Text style={[styles.peerEyebrow, { color: c.text }]}>
-                  {carriedOver ? '지난번에 만난 사람' : showingDemoProfiles ? '프로필 미리보기' : '오늘의 상대'}
+                  {carriedOver
+                    ? '지난번에 만난 사람'
+                    : waitingAtGate
+                      ? '입장 대기'
+                      : showingDemoProfiles
+                        ? '프로필 미리보기'
+                        : '오늘의 상대'}
                 </Text>
               </View>
 
@@ -564,6 +572,16 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
                   c={c}
                   onWriteAnswer={() => setComposing(true)}
                   onUnlock={confirmAnswerUnlock}
+                />
+              ) : waitingAtGate ? (
+                // 게이트 앞 — 데모 카드보다 먼저다. 기다리는 사람에게 미리보기를 보여주면 "왜 이 사람은 못 만나냐"가 된다.
+                <EmptyPeer
+                  c={c}
+                  title="입장을 기다리고 있어요"
+                  body={
+                    '지금은 여성 회원을 먼저 모시고 있어요. 답은 계속 남길 수 있고, 차례가 오면 알려드릴게요.' +
+                    (peersData?.waitingPosition ? ` (지금 ${peersData.waitingPosition}번째)` : '')
+                  }
                 />
               ) : showingDemoProfiles ? (
                 // 실제 후보가 없을 때만 허구의 데모를 보여준다. 계정이 아니라 정적 카드라

@@ -40,6 +40,17 @@ class PeerEligibilityTest {
     }
 
     @Test
+    fun `성비 게이트에서 기다리는 사람은 후보가 아니다`() {
+        // 본인이 오늘의 상대를 못 받는 것의 반대편 — 여성 화면에도 나타나지 않아야 하트를 받고 답할 자리가 없는 사람이 안 생긴다.
+        val waitingMan = member(Gender.MALE, Gender.FEMALE)
+        val her = member(Gender.FEMALE, Gender.MALE)
+
+        assertFalse(PeerEligibility.isEligible(her, waitingMan, alreadyMet = emptySet(), waitingAtGate = setOf(waitingMan.accountId)))
+        // 아무도 기다리지 않으면(스위치 꺼짐) 예전과 같다
+        assertTrue(PeerEligibility.isEligible(her, waitingMan, alreadyMet = emptySet(), waitingAtGate = emptySet()))
+    }
+
+    @Test
     fun `내가 원하지 않는 성별은 후보가 아니다`() {
         val peer = member(Gender.MALE, Gender.FEMALE)
 

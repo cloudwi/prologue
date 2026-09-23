@@ -108,6 +108,13 @@ export type TodayPeers = {
   carriedOver?: boolean;
   /** 소개된 상대, 최대 2명. */
   peers: Peer[];
+  /**
+   * 성비 게이트 — 'WAITING'이면 아직 매칭 풀에 들어가지 못한 남성이라 peers가 비어 있다.
+   * 답은 남길 수 있고, 차례가 오면 푸시로 알린다. 없거나 null이면 게이트와 무관(구버전 서버 포함).
+   */
+  gateStatus?: 'WAITING' | 'ADMITTED' | null;
+  /** 기다리는 중일 때 내 차례(1부터). */
+  waitingPosition?: number | null;
 };
 
 /** 오늘의 상대 목록 (문답에 답하면 한 명, 카드 한 벌에 한 명, GET /daily/today/peers). */

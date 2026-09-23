@@ -81,6 +81,12 @@ services:
       # 우리 이름으로 사람을 모으고 참가비를 받는다.
       - key: MEETUP_HOST_EMAILS
         sync: false
+      # 성비 게이트(남성 대기열) 스위치 — `true`면 신규 남성은 활성 성비가 기준을 넘을 때까지
+      # 매칭 풀에서 기다린다. **비우거나 안 넣으면 꺼짐**이고, 켜는 결정은 운영자가 한다.
+      # 기준·활성 일수는 GENDER_GATE_MIN_FEMALE_RATIO(0.8) / GENDER_GATE_ACTIVE_DAYS(14).
+      # 끄면 대기 행이 남아 있어도 즉시 전원 입장과 같다 — docs/product/gender-gate.md.
+      - key: GENDER_GATE
+        sync: false
       # 강제 업데이트(최소 지원 버전)는 **여기가 아니라 어드민에 있다** — /admin/settings.
       #
       # 사람을 앱에서 잠그는 스위치라 되돌리는 데 서비스 재시작을 기다릴 수 없다. 환경변수를

@@ -35,6 +35,17 @@ daily:
   # 새 후보가 아무도 없을 때, 이미 만난 사람을 다시 소개하기까지의 최소 간격(일). 그 사이 새 답을 남긴 사람만.
   reintroduce-after-days: ${DAILY_REINTRODUCE_AFTER_DAYS:14}
 
+# 성비 게이트 — 신규 남성을 대기열에 세우고 활성 성비에 맞춰 들인다(GenderGatePolicy).
+# 소개팅 앱은 성비가 생사라, 남초로 기울면 여성이 먼저 떠나고 그러면 남성도 아무도 못 만난다.
+# **기본은 꺼짐**이고 켜는 결정은 운영자가 한다(GENDER_GATE=true). 꺼져 있으면 대기 행이 있어도 전원 입장과 같다.
+# 켜기 전에 어드민 통계의 활성 남녀 수를 보고 기준(min-female-ratio)을 정할 것 — docs/product/gender-gate.md.
+gate:
+  enabled: ${GENDER_GATE:false}
+  # 활성 여성/활성 남성이 이 값 이상이어야 남성을 더 들인다. 자동 입장 수 = floor(활성여성/기준) - 활성남성.
+  min-female-ratio: ${GENDER_GATE_MIN_FEMALE_RATIO:0.8}
+  # "활성"의 기준 — 최근 며칠 안에 접속했는가(accounts.last_seen_at, ACTIVE 계정만).
+  active-days: ${GENDER_GATE_ACTIVE_DAYS:14}
+
 # 프로필 사진 검수(Google Cloud Vision images:annotate) — 얼굴이 담긴 사진인지 + 선정성 판정.
 # 키가 없으면 검수를 건너뛰고 모두 통과시킨다(로컬·개발에서 업로드가 막히지 않도록). 호출 실패도 통과.
 # 과금은 기능 단위 — 사진 1장당 FACE_DETECTION + SAFE_SEARCH_DETECTION = 2유닛(월 1,000유닛 무료, 이후 1,000유닛당 $1.5).

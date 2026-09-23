@@ -56,6 +56,13 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
           'admin-badge' + (m.status === 'ACTIVE' ? ' ok' : m.status === 'SUSPENDED' ? ' warn' : '');
         badge.textContent = MEMBER_STATUS[m.status] || m.status;
         name.append(nick, badge);
+        // 성비 게이트 — 기다리는 남성은 매칭 풀 밖이다. 스위치가 꺼져 있어도 기록은 보인다(켜면 곧바로 대기).
+        if (m.gateStatus === 'WAITING') {
+          const gate = document.createElement('span');
+          gate.className = 'admin-badge warn';
+          gate.textContent = '입장 대기';
+          name.append(gate);
+        }
         const email = document.createElement('div');
         email.className = 'admin-row-date';
         email.textContent = m.email;
@@ -94,6 +101,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             if (confirm(m.email + ' 계정의 정지를 해제할까요?')) act(m.accountId, 'reactivate', reactivate);
           };
           actions.append(reactivate);
+        }
+        if (m.gateStatus === 'WAITING' && m.status === 'ACTIVE') {
+          const admit = document.createElement('button');
+          admit.className = 'admin-btn small';
+          admit.textContent = '입장';
+          admit.onclick = () => {
+            if (confirm(m.email + ' 님을 지금 들일까요? 오늘의 질문에 답하면 소개가 시작돼요.')) act(m.accountId, 'admit', admit);
+          };
+          actions.append(admit);
         }
         if (m.status !== 'WITHDRAWN') {
           const grant = document.createElement('button');

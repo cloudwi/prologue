@@ -197,6 +197,23 @@ class NotificationService(
         ),
     )
 
+    /**
+     * 성비 게이트에서 차례가 왔다 — 기다리던 남성에게 입장을 알린다.
+     *
+     * 입장은 소개가 아니다. 소개는 답변이 연다. 그래서 "들어왔다"에서 끝내지 않고
+     * 무엇을 하면 소개가 시작되는지를 같은 줄에 적는다 — 열고 나서 빈 화면을 보게 하지 않게.
+     */
+    @Async
+    @Transactional(readOnly = true)
+    fun gateAdmitted(accountId: UUID) = notify(
+        accountId,
+        PushMessage(
+            title = "프롤로그에 입장했어요",
+            body = "오늘의 질문에 답을 남기면 소개가 시작돼요.",
+            data = mapOf("screen" to "discover"),
+        ),
+    )
+
     /** 내 초대 코드로 친구가 들어왔다 — 보상이 들어왔다는 것도 함께. */
     @Async
     @Transactional(readOnly = true)

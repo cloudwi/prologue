@@ -127,14 +127,23 @@ data class PeerProfileResponse(
 data class PeersResponse(
     val open: Boolean,
     val answerUnlocked: Boolean,
+    /** [peers]가 지난번에 만난 사람이라는 표시 — 앱은 없으면 false로 읽는다(옵셔널). */
+    val carriedOver: Boolean,
     val peers: List<PeerResponse>,
+    /** 성비 게이트 상태 WAITING/ADMITTED. null이면 게이트와 무관(꺼짐·여성·게이트 이전 회원). */
+    val gateStatus: String?,
+    /** 기다리는 중일 때 내 차례(1부터). */
+    val waitingPosition: Int?,
 ) {
     companion object {
         fun from(view: TodayPeersView): PeersResponse =
             PeersResponse(
                 open = view.open,
                 answerUnlocked = view.answerUnlocked,
+                carriedOver = view.carriedOver,
                 peers = view.peers.map(PeerResponse::from),
+                gateStatus = view.gateStatus?.name,
+                waitingPosition = view.waitingPosition,
             )
     }
 }

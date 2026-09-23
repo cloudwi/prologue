@@ -4,6 +4,7 @@ import com.prologue.backend.growth.GrowthEvents
 import com.prologue.backend.growth.GrowthEvent
 
 import com.prologue.backend.member.domain.model.Member
+import com.prologue.backend.member.domain.model.MemberDomainException
 import com.prologue.backend.member.domain.model.MemberConsent
 import com.prologue.backend.member.domain.repository.MemberConsentRepository
 import com.prologue.backend.member.domain.repository.MemberRepository
@@ -19,12 +20,20 @@ class OnboardingService(
     private val memberRepository: MemberRepository,
     private val consentRepository: MemberConsentRepository,
     private val growthEvents: GrowthEvents = GrowthEvents.NONE,
+    /** 성비 게이트 — 신규 남성을 줄 세운다. null은 격리된 테스트를 위한 값이고 Spring은 빈을 넣어준다. */
+    private val memberGateService: MemberGateService? = null,
 ) {
     @Transactional
     fun complete(command: CompleteOnboardingCommand): Member {
         val existing = memberRepository.findByAccountId(command.accountId)
         recordConsent(command, isFirst = existing == null)
         val member = if (existing != null) {
+            // 성별은 가입 후 바꿀 수 없다. 매칭·성비 게이트·초대 보상(여성 가중)이 전부 성별을 축으로
+            // 돌아가는데, 바꿀 수 있으면 "여성으로 고쳐 보상을 받고 되돌리기"가 앱 UI만으로 된다.
+            // 게이트의 "기다리는 동안" 규칙보다 넓은 규칙이라 그쪽 검사는 이 뒤에 닿지 않는다.
+            if (existing.gender != command.gender) {
+                throw MemberDomainException("성별은 가입 후 바꿀 수 없어요")
+            }
             existing.apply {
                 updateProfile(
                     nickname = command.nickname,
@@ -67,7 +76,11 @@ class OnboardingService(
             )
         }
         return memberRepository.save(member).also {
-            if (existing == null) growthEvents.record(command.accountId, GrowthEvent.ONBOARDED, "onboarding")
+            if (existing == null) {
+                growthEvents.record(command.accountId, GrowthEvent.ONBOARDED, "onboarding")
+                // 온보딩을 마친 신규 남성만 줄을 선다 — 여성과 기존 회원은 행이 생기지 않는다.
+                memberGateService?.enqueueIfNeeded(it)
+            }
         }
     }
 

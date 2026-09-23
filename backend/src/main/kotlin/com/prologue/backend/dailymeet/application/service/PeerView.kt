@@ -7,6 +7,7 @@ import com.prologue.backend.member.domain.model.MeetFrequency
 import com.prologue.backend.member.domain.model.PoliticalLeaning
 import com.prologue.backend.member.domain.model.Smoking
 import com.prologue.backend.member.domain.model.Religion
+import com.prologue.backend.member.domain.model.GateStatus
 import com.prologue.backend.member.domain.model.Gender
 import java.time.Duration
 import java.time.Instant
@@ -162,4 +163,11 @@ data class TodayPeersView(
      */
     val carriedOver: Boolean = false,
     val peers: List<PeerView>,
+    /**
+     * 성비 게이트에서의 자리. WAITING이면 [peers]는 비어 있고 앱은 "입장을 기다리고 있어요"를 그린다.
+     * null은 게이트와 무관하다는 뜻 — 스위치가 꺼졌거나, 여성이거나, 게이트 이전 회원.
+     */
+    val gateStatus: GateStatus? = null,
+    /** 기다리는 중일 때 내 차례(1부터). 그 외엔 null. */
+    val waitingPosition: Int? = null,
 )

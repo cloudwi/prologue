@@ -134,8 +134,16 @@ export default function EditBasicScreen() {
               />
             </Field>
 
+            {/* 성별은 매칭의 축이라 가입 뒤엔 바꿀 수 없다 — 서버도 거절한다 */}
             <Field label="나의 성별" c={c}>
-              <GenderToggle value={gender} onChange={setGender} c={c} />
+              <View style={[styles.readonly, { borderColor: c.border, backgroundColor: c.backgroundSelected }]}>
+                <Text style={[styles.readonlyText, { color: c.textSecondary }]}>
+                  {gender === 'MALE' ? '남성' : gender === 'FEMALE' ? '여성' : '-'}
+                </Text>
+              </View>
+              <Text style={[styles.readonlyHint, { color: c.textSecondary }]}>
+                가입 후에는 변경할 수 없어요.
+              </Text>
             </Field>
 
             <Field label="생년월일" c={c}>

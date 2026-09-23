@@ -2,6 +2,7 @@ package com.prologue.backend.admin
 
 import com.prologue.backend.auth.application.service.AccountModerationService
 import com.prologue.backend.dailymeet.application.service.InkService
+import com.prologue.backend.member.application.service.MemberGateService
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.GetMapping
@@ -23,6 +24,7 @@ class AdminMemberController(
     private val jdbc: JdbcTemplate,
     private val accountModerationService: AccountModerationService,
     private val inkService: InkService,
+    private val memberGateService: MemberGateService,
 ) {
     data class GrantInksRequest(val amount: Int)
 
@@ -34,6 +36,8 @@ class AdminMemberController(
         val gender: String?,
         val createdAt: Instant,
         val lastSeenAt: Instant?,
+        /** 성비 게이트 상태 WAITING/ADMITTED. 행이 없으면 null(게이트 무관). 스위치가 꺼져 있어도 기록은 보인다. */
+        val gateStatus: String?,
     )
 
     data class AdminMembersResponse(val members: List<AdminMemberRow>)
@@ -45,9 +49,10 @@ class AdminMemberController(
         val like = "%$query%"
         val rows = jdbc.query(
             """
-            select a.id, a.email, a.status, a.created_at, a.last_seen_at, m.nickname, m.gender
+            select a.id, a.email, a.status, a.created_at, a.last_seen_at, m.nickname, m.gender, g.status as gate_status
             from accounts a
             left join members m on m.account_id = a.id
+            left join member_gate g on g.account_id = a.id
             where ? = '' or a.email ilike ? or m.nickname ilike ?
             order by a.created_at desc
             limit 50
@@ -61,6 +66,7 @@ class AdminMemberController(
                     gender = rs.getString("gender"),
                     createdAt = rs.getTimestamp("created_at").toInstant(),
                     lastSeenAt = rs.getTimestamp("last_seen_at")?.toInstant(),
+                    gateStatus = rs.getString("gate_status"),
                 )
             },
             query, like, like,
@@ -142,6 +148,12 @@ class AdminMemberController(
 
     @PostMapping("/{accountId}/reactivate")
     fun reactivate(@PathVariable accountId: UUID) = accountModerationService.reactivate(accountId)
+
+    /** 성비 게이트 수동 입장 — 대기 남성을 운영자가 직접 들인다. 이미 들어와 있거나 행이 없으면 아무 일도 없다. */
+    @PostMapping("/{accountId}/admit")
+    fun admit(@PathVariable accountId: UUID) {
+        memberGateService.admit(accountId)
+    }
 
     /** 잉크 수동 지급 — CS 보상 등. 원장(reason)에 어드민 지급으로 남는다. */
     @PostMapping("/{accountId}/grant-ink")

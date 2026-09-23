@@ -22,7 +22,9 @@ import com.prologue.backend.dailymeet.domain.repository.QuestionRepository
 import com.prologue.backend.dailymeet.domain.repository.TasteRewardRepository
 import com.prologue.backend.member.application.service.BlockService
 import com.prologue.backend.member.application.service.JobVerificationService
+import com.prologue.backend.member.application.service.MemberGateService
 import com.prologue.backend.member.application.service.MemberQueryService
+import com.prologue.backend.member.domain.model.GateStatus
 import com.prologue.backend.member.domain.model.Member
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -95,6 +97,12 @@ class PeerMatchingService(
      */
     @param:Value("\${daily.reintroduce-after-days:14}") private val reintroduceAfterDays: Long = 14,
     private val growthEvents: GrowthEvents = GrowthEvents.NONE,
+    /**
+     * 성비 게이트 — 기다리는 남성은 매칭 풀 밖이다. 본인도 오늘의 상대를 받지 않고, 남의 후보도 되지 않는다.
+     * 스위치가 꺼져 있으면 서비스가 "아무도 안 기다린다"고 답하므로 여기서는 켜짐 여부를 따로 보지 않는다.
+     * null은 격리된 테스트를 위한 값이다 — Spring은 빈을 넣어준다.
+     */
+    private val memberGateService: MemberGateService? = null,
 ) {
     /** 문답에 답하면 한 명, 카드 한 벌을 채우면 한 명. 두 몫은 서로를 기다리지 않는다. */
     @Transactional
@@ -114,17 +122,26 @@ class PeerMatchingService(
         // 잉크로 산 열람권도 답을 쓴 것과 같은 자격이다 — 규칙이 아니라 값의 문제다.
         val canRead = answered || question.id in answerAccessService.unlockedQuestions(accountId)
 
+        // 성비 게이트에서 기다리는 사람은 자리를 채우지 않는다 — 답은 남길 수 있되 소개는 차례가 온 뒤다.
+        val gateStatus = memberGateService?.statusOf(accountId)
+        if (gateStatus == GateStatus.WAITING) return TodayPeersView(
+            open = true, answerUnlocked = canRead, carriedOver = false, peers = emptyList(),
+            gateStatus = gateStatus, waitingPosition = memberGateService?.waitingPosition(accountId),
+        )
+
         val revealed = fillRevealedWithRewards(accountId, question, questions, answered)
         if (revealed.isNotEmpty()) return TodayPeersView(
             open = true, answerUnlocked = canRead, carriedOver = false,
             peers = revealed.map {
                 peerView(accountId, it, answered = canRead, questions, withRecentAnswers = canRead, withSharedTastes = true)
             },
+            gateStatus = gateStatus,
         )
         val carried = carriedOverReveals(accountId, question)
         return TodayPeersView(
             open = true, answerUnlocked = canRead, carriedOver = carried.isNotEmpty(),
             peers = carried.map { (_, answer) -> peerView(accountId, answer, answered = true, questions, withRecentAnswers = true) },
+            gateStatus = gateStatus,
         )
     }
 
@@ -212,6 +229,8 @@ class PeerMatchingService(
         val alreadyMet = dailyRevealRepository.findEverPairedAccountIds(accountId)
         // 차단(번호·같은 회사)은 자격 이전의 문제다 — 어느 풀에서 왔든, 재소개 예외로도 뚫리면 안 된다.
         val exclusion = blockService.exclusionFor(accountId, me.phone)
+        // 게이트에서 기다리는 사람 전부 — 후보마다 묻지 않고 한 번에 읽는다(N+1 금지).
+        val waitingAtGate = memberGateService?.waitingIds() ?: emptySet()
         val now = Instant.now()
 
         // 후보 풀은 가까운 범위부터, 비어 있으면 다음 범위로. 각 풀은 필요할 때만 읽는다.
@@ -224,7 +243,7 @@ class PeerMatchingService(
         var candidates = mutableListOf<Candidate>()
         for (pool in pools) {
             candidates = toCandidates(pool(), me, question, seen) { peer, _ ->
-                !exclusion.excludes(peer) && PeerEligibility.isEligible(me, peer, alreadyMet)
+                !exclusion.excludes(peer) && PeerEligibility.isEligible(me, peer, alreadyMet, waitingAtGate = waitingAtGate)
             }
             if (candidates.isNotEmpty()) break
         }
@@ -235,7 +254,7 @@ class PeerMatchingService(
             val pool = answerRepository.findOthersAnsweredSince(now.minus(Duration.ofDays(widest.toLong())), accountId)
             candidates = toCandidates(pool, me, question, seen) { peer, answer ->
                 !exclusion.excludes(peer) &&
-                    PeerEligibility.isEligible(me, peer, alreadyMet = emptySet()) &&
+                    PeerEligibility.isEligible(me, peer, alreadyMet = emptySet(), waitingAtGate = waitingAtGate) &&
                     PeerEligibility.canReintroduce(
                         lastRevealedAt = dailyRevealRepository.findLastRevealedAtBetween(accountId, peer.accountId),
                         answerWrittenAt = answer.createdAt,
@@ -308,8 +327,9 @@ class PeerMatchingService(
     @Transactional
     fun fillLateArrival(accountId: UUID): Boolean = fillNow(accountId)
 
-    /** 지금 시점의 몫대로 채운다. 답변 여부는 그때그때 원장에서 읽는다. */
+    /** 지금 시점의 몫대로 채운다. 답변 여부는 그때그때 원장에서 읽는다. 게이트에서 기다리는 사람은 채우지 않는다. */
     private fun fillNow(accountId: UUID): Boolean {
+        if (memberGateService?.isWaiting(accountId) == true) return false
         tasteRewardRepository.lockAccount(accountId)
         val questions = questionRepository.findAllOrdered()
         val question = QuestionRotation.of(questions, ServiceDay.now())
