@@ -145,8 +145,7 @@ class Member private constructor(
      * 가입 시점에는 사진을 올릴 수 없으므로(회원이 있어야 업로드 가능) 최소 장수를
      * 가입 조건으로 걸 수 없다. 대신 계정은 만들되 사진을 채우기 전까지 소개되지 않는다.
      * 온보딩(클라이언트)이 [MIN_PHOTOS]장을 요구하고, 한번 채운 뒤에는 [removePhoto]가
-     * 그 밑으로 내려가지 못하게 막는다 — 두 장치가 합쳐져 "보이는 회원은 항상 2장 이상"이 된다.
-     * TODO: 매칭·발견 쿼리에 이 조건을 반영할 것.
+     * 그 밑으로 내려가지 못하게 막는다 — 사진 한 장이면 소개를 시작할 수 있다.
      */
     fun isVisibleToOthers(): Boolean = photoUrls.size >= MIN_PHOTOS
 
@@ -221,7 +220,7 @@ class Member private constructor(
 
     companion object {
         /** 프로필 사진 필수/최대 장수. 최소 장수는 앱 온보딩에서 강제된다(사진은 가입 후 업로드라서). */
-        const val MIN_PHOTOS = 2
+        const val MIN_PHOTOS = 1
         const val MAX_PHOTOS = 6
 
         private const val NICKNAME_MAX = 30

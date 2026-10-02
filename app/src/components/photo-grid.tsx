@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Radius, type ThemeColors } from '@/constants/theme';
+import { MAX_PHOTOS } from '@/constants/photos';
 import { thumbUrl } from '@/lib/image';
 
 /** 프로필 사진 그리드 (최대 6장). 첫 번째 사진이 대표. */
 
-export const MIN_PHOTOS = 2;
-export const MAX_PHOTOS = 6;
+export { MIN_PHOTOS, MAX_PHOTOS } from '@/constants/photos';
 
 const COLUMNS = 3;
 const GAP = 10;

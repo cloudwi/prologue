@@ -1,4 +1,13 @@
-import { profileFactGroups, profileTags } from './profile-form';
+import { profileChecklist, profileFactGroups, profileTags } from './profile-form';
+import type { MemberProfile } from './member';
+
+it('대표 사진 한 장이면 소개용 사진 체크가 완료된다', () => {
+  const profile = { photoUrls: ['photo.jpg'] } as MemberProfile;
+  expect(profileChecklist(profile).find((item) => item.key === 'photos')).toMatchObject({
+    label: '대표 사진 1장 올리기', done: true,
+  });
+  expect(profileChecklist({ ...profile, photoUrls: [] }).find((item) => item.key === 'photos')?.done).toBe(false);
+});
 
 describe('profileTags', () => {
   it('고른 항목만 짧은 태그가 된다', () => {

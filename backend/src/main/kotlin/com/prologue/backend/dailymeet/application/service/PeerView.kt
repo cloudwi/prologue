@@ -46,7 +46,7 @@ data class PeerView(
     /** 그 질문의 id — 답이 잠겨 있을 때 앱이 잉크로 열 대상을 가리키는 값이다. */
     val questionId: Long? = null,
     val answerUnlocked: Boolean,
-    /** 노출 순서대로의 프로필 사진. 가입 시 2장이 필수라 비어 있는 건 옛 데이터뿐이다. */
+    /** 노출 순서대로의 프로필 사진. 한 장부터 소개되며 잠긴 응답은 비어 있을 수 있다. */
     val photoUrls: List<String>,
     val nickname: String?,
     /** 미리 써둔 프로필 편지(질문+답). 자기소개를 대신한다. */

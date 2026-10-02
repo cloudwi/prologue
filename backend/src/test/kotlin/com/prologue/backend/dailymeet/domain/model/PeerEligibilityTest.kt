@@ -124,9 +124,17 @@ class PeerEligibilityTest {
 
     @Test
     fun `사진이 모자라면 후보가 아니다`() {
-        val peer = member(Gender.FEMALE, Gender.MALE, photos = listOf("only-one.jpg"))
+        val peer = member(Gender.FEMALE, Gender.MALE, photos = emptyList())
 
         assertFalse(PeerEligibility.isEligible(me, peer, alreadyMet = emptySet()))
+    }
+
+    @Test
+    fun `대표 사진 한 장씩이면 소개 후보가 된다`() {
+        val onePhotoMe = member(Gender.MALE, Gender.FEMALE, photos = listOf("me.jpg"))
+        val peer = member(Gender.FEMALE, Gender.MALE, photos = listOf("peer.jpg"))
+
+        assertTrue(PeerEligibility.isEligible(onePhotoMe, peer, alreadyMet = emptySet()))
     }
 
     @Test

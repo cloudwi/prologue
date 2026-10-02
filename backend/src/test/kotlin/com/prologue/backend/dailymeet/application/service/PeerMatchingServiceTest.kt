@@ -316,9 +316,9 @@ class PeerMatchingServiceTest {
         every { dailyRevealRepository.findAllByViewerAndQuestion(accountId, 1L) } returns emptyList()
         every { memberQueryService.findProfile(accountId) } returns member(accountId, Gender.MALE, Gender.FEMALE)
         every { answerRepository.findOthersByQuestionIds(listOf(1L), accountId) } returns listOf(theirAnswer)
-        // 선호는 맞지만 사진이 한 장뿐 → 제외
+        // 선호는 맞지만 사진이 없음 → 제외. 한 장이면 소개할 수 있다.
         every { memberQueryService.findProfile(noPhotoAccount) } returns
-            member(noPhotoAccount, Gender.FEMALE, Gender.MALE, photos = listOf("only-one.jpg"))
+            member(noPhotoAccount, Gender.FEMALE, Gender.MALE, photos = emptyList())
 
         val view = service.todayPeers(accountId)
 

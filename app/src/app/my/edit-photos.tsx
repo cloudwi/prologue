@@ -21,6 +21,7 @@ export default function EditPhotosScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
   // 자르기를 기다리는 사진 줄 — 한 장씩 4:5 창을 거친 뒤에 업로드된다.
   const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
 
@@ -55,6 +56,7 @@ export default function EditPhotosScreen() {
     try {
       const res = await uploadPhoto(uri);
       setPhotos(res.photoUrls);
+      setPhotoNotice(res.photoNotice ?? null);
     } catch (e) {
       const rejected = e instanceof ApiError && e.code === 'PHOTO_REJECTED';
       Alert.alert(
@@ -80,6 +82,7 @@ export default function EditPhotosScreen() {
     try {
       const res = await deletePhoto(url);
       setPhotos(res.photoUrls);
+      setPhotoNotice(null);
     } catch (e) {
       Alert.alert('삭제 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
     } finally {
@@ -99,12 +102,12 @@ export default function EditPhotosScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           {/*
            * 규칙을 미리 말한다 — 올리고 나서 거절당하면 무엇이 잘못인지 모른 채 다른 사진을
-           * 고르게 된다. 앞 두 장과 뒷장의 잣대가 다르다는 것도 여기서 알려야 뒷장에 풍경을
+           * 고르게 된다. 대표 사진과 나머지의 잣대가 다르다는 것도 여기서 알려야 풍경을
            * 올려볼 생각을 한다.
            */}
           <Text style={[styles.lead, { color: c.text }]}>
-            앞 2장은 얼굴이 잘 보이는 사진으로 올려주세요. 대표 사진으로 나가요.
-            {'\n'}3번째부터는 좋아하는 것, 사는 모습도 좋아요.
+            얼굴이 보이는 사진 한 장이면 충분해요. 첫 번째가 대표 사진이에요.
+            {'\n'}두 번째부터는 여행·반려동물·좋아하는 것의 사진도 좋아요.
             {'\n'}꾹 눌러 순서를 바꾸는 기능은 준비 중이에요.
           </Text>
           <Text style={[styles.sub, { color: short ? c.primary : c.textSecondary }]}>
@@ -116,6 +119,9 @@ export default function EditPhotosScreen() {
           <View style={styles.grid}>
             <PhotoGrid photos={photos} onAdd={add} onRemove={remove} busy={busy} c={c} />
           </View>
+          {photoNotice && (
+            <Text style={[styles.sub, { color: c.textSecondary }]}>{photoNotice}</Text>
+          )}
 
           {busy && (
             <View style={styles.busy}>

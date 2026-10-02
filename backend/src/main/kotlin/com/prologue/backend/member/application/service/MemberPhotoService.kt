@@ -29,18 +29,18 @@ class MemberPhotoService(
      * 형식은 요청의 Content-Type이 아니라 바이트에서 직접 판별한다([ImageFormat]).
      */
     @Transactional
-    fun addPhoto(accountId: UUID, bytes: ByteArray): Member {
+    fun addPhoto(accountId: UUID, bytes: ByteArray): PhotoUploadResult {
         val member = memberRepository.findByAccountId(accountId) ?: throw MemberNotOnboardedException()
         if (member.photoUrls.size >= Member.MAX_PHOTOS) {
             throw MemberDomainException("사진은 최대 ${Member.MAX_PHOTOS}장까지 등록할 수 있어요")
         }
         val format = requireSupportedFormat(bytes)
         // 저장소에 올리기 전에 판정한다 — 거절된 사진이 스토리지에 고아로 남지 않는다.
-        // 몇 번째 자리에 놓이느냐가 잣대를 정한다: 앞자리는 얼굴, 뒷자리는 안전만.
-        requireUsableProfilePhoto(photoInspector.inspect(bytes, format.mimeType), member.photoUrls.size)
+        // 대표 사진만 얼굴을 확인한다. 크기·검수 불가는 가입을 막지 않는 안내로 돌린다.
+        val notice = inspectProfilePhoto(photoInspector.inspect(bytes, format.mimeType), member.photoUrls.size)
         val url = photoStorage.uploadProfilePhoto(accountId, bytes, format.mimeType)
         member.addPhoto(url)
-        return memberRepository.save(member)
+        return PhotoUploadResult(memberRepository.save(member), notice)
     }
 
     /** 실제 바이트로 형식을 확인한다. HEIC는 원인을 짚어 안내한다 — 아이폰 기본 설정이라 자주 마주친다. */
@@ -75,57 +75,40 @@ class MemberPhotoService(
     }
 
     /**
-     * 프로필 사진으로 쓸 수 있는 사진인지 판단한다.
-     *
-     * 판별하지 못한 경우([PhotoInspection.skipped])는 통과시킨다.
-     * 검수기가 죽었다고 가입이 막히는 쪽이, 얼굴 없는 사진 몇 장이 올라가는 쪽보다 나쁘다.
+     * 첫 사진은 얼굴 유무만 확인하고, 두 번째부터는 취향 사진도 받는다.
+     * 작은 얼굴·검수 불가는 거절이 아닌 권장 안내. 부적절 이미지 차단은 모든 자리에 적용한다.
      */
-    /**
-     * 이 사진을 프로필에 걸어도 되는가. [position]은 이 사진이 놓일 자리(0부터).
-     *
-     * 잣대가 자리마다 다르다. 앞 [FACE_REQUIRED_UNTIL]장은 얼굴이 있어야 한다 — 소개 카드와
-     * 목록에 나가는 대표 사진이라, 여기가 풍경이면 상대는 누구를 만나는지 알 수 없다.
-     *
-     * 뒷자리는 풀어준다. 프로필은 얼굴 증명서가 아니라 그 사람을 보여주는 자리라, 좋아하는 것과
-     * 사는 모습이 얼굴만큼 말해준다 — 기르는 고양이, 다녀온 산, 만든 요리 같은 것들이다.
-     * 얼굴 넉 장을 더 요구하면 결국 같은 각도의 사진만 남는다.
-     *
-     * 자리와 무관하게 막는 건 하나다. 선정적이거나 폭력적인 사진은 어느 자리에도 걸 수 없다.
-     */
-    private fun requireUsableProfilePhoto(inspection: PhotoInspection, position: Int) {
-        if (inspection.skipped) return
+    private fun inspectProfilePhoto(inspection: PhotoInspection, position: Int): String? {
         if (inspection.unsafe) {
             throw PhotoRejectedException("선정적이거나 부적절한 사진은 등록할 수 없어요")
         }
-        if (position >= FACE_REQUIRED_UNTIL) return
-
-        val ordinal = position + 1
+        if (position >= FACE_REQUIRED_UNTIL) return null
+        if (inspection.skipped) {
+            return "사진을 등록했어요. 얼굴을 자동으로 확인하지 못했지만, 얼굴이 보이는 대표 사진이면 괜찮아요."
+        }
         if (inspection.faceCount == 0) {
-            log.info("사진 거절(얼굴 없음) — 자리={}", ordinal)
-            throw PhotoRejectedException("${ordinal}번째 사진은 얼굴이 보여야 해요. 앞 ${FACE_REQUIRED_UNTIL}장은 얼굴이 나온 사진으로 올려주세요")
+            log.info("대표 사진 거절(얼굴을 확인하지 못함)")
+            throw PhotoRejectedException("첫 번째 사진에서 얼굴을 확인하지 못했어요. 얼굴이 보이는 사진 한 장을 골라주세요. 두 번째부터는 자유롭게 올릴 수 있어요")
         }
         val ratio = inspection.largestFaceRatio
-        if (ratio != null && ratio < MIN_FACE_AREA_RATIO) {
-            log.info("사진 거절(얼굴이 작음) — 자리={}, 넓이비율={}", ordinal, ratio)
-            throw PhotoRejectedException("얼굴이 너무 작게 나왔어요. 조금 더 가까이서 찍은 사진으로 올려주세요")
+        if (ratio != null && ratio < RECOMMENDED_FACE_AREA_RATIO) {
+            return "사진을 등록했어요. 얼굴이 작게 나왔지만 그대로 사용할 수 있어요. 조금 더 가까운 사진이면 알아보기 좋아요."
         }
+        return null
     }
 
     companion object {
         private val log = LoggerFactory.getLogger(MemberPhotoService::class.java)
 
-        /**
-         * 얼굴을 요구하는 자리 수. 1·2번째 사진까지다.
-         *
-         * 대표 사진과 그다음 한 장은 소개 카드·목록에 그대로 나가므로 얼굴이 있어야 한다.
-         * 3번째부터는 자유다 — 그때부터는 "누구인가"가 아니라 "어떤 사람인가"를 보는 자리다.
-         */
-        const val FACE_REQUIRED_UNTIL = 2
+        /** 첫 번째로 업로드되는 대표 사진만 얼굴을 요구한다. */
+        const val FACE_REQUIRED_UNTIL = 1
 
         /**
-         * 가장 큰 얼굴이 사진에서 차지해야 하는 최소 넓이 비율(2%).
-         * 멀리서 찍혀 얼굴이 점만 한 풍경 사진을 거르는 하한선일 뿐, 상반신·전신 사진은 넉넉히 통과한다.
+         * 알아보기 좋은 얼굴 크기의 권장 기준(2%). 미달해도 업로드·가입을 막지 않는다.
          */
-        const val MIN_FACE_AREA_RATIO = 0.02
+        const val RECOMMENDED_FACE_AREA_RATIO = 0.02
     }
 }
+
+/** 업로드는 이미 성공했다. notice는 다시 제출할 필요가 없는 비차단 안내다. */
+data class PhotoUploadResult(val member: Member, val notice: String? = null)

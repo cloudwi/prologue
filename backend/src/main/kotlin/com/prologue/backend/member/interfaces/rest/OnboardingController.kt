@@ -104,8 +104,9 @@ class OnboardingController(
         if (file.isEmpty) throw MemberDomainException("이미지 파일이 비어 있습니다")
         // 형식 검사는 서비스에서 바이트로 한다 — 클라이언트가 보낸 Content-Type은 확장자 추측이라 자주 틀린다.
         val accountId = UUID.fromString(authentication.name)
-        val member = memberPhotoService.addPhoto(accountId, file.bytes)
-        return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
+        val result = memberPhotoService.addPhoto(accountId, file.bytes)
+        return MemberProfileResponse.from(result.member, accountQueryService.findEmail(accountId))
+            .copy(photoNotice = result.notice)
     }
 
     /** 프로필 사진 삭제(공개 URL 지정). */

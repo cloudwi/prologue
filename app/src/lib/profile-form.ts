@@ -1,3 +1,4 @@
+import { MIN_PHOTOS } from '@/constants/photos';
 import {
   CONTACT_FREQUENCY_TAGS,
   DRINKING_LABELS,
@@ -159,11 +160,11 @@ export function profileChecklist(p: MemberProfile, letters?: number): ChecklistI
       done: !!p.phone,
     },
     {
-      key: 'photos2',
-      label: '사진 2장 이상 올리기',
+      key: 'photos',
+      label: `대표 사진 ${MIN_PHOTOS}장 올리기`,
       hint: '사진이 있어야 상대에게 소개돼요',
       href: '/my/edit-photos',
-      done: photos >= 2,
+      done: photos >= MIN_PHOTOS,
     },
     {
       key: 'bio',
@@ -177,7 +178,7 @@ export function profileChecklist(p: MemberProfile, letters?: number): ChecklistI
       // 그 뒤로도 계속 사진을 조르면 다른 빈칸이 영영 뒤로 밀린다.
       key: 'photos3',
       label: '사진 한 장 더 올리기',
-      hint: '여러 장일수록 대화로 이어질 확률이 높아요',
+      hint: '여행이나 좋아하는 것의 사진도 좋아요',
       href: '/my/edit-photos',
       done: photos >= 3,
     },

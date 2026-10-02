@@ -11,6 +11,8 @@ import { ApiError, authedFetch } from './api';
 
 export type PhotoUploadResult = {
   photoUrls: string[];
+  /** 업로드는 성공했다. 사진을 고쳐 올리지 않고 그대로 계속할 수 있는 안내. */
+  photoNotice?: string | null;
 };
 
 /** 업로드 사진의 긴 변 상한. 프로필 사진이 화면에서 이보다 크게 보일 일이 없다. */
@@ -83,4 +85,3 @@ export async function deletePhoto(publicUrl: string): Promise<PhotoUploadResult>
   }
   return data as PhotoUploadResult;
 }
-

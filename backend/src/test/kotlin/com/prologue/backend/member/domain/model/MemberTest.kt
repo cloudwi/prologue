@@ -52,35 +52,41 @@ class MemberTest {
 
     @Test
     fun `사진이 최소 장수를 넘으면 지울 수 있다`() {
-        val member = memberWithPhotos("a", "b", "c")
-        member.removePhoto("c")
-        kotlin.test.assertEquals(listOf("a", "b"), member.photoUrls)
+        val member = memberWithPhotos("a", "b")
+        member.removePhoto("b")
+        kotlin.test.assertEquals(listOf("a"), member.photoUrls)
     }
 
     @Test
     fun `사진 최소 장수에서는 지울 수 없다 - 교체는 추가 후 삭제 순서`() {
-        val member = memberWithPhotos("a", "b")
+        val member = memberWithPhotos("a")
         assertFailsWith<MemberDomainException> { member.removePhoto("a") }
     }
 
     @Test
-    fun `최소 장수를 못 채운 계정은 자유롭게 지운다 - 바닥은 채운 뒤에만 생긴다`() {
-        val member = memberWithPhotos("a")
-        member.removePhoto("a")
+    fun `사진이 없는 계정의 삭제는 멱등이다`() {
+        val member = memberWithPhotos()
+        member.removePhoto("없는사진")
         kotlin.test.assertEquals(emptyList(), member.photoUrls)
     }
 
     @Test
     fun `목록에 없는 사진 삭제는 무시한다 - 최소 장수여도 예외가 아니다`() {
-        val member = memberWithPhotos("a", "b")
+        val member = memberWithPhotos("a")
         member.removePhoto("없는사진")
-        kotlin.test.assertEquals(listOf("a", "b"), member.photoUrls)
+        kotlin.test.assertEquals(listOf("a"), member.photoUrls)
     }
 
     @Test
     fun `검수 삭제는 최소 장수 밑으로도 내린다`() {
-        val member = memberWithPhotos("a", "b")
+        val member = memberWithPhotos("a")
         member.stripPhoto("a")
-        kotlin.test.assertEquals(listOf("b"), member.photoUrls)
+        kotlin.test.assertEquals(emptyList(), member.photoUrls)
+    }
+
+    @Test
+    fun `한 장이면 소개되지만 사진이 없으면 소개되지 않는다`() {
+        kotlin.test.assertFalse(memberWithPhotos().isVisibleToOthers())
+        kotlin.test.assertTrue(memberWithPhotos("a").isVisibleToOthers())
     }
 }

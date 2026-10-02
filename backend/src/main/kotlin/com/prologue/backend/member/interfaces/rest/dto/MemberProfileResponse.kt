@@ -43,6 +43,8 @@ data class MemberProfileResponse(
     val kakaoId: String?,
     /** 로그인에 쓰는 이메일. 계정의 자연키라 화면에서는 읽기 전용으로 보여준다. */
     val email: String?,
+    /** 사진 업로드 성공 시에만 내려가는 비차단 권장 안내. 구버전 앱은 무시해도 된다. */
+    val photoNotice: String? = null,
 ) {
     companion object {
         fun from(member: Member, email: String? = null): MemberProfileResponse =

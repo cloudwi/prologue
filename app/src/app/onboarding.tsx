@@ -78,7 +78,7 @@ export default function OnboardingScreen() {
   /*
    * 두 갈래 가입(1.3).
    *
-   * 소개팅으로 온 사람에게는 지금까지처럼 다 묻는다 — 사진 두 장, 선호 성별, 문답 하나.
+   * 소개팅으로 온 사람에게는 사진 한 장, 선호 성별, 문답 하나를 묻는다.
    * 그 셋이 소개의 재료라서 하나라도 비면 소개가 성립하지 않는다.
    *
    * 모임으로 온 사람에게는 그 셋을 묻지 않는다. 얼굴 한 장과 기본 정보면 모임장이 누가
@@ -87,8 +87,8 @@ export default function OnboardingScreen() {
    */
   const { intent, next: nextPath } = useLocalSearchParams<{ intent?: string; next?: string }>();
   const meetupOnly = intent === 'meetup';
-  /** 모임 전용 가입은 얼굴 한 장이면 된다 — 소개팅은 여전히 두 장. */
-  const minPhotos = meetupOnly ? 1 : MIN_PHOTOS;
+  /** 모임·소개팅 모두 대표 사진 한 장으로 시작할 수 있다. */
+  const minPhotos = MIN_PHOTOS;
   /**
    * 가입을 마치고 갈 곳. 보던 모임에서 왔다면 그 초대장으로 되돌아간다.
    *
@@ -129,6 +129,7 @@ export default function OnboardingScreen() {
   const [letterDraft, setLetterDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   // 화면 진입 시 한 번 랜덤으로 고정되는 추천 닉네임 3개 (탭하면 입력됨)
   const [nameSuggestions] = useState(() =>
@@ -280,7 +281,7 @@ export default function OnboardingScreen() {
       title: '프로필 사진을 올려주세요',
       subtitle: meetupOnly
         ? `얼굴이 보이는 사진 ${minPhotos}장이면 충분해요. 모임장이 누가 오는지 알 수 있게요.\n최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`
-        : `최소 ${minPhotos}장, 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요. 첫 번째 사진이 대표 사진이에요.\n얼굴이 잘 보이는 사진만 등록돼요.`,
+        : `얼굴이 보이는 사진 ${minPhotos}장이면 시작할 수 있어요. 첫 번째가 대표 사진이에요.\n두 번째부터는 여행·반려동물·좋아하는 것의 사진도 좋아요. 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`,
       valid: photos.length >= minPhotos,
       content: (
         <PhotoGrid
@@ -478,10 +479,12 @@ export default function OnboardingScreen() {
    */
   async function uploadPhotos(): Promise<boolean> {
     const pending = [...photos];
+    setPhotoNotice(null);
     for (let i = 0; i < pending.length; i++) {
       setUploadProgress(`사진 업로드 중... (${i + 1}/${pending.length})`);
       try {
-        await uploadPhoto(pending[i]);
+        const result = await uploadPhoto(pending[i]);
+        if (result.photoNotice) setPhotoNotice(result.photoNotice);
       } catch (e) {
         const rejected = e instanceof ApiError && e.code === 'PHOTO_REJECTED';
         setPhotos(pending.slice(rejected ? i + 1 : i));
@@ -602,6 +605,9 @@ export default function OnboardingScreen() {
             <Text lineBreakStrategyIOS="hangul-word" style={[styles.subtitle, { color: c.textSecondary }]}>
               키·취미·관심사를 채우면 상대에게 더 잘 보여요.{'\n'}지금 하지 않아도 MY 탭에서 언제든 채울 수 있어요.
             </Text>
+            {photoNotice && (
+              <Text style={[styles.hint, { color: c.textSecondary }]}>{photoNotice}</Text>
+            )}
           </View>
           <View style={styles.choiceButtons}>
             <Pressable
