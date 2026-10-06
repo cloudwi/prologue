@@ -21,7 +21,7 @@ type Props = {
   text: string | null | undefined;
   images?: string[];
   c: ThemeColors;
-  /** 글자 크기·줄 간격 — 초대장 본문(16/29)과 지난 모임 요약(14.5/24)이 다르다. */
+  /** 글자 크기·줄 간격 — 초대장 본문(17/29)과 지난 모임 요약(14.5/24)이 다르다. */
   size?: 'body' | 'small';
   /** 사진을 누르면 크게 본다. 넘기지 않으면 누를 수 없다. */
   onPressImage?: (url: string, index: number) => void;
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
    * alignItems: 'center'인 부모 안에서 폭을 주지 않으면 덩이가 제 글자 길이만큼 줄어들고,
    * 그러면 textAlign이 아무 일도 하지 않는다 — 왼쪽 정렬한 글이 가운데 선 것처럼 보인다.
    */
-  body: { width: '100%', fontSize: 16, lineHeight: 29 },
+  body: { width: '100%', fontSize: 17, lineHeight: 29 },
   small: { width: '100%', fontSize: 14.5, lineHeight: 24 },
   photoRow: { alignSelf: 'center' },
   photo: { width: '100%', borderRadius: Radius.md },

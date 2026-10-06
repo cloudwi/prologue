@@ -13,4 +13,8 @@ class MemberQueryService(
 ) {
     @Transactional(readOnly = true)
     fun findProfile(accountId: UUID): Member? = memberRepository.findByAccountId(accountId)
+
+    @Transactional(readOnly = true)
+    fun findProfiles(accountIds: Collection<UUID>): Map<UUID, Member> =
+        memberRepository.findAllByAccountIds(accountIds).associateBy { it.accountId }
 }

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { ImageManipulator } from 'expo-image-manipulator';
+import { File as ExpoFile } from 'expo-file-system';
 import { authedFetch } from './api';
 import { deletePhoto, uploadPhoto } from './photo';
 
@@ -28,6 +29,7 @@ it('사진 등록 성공 안내를 보존하고 업로드 실패로 취급하지
   jest.mocked(authedFetch).mockResolvedValue({ ok: true, json: async () => result } as Response);
 
   await expect(uploadPhoto('file:///photo.jpg')).resolves.toEqual(result);
+  expect(ExpoFile).toHaveBeenCalledWith('file:///photo.jpg');
   expect(authedFetch).toHaveBeenCalledWith('/members/me/photos', expect.objectContaining({ method: 'POST' }));
 });
 

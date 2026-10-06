@@ -175,7 +175,7 @@ export function MeetupInvitation({
             {isPaid && (
               // 결제 로드맵 사전 고지 — 지금은 이체, 향후 앱 결제 전환(2026-08-24 결정).
               <Text style={[styles.infoHint, { color: c.textSecondary }]}>
-                참가비는 오픈채팅에서 모임장에게 직접 보내요.
+                참가비는 모임장에게 납부 방법을 확인한 뒤 직접 보내주세요.
               </Text>
             )}
           </View>
@@ -298,12 +298,11 @@ function RsvpBar({
   let action: { label: string; onPress: () => void; primary: boolean } | null = null;
 
   if (meetup.isMine) {
-    // '오른쪽 위 관리' 안내는 지웠다 — 모임 관리는 웹 콘솔로 옮겨서 그 버튼이 앱에 없다.
     title = '내가 여는 모임';
     sub = `확정 ${meetup.confirmedCount}/${meetup.capacity}명`;
   } else if (meetup.myStatus === 'CONFIRMED') {
     title = '참석 확정';
-    sub = '당일 안내는 오픈채팅에서';
+    sub = kakao ? '당일 안내는 연락 링크에서' : '참석 상태를 여기서 확인할 수 있어요';
     if (kakao && onOpenKakao) action = { label: '오픈채팅', onPress: () => onOpenKakao(kakao), primary: false };
   } else if (meetup.myStatus === 'APPLIED') {
     title = '확정을 기다리는 중';
@@ -475,7 +474,7 @@ const styles = StyleSheet.create({
   coverBannerEmoji: { fontSize: 64 },
 
   // ── 표지 ──
-  headline: { alignItems: 'center', paddingTop: 36, paddingHorizontal: 32 },
+  headline: { alignItems: 'center', paddingTop: 32, paddingHorizontal: 24 },
   eyebrow: { fontSize: 11.5, fontWeight: '600', letterSpacing: 4 },
   occurrence: { ...Type.caption, fontWeight: '600', marginTop: 10, letterSpacing: 0.3 },
   title: { fontSize: 26, fontWeight: '700', textAlign: 'center', lineHeight: 36, marginTop: 14, letterSpacing: -0.3 },
@@ -485,9 +484,9 @@ const styles = StyleSheet.create({
 
   // ── 절 ──
   // 절 사이 여백 — 56은 종이답긴 해도 아홉 절을 이어 붙이면 스크롤이 끝나지 않는다.
-  section: { alignItems: 'center', paddingHorizontal: 24, marginTop: 44 },
-  sectionEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 3 },
-  sectionTitle: { ...Type.title, marginTop: 8, marginBottom: 20 },
+  section: { alignItems: 'stretch', paddingHorizontal: 24, marginTop: 40 },
+  sectionEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 3, textAlign: 'center' },
+  sectionTitle: { ...Type.title, marginTop: 8, marginBottom: 20, textAlign: 'center' },
 
   hostBlock: { alignItems: 'center', marginTop: 28 },
   hostCaption: { ...Type.caption, letterSpacing: 2, marginBottom: 8 },
@@ -495,18 +494,18 @@ const styles = StyleSheet.create({
   hostMeta: { ...Type.caption, marginTop: 5 },
 
   // ── 달력 ──
-  calendar: { width: '100%', maxWidth: 320, gap: 4 },
+  calendar: { width: '100%', maxWidth: 360, gap: 4, alignSelf: 'center' },
   calRow: { flexDirection: 'row' },
   calCell: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' },
   calHead: { fontSize: 12, fontWeight: '600' },
   calDay: { ...Type.body },
   calMark: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  dday: { ...Type.button, marginTop: 22 },
+  dday: { ...Type.button, marginTop: 22, textAlign: 'center' },
 
   // ── 오시는 길 ──
   venueName: { ...Type.title, textAlign: 'center' },
   venueAddress: { ...Type.body, marginTop: 8, textAlign: 'center' },
-  mapRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  mapRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 18 },
   mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 16, borderRadius: Radius.pill, borderWidth: 1 },
   mapBtnText: { ...Type.label },
 

@@ -30,12 +30,11 @@ class MeetupSeriesTest {
     private val jobVerificationService = mockk<com.prologue.backend.member.application.service.JobVerificationService>(relaxed = true)
     private val notificationService = mockk<com.prologue.backend.notification.application.service.NotificationService>(relaxed = true)
     private val photoStorage = mockk<com.prologue.backend.member.application.port.PhotoStorage>(relaxed = true)
-    private val hostPolicy = mockk<MeetupHostPolicy> { every { canHost(any()) } returns true }
     private val followRepository = mockk<MeetupFollowRepository>(relaxed = true)
 
     private val service = MeetupService(
         meetupRepository, applicationRepository, memberQueryService, jobVerificationService,
-        notificationService, photoStorage, hostPolicy, followRepository,
+        notificationService, photoStorage, followRepository,
     )
 
     private val host = UUID.randomUUID()

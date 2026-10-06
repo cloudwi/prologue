@@ -48,16 +48,12 @@ class MeetupController(
     }
 
     /**
-     * [canCreate] — 이 사람이 모임을 열 수 있는지. 앱이 '모임 열기' 버튼을 그릴지 정한다.
-     * 옛 앱은 이 필드를 모르고 버튼을 늘 그리지만, 눌러도 서버가 거절한다(가산적 변경).
+     * [canCreate] — 구버전 호환용. 로그인한 회원이면 누구나 만들 수 있다.
      */
     data class MeetupsResponse(val meetups: List<MeetupView>, val canCreate: Boolean = false)
     data class MeetupHistoryResponse(val meetups: List<MeetupHistoryView>)
     /**
-     * [canCreate] — 이 사람이 모임을 열 수 있는지.
-     *
-     * 콘솔이 '새 모임' 단추를 그릴지 정한다. 이게 없으면 열 수 없는 사람이 폼을 다 채우고
-     * **저장할 때야** 거절당한다 — 못 하는 일은 하기 전에 말해야 한다.
+     * [canCreate] — 구버전 호환용. 인증이 필요한 내 모임 목록에서는 항상 true다.
      */
     data class MyMeetupsResponse(val meetups: List<HostMeetupView>, val canCreate: Boolean = false)
 
@@ -106,8 +102,7 @@ class MeetupController(
         val coverUrls: List<String> = emptyList(),
         /** 소개 글 안에 놓는 사진(선택, 최대 10장). 소개의 `[사진N]` 표시가 가리킨다. */
         val bodyImageUrls: List<String> = emptyList(),
-        @field:NotBlank(message = "카카오 오픈채팅 링크를 넣어주세요")
-        val kakaoLink: String,
+        val kakaoLink: String = "",
         /**
          * 이어 여는 회차면 그 모임의 seriesId('이 모임 다시 열기').
          * 없으면 새 모임 — 자기 혼자짜리 회차로 시작한다.
@@ -122,6 +117,38 @@ class MeetupController(
 
     data class CreateMeetupResponse(val meetupId: String)
 
+    /** 앱의 짧은 작성 폼. 구버전의 상세 요청은 별도 호환 경로로 남긴다. */
+    data class SimpleMeetupRequest(
+        @field:NotBlank(message = "모임 이름을 적어주세요") val title: String,
+        @field:NotBlank(message = "모임 일시가 필요해요") val meetAt: String,
+        @field:NotBlank(message = "모임 장소를 적어주세요") val place: String,
+        @field:Min(2) @field:Max(100) val capacity: Int,
+        val description: String? = null,
+        val placeAddress: String? = null,
+        @field:Min(0) val fee: Int = 0,
+        val coverUrls: List<String> = emptyList(),
+        val kakaoLink: String = "",
+        val durationMinutes: Int? = null,
+    ) {
+        fun details(): com.prologue.backend.dailymeet.application.service.SimpleMeetupDetails {
+            val time = try { Instant.parse(meetAt) } catch (_: java.time.format.DateTimeParseException) {
+                throw DailyMeetException("모임 일시 형식이 올바르지 않아요")
+            }
+            return com.prologue.backend.dailymeet.application.service.SimpleMeetupDetails(
+                title, time, place, capacity, description, placeAddress, fee, coverUrls, kakaoLink, durationMinutes,
+            )
+        }
+    }
+
+    @PostMapping("/simple")
+    fun createSimple(authentication: Authentication, @Valid @RequestBody request: SimpleMeetupRequest): CreateMeetupResponse =
+        CreateMeetupResponse(meetupService.saveSimple(UUID.fromString(authentication.name), null, request.details()).toString())
+
+    @org.springframework.web.bind.annotation.PutMapping("/{meetupId}/simple")
+    fun updateSimple(authentication: Authentication, @PathVariable meetupId: String, @Valid @RequestBody request: SimpleMeetupRequest) {
+        meetupService.saveSimple(UUID.fromString(authentication.name), parseId(meetupId), request.details())
+    }
+
     /**
      * 다가오는 모임 — 가까운 날짜순. 내 신청 상태와 (신청자에게만) 카카오 링크가 담긴다.
      *
@@ -133,7 +160,7 @@ class MeetupController(
         val accountId = accountIdOrNull(authentication)
         return MeetupsResponse(
             meetupService.upcoming(accountId),
-            canCreate = accountId != null && meetupService.canHost(accountId),
+            canCreate = accountId != null,
         )
     }
 
@@ -268,7 +295,7 @@ class MeetupController(
     @GetMapping("/mine")
     fun mine(authentication: Authentication): MyMeetupsResponse =
         UUID.fromString(authentication.name).let { id ->
-            MyMeetupsResponse(meetupService.hostMeetups(id), meetupService.canHost(id))
+            MyMeetupsResponse(meetupService.hostMeetups(id), canCreate = true)
         }
 
     /** 입금 확인 후 확정 — 신청자에게 푸시가 간다. */

@@ -115,8 +115,6 @@ object MeetupInvitationPage {
                   <h1>${escape(v.title)}</h1>
                   <p class="date">${escape(numeralDate(v.meetAt))}</p>
                   <p class="when">${escape(whenLine(v))}</p>
-                  ${greeting(v.description, v.bodyImageUrls)}
-                  ${gallery(v.coverUrls)}
                   <dl class="info">
                     ${row("여는 사람", v.hostNickname ?: "프롤로그")}
                     ${row("장소", v.placeName)}
@@ -125,6 +123,8 @@ object MeetupInvitationPage {
                     ${row("참석 조건", conditionLabel(v))}
                     ${row("남은 자리", seatsValue(v))}
                   </dl>
+                  ${greeting(v.description, v.bodyImageUrls)}
+                  ${gallery(v.coverUrls)}
                   ${recap(v)}
                   <a class="cta" href="${escape(deepLink)}" id="open">앱에서 초대장 열기</a>
                   <p class="note">프롤로그 앱에서 신청할 수 있어요. 앱이 없다면 아래에서 받아주세요.</p>
@@ -389,28 +389,28 @@ ${head.prependIndent("        ")}
         <style>
           :root { --bg:#F6F8FA; --card:#FFFFFF; --sunken:#F3F6F9; --text:#1B2126; --muted:#69747E; --line:#E3E8EE; --point:#D9694C; --on-point:#fff; }
           @media (prefers-color-scheme: dark) {
-            :root { --bg:#101418; --card:#181D22; --sunken:#1F252B; --text:#EAEFF4; --muted:#96A1AC; --line:#28303A; --point:#E07A5C; --on-point:#101418; }
+            :root { --bg:#0D1115; --card:#171C21; --sunken:#22282E; --text:#F2F5F7; --muted:#B0BAC4; --line:#323A43; --point:#E07A5C; --on-point:#101418; }
           }
           * { box-sizing: border-box; }
           body { margin:0; background:var(--bg); color:var(--text);
                  font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-                 display:flex; justify-content:center; padding:24px 16px 48px; }
-          .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:20px; overflow:hidden;
-                  padding:0 24px 32px; text-align:center; }
-          .cover { display:block; width:calc(100% + 48px); margin:0 -24px 28px; aspect-ratio:4/3; object-fit:cover; background:var(--line); }
-          .eyebrow { margin:32px 0 0; font-size:11.5px; font-weight:600; letter-spacing:4px; color:var(--muted); }
+                 display:flex; justify-content:center; align-items:flex-start; padding:32px 20px 56px; }
+          .card { width:100%; max-width:560px; background:var(--card); border:1px solid var(--line); border-radius:24px; overflow:hidden;
+                  padding:0 36px 40px; text-align:center; }
+          .cover { display:block; width:calc(100% + 72px); margin:0 -36px 32px; aspect-ratio:4/3; object-fit:cover; background:var(--line); }
+          .eyebrow { margin:36px 0 0; font-size:12px; font-weight:600; letter-spacing:4px; color:var(--muted); }
           .cover ~ .eyebrow { margin-top:0; }
           .occurrence { margin:10px 0 0; font-size:13px; font-weight:700; color:var(--point); }
-          h1 { margin:14px 0 0; font-size:26px; font-weight:600; line-height:1.4; letter-spacing:-0.02em; }
-          .date { margin:20px 0 0; font-size:22px; font-weight:300; letter-spacing:3px; font-variant-numeric:tabular-nums; }
-          .when { margin:8px 0 0; font-size:14px; color:var(--muted); }
+          h1 { margin:14px 0 0; font-size:30px; font-weight:650; line-height:1.35; letter-spacing:-0.025em; }
+          .date { margin:22px 0 0; font-size:24px; font-weight:400; letter-spacing:3px; font-variant-numeric:tabular-nums; }
+          .when { margin:8px 0 0; font-size:15px; line-height:1.6; color:var(--muted); }
           /*
             머리말(눈썹·제목·날짜)만 가운데에 두고 **본문은 왼쪽으로 흘린다**.
             청첩장이 가운데 정렬로 읽히는 건 한 줄 한 줄을 손으로 끊어 놓기 때문이다. 모임장이
             쓰는 소개는 긴 문단이라, 가운데에 두면 줄 끝이 들쭉날쭉해지고 "들려드릴 / 게요."처럼
             한 음절이 홀로 떨어진다. 청첩장다움은 정렬이 아니라 눈썹의 자간·숫자 날짜·여백이 낸다.
           */
-          .greeting { margin:36px 0 0; font-size:15.5px; line-height:1.9; letter-spacing:-0.2px; text-align:left; }
+          .greeting { margin:32px 0 0; font-size:17px; line-height:1.85; letter-spacing:-0.25px; text-align:left; }
           /* 글쓴이가 세운 줄 — 머리줄과 맺는 한 줄이 여기 온다. 기본은 왼쪽이라 클래스가 없다. */
           .greeting.center { text-align:center; }
           .greeting.right { text-align:right; }
@@ -421,7 +421,7 @@ ${head.prependIndent("        ")}
            * 속성으로 비율을 계산해 사진이 도착하기 전에 상자를 잡아주는데, 여기서 height를
            * 못박으면 그 계산이 통째로 무시된다 — 글이 밀리는 이유가 다시 생긴다.
            */
-          .body-photo { display:block; width:calc(100% + 48px); height:auto; margin:24px -24px; border-radius:0;
+          .body-photo { display:block; width:calc(100% + 72px); height:auto; margin:28px -36px; border-radius:0;
                         object-fit:cover; background:var(--line); }
           /* 폭을 정한 사진은 카드 안으로 들어와 가운데 선다 — 흘려보낼 이유가 없으니 모서리도 둥글다. */
           .body-photo.w25, .body-photo.w50, .body-photo.w75 {
@@ -435,11 +435,11 @@ ${head.prependIndent("        ")}
             같은 카드 안이지만 다른 시간의 글이다. 위는 "오세요"이고 여기는 "이랬어요"다.
             그 경계가 없으면 지난 모임의 후기가 모집 문구처럼 읽힌다.
           */
-          .recap { margin:36px -24px 0; padding:28px 24px 0; border-top:1px solid var(--line); }
+          .recap { margin:40px -36px 0; padding:32px 36px 0; border-top:1px solid var(--line); }
           .recap .eyebrow { margin:0; }
           .recap .greeting { margin-top:18px; }
           /* 사진 여러 장 — 옆으로 밀어 본다. 카드 밖으로 흘러나가게 두면 폭이 넉넉해 보인다. */
-          .gallery { display:flex; gap:8px; margin:36px -24px 0; padding:0 24px; overflow-x:auto;
+          .gallery { display:flex; gap:10px; margin:40px -36px 0; padding:0 36px; overflow-x:auto;
                      scroll-snap-type:x mandatory; scrollbar-width:none; }
           .gallery::-webkit-scrollbar { display:none; }
           .gallery img { flex:0 0 auto; width:72%; max-width:280px; aspect-ratio:4/3; object-fit:cover;
@@ -449,15 +449,28 @@ ${head.prependIndent("        ")}
             다섯 줄에 다섯 개의 선이 그어지면 정보보다 선이 먼저 눈에 든다. 한 칸 눌린 면에
             올려 덩어리로 묶고, 그 안은 여백으로만 가른다.
           */
-          .info { margin:40px 0 0; padding:6px 18px; text-align:left; background:var(--sunken); border-radius:16px; }
-          .row { display:flex; justify-content:space-between; align-items:baseline; gap:20px; padding:13px 0; }
-          dt { font-size:14px; color:var(--muted); flex-shrink:0; }
-          dd { margin:0; font-size:15px; font-weight:600; text-align:right; line-height:1.55; }
+          .info { margin:32px 0 0; padding:8px 20px; text-align:left; background:var(--sunken); border-radius:18px; }
+          .row { display:flex; justify-content:space-between; align-items:baseline; gap:24px; padding:14px 0; }
+          dt { font-size:14.5px; color:var(--muted); flex-shrink:0; }
+          dd { margin:0; font-size:15.5px; font-weight:600; text-align:right; line-height:1.55; }
           .cta { display:block; margin:32px 0 0; padding:17px; border-radius:16px; background:var(--point); color:var(--on-point);
                  font-size:16px; font-weight:700; text-decoration:none; }
           .note { margin:16px 0 0; font-size:13px; line-height:1.7; color:var(--muted); }
           .stores { margin:10px 0 0; font-size:13px; color:var(--muted); display:flex; gap:8px; justify-content:center; }
           .stores a { color:var(--muted); }
+          @media (max-width:600px) {
+            body { padding:0; }
+            .card { max-width:none; min-height:100vh; border:0; border-radius:0; padding:0 20px 32px; }
+            .cover { width:calc(100% + 40px); margin:0 -20px 28px; }
+            h1 { font-size:27px; }
+            .date { font-size:22px; }
+            .greeting { font-size:16.5px; line-height:1.85; }
+            .body-photo { width:calc(100% + 40px); margin:24px -20px; }
+            .recap { margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px; }
+            .gallery { margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px; }
+            .info { padding-left:16px; padding-right:16px; }
+            .row { gap:16px; }
+          }
         </style>
         </head>
         <body>

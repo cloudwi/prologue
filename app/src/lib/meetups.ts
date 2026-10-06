@@ -1,4 +1,5 @@
 import { authedRequest } from './api';
+import { uploadImage } from './photo';
 
 /**
  * 오프라인 모임 클라이언트.
@@ -239,9 +240,70 @@ export function conditionLabel(
 
 // ── 모임장으로서 ──
 
-/*
- * 모임장이 쓰던 것들(개설·수정·신청자 확정·개최 관리)은 여기서 걷어냈다.
- * 그 일은 웹 콘솔(prologue.day/host)이 맡는다 — V37 마이그레이션이 처음부터 그렇게 적고 있었고,
- * 개설은 커버 사진과 긴 소개와 주소를 다루는 폼 작업이라 큰 화면이 맞다.
- * 앱은 모임을 보고 신청하는 쪽만 남긴다. 서버 API는 그대로 있으니 웹이 같은 것을 부른다.
- */
+export type HostApplication = {
+  applicationId: string;
+  nickname: string | null;
+  gender: string | null;
+  age: number | null;
+  region: string | null;
+  status: 'APPLIED' | 'CONFIRMED' | 'DECLINED' | 'CANCELED';
+  appliedAt: string;
+  jobVerified: boolean;
+};
+
+export type HostMeetup = Pick<Meetup,
+  'meetupId' | 'title' | 'description' | 'meetAt' | 'durationMinutes' | 'place' | 'placeUrl' |
+  'placeAddress' | 'capacity' | 'fee' | 'feeFemale' | 'genderLimit' | 'minAgeMale' | 'maxAgeMale' |
+  'minAgeFemale' | 'maxAgeFemale' | 'minHeightMaleCm' | 'minHeightFemaleCm' | 'requireJobVerified' |
+  'emoji' | 'color' | 'coverUrls' | 'bodyImageUrls' | 'status' | 'confirmedCount' | 'seriesId'
+> & {
+  capacityMale: number | null;
+  capacityFemale: number | null;
+  waitlistCapacity: number | null;
+  kakaoLink: string;
+  reviewNote: string | null;
+  applications: HostApplication[];
+};
+
+export type SimpleMeetupInput = {
+  title: string;
+  meetAt: string;
+  place: string;
+  capacity: number;
+  description?: string | null;
+  durationMinutes?: number | null;
+  placeAddress?: string | null;
+  fee?: number;
+  kakaoLink?: string;
+  coverUrls?: string[];
+};
+
+export async function getHostMeetups(): Promise<{ meetups: HostMeetup[]; canCreate: boolean }> {
+  return authedRequest('GET', '/meetups/mine');
+}
+
+export async function saveMeetup(input: SimpleMeetupInput, id?: string): Promise<string> {
+  if (id) {
+    await authedRequest('PUT', `/meetups/${id}/simple`, input);
+    return id;
+  }
+  const result = await authedRequest<{ meetupId: string }>('POST', '/meetups/simple', input);
+  return result.meetupId;
+}
+
+export async function uploadMeetupCover(uri: string): Promise<string> {
+  const result = await uploadImage<{ url: string }>(uri, '/meetups/cover');
+  return result.url;
+}
+
+export async function manageApplication(id: string, action: 'confirm' | 'decline'): Promise<void> {
+  await authedRequest('POST', `/meetups/applications/${id}/${action}`);
+}
+
+export async function manageMeetup(id: string, action: 'close' | 'reopen' | 'complete' | 'cancel'): Promise<void> {
+  await authedRequest('POST', `/meetups/${id}/hosting/${action}`);
+}
+
+export function hostingStatus(status: string): string {
+  return ({ PENDING: '승인 대기', REJECTED: '수정 필요', OPEN: '모집 중', CLOSED: '모집 마감', DONE: '개최 완료', CANCELED: '취소됨' } as Record<string, string>)[status] ?? status;
+}

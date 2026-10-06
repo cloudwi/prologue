@@ -73,7 +73,7 @@ class MeetupPersistenceAdapter(
             color = color,
             coverUrls = coverUrls.joinToString(",").ifBlank { null },
             bodyImageUrls = bodyImageUrls.joinToString(",").ifBlank { null },
-            kakaoLink = kakaoLink,
+            kakaoLink = kakaoLink.ifBlank { null },
             status = status.name,
             reviewNote = reviewNote,
             createdAt = createdAt,
@@ -113,7 +113,7 @@ class MeetupPersistenceAdapter(
             color = color,
             coverUrls = coverUrls?.split(',')?.filter { it.isNotBlank() } ?: emptyList(),
             bodyImageUrls = bodyImageUrls?.split(',')?.filter { it.isNotBlank() } ?: emptyList(),
-            kakaoLink = kakaoLink,
+            kakaoLink = kakaoLink.orEmpty(),
             status = MeetupStatus.valueOf(status),
             reviewNote = reviewNote,
             createdAt = createdAt,
@@ -141,6 +141,9 @@ class MeetupApplicationPersistenceAdapter(
     override fun findAllByMeetup(meetupId: UUID): List<MeetupApplication> =
         jpa.findByMeetupIdOrderByCreatedAtAsc(meetupId).map { it.toDomain() }
 
+    override fun findAllByMeetups(meetupIds: Collection<UUID>): List<MeetupApplication> =
+        if (meetupIds.isEmpty()) emptyList() else jpa.findByMeetupIdInOrderByCreatedAtAsc(meetupIds).map { it.toDomain() }
+
     override fun findConfirmedByMeetups(meetupIds: Collection<UUID>): List<MeetupApplication> {
         if (meetupIds.isEmpty()) return emptyList()
         return jpa.findByMeetupIdInAndStatus(meetupIds, MeetupApplicationStatus.CONFIRMED.name)
@@ -150,9 +153,7 @@ class MeetupApplicationPersistenceAdapter(
 
     override fun countConfirmedByMeetup(meetupIds: Collection<UUID>): Map<UUID, Int> {
         if (meetupIds.isEmpty()) return emptyMap()
-        return jpa.findByMeetupIdInAndStatus(meetupIds, MeetupApplicationStatus.CONFIRMED.name)
-            .groupingBy { it.meetupId }
-            .eachCount()
+        return jpa.countConfirmed(meetupIds).associate { it.meetupId to it.total.toInt() }
     }
 
     override fun findAllByApplicant(applicantAccountId: UUID): List<MeetupApplication> =

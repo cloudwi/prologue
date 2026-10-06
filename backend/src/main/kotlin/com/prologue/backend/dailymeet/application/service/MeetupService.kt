@@ -307,10 +307,9 @@ data class MeetupInvitationView(
 /**
  * 오프라인 모임 유스케이스.
  *
- * 회원은 앱에서 모임을 보고 신청한다. 다만 **여는 건 아직 운영자만** 할 수 있다([MeetupHostPolicy]) —
- * 초창기 기능이라 처음 몇 번은 직접 치러 보며 규칙을 배우는 편이 낫다.
- * 모임장 = 만든 사람이라는 구조는 그대로다: 제한이 풀리면 그날부터 누구나 모임장이 된다.
- * 모임장은 앱(또는 웹 콘솔 /host)에서 입금을 확인해 확정한다.
+ * 로그인한 회원 누구나 앱에서 모임을 만든다. 별도의 모임장 자격은 없다.
+ * 만든 사람은 자기 모임의 신청자를 확정하고 내용을 관리한다. 모든 관리 요청은 소유권을 검사한다.
+ * 공개 전 운영자 검토는 개설 자격과 별개로 유지한다.
  * 돈은 카카오에서 오간다 — 여기에는 신청·확정·개최의 기록만 남고,
  * 그 기록이 모임장의 신뢰 신호(개최 횟수·확정 인원)로 공개된다.
  */
@@ -355,12 +354,8 @@ class MeetupService(
     private val jobVerificationService: JobVerificationService,
     private val notificationService: NotificationService,
     private val photoStorage: PhotoStorage,
-    private val hostPolicy: MeetupHostPolicy,
     private val followRepository: MeetupFollowRepository,
 ) {
-    /** 이 사람이 모임을 열 수 있는지 — 앱이 '모임 열기' 버튼을 그릴지 정할 때 묻는다. */
-    fun canHost(accountId: UUID): Boolean = hostPolicy.canHost(accountId)
-
     // ── 회원(앱) ──
 
     /**
@@ -448,7 +443,7 @@ class MeetupService(
                 confirmedCount = confirmedApps.size,
                 myStatus = my?.status?.name,
                 // 링크는 손든 사람에게만 — 입금 안내가 오픈채팅에서 이뤄지므로 신청이 곧 입장권이다.
-                kakaoLink = if (my != null && my.status != MeetupApplicationStatus.DECLINED) m.kakaoLink else null,
+                kakaoLink = if (my != null && my.status != MeetupApplicationStatus.DECLINED) m.kakaoLink.ifBlank { null } else null,
                 participants = confirmedApps.map {
                     MeetupParticipantView(
                         accountId = it.applicantAccountId,
@@ -630,7 +625,7 @@ class MeetupService(
         applicationRepository.save(application)
     }
 
-    // ── 모임장(웹 콘솔) ──
+    // ── 만든 사람(앱) ──
 
     @Transactional
     fun create(
@@ -665,10 +660,6 @@ class MeetupService(
         /** 소요 시간(분). null이면 정하지 않은 모임 — 옛 앱은 보내지 않는다. */
         durationMinutes: Int? = null,
     ): UUID {
-        // 서버가 막아야 실효가 있다 — 앱은 버튼을 숨길 뿐이고, 옛 앱과 직접 호출은 여기서 걸린다.
-        if (!hostPolicy.canHost(hostAccountId)) {
-            throw DailyMeetException("모임은 아직 운영자만 열 수 있어요. 열고 싶은 모임이 있다면 알려주세요.")
-        }
         // 남의 모임 회차에 끼어들 수 없다 — 회차는 그 모임을 열어온 사람의 것이다.
         if (seriesId != null && meetupRepository.findAllBySeries(seriesId).none { it.hostAccountId == hostAccountId }) {
             throw DailyMeetException("이어 열 수 있는 모임이 아니에요")
@@ -689,6 +680,34 @@ class MeetupService(
                 .forEach { notificationService.meetupSeriesOpened(it, saved.title) }
         }
         return requireNotNull(saved.id)
+    }
+
+    /** 짧은 앱 폼. 편집 화면에 없는 기존 조건·본문 사진은 조용히 지우지 않는다. */
+    @Transactional
+    fun saveSimple(hostAccountId: UUID, meetupId: UUID?, d: SimpleMeetupDetails): UUID {
+        if (meetupId == null) return create(
+            hostAccountId = hostAccountId, title = d.title, description = d.description,
+            meetAt = d.meetAt, place = d.place, placeUrl = null, placeAddress = d.placeAddress,
+            capacity = d.capacity, fee = d.fee, feeFemale = null, genderLimit = null,
+            minAgeMale = null, maxAgeMale = null, minAgeFemale = null, maxAgeFemale = null,
+            minHeightMaleCm = null, minHeightFemaleCm = null, requireJobVerified = false,
+            emoji = null, color = null, coverUrls = d.coverUrls, kakaoLink = d.kakaoLink,
+            durationMinutes = d.durationMinutes,
+        )
+        val existing = owned(hostAccountId, meetupId)
+        updateMeetup(
+            hostAccountId = hostAccountId, meetupId = meetupId, title = d.title, description = d.description,
+            meetAt = d.meetAt, place = d.place, placeUrl = existing.placeUrl, placeAddress = d.placeAddress,
+            capacity = d.capacity, capacityMale = existing.capacityMale, capacityFemale = existing.capacityFemale,
+            waitlistCapacity = existing.waitlistCapacity, fee = d.fee, feeFemale = existing.feeFemale,
+            genderLimit = existing.genderLimit, minAgeMale = existing.minAgeMale, maxAgeMale = existing.maxAgeMale,
+            minAgeFemale = existing.minAgeFemale, maxAgeFemale = existing.maxAgeFemale,
+            minHeightMaleCm = existing.minHeightMaleCm, minHeightFemaleCm = existing.minHeightFemaleCm,
+            requireJobVerified = existing.requireJobVerified, emoji = existing.emoji, color = existing.color,
+            coverUrls = d.coverUrls, bodyImageUrls = existing.bodyImageUrls, kakaoLink = d.kakaoLink,
+            durationMinutes = d.durationMinutes,
+        )
+        return meetupId
     }
 
     /** 모임 수정 — 모임장 본인만. 내용 검증은 도메인이 create와 동일하게 한다. */
@@ -724,6 +743,10 @@ class MeetupService(
         durationMinutes: Int? = null,
     ) {
         val existing = owned(hostAccountId, meetupId)
+        if (capacity < existing.capacity) {
+            val confirmed = applicationRepository.countConfirmedByMeetup(listOf(meetupId))[meetupId] ?: 0
+            if (capacity < confirmed) throw DailyMeetException("이미 확정된 ${confirmed}명보다 정원을 줄일 수 없어요")
+        }
         meetupRepository.save(
             Meetup.update(
                 existing, title, description, meetAt, place, placeUrl, placeAddress,
@@ -791,9 +814,16 @@ class MeetupService(
 
     /** 내 모임 전부 — 신청자 목록까지 한 번에(콘솔은 화면 하나로 끝낸다). */
     @Transactional(readOnly = true)
-    fun hostMeetups(hostAccountId: UUID): List<HostMeetupView> =
-        meetupRepository.findAllByHost(hostAccountId).map { m ->
-            val applications = applicationRepository.findAllByMeetup(requireNotNull(m.id))
+    fun hostMeetups(hostAccountId: UUID): List<HostMeetupView> {
+        val meetups = meetupRepository.findAllByHost(hostAccountId)
+        if (meetups.isEmpty()) return emptyList()
+        val allApplications = applicationRepository.findAllByMeetups(meetups.map { requireNotNull(it.id) })
+        val byMeetup = allApplications.groupBy { it.meetupId }
+        val accounts = allApplications.map { it.applicantAccountId }.toSet()
+        val profiles = memberQueryService.findProfiles(accounts)
+        val verified = jobVerificationService.verifiedAccounts(accounts)
+        return meetups.map { m ->
+            val applications = byMeetup[m.id].orEmpty()
             HostMeetupView(
                 meetupId = requireNotNull(m.id),
                 title = m.title,
@@ -831,7 +861,7 @@ class MeetupService(
                 seriesId = m.seriesId,
                 confirmedCount = applications.count { it.status == MeetupApplicationStatus.CONFIRMED },
                 applications = applications.map { app ->
-                    val profile = memberQueryService.findProfile(app.applicantAccountId)
+                    val profile = profiles[app.applicantAccountId]
                     HostApplicationView(
                         applicationId = requireNotNull(app.id),
                         nickname = profile?.nickname,
@@ -840,11 +870,12 @@ class MeetupService(
                         region = profile?.region,
                         status = app.status.name,
                         appliedAt = app.createdAt,
-                        jobVerified = jobVerificationService.verifiedDomain(app.applicantAccountId) != null,
+                        jobVerified = app.applicantAccountId in verified,
                     )
                 },
             )
         }
+    }
 
     /** 입금 확인 후 확정 — 신청자에게 푸시가 간다. */
     @Transactional

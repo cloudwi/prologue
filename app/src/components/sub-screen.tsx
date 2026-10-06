@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, Type, type ThemeColors } from '@/constants/theme';
 
@@ -43,7 +43,7 @@ export function SubScreen({
                 saving ? (
                   <ActivityIndicator color={c.primary} />
                 ) : (
-                  <Pressable onPress={onSave} disabled={saveDisabled} hitSlop={12} accessibilityRole="button" accessibilityState={{ disabled: saveDisabled }}>
+                  <Pressable onPress={onSave} disabled={saveDisabled} hitSlop={12} style={styles.saveAction} accessibilityRole="button" accessibilityState={{ disabled: saveDisabled }}>
                     <Text style={[styles.save, { color: c.primaryStrong, opacity: saveDisabled ? 0.35 : 1 }]}>
                       {saveLabel}
                     </Text>
@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   save: { ...Type.button },
+  saveAction: { minHeight: 44, justifyContent: 'center', marginRight: Platform.OS === 'web' ? 16 : 0 },
   soonTitle: { ...Type.title },
   soonDesc: { ...Type.body, textAlign: 'center', marginTop: 8 },
 });

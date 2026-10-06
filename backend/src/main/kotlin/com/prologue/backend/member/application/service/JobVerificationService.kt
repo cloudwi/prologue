@@ -39,6 +39,17 @@ class JobVerificationService(
         jdbc.query("select email_domain from job_verifications where account_id = ?", { rs, _ -> rs.getString(1) }, accountId)
             .firstOrNull()
 
+    /** 관리 화면은 인증 여부만 필요하다. 사람마다 도메인을 따로 읽지 않는다. */
+    @Transactional(readOnly = true)
+    fun verifiedAccounts(accountIds: Collection<UUID>): Set<UUID> {
+        if (accountIds.isEmpty()) return emptySet()
+        val ids = accountIds.toSet()
+        return jdbc.query(
+            "select account_id from job_verifications where account_id in (${ids.joinToString(",") { "?" }})",
+            { rs, _ -> UUID.fromString(rs.getString(1)) }, *ids.toTypedArray(),
+        ).toSet()
+    }
+
     @Transactional
     fun requestCode(accountId: UUID, rawEmail: String) {
         val email = Account.normalizeEmail(rawEmail)

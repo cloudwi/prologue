@@ -103,8 +103,8 @@ class MeetupJpaEntity(
     @Column(name = "body_image_urls", columnDefinition = "text")
     val bodyImageUrls: String? = null,
 
-    @Column(name = "kakao_link", nullable = false, length = 300)
-    val kakaoLink: String,
+    @Column(name = "kakao_link", length = 300)
+    val kakaoLink: String? = null,
 
     @Column(name = "status", nullable = false, length = 12)
     var status: String = "OPEN",

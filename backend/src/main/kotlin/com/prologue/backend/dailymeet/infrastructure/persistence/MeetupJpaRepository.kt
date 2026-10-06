@@ -36,6 +36,15 @@ interface MeetupFollowJpaRepository : JpaRepository<MeetupFollowJpaEntity, Meetu
 }
 
 interface MeetupApplicationJpaRepository : JpaRepository<MeetupApplicationJpaEntity, UUID> {
+    interface ConfirmedCount {
+        val meetupId: UUID
+        val total: Long
+    }
+
+    @Query("select a.meetupId as meetupId, count(a) as total from MeetupApplicationJpaEntity a where a.meetupId in :ids and a.status = 'CONFIRMED' group by a.meetupId")
+    fun countConfirmed(@Param("ids") ids: Collection<UUID>): List<ConfirmedCount>
+
+    fun findByMeetupIdInOrderByCreatedAtAsc(meetupIds: Collection<UUID>): List<MeetupApplicationJpaEntity>
     fun findByMeetupIdAndApplicantAccountId(meetupId: UUID, applicantAccountId: UUID): MeetupApplicationJpaEntity?
 
     fun findByMeetupIdOrderByCreatedAtAsc(meetupId: UUID): List<MeetupApplicationJpaEntity>

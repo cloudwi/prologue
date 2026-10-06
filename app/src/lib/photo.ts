@@ -62,18 +62,22 @@ async function appendPhotoPart(formData: FormData, localUri: string): Promise<vo
 }
 
 /** 로컬 이미지 URI → multipart로 POST /members/me/photos 업로드. 업데이트된 프로필(photoUrls 포함)을 반환. */
-export async function uploadPhoto(localUri: string): Promise<PhotoUploadResult> {
+export async function uploadImage<T>(localUri: string, path: string): Promise<T> {
   const formData = new FormData();
   await appendPhotoPart(formData, await shrinkForUpload(localUri));
 
   // Content-Type은 FormData가 자동으로 boundary 포함하여 설정
-  const res = await authedFetch('/members/me/photos', { method: 'POST', body: formData });
+  const res = await authedFetch(path, { method: 'POST', body: formData });
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     throw new ApiError(res.status, data?.code, data?.message);
   }
-  return data as PhotoUploadResult;
+  return data as T;
+}
+
+export async function uploadPhoto(localUri: string): Promise<PhotoUploadResult> {
+  return uploadImage(localUri, '/members/me/photos');
 }
 
 /** 프로필 사진 삭제. DELETE /members/me/photos?url=... */

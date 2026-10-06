@@ -32,7 +32,7 @@ class MeetupCoverService(
             )
         }
         val inspection = photoInspector.inspect(bytes, format.mimeType)
-        if (!inspection.skipped && inspection.unsafe) {
+        if (inspection.unsafe) {
             throw PhotoRejectedException("선정적이거나 부적절한 사진은 커버로 쓸 수 없어요")
         }
         return photoStorage.uploadProfilePhoto(accountId, bytes, format.mimeType)

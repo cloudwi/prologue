@@ -28,7 +28,7 @@ enum class MeetupStatus { PENDING, REJECTED, OPEN, CLOSED, DONE, CANCELED }
 enum class RecapStatus { NONE, PENDING, APPROVED, REJECTED }
 
 /**
- * 오프라인 모임 — 모임장이 웹 콘솔(/host)에서 만들고, 회원이 앱에서 신청한다.
+ * 오프라인 모임 — 개설·신청·참가자 관리는 앱에서, 공개 초대장은 웹에서 공유한다.
  *
  * 우리는 돈을 만지지 않는다. 참가비 입금과 자리 배분은 모임장의 카카오 오픈채팅에서
  * 이뤄지고, 모임장은 입금을 확인한 신청자에게 확정 표시만 남긴다. 그래서 이 모델에는
@@ -420,7 +420,7 @@ class Meetup private constructor(
             }
             val cleanLink = kakaoLink.trim()
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
-            if (!cleanLink.startsWith("https://")) throw DailyMeetException("카카오 오픈채팅 링크(https://)를 넣어주세요")
+            if (cleanLink.isNotEmpty() && !cleanLink.startsWith("https://")) throw DailyMeetException("연락 링크는 https://로 시작해야 해요")
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")
             return Meetup(
                 null, seriesId ?: UUID.randomUUID(), hostAccountId, cleanTitle, cleanDescription, meetAt, cleanPlace, cleanPlaceUrl, cleanPlaceAddress,
@@ -571,7 +571,7 @@ enum class MeetupApplicationStatus { APPLIED, CONFIRMED, DECLINED, CANCELED }
 
 /**
  * 모임 신청 — 회원이 앱에서 남기는 손들기.
- * 확정은 모임장이 카카오에서 입금을 확인한 뒤 웹 콘솔에서 찍는다.
+ * 확정은 모임장이 필요한 입금을 확인한 뒤 앱에서 남긴다.
  */
 class MeetupApplication private constructor(
     val id: UUID?, // 영속 전 null, JPA가 부여(UUIDv7)

@@ -6,6 +6,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.ZoneId
@@ -127,6 +128,13 @@ class MeetupInvitationPageTest {
         val out = html(view(description = "첫 줄\n둘째 줄"))
 
         assertContains(out, """<p class="greeting">첫 줄<br />둘째 줄</p>""")
+    }
+
+    @Test
+    fun `장소와 참가비는 긴 소개보다 먼저 보여준다`() {
+        val out = html(view(description = "소개가 길어져도 핵심 정보부터 읽어요"))
+
+        assertTrue(out.indexOf("<dl class=\"info\">") < out.indexOf("소개가 길어져도 핵심 정보부터 읽어요"))
     }
 
     @Test

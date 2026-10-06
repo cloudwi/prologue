@@ -8,6 +8,7 @@ import io.mockk.verify
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -32,7 +33,6 @@ class MeetupControllerGuestTest {
 
         assertFalse(response.canCreate) // 손님은 모임을 열 수 없다
         verify(exactly = 1) { meetupService.upcoming(null) }
-        verify(exactly = 0) { meetupService.canHost(any()) }
     }
 
     @Test
@@ -54,11 +54,19 @@ class MeetupControllerGuestTest {
     fun `회원이면 자기 계정으로 읽는다`() {
         val accountId = UUID.randomUUID()
         every { meetupService.upcoming(accountId) } returns emptyList()
-        every { meetupService.canHost(accountId) } returns true
 
         val response = controller.upcoming(UsernamePasswordAuthenticationToken(accountId.toString(), null, emptyList()))
 
-        assert(response.canCreate)
+        assertTrue(response.canCreate)
         verify(exactly = 1) { meetupService.upcoming(accountId) }
+    }
+
+    @Test
+    fun `내 모임 목록은 일반 회원에게도 만들기를 허용한다`() {
+        val accountId = UUID.randomUUID()
+        every { meetupService.hostMeetups(accountId) } returns emptyList()
+        val response = controller.mine(UsernamePasswordAuthenticationToken(accountId.toString(), null, emptyList()))
+        assertTrue(response.canCreate)
+        verify(exactly = 1) { meetupService.hostMeetups(accountId) }
     }
 }

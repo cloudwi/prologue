@@ -93,6 +93,14 @@ export function timeRangeLabel(start: Date, durationMinutes?: number | null): st
   return timeLabel(start) + untilSuffix(start, durationMinutes);
 }
 
+/** 관리 화면도 기기의 시간대와 관계없이 한국 시간과 종료 시각을 함께 보여준다. */
+export function koreanMeetupWhen(m: Pick<Meetup, 'meetAt' | 'durationMinutes'>): string {
+  // 기존 조판 함수가 읽는 로컬 Date를 한국 시각의 벽시계 값으로 만든다.
+  const kst = new Date(new Date(m.meetAt).getTime() + 9 * 60 * 60_000);
+  const wallClock = new Date(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate(), kst.getUTCHours(), kst.getUTCMinutes());
+  return `${wallClock.getMonth() + 1}월 ${wallClock.getDate()}일 (${WEEKDAYS[wallClock.getDay()]}) ${timeRangeLabel(wallClock, m.durationMinutes)}`;
+}
+
 /**
  * 며칠 남았는지 — 청첩장의 "결혼식이 N일 남았습니다" 줄.
  *

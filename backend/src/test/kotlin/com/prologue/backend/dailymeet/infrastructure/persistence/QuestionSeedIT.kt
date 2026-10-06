@@ -51,4 +51,13 @@ class QuestionSeedIT : PostgresRepositoryTest() {
         val tooLong = pool.filter { it.content.length > 80 }
         assertTrue(tooLong.isEmpty(), "너무 긴 질문: ${tooLong.take(3).map { it.id to it.content.length }}")
     }
+
+    @Test
+    fun `가벼운 질문이 열흘 간격으로 섞인다`() {
+        val pool = questions.findAllOrdered().associateBy { it.id }
+
+        assertEquals("배스킨라빈스에 가면 고민 없이 고르는 최애 맛은 무엇인가요?", pool.getValue(10).content)
+        assertEquals("누군가 내 사용 설명서를 쓴다면 첫 줄에 무엇을 적어야 할까요?", pool.getValue(500).content)
+        assertEquals("오늘의 나를 한 문장으로 소개한다면 뭐라고 말하고 싶나요?", pool.getValue(1000).content)
+    }
 }

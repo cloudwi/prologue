@@ -27,8 +27,8 @@ import { thumbUrl } from '@/lib/image';
 /**
  * 모임 — 모임장이 여는 오프라인 모임에 손을 드는 곳.
  *
- * 앱은 신청까지만 한다. 참가비 입금과 대화는 모임장의 카카오 오픈채팅에서 이뤄지고
- * (링크는 신청해야 열린다), 모임장이 입금을 확인하면 "참여 확정" 표시가 돌아온다.
+ * 개설과 참가자 관리는 앱에서 한다. 참가비는 모임장이 직접 확인하며,
+ * 선택 연락 링크는 신청한 사람에게만 열린다.
  * 지난 모임 기록(개최 횟수·참여 인원)을 함께 보여준다 — 잘 굴러가는 모임이라는
  * 증거는 우리가 말하는 것보다 기록이 말하는 게 낫다.
  */
@@ -155,7 +155,6 @@ export default function MeetupsScreen() {
             jobVerified: job?.verified ?? false,
           }
         : null;
-      // 모임을 여는 일은 웹 콘솔(prologue.day/host)로 옮겼다 — 앱은 손드는 쪽만 한다.
       return { meetups: ups.meetups, history: done, my };
     },
   });
@@ -253,6 +252,10 @@ export default function MeetupsScreen() {
             </View>
 
             {/* 검색과 필터 — 모임이 늘면 '내 것'부터 찾게 된다. */}
+            {!guest && <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/meetup-host')}><Text style={[Type.button, { color: c.text }]}>내가 여는 모임</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/meetup-host/edit')}><Text style={[Type.button, { color: c.text }]}>모임·파티 만들기</Text></Pressable>
+            </View>}
             {meetups.length > 0 && (
               <View style={styles.filterArea}>
                 <View style={styles.searchRow}>
@@ -353,7 +356,7 @@ export default function MeetupsScreen() {
                             <Text style={styles.coverTileEmoji}>{m.emoji}</Text>
                           </View>
                         ) : null}
-                        <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={1}>
+                        <Text style={[styles.cardTitle, { color: c.text, fontFamily: Fonts.serif }]} numberOfLines={2}>
                           {m.title}
                         </Text>
                       </View>
@@ -645,7 +648,7 @@ const styles = StyleSheet.create({
   coverTileEmoji: { fontSize: 20 },
   statusChip: { height: 24, paddingHorizontal: 10, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   statusChipText: { ...Type.caption, fontWeight: '600' },
-  cardMeta: { ...Type.caption, marginTop: 5 },
+  cardMeta: { ...Type.label, fontWeight: '400', marginTop: 6 },
   filterArea: { marginBottom: 14, gap: 10 },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, borderRadius: Radius.pill, paddingHorizontal: 14 },
   searchInput: { ...Type.body, flex: 1, paddingVertical: 0 },

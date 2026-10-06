@@ -92,7 +92,7 @@ describe('admin dashboard requests', () => {
     expect(document.querySelector('#stats').hasAttribute('aria-busy')).toBe(false);
     api.mockResolvedValue({ totalMembers: 4, femaleMembers: 2, maleMembers: 2, joinedToday: 1, weeklyActive: 4, answersToday: 2, revealsToday: 3, pendingReports: 0, suspendedAccounts: 0 });
     document.querySelector('.feedback-retry').click();
-    await vi.waitFor(() => expect(document.querySelectorAll('.admin-stat')).toHaveLength(8));
+    await vi.waitFor(() => expect(document.querySelectorAll('.admin-stat')).toHaveLength(9));
     expect(document.querySelector('.feedback-loading')).toBeNull();
     expect(document.querySelector('.feedback-message')).toBeNull();
   });

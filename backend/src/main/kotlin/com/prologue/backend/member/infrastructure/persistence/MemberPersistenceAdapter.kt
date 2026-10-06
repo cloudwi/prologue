@@ -14,6 +14,9 @@ class MemberPersistenceAdapter(
     override fun findByAccountId(accountId: UUID): Member? =
         jpa.findById(accountId).orElse(null)?.toDomain()
 
+    override fun findAllByAccountIds(accountIds: Collection<UUID>): List<Member> =
+        if (accountIds.isEmpty()) emptyList() else jpa.findAllById(accountIds).map { it.toDomain() }
+
     override fun save(member: Member): Member =
         jpa.save(member.toEntity()).toDomain()
 

@@ -82,8 +82,8 @@ export default function MeetupDetailScreen() {
       '모임에 신청할까요?',
       // 무료 모임에 '참가비는 없어요'를 덧붙이지 않는다 — 카드가 이미 무료라고 적혀 있다.
       [
-        '신청하면 모임장의 카카오 오픈채팅이 열려요.',
-        m.fee > 0 || (m.feeFemale ?? 0) > 0 ? `참가비(${feeLabel(m)})는 오픈채팅에서 직접 보내요.` : null,
+        '모임장이 연락 링크를 등록했다면 신청 후 확인할 수 있어요.',
+        m.fee > 0 || (m.feeFemale ?? 0) > 0 ? `참가비(${feeLabel(m)})는 모임장에게 직접 확인하고 보내주세요.` : null,
         '모임장이 확인하면 참여가 확정돼요.',
       ]
         .filter((line): line is string => line != null)
@@ -167,6 +167,8 @@ export default function MeetupDetailScreen() {
   return (
     <SubScreen
       title=""
+      onSave={meetup?.isMine ? () => router.push(`/meetup-host/${id}`) : undefined}
+      saveLabel="관리"
       c={c}
     >
       {loading ? (
