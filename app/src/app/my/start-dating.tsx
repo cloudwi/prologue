@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MIN_PHOTOS } from '@/components/photo-grid';
@@ -36,7 +36,7 @@ export default function StartDatingScreen() {
   const [preferredGender, setPreferredGender] = useState<Gender | null>(null);
   const [agreed, setAgreed] = useState(false);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     (async () => {
       try {
@@ -44,9 +44,8 @@ export default function StartDatingScreen() {
         if (!active || !p) return;
         setBase(p);
         // 이미 켜져 있다면 지금 값을 보여준다 — 되돌아온 사람이 처음부터 고르지 않게.
-        setPreferredGender(p.preferredGender);
-        // 성별을 알고 있으니 반대 성별을 미리 짚어둔다. 고르는 수고 하나를 던다.
-        if (p.preferredGender == null) setPreferredGender(p.gender === 'MALE' ? 'FEMALE' : 'MALE');
+        // 사진 등록에서 돌아오면 사진만 갱신하고, 이미 고른 성별과 동의는 유지한다.
+        setPreferredGender((selected) => selected ?? p.preferredGender ?? (p.gender === 'MALE' ? 'FEMALE' : 'MALE'));
       } catch (e) {
         if (active) Alert.alert('불러오기 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       } finally {
@@ -56,13 +55,13 @@ export default function StartDatingScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, []));
 
   // 사진이 모자라면 소개가 시작되지 않는다(서버 PeerEligibility). 켜고 나서 조용히 아무 일도
   // 일어나지 않는 것보다, 켜기 전에 무엇이 남았는지 말해주는 편이 낫다.
   const photos = base?.photoUrls?.length ?? 0;
   const photosShort = base != null && photos < MIN_PHOTOS;
-  const canSave = base != null && preferredGender != null && agreed;
+  const canSave = base != null && preferredGender != null && agreed && !photosShort;
 
   async function save() {
     if (!canSave || saving) return;
@@ -152,7 +151,7 @@ export default function StartDatingScreen() {
           )}
 
           <Text style={[styles.foot, { color: c.textSecondary }]}>
-            언제든 MY에서 다시 끌 수 있어요. 끄면 소개가 멈추고 모임만 남아요.
+            MY → 소개 설정에서 언제든 중지할 수 있어요. 프로필과 모임 기록은 그대로 남아요.
           </Text>
         </ScrollView>
       )}

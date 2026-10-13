@@ -593,6 +593,9 @@ class MeetupService(
         val meetup = meetupRepository.findById(meetupId) ?: throw DailyMeetException("모임을 찾을 수 없어요")
         if (!meetup.isOpen()) throw DailyMeetException("모집이 끝난 모임이에요")
         if (meetup.hostAccountId == accountId) throw DailyMeetException("내가 여는 모임이에요")
+        if ((meetup.fee > 0 || (meetup.feeFemale ?: 0) > 0) && meetup.kakaoLink.isBlank()) {
+            throw DailyMeetException("여는 사람이 연락 방법을 준비 중이에요. 등록된 뒤 신청해주세요")
+        }
         checkConditions(meetup, accountId)
         val existing = applicationRepository.findByMeetupAndApplicant(meetupId, accountId)
         // 새로 손드는 사람만 대기 줄 검사를 받는다 — 이미 줄에 서 있던 사람이 다시 누른 것까지

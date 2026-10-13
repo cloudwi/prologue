@@ -47,17 +47,33 @@ class QuestionSeedIT : PostgresRepositoryTest() {
         val notAsking = pool.filterNot { it.content.trimEnd().endsWith("?") || it.content.trimEnd().endsWith("…") }
         assertTrue(notAsking.isEmpty(), "물음표로 끝나지 않는 질문: ${notAsking.take(3).map { it.id to it.content }}")
 
-        // 문답 화면은 질문을 두세 줄로 보여준다. 길어지면 답 쓰는 자리가 밀린다.
-        val tooLong = pool.filter { it.content.length > 80 }
+        // 글자 수는 줄 수를 보장하지 않지만, 긴 질문이 답 쓰는 자리를 밀지 않게 제한한다.
+        val tooLong = pool.filter { it.content.length > 35 }
         assertTrue(tooLong.isEmpty(), "너무 긴 질문: ${tooLong.take(3).map { it.id to it.content.length }}")
     }
 
     @Test
-    fun `가벼운 질문이 열흘 간격으로 섞인다`() {
+    fun `가벼운 질문과 요즘 취향 질문이 닷새 간격으로 섞인다`() {
         val pool = questions.findAllOrdered().associateBy { it.id }
 
-        assertEquals("배스킨라빈스에 가면 고민 없이 고르는 최애 맛은 무엇인가요?", pool.getValue(10).content)
-        assertEquals("누군가 내 사용 설명서를 쓴다면 첫 줄에 무엇을 적어야 할까요?", pool.getValue(500).content)
-        assertEquals("오늘의 나를 한 문장으로 소개한다면 뭐라고 말하고 싶나요?", pool.getValue(1000).content)
+        assertEquals("요즘 저장해둔 짧은 영상은 어떤 내용인가요?", pool.getValue(5).content)
+        assertEquals("배스킨라빈스 최애 맛은 무엇인가요?", pool.getValue(10).content)
+        assertEquals("과자 한 봉지를 모임에 가져간다면 무엇인가요?", pool.getValue(125).content)
+        assertEquals("네 컷 사진의 마지막 포즈는 어떻게 하고 싶나요?", pool.getValue(205).content)
+        assertEquals("내 사용 설명서 첫 줄에는 뭐라고 써야 할까요?", pool.getValue(500).content)
+        assertEquals("둘이 플레이리스트를 만들면 첫 곡은 무엇인가요?", pool.getValue(885).content)
+        assertEquals("오늘의 나를 한 문장으로 소개하면 무엇인가요?", pool.getValue(1000).content)
+        // 가벼운 질문 사이의 관계·가치관 질문은 없애지 않는다.
+        assertEquals("연애 중 혼자만의 시간은 무엇을 채워주나요?", pool.getValue(3).content)
+        assertEquals("흔들린 믿음을 회복하려면 무엇이 필요한가요?", pool.getValue(552).content)
+    }
+
+    @Test
+    fun `주어를 덜어낼 때 깨졌던 만나는 문장을 복원한다`() {
+        val pool = questions.findAllOrdered().associateBy { it.id }
+
+        assertEquals("주 몇 번 만나는 게 잘 맞고, 그 이유는 무엇인가요?", pool.getValue(406).content)
+        assertEquals("주변의 결혼 소식에 먼저 일어나는 감정은 무엇인가요?", pool.getValue(289).content)
+        assertEquals("오랜만에 만나는 날 무엇부터 하고 싶나요?", pool.getValue(986).content)
     }
 }

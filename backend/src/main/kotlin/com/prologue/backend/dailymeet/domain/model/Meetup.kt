@@ -419,6 +419,9 @@ class Meetup private constructor(
                 throw DailyMeetException("모임 시간은 ${DURATION_MIN}분에서 ${DURATION_MAX / 60}시간 사이로 정해주세요")
             }
             val cleanLink = kakaoLink.trim()
+            if ((fee > 0 || (feeFemale ?: 0) > 0) && cleanLink.isEmpty()) {
+                throw DailyMeetException("유료 모임에는 참가비와 당일 안내를 받을 연락 링크가 필요해요")
+            }
             // 신청자에게만 내려가는 링크 — 형태만 죈다(오픈채팅이 아닌 https 링크도 허용).
             if (cleanLink.isNotEmpty() && !cleanLink.startsWith("https://")) throw DailyMeetException("연락 링크는 https://로 시작해야 해요")
             if (cleanLink.length > KAKAO_LINK_MAX) throw DailyMeetException("링크가 너무 길어요")

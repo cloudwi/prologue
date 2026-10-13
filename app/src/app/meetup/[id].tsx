@@ -111,7 +111,7 @@ export default function MeetupDetailScreen() {
   }
 
   function confirmCancel(m: Meetup) {
-    Alert.alert('신청을 취소할까요?', '이미 참가비를 보냈다면 모임장에게 오픈채팅으로 알려주세요.', [
+    Alert.alert('신청을 취소할까요?', '이미 참가비를 보냈다면 여는 사람에게 연락 링크로 환불을 문의해주세요.', [
       { text: '그냥 둘게요', style: 'cancel' },
       {
         text: '신청 취소',

@@ -16,6 +16,7 @@ import { SignupGate } from '@/components/signup-gate';
 import { ScreenLoadError } from '@/components/screen-load-error';
 import { promptReport } from '@/lib/reports';
 import { track } from '@/lib/analytics';
+import { FeedAnswer } from '@/components/feed-answer';
 
 export default function FeedScreen() {
   const session = useSession();
@@ -33,7 +34,6 @@ function FeedBoard() {
   const [sort, setSort] = useState<FeedSort>('latest');
   const feed = useQuery({ queryKey: ['feed', sort], queryFn: () => getFeed(sort) });
   const [opening, setOpening] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => { track('feed_opened'); }, []);
 
@@ -131,12 +131,7 @@ function FeedBoard() {
                   <Pressable onPress={() => post.mine ? remove(post) : promptReport({ feedPostId: post.id })} hitSlop={10} accessibilityLabel={post.mine ? '내 피드 글 관리' : '피드 글 신고'}><Ionicons name="ellipsis-horizontal" size={20} color={c.textSecondary} /></Pressable>
                 </View>
                 <Text style={[styles.prompt, { color: c.textSecondary }]}>{post.prompt}</Text>
-                <Text numberOfLines={expanded[post.id] ? undefined : 6} style={[styles.answer, { color: c.text }]}>{post.content}</Text>
-                {isLong(post.content) && (
-                  <Pressable onPress={() => setExpanded((v) => ({ ...v, [post.id]: !v[post.id] }))} hitSlop={6} style={styles.moreBtn}>
-                    <Text style={[styles.link, { color: c.primaryStrong }]}>{expanded[post.id] ? '접기' : '더보기'}</Text>
-                  </Pressable>
-                )}
+                <FeedAnswer content={post.content} c={c} />
                 <View style={[styles.actions, { borderTopColor: c.border }]}>
                   <Pressable onPress={() => void toggleHeart(post)} style={styles.action} accessibilityLabel={post.hearted ? '하트 취소' : '하트'}><Ionicons name={post.hearted ? 'heart' : 'heart-outline'} size={21} color={post.hearted ? c.primary : c.textSecondary} /><Text style={[styles.count, { color: post.hearted ? c.primaryStrong : c.textSecondary }]}>{post.heartCount || ''}</Text></Pressable>
                   {!post.mine && <Pressable onPress={() => openProfile(post)} disabled={opening === post.id} style={styles.profileAction}><Ionicons name={post.profileUnlocked ? 'person-outline' : 'water-outline'} size={17} color={c.textSecondary} /><Text style={[styles.profileLabel, { color: c.textSecondary }]}>{opening === post.id ? '여는 중' : post.profileUnlocked ? '프로필 보기' : `프로필 · ${INK_PRICE.PROFILE_UNLOCK}`}</Text></Pressable>}
@@ -147,16 +142,6 @@ function FeedBoard() {
       )}
     </SafeAreaView>
   );
-}
-
-/**
- * 6줄에서 잘릴 만한 글인지.
- *
- * 글자 수만 세면 "선택지\n메모" 형태의 취향 카드 답변처럼 짧지만 줄이 많은 글을 놓쳐서,
- * 본문이 잘렸는데도 더보기가 안 뜬다. 줄 수도 함께 본다.
- */
-function isLong(content: string) {
-  return content.length > 140 || content.split('\n').length > 6;
 }
 
 function relativeTime(value: string) {
@@ -173,8 +158,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 }, retry: { ...Type.button }, list: { paddingHorizontal: 16, gap: 14 },
   empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: 30 }, emptyTitle: { ...Type.title, marginTop: 18 }, emptyBody: { ...Type.body, textAlign: 'center', marginTop: 8 },
   card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.lg, padding: 18 }, authorRow: { flexDirection: 'row', alignItems: 'center' }, authorPhoto: { width: 40, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  authorText: { flex: 1, marginLeft: 10 }, nickname: { ...Type.label }, kind: { ...Type.caption, marginTop: 1 }, prompt: { ...Type.caption, marginTop: 22 }, answer: { ...Type.read, marginTop: 8 },
-  moreBtn: { marginTop: 8, alignSelf: 'flex-start' }, link: { ...Type.label },
+  authorText: { flex: 1, marginLeft: 10 }, nickname: { ...Type.label }, kind: { ...Type.caption, marginTop: 1 }, prompt: { ...Type.caption, marginTop: 22 },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth }, action: { flexDirection: 'row', alignItems: 'center', minWidth: 52 }, count: { ...Type.caption, marginLeft: 5 },
   profileAction: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5 }, profileLabel: { ...Type.caption, fontWeight: '600' },
 });

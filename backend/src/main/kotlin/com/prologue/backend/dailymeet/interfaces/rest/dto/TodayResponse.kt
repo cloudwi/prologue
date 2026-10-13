@@ -1,6 +1,8 @@
 package com.prologue.backend.dailymeet.interfaces.rest.dto
 
 import com.prologue.backend.dailymeet.application.service.TodayView
+import com.prologue.backend.dailymeet.domain.model.QuestionInputType
+import com.prologue.backend.dailymeet.domain.model.QuestionOption
 
 data class TodayResponse(
     val questionId: Long,
@@ -11,9 +13,12 @@ data class TodayResponse(
     val inkEarned: Int = 0,
     /** 오늘 답을 이미 피드에 올렸는지. 앱이 "피드에 올림"을 다시 열어도 유지하려면 필요하다. */
     val feedPublished: Boolean = false,
+    val inputType: QuestionInputType = QuestionInputType.TEXT,
+    val options: List<QuestionOption> = emptyList(),
+    val mySelectedOptionIds: List<String> = emptyList(),
 ) {
     companion object {
         fun from(view: TodayView, inkEarned: Int = 0, feedPublished: Boolean = false): TodayResponse =
-            TodayResponse(view.questionId, view.content, view.answered, view.myAnswer, inkEarned, feedPublished)
+            TodayResponse(view.questionId, view.content, view.answered, view.myAnswer, inkEarned, feedPublished, view.inputType, view.options, view.mySelectedOptionIds)
     }
 }

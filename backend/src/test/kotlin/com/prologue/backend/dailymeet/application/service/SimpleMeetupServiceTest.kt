@@ -34,14 +34,14 @@ class SimpleMeetupServiceTest {
     private val service = MeetupService(repo, apps, members, jobs, mockk<NotificationService>(relaxed = true), mockk<PhotoStorage>(), mockk<MeetupFollowRepository>(relaxed = true))
     private val details = SimpleMeetupDetails("과자 모임", at, "서로서가", 8)
 
-    private fun existing(owner: UUID = host): Meetup = Meetup.reconstitute(
+    private fun existing(owner: UUID = host, contact: String = "https://open.kakao.com/o/test"): Meetup = Meetup.reconstitute(
         id = id, seriesId = UUID.randomUUID(), hostAccountId = owner, title = "과자 모임", description = "[사진1] 원래 소개",
         meetAt = at, place = "서로서가", placeUrl = null, placeAddress = null, capacity = 8,
         capacityMale = 4, capacityFemale = 4, waitlistCapacity = 20, fee = 10000, feeFemale = 8000,
         genderLimit = null, minAgeMale = 25, maxAgeMale = 39, minAgeFemale = 25, maxAgeFemale = 39,
         minHeightMaleCm = 170, minHeightFemaleCm = null, requireJobVerified = true,
         emoji = "🍪", color = "#D9694C", coverUrls = listOf("https://cdn/cover.jpg"), bodyImageUrls = listOf("https://cdn/body.jpg"),
-        kakaoLink = "https://open.kakao.com/o/test", status = MeetupStatus.OPEN, createdAt = Instant.EPOCH,
+        kakaoLink = contact, status = MeetupStatus.OPEN, createdAt = Instant.EPOCH,
     )
 
     @Test fun `필수 정보만으로 만들면 세부 조건 없이 심사 대기로 저장한다`() {
@@ -115,6 +115,26 @@ class SimpleMeetupServiceTest {
 
     @Test fun `연락 링크가 선택이어도 입력한 잘못된 링크는 막는다`() {
         assertFailsWith<DailyMeetException> { service.saveSimple(host, null, details.copy(kakaoLink = "http://example.com")) }
+    }
+
+    @Test fun `유료 모임은 연락 링크 없이 만들 수 없다`() {
+        val error = assertFailsWith<DailyMeetException> { service.saveSimple(host, null, details.copy(fee = 10000)) }
+        assertEquals("유료 모임에는 참가비와 당일 안내를 받을 연락 링크가 필요해요", error.message)
+        verify(exactly = 0) { repo.save(any()) }
+    }
+
+    @Test fun `여성 요금이 남아 있는 기존 모임도 연락 링크를 지울 수 없다`() {
+        every { repo.findById(id) } returns existing()
+        val error = assertFailsWith<DailyMeetException> { service.saveSimple(host, id, details.copy(fee = 0)) }
+        assertEquals("유료 모임에는 참가비와 당일 안내를 받을 연락 링크가 필요해요", error.message)
+        verify(exactly = 0) { repo.save(any()) }
+    }
+
+    @Test fun `연락 방법이 없는 기존 유료 모임에는 신청을 저장하지 않는다`() {
+        every { repo.findById(id) } returns existing(contact = "")
+        val error = assertFailsWith<DailyMeetException> { service.apply(UUID.randomUUID(), id) }
+        assertEquals("여는 사람이 연락 방법을 준비 중이에요. 등록된 뒤 신청해주세요", error.message)
+        verify(exactly = 0) { apps.save(any()) }
     }
 
     @Test fun `이미 확정된 인원 아래로 정원을 줄일 수 없다`() {

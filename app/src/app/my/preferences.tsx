@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { SubScreen } from '@/components/sub-screen';
-import { Radius, type ThemeColors } from '@/constants/theme';
+import { Radius, Type, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { completeOnboarding, getMyProfile, type MemberProfile } from '@/lib/member';
+import { completeOnboarding, getMyProfile, pauseDating, type MemberProfile } from '@/lib/member';
 import { ageFrom, toRequest } from '@/lib/profile-form';
 import { SESSION_QUERY_KEY } from '@/lib/session';
 
@@ -36,6 +36,8 @@ export default function PreferencesScreen() {
   const [base, setBase] = useState<MemberProfile | null>(null);
   const [minAge, setMinAge] = useState<number | null>(null);
   const [maxAge, setMaxAge] = useState<number | null>(null);
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [pauseError, setPauseError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -78,8 +80,25 @@ export default function PreferencesScreen() {
 
   const myAge = base ? ageFrom(base.birthDate) : null;
 
+  async function pause() {
+    if (saving) return;
+    setSaving(true);
+    setPauseError(null);
+    try {
+      const profile = await pauseDating();
+      queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: true, profile });
+      // MY 캐시는 프로필뿐 아니라 직장 인증·알림도 함께 담는다. 기존 구조를 유지한다.
+      queryClient.setQueryData(['me', 'profile'], (old?: { profile: MemberProfile | null }) => old ? { ...old, profile } : old);
+      queryClient.removeQueries({ queryKey: ['daily'] });
+      setPauseOpen(false);
+      router.replace('/my');
+    } catch (e) {
+      setPauseError(e instanceof Error ? e.message : '연결 상태를 확인하고 다시 시도해주세요.');
+    } finally { setSaving(false); }
+  }
+
   return (
-    <SubScreen title="선호하는 이성" c={c} onSave={save} saveDisabled={!canSave} saving={saving}>
+    <SubScreen title="소개 설정" c={c} onSave={save} saveDisabled={!canSave || pauseOpen} saving={saving}>
       {loading ? (
         <View style={[styles.flex, styles.center]}>
           <ActivityIndicator color={c.primary} />
@@ -159,8 +178,23 @@ export default function PreferencesScreen() {
               <Text style={{ color: c.textSecondary, fontSize: 15 }}>나이대 지우기</Text>
             </Pressable>
           )}
+
+          {base?.preferredGender != null && <Pressable accessibilityRole="button" onPress={() => setPauseOpen(true)} style={[styles.pauseButton, { borderColor: c.border }]}>
+            <Text style={[Type.button, { color: c.text }]}>소개팅 중지하기</Text>
+          </Pressable>}
         </ScrollView>
       )}
+      <Modal visible={pauseOpen} transparent animationType="slide" onRequestClose={() => { if (!saving) setPauseOpen(false); }}>
+        <View style={styles.overlay}>
+          <View style={[styles.pauseSheet, { backgroundColor: c.background }]}>
+            <Text style={[Type.title, { color: c.text }]}>소개팅을 잠시 중지할까요?</Text>
+            <Text style={[Type.body, { color: c.textSecondary, marginTop: 12 }]}>소개팅 탭은 닫히고 모임은 그대로 쓸 수 있어요. 프로필과 기존 기록은 지워지지 않아요. MY에서 다시 시작할 수 있어요.</Text>
+            {pauseError && <Text accessibilityRole="alert" style={[Type.body, { color: c.primaryStrong, marginTop: 12 }]}>{pauseError}</Text>}
+            <Pressable accessibilityRole="button" disabled={saving} onPress={() => void pause()} style={[styles.pauseButton, { backgroundColor: c.primary, borderColor: c.primary, opacity: saving ? 0.5 : 1 }]}><Text style={[Type.button, { color: c.primaryText }]}>{saving ? '중지하는 중' : '중지하기'}</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={saving} onPress={() => setPauseOpen(false)} style={[styles.pauseButton, { borderColor: c.border }]}><Text style={[Type.button, { color: c.textSecondary }]}>계속 소개받기</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
     </SubScreen>
   );
 }
@@ -259,6 +293,8 @@ const styles = StyleSheet.create({
   note: { marginTop: 26, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderRadius: Radius.sm, gap: 10 },
   noteText: { fontSize: 13.5, lineHeight: 20 },
   clear: { marginTop: 22, alignItems: 'center' },
+  pauseButton: { minHeight: 48, marginTop: 24, borderRadius: Radius.md, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  pauseSheet: { padding: 24, paddingBottom: 40, borderTopLeftRadius: Radius.lg, borderTopRightRadius: Radius.lg },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { paddingBottom: 30 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },

@@ -45,6 +45,7 @@ export function draftInput(d: MeetupDraft, now = Date.now()): SimpleMeetupInput 
   if (d.description.trim().length > 1000) throw new Error('소개는 1,000자 이내로 적어주세요.');
   if (d.placeAddress.trim().length > 200) throw new Error('주소는 200자 이내로 적어주세요.');
   const link = d.kakaoLink.trim();
+  if (fee > 0 && !link) throw new Error('유료 모임에는 참가비와 당일 안내를 받을 연락 링크가 필요해요.');
   if (link && (!link.startsWith('https://') || link.length > 300)) throw new Error('연락 링크는 https://로 시작하는 주소를 넣어주세요.');
   let durationMinutes: number | null = null;
   if (d.endTime) {

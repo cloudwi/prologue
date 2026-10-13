@@ -14,6 +14,7 @@ import { useHostMeetups } from '@/hooks/use-host-meetups';
 import { useTheme } from '@/hooks/use-theme';
 import { draftInput, draftPreview, meetupDraft, type MeetupDraft } from '@/lib/meetup-draft';
 import { conditionLabel, feeValue, saveMeetup, uploadMeetupCover, type SimpleMeetupInput } from '@/lib/meetups';
+import { clearMeetupDraft, loadMeetupDraft, saveMeetupDraft } from '@/lib/meetup-draft-storage';
 
 export default function MeetupEditor() {
   const c = useTheme();
@@ -22,17 +23,44 @@ export default function MeetupEditor() {
   const hosts = useHostMeetups();
   const cache = useQueryClient();
   const existing = hosts.data?.meetups.find((m) => m.meetupId === id);
-  const initialized = useRef(false);
+  const initialized = useRef<string | null>(null);
+  const submitted = useRef(false);
+  const accountId = hosts.session.profile?.accountId;
   const [draft, setDraft] = useState(() => meetupDraft());
+  const draftKey = accountId ? `${accountId}/${id ?? 'new'}` : null;
+  const [draftReady, setDraftReady] = useState<string | null>(null);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [more, setMore] = useState(false);
   const [preview, setPreview] = useState<SimpleMeetupInput | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saveLock = useRef(false);
+  // 외부 저장소의 초안과 저장 결과를 화면에 동기화한다. 상태로 상태를 계산하는 효과가 아니다.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (existing && !initialized.current) { setDraft(meetupDraft(existing)); initialized.current = true; }
-  }, [existing]);
+    if (!accountId || !draftKey || initialized.current === draftKey || (id && !existing)) return;
+    initialized.current = draftKey;
+    submitted.current = false;
+    let saved: MeetupDraft | null = null;
+    try { saved = loadMeetupDraft(accountId, id); }
+    catch { setDraftNotice('이 기기에 저장된 초안을 불러오지 못했어요.'); }
+    setDraft(saved ?? meetupDraft(existing));
+    setMore(Boolean(saved && (saved.description || saved.photos.length || saved.kakaoLink || Number(saved.fee))));
+    setError(null); setPreviewOpen(false);
+    setDraftReady(draftKey);
+  }, [accountId, draftKey, existing, id]);
+  useEffect(() => {
+    if (!draftKey || draftReady !== draftKey || !accountId || submitted.current) return;
+    try {
+      if (JSON.stringify(draft) === JSON.stringify(meetupDraft(existing))) {
+        clearMeetupDraft(accountId, id); setDraftNotice(null);
+      } else {
+        saveMeetupDraft(accountId, draft, id); setDraftNotice('입력은 이 기기에 임시저장돼요. 다음에 이어서 만들 수 있어요.');
+      }
+    } catch { setDraftNotice('기기에 임시저장하지 못했어요. 나가기 전에 제출하거나 입력을 따로 보관해주세요.'); }
+  }, [accountId, draft, draftKey, draftReady, existing, id]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   function change<K extends keyof MeetupDraft>(key: K, value: MeetupDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value })); setError(null);
   }
@@ -41,7 +69,10 @@ export default function MeetupEditor() {
     catch (e) { setError(e instanceof Error ? e.message : '사진을 고르지 못했어요.'); }
   }
   function showPreview() {
-    try { const input = draftInput(draft); Keyboard.dismiss(); setPreview(input); setPreviewOpen(true); setError(null); }
+    try {
+      if (existing?.feeFemale && !draft.kakaoLink.trim()) throw new Error('유료 모임에는 참가비와 당일 안내를 받을 연락 링크가 필요해요.');
+      const input = draftInput(draft); Keyboard.dismiss(); setPreview(input); setPreviewOpen(true); setError(null);
+    }
     catch (e) { setError(e instanceof Error ? e.message : '입력 내용을 확인해주세요.'); }
   }
   async function save() {
@@ -58,6 +89,8 @@ export default function MeetupEditor() {
         }
       }
       const savedId = await saveMeetup({ ...input, coverUrls: photos }, id);
+      submitted.current = true;
+      if (accountId) { try { clearMeetupDraft(accountId, id); } catch { /* 저장은 성공했다. 로컬 정리 실패로 중복 제출시키지 않는다. */ } }
       void cache.invalidateQueries({ queryKey: ['meetups'] });
       setPreviewOpen(false);
       router.replace(`/meetup-host/${savedId}`);
@@ -88,6 +121,7 @@ export default function MeetupEditor() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[Type.body, { color: c.textSecondary }]}>언제, 어디서, 몇 명이 만날지만 정하면 돼요.</Text>
+        {draftNotice && <Text style={[Type.caption, { color: c.textSecondary }]}>{draftNotice}</Text>}
         {field('모임 이름', 'title', { maxLength: 80, placeholder: '예: 좋아하는 과자 한 봉지' })}
         <View style={styles.field}><Text style={[Type.label, { color: c.text }]}>날짜 · 한국 시간</Text><MeetupTimePicker label="모임 날짜" value={draft.date} mode="date" onChange={(value) => change('date', value)} c={c} /></View>
         <View style={styles.row}>
@@ -110,7 +144,7 @@ export default function MeetupEditor() {
           {field('주소 · 선택', 'placeAddress', { maxLength: 200 })}
           {field('참가비 · 0원이면 무료', 'fee', { numeric: true, maxLength: 10, disabled: splitFee })}
           {splitFee && <Text style={[Type.caption, { color: c.textSecondary }]}>기존 요금 유지: {feeValue(existing)}</Text>}
-          {field('연락 링크 · 선택', 'kakaoLink', { maxLength: 300, placeholder: 'https://open.kakao.com/o/...' })}
+          {field(Number(draft.fee) > 0 || (existing?.feeFemale ?? 0) > 0 ? '연락 링크 · 유료 모임 필수' : '연락 링크 · 선택', 'kakaoLink', { maxLength: 300, placeholder: 'https://open.kakao.com/o/...' })}
           <Text style={[Type.caption, { color: c.textSecondary }]}>연락 링크는 신청자에게만 보여요. 참가비는 직접 확인하고 참가자를 확정해주세요.</Text>
         </>}
         <Text style={[Type.caption, { color: c.textSecondary }]}>제출하면 운영자 확인 후 공개돼요.{id ? ' 수정한 모임도 다시 확인합니다.' : ''}</Text>

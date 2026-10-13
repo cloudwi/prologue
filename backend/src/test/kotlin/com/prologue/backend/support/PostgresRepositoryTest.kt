@@ -5,6 +5,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.annotation.DirtiesContext
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -25,6 +26,8 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("integration")
+// 클래스가 끝나면 Testcontainers가 DB를 중지한다. 종료된 DB 포트를 가진 컨텍스트는 재사용하지 않는다.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 // Docker가 없는 환경(일부 CI·동료 노트북)에서는 조용히 건너뛴다 — 통합 테스트가 없다고 빌드가 죽으면 안 된다.
 @Testcontainers(disabledWithoutDocker = true)
 @Tag("integration")

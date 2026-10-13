@@ -9,15 +9,12 @@ import { RichText } from '@/components/rich-text';
 import { Radius, Type, type ThemeColors } from '@/constants/theme';
 import { conditionLabel, feeValue, type Meetup } from '@/lib/meetups';
 import { WEEKDAYS, ddayLabel, mapQuery, numeralDate, timeRangeLabel, venueOf, weekdayLabel } from '@/lib/meetup-format';
-import { plainText } from '@/lib/rich-text';
 
 /**
  * 모임 초대장 — 상세 화면과 모임 열기의 미리보기가 같은 것을 그린다.
  *
- * 요즘 모바일 청첩장의 문법(2026-08-25):
- * 전면 사진 → 영문 눈썹·제목·숫자 날짜 → 모시는 글·여는 사람 → 달력(그 날 표시)·D-day
- * → 오시는 길(지도 버튼) → 안내 카드(참가비·조건) → 함께하는 사람들 → RSVP 카드.
- * 세리프 없이도 청첩장으로 읽히게 하는 건 가운데 정렬·자간 넓은 영문 눈썹·달력·넉넉한 여백이다.
+ * 사진과 초대장의 분위기는 남기되, 일정·장소·비용은 글보다 먼저 읽히게 모은다.
+ * 소개와 사진은 숨기지 않는다. 긴 글은 왼쪽 정렬과 제한된 읽기 폭으로 정돈한다.
  *
  * 동작(신청·취소·오픈채팅·프로필 이동)은 전부 콜백으로 받는다 — 미리보기는 콜백을 주지 않으면 된다.
  */
@@ -61,30 +58,25 @@ export function MeetupInvitation({
   const isPaid = meetup.fee > 0 || (meetup.feeFemale ?? 0) > 0;
   const insets = useSafeAreaInsets();
 
-  /*
-   * 긴 글은 접어둔다. 모시는 글도 후기도 모임장이 쓰는 것이라 길이를 정해줄 수 없다 —
-   * 여섯 줄만 보이고 나머지는 눌러서 편다. 요즘 행사 페이지가 다 그렇게 한다.
-   */
-  const [descOpen, setDescOpen] = useState(false);
-  const [recapOpen, setRecapOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const description = meetup.descriptionRich ?? meetup.description;
-  const descLong = (plainText(description)?.length ?? 0) > 170 || (meetup.bodyImageUrls?.length ?? 0) > 0;
-  const recapLong = (plainText(meetup.recap)?.length ?? 0) > 170 || (meetup.recapImageUrls?.length ?? 0) > 0;
-
-  // 고정 바가 마지막 줄을 가리지 않도록 그 높이만큼 아래를 비운다.
-  const barSpace = preview ? 0 : 76 + insets.bottom;
+  const remaining = Math.max(0, meetup.capacity - meetup.confirmedCount);
+  const recruitment = preview ? '신청을 받을 예정이에요'
+    : meetup.status === 'OPEN' ? (remaining > 0 ? `${remaining}자리 남았어요` : '정원이 찼어요')
+    : '모집이 끝났어요';
 
   return (
     <View style={styles.flex}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 48 + barSpace }, contentContainerStyle]}
+        style={styles.flex}
+        contentContainerStyle={[styles.content, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* 1) 전면 사진 — 청첩장의 첫 장. 둥근 카드가 아니라 화면 폭 그대로. */}
         {meetup.coverUrls.length > 0 ? (
           <PhotoPager
             photos={meetup.coverUrls}
-            aspectRatio={4 / 3}
+            aspectRatio={16 / 10}
             backgroundColor={c.backgroundSelected}
             onPressImage={onPressImage}
           />
@@ -94,23 +86,36 @@ export function MeetupInvitation({
           </View>
         ) : null}
 
-        {/* 2) 표지 — 영문 눈썹, 제목, 숫자 날짜. 숫자는 가늘고 자간 넓게 — 청첩장의 서명 같은 줄. */}
+        {/* 제목 다음에 바로 핵심 정보. 작은 영어 제목과 가는 숫자로 중요도를 흐리지 않는다. */}
         <View style={styles.headline}>
-          <Text style={[styles.eyebrow, { color: c.textSecondary }]}>INVITATION</Text>
-          {/* 회차 — 이어져 온 모임이면 "몇 번째 만남"이 초대장의 첫 신뢰 신호다. */}
-          {(meetup.occurrenceTotal ?? 1) > 1 && (
-            <Text style={[styles.occurrence, { color: c.primaryStrong }]}>{meetup.occurrence ?? 1}번째 만남</Text>
-          )}
-          <Text style={[styles.title, { color: c.text }]}>{meetup.title}</Text>
-          <Text style={[styles.dateNumerals, { color: c.text }]}>{numeralDate(meetDate)}</Text>
-          <Text style={[styles.dateWords, { color: c.textSecondary }]}>
-            {weekdayLabel(meetDate)} {timeRangeLabel(meetDate, meetup.durationMinutes)}
-            {venue.name ? ` · ${venue.name}` : ''}
-          </Text>
+          <View style={styles.headlineMeta}>
+            <Text style={[styles.eyebrow, { color: c.textSecondary }]}>
+              {(meetup.occurrenceTotal ?? 1) > 1 ? `${meetup.occurrence ?? 1}번째 만남` : '프롤로그 모임'}
+            </Text>
+            <Text style={[styles.dateBadge, { color: c.text, backgroundColor: c.backgroundSelected }]}>{ddayLabel(meetDate)}</Text>
+          </View>
+          <Text accessibilityRole="header" style={[styles.title, { color: c.text }]}>{meetup.title}</Text>
+          <View style={[styles.summaryCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+            <InfoRow label="일시" value={`${numeralDate(meetDate)} (${weekdayLabel(meetDate)})\n${timeRangeLabel(meetDate, meetup.durationMinutes)}`} c={c} />
+            <InfoRow label="장소" value={venue.name || venue.address || meetup.place} c={c} />
+            <InfoRow label="참가비" value={feeValue(meetup)} c={c} />
+            <InfoRow label="인원" value={`정원 ${meetup.capacity}명 · 확정 ${meetup.confirmedCount}명`} c={c} last />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={calendarOpen ? '달력 접기' : '달력 보기'}
+              accessibilityState={{ expanded: calendarOpen }}
+              onPress={() => setCalendarOpen(!calendarOpen)}
+              style={[styles.calendarToggle, { borderTopColor: c.border }]}
+            >
+              <Text style={[styles.calendarToggleText, { color: c.textSecondary }]}>{calendarOpen ? '달력 접기' : '달력으로 보기'}</Text>
+              <Ionicons name={calendarOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.textSecondary} />
+            </Pressable>
+            {calendarOpen && <MonthCalendar date={meetDate} c={c} />}
+          </View>
         </View>
 
         {/* 3) 모시는 글 + 여는 사람 — 인사말 아래 이름이 오는 청첩장의 순서. */}
-        <Section eyebrow="GREETING" title="모시는 글" c={c}>
+        <Section title="모임 소개" c={c}>
           {/*
             표시가 살아 있는 원문이 오면 그걸로 그린다 — 사진이 글 사이에 놓인다.
             옛 서버(또는 표시가 없는 글)는 description만 오므로 그때는 지금까지처럼 글만 그린다.
@@ -119,33 +124,27 @@ export function MeetupInvitation({
             text={description}
             images={meetup.bodyImageUrls ?? []}
             c={c}
-            maxLines={descOpen ? undefined : 6}
           />
-          {descLong && !descOpen ? <MoreLink label="더 읽기" onPress={() => setDescOpen(true)} c={c} /> : null}
           <Pressable
+            accessibilityRole={onPressHost ? 'button' : undefined}
+            accessibilityLabel={onPressHost ? '여는 사람 프로필 보기' : undefined}
             onPress={onPressHost}
             disabled={onPressHost == null}
             hitSlop={8}
-            style={({ pressed }) => [styles.hostBlock, { opacity: pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [styles.hostBlock, { backgroundColor: c.backgroundSelected, opacity: pressed ? 0.6 : 1 }]}
           >
             <Text style={[styles.hostCaption, { color: c.textSecondary }]}>여는 사람</Text>
             <Text style={[styles.hostName, { color: c.text }]}>{meetup.hostNickname ?? '(알 수 없음)'}</Text>
             <Text style={[styles.hostMeta, { color: c.textSecondary }]}>
-              {preview ? '모임장 · 나' : `${meetup.hostDoneCount > 0 ? `지금까지 ${meetup.hostDoneCount}회 개최` : '첫 모임이에요'} · 프로필 보기 ›`}
+              {preview ? '내가 여는 모임' : `${meetup.hostDoneCount > 0 ? `지금까지 ${meetup.hostDoneCount}회 개최` : '첫 모임이에요'}${onPressHost ? ' · 프로필 보기 ›' : ''}`}
             </Text>
           </Pressable>
         </Section>
 
-        {/* 4) 달력 — 그 달을 펼쳐 그 날에 동그라미. 모바일 청첩장에서 가장 먼저 알아보는 장면. */}
-        <Section eyebrow="CALENDAR" title={`${meetDate.getFullYear()}년 ${meetDate.getMonth() + 1}월`} c={c}>
-          <MonthCalendar date={meetDate} c={c} />
-          <Text style={[styles.dday, { color: c.text }]}>{ddayLabel(meetDate)}</Text>
-        </Section>
-
         {/* 5) 오시는 길 — 이름·주소, 그리고 지도 버튼 둘. */}
-        <Section eyebrow="LOCATION" title="오시는 길" c={c}>
+        <Section title="오시는 길" c={c}>
           {venue.name ? <Text style={[styles.venueName, { color: c.text }]}>{venue.name}</Text> : null}
-          {venue.address ? <Text style={[styles.venueAddress, { color: c.textSecondary }]}>{venue.address}</Text> : null}
+          {venue.address ? <Text style={[styles.venueAddress, { color: c.text }]}>{venue.address}</Text> : null}
           {meetup.placeAddress != null ? (
             <View style={styles.mapRow}>
               <MapButton
@@ -167,15 +166,16 @@ export function MeetupInvitation({
         </Section>
 
         {/* 6) 안내 — 참가비·조건을 카드 한 장에. 청첩장의 '마음 전하실 곳' 자리. */}
-        <Section eyebrow="INFORMATION" title="안내" c={c}>
-          <View style={[styles.infoCard, { backgroundColor: c.backgroundElement }]}>
-            <InfoRow label="참가비" value={feeValue(meetup)} c={c} />
-            {conditionLabel(meetup) ? <InfoRow label="참석 조건" value={conditionLabel(meetup)!} c={c} /> : null}
-            <InfoRow label="정원" value={`${meetup.capacity}명 · 확정 ${meetup.confirmedCount}명`} c={c} last />
+        <Section title="참가 안내" c={c}>
+          <View style={[styles.infoCard, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+            <InfoRow label="모집" value={recruitment} c={c} last={!conditionLabel(meetup)} />
+            {conditionLabel(meetup) ? <InfoRow label="참석 조건" value={conditionLabel(meetup)!} c={c} last /> : null}
             {isPaid && (
               // 결제 로드맵 사전 고지 — 지금은 이체, 향후 앱 결제 전환(2026-08-24 결정).
               <Text style={[styles.infoHint, { color: c.textSecondary }]}>
-                참가비는 모임장에게 납부 방법을 확인한 뒤 직접 보내주세요.
+                {(meetup.myStatus === 'APPLIED' || meetup.myStatus === 'CONFIRMED') && !meetup.kakaoLink
+                  ? '여는 사람이 연락 방법을 준비 중이에요. 연락 링크가 생기면 납부 방법을 확인해주세요. 참가비를 먼저 보내지 마세요.'
+                  : '신청 후 연락 링크에서 납부 방법을 확인한 뒤 여는 사람에게 직접 보내주세요.'}
               </Text>
             )}
           </View>
@@ -183,7 +183,7 @@ export function MeetupInvitation({
 
         {/* 7) 함께하는 사람들 — 확정된 이름들. */}
         {meetup.participants.length > 0 && (
-          <Section eyebrow="GUESTS" title="함께하는 사람들" c={c}>
+          <Section title="함께하는 사람들" c={c}>
             <View style={styles.participantWrap}>
               {/* 이름을 다 늘어놓으면 그 자체가 한 화면이 된다 — 여덟 명까지만, 나머지는 숫자로. */}
               {meetup.participants.slice(0, 8).map((p) => (
@@ -215,9 +215,8 @@ export function MeetupInvitation({
           있는지만 본다.
         */}
         {meetup.recap || meetup.recapImageUrls?.length ? (
-          <Section eyebrow="AFTER" title="그날의 기록" c={c}>
-            <RichText text={meetup.recap} images={meetup.recapImageUrls ?? []} c={c} maxLines={recapOpen ? undefined : 6} />
-            {recapLong && !recapOpen ? <MoreLink label="더 읽기" onPress={() => setRecapOpen(true)} c={c} /> : null}
+          <Section title="그날의 기록" c={c}>
+            <RichText text={meetup.recap} images={meetup.recapImageUrls ?? []} c={c} />
           </Section>
         ) : null}
 
@@ -302,19 +301,19 @@ function RsvpBar({
     sub = `확정 ${meetup.confirmedCount}/${meetup.capacity}명`;
   } else if (meetup.myStatus === 'CONFIRMED') {
     title = '참석 확정';
-    sub = kakao ? '당일 안내는 연락 링크에서' : '참석 상태를 여기서 확인할 수 있어요';
-    if (kakao && onOpenKakao) action = { label: '오픈채팅', onPress: () => onOpenKakao(kakao), primary: false };
+    sub = kakao ? '당일 안내는 연락 링크에서' : '연락 방법은 여는 사람이 준비 중이에요';
+    if (kakao && onOpenKakao) action = { label: '연락하기', onPress: () => onOpenKakao(kakao), primary: false };
   } else if (meetup.myStatus === 'APPLIED') {
     title = '확정을 기다리는 중';
     sub = '신청 취소';
     onSub = onCancel ?? null;
-    if (kakao && onOpenKakao) action = { label: '오픈채팅', onPress: () => onOpenKakao(kakao), primary: false };
+    if (kakao && onOpenKakao) action = { label: '연락하기', onPress: () => onOpenKakao(kakao), primary: false };
   } else if (meetup.myStatus === 'DECLINED') {
     title = '이번에는 함께하지 못했어요';
   } else if (meetup.status === 'OPEN') {
     title = feeValue(meetup);
     sub = remaining > 0 ? `${remaining}자리 남음` : '자리가 찼어요';
-    if (onApply) action = { label: '참석할게요', onPress: onApply, primary: true };
+    if (onApply) action = { label: '참가 신청', onPress: onApply, primary: true };
   } else {
     title = '모집이 끝났어요';
     sub = '다음 모임을 기다려 주세요';
@@ -323,19 +322,22 @@ function RsvpBar({
   return (
     <View style={[styles.bar, { backgroundColor: c.background, borderTopColor: c.border, paddingBottom: insetBottom + 12 }]}>
       <View style={styles.barText}>
-        <Text style={[styles.barTitle, { color: c.text }]} numberOfLines={1}>{title}</Text>
+        <Text style={[styles.barTitle, { color: c.text }]}>{title}</Text>
         {sub ? (
           onSub ? (
-            <Pressable onPress={onSub} disabled={busy} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={onSub} disabled={busy} hitSlop={8}>
               <Text style={[styles.barSubLink, { color: c.textSecondary }]}>{sub}</Text>
             </Pressable>
           ) : (
-            <Text style={[styles.barSub, { color: c.textSecondary }]} numberOfLines={1}>{sub}</Text>
+            <Text style={[styles.barSub, { color: c.textSecondary }]}>{sub}</Text>
           )
         ) : null}
       </View>
       {action && (
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+          accessibilityState={{ disabled: !!busy }}
           onPress={action.onPress}
           disabled={busy}
           style={({ pressed }) => [
@@ -350,24 +352,11 @@ function RsvpBar({
   );
 }
 
-/** 접힌 글을 펴는 한 줄. 초대장 안에서 유일하게 밑줄 없는 링크다. */
-function MoreLink({ label, onPress, c }: { label: string; onPress: () => void; c: ThemeColors }) {
-  return (
-    <Pressable onPress={onPress} hitSlop={8} style={styles.moreLink}>
-      <Text style={[styles.moreLinkText, { color: c.primaryStrong }]}>{label} ›</Text>
-    </Pressable>
-  );
-}
-
-/**
- * 절 — 자간 넓은 영문 눈썹 + 한글 제목 + 내용. 전부 가운데.
- * 절 사이는 선이 아니라 여백(56)으로 가른다 — 여백이 넉넉해야 종이처럼 읽힌다.
- */
-function Section({ eyebrow, title, c, children }: { eyebrow: string; title: string; c: ThemeColors; children: ReactNode }) {
+/** 읽기 폭과 왼쪽 기준선을 공유한다. 제목과 구분선으로 내용을 빠르게 찾을 수 있다. */
+function Section({ title, c, children }: { title: string; c: ThemeColors; children: ReactNode }) {
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionEyebrow, { color: c.textSecondary }]}>{eyebrow}</Text>
-      <Text style={[styles.sectionTitle, { color: c.text }]}>{title}</Text>
+      <Text accessibilityRole="header" style={[styles.sectionTitle, { color: c.text, borderTopColor: c.border }]}>{title}</Text>
       {children}
     </View>
   );
@@ -427,7 +416,7 @@ function InfoRow({ label, value, c, last }: { label: string; value: string; c: T
 /** 지도 버튼 — 테두리만 있는 알약. 포인트 컬러는 쓰지 않는다. */
 function MapButton({ label, onPress, c }: { label: string; onPress: () => void; c: ThemeColors }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.mapBtn, { borderColor: c.border, opacity: pressed ? 0.6 : 1 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.mapBtn, { borderColor: c.border, opacity: pressed ? 0.6 : 1 }]}>
       <Ionicons name="location-outline" size={14} color={c.textSecondary} />
       <Text style={[styles.mapBtnText, { color: c.text }]}>{label}</Text>
     </Pressable>
@@ -466,67 +455,61 @@ function Pill({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  // 좌우 여백은 절마다 준다 — 첫 장(사진)은 화면 폭 그대로 깔린다.
-  content: {}, // 아래 여백은 렌더에서 고정 바 높이를 더해 정한다
+  // 사진도 과도하게 커지지 않게 제한한다. 본문은 좌우 여백을 뺀 최대 560px.
+  content: { width: '100%', maxWidth: 608, alignSelf: 'center', paddingBottom: 32 },
 
   coverBanner: { height: 200, alignItems: 'center', justifyContent: 'center' },
   coverBannerEmoji: { fontSize: 64 },
 
   // ── 표지 ──
-  headline: { alignItems: 'center', paddingTop: 32, paddingHorizontal: 24 },
-  eyebrow: { fontSize: 11.5, fontWeight: '600', letterSpacing: 4 },
-  occurrence: { ...Type.caption, fontWeight: '600', marginTop: 10, letterSpacing: 0.3 },
-  title: { fontSize: 26, fontWeight: '700', textAlign: 'center', lineHeight: 36, marginTop: 14, letterSpacing: -0.3 },
-  // 숫자 날짜 — 가늘고 넓게. 청첩장에서 제목 다음으로 큰 글자.
-  dateNumerals: { fontSize: 22, fontWeight: '300', letterSpacing: 3, marginTop: 18, fontVariant: ['tabular-nums'] },
-  dateWords: { ...Type.label, fontWeight: '400', marginTop: 8, letterSpacing: 0.3, textAlign: 'center' },
+  headline: { paddingTop: 20, paddingHorizontal: 24 },
+  headlineMeta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  eyebrow: { ...Type.caption, fontWeight: '600' },
+  dateBadge: { ...Type.caption, fontWeight: '600', borderRadius: Radius.sm, paddingHorizontal: 10, paddingVertical: 6 },
+  title: { ...Type.display, marginTop: 12 },
+  summaryCard: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 16, marginTop: 20 },
+  calendarToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
+  calendarToggleText: { ...Type.label },
 
   // ── 절 ──
-  // 절 사이 여백 — 56은 종이답긴 해도 아홉 절을 이어 붙이면 스크롤이 끝나지 않는다.
-  section: { alignItems: 'stretch', paddingHorizontal: 24, marginTop: 40 },
-  sectionEyebrow: { fontSize: 11, fontWeight: '600', letterSpacing: 3, textAlign: 'center' },
-  sectionTitle: { ...Type.title, marginTop: 8, marginBottom: 20, textAlign: 'center' },
+  section: { alignItems: 'stretch', paddingHorizontal: 24, marginTop: 28 },
+  sectionTitle: { ...Type.title, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 24, marginBottom: 16 },
 
-  hostBlock: { alignItems: 'center', marginTop: 28 },
-  hostCaption: { ...Type.caption, letterSpacing: 2, marginBottom: 8 },
+  hostBlock: { alignItems: 'flex-start', borderRadius: Radius.md, padding: 16, marginTop: 20 },
+  hostCaption: { ...Type.caption, marginBottom: 6 },
   hostName: { ...Type.title },
   hostMeta: { ...Type.caption, marginTop: 5 },
 
   // ── 달력 ──
-  calendar: { width: '100%', maxWidth: 360, gap: 4, alignSelf: 'center' },
+  calendar: { width: '100%', maxWidth: 360, gap: 4, alignSelf: 'center', paddingBottom: 16 },
   calRow: { flexDirection: 'row' },
-  calCell: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' },
-  calHead: { fontSize: 12, fontWeight: '600' },
+  calCell: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  calHead: { ...Type.caption, fontWeight: '600' },
   calDay: { ...Type.body },
   calMark: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  dday: { ...Type.button, marginTop: 22, textAlign: 'center' },
 
   // ── 오시는 길 ──
-  venueName: { ...Type.title, textAlign: 'center' },
-  venueAddress: { ...Type.body, marginTop: 8, textAlign: 'center' },
-  mapRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 18 },
-  mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 16, borderRadius: Radius.pill, borderWidth: 1 },
-  mapBtnText: { ...Type.label },
+  venueName: { ...Type.body, fontWeight: '600' },
+  venueAddress: { ...Type.body, marginTop: 8 },
+  mapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
+  mapBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: Radius.sm, borderWidth: 1 },
+  mapBtnText: { ...Type.label, flexShrink: 1 },
 
   // ── 안내 카드 ──
-  infoCard: { width: '100%', borderRadius: Radius.lg, paddingHorizontal: 20, paddingVertical: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, paddingVertical: 14 },
-  infoLabel: { ...Type.body, flexShrink: 0 },
-  infoValue: { ...Type.body, fontWeight: '600', textAlign: 'right', flexShrink: 1 },
-  infoHint: { ...Type.caption, paddingBottom: 14, paddingTop: 2 },
+  infoCard: { width: '100%', borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 16 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 12 },
+  infoLabel: { ...Type.label, fontWeight: '400', width: 56, flexShrink: 0 },
+  infoValue: { ...Type.body, fontWeight: '600', flex: 1 },
+  infoHint: { ...Type.body, paddingBottom: 16, paddingTop: 8 },
 
   // ── 함께하는 사람들 ──
-  participantWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
-  participantChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, height: 34, paddingHorizontal: 14, borderRadius: Radius.pill },
+  participantWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  participantChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 44, paddingVertical: 10, paddingHorizontal: 14, borderRadius: Radius.pill },
   participantName: { ...Type.label },
-
-  // ── 접은 글을 펴는 링크 ──
-  moreLink: { marginTop: 12, alignSelf: 'center', padding: 4 },
-  moreLinkText: { ...Type.label },
 
   // ── 하단 고정 RSVP 바 ──
   bar: {
+    width: '100%', maxWidth: 608, alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -535,19 +518,19 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  barText: { flex: 1 },
-  barTitle: { ...Type.body, fontWeight: '600' },
+  barText: { flex: 1, minWidth: 0 },
+  barTitle: { ...Type.read, fontWeight: '600' },
   barSub: { ...Type.caption, marginTop: 2 },
   barSubLink: { ...Type.caption, marginTop: 2, textDecorationLine: 'underline' },
-  barBtn: { height: 46, paddingHorizontal: 22, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  barBtn: { minHeight: 48, paddingVertical: 12, paddingHorizontal: 20, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   barBtnText: { ...Type.button },
 
   // 전하기·따라가기 — 테두리 알약. 둘 다 있으면 한 줄에 서고, 좁으면 아래로 접힌다.
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: 24, marginTop: 40 },
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 24, marginTop: 28 },
   pill: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    height: 44, paddingHorizontal: 20, borderRadius: Radius.pill, borderWidth: 1,
+    minHeight: 44, maxWidth: '100%', paddingVertical: 10, paddingHorizontal: 16, borderRadius: Radius.pill, borderWidth: 1,
   },
-  pillText: { ...Type.label },
-  closing: { fontSize: 12, textAlign: 'center', marginTop: 48, letterSpacing: 0.5 },
+  pillText: { ...Type.label, flexShrink: 1 },
+  closing: { ...Type.caption, textAlign: 'center', marginTop: 32, paddingHorizontal: 24 },
 });

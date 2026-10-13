@@ -1,11 +1,17 @@
 import { authedRequest } from './api';
 import type { ContactFrequency, Drinking, MeetFrequency, PoliticalLeaning, Religion, Smoking } from './member';
 
+export type QuestionInputType = 'TEXT' | 'OX' | 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE';
+export type QuestionOption = { id: string; label: string };
+
 export type Today = {
   questionId: number;
   content: string;
   answered: boolean;
   myAnswer: string | null;
+  inputType?: QuestionInputType;
+  options?: QuestionOption[];
+  mySelectedOptionIds?: string[];
   /** 이번 요청으로 고인 잉크 — 답변 저장 응답에서 하루 한 번 0보다 크다. 조회는 늘 0. */
   inkEarned: number;
   /** 오늘 답을 이미 피드에 올렸는지. 구버전 서버는 안 내려주므로 옵셔널. */
@@ -18,8 +24,8 @@ export async function getToday(): Promise<Today> {
 }
 
 /** 오늘의 질문에 답변(작성/수정) (POST /daily/today/answer). */
-export async function answerToday(content: string): Promise<Today> {
-  return authedRequest<Today>('POST', '/daily/today/answer', { content });
+export async function answerToday(content: string, selectedOptionIds: string[] = [], questionId?: number): Promise<Today> {
+  return authedRequest<Today>('POST', '/daily/today/answer', { content, selectedOptionIds, questionId });
 }
 
 /** 상대와 똑같이 고른 취향 카드 한 장. */

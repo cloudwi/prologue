@@ -21,3 +21,7 @@ it('미리보기는 아직 업로드하지 않은 로컬 사진도 그대로 보
   expect(preview.status).toBe('PENDING');
   expect(preview.description).toBeNull();
 });
+it('유료 모임에만 연락 링크가 필수다', () => {
+  expect(() => draftInput({ ...basic(), fee: '10000' }, now)).toThrow(/연락 링크/);
+  expect(draftInput({ ...basic(), fee: '10000', kakaoLink: 'https://open.kakao.com/o/test' }, now).fee).toBe(10000);
+});

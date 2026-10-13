@@ -20,6 +20,43 @@ import kotlin.test.assertTrue
 
 class DailyAnswerServiceTest {
 
+    @Test
+    fun `선택만 제출해도 답변과 선택 번호가 저장되고 잉크를 받는다`() {
+        val choice = Question(1, "카페에서는 무엇을 마시나요?", com.prologue.backend.dailymeet.domain.model.QuestionInputType.SINGLE_CHOICE,
+            listOf(com.prologue.backend.dailymeet.domain.model.QuestionOption("A", "차"), com.prologue.backend.dailymeet.domain.model.QuestionOption("B", "커피")))
+        every { questionRepository.findAllOrdered() } returns listOf(choice)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { answerRepository.save(any()) } answers { firstArg() }
+        every { inkService.rewardDailyAnswer(accountId) } returns 2
+
+        val result = service.answerToday(accountId, "", listOf("A"), 1)
+        assertEquals("차", result.answer.content)
+        assertEquals(listOf("A"), result.answer.selectedOptionIds)
+        assertEquals(2, result.inkEarned)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns result.answer
+        assertTrue(service.today(accountId).answered)
+        assertEquals(listOf("A"), service.today(accountId).mySelectedOptionIds)
+        verify(exactly = 1) { growth.record(accountId, com.prologue.backend.growth.GrowthEvent.ANSWER_SUBMITTED, any()) }
+    }
+
+    @Test
+    fun `화면의 질문이 바뀌었다면 선택을 다른 질문에 저장하지 않는다`() {
+        every { questionRepository.findAllOrdered() } returns listOf(question)
+        assertFailsWith<DailyMeetException> { service.answerToday(accountId, "", listOf("A"), 2) }
+        verify(exactly = 0) { answerRepository.save(any()) }
+        verify(exactly = 0) { inkService.rewardDailyAnswer(any()) }
+    }
+
+    @Test
+    fun `구버전 앱이 선택형에 글로 답해도 기존 저장 계약을 유지한다`() {
+        val choice = Question(1, "무엇을 마시나요?", com.prologue.backend.dailymeet.domain.model.QuestionInputType.SINGLE_CHOICE,
+            listOf(com.prologue.backend.dailymeet.domain.model.QuestionOption("A", "차"), com.prologue.backend.dailymeet.domain.model.QuestionOption("B", "커피")))
+        every { questionRepository.findAllOrdered() } returns listOf(choice)
+        every { answerRepository.findByAccountIdAndQuestionId(accountId, 1L) } returns null
+        every { answerRepository.save(any()) } answers { firstArg() }
+        assertEquals("따뜻한 차", service.answerToday(accountId, "따뜻한 차").answer.content)
+    }
+
     private val questionRepository = mockk<QuestionRepository>()
     private val answerRepository = mockk<AnswerRepository>()
     private val inkService = mockk<InkService> { every { rewardDailyAnswer(any()) } returns 0 }

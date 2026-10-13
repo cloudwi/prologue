@@ -51,6 +51,7 @@ export default function MyScreen() {
     return (
       <SignupGate
         mode="guest"
+        intent="meetup"
         icon="person-outline"
         title={'가입하면\n내 자리가 생겨요'}
         lines={[
@@ -329,7 +330,7 @@ function MyHub() {
             />
           ) : (
             <Row
-              label="선호하는 이성"
+              label="소개 설정"
               value={ageRangeLabel(profile)}
               onPress={() => router.push('/my/preferences')}
               c={c}

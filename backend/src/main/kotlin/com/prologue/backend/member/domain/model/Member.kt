@@ -48,6 +48,11 @@ class Member private constructor(
         private set
     var preferredGender: Gender? = preferredGender
         private set
+
+    /** 소개만 중지한다. 프로필·사진·모임·기존 기록은 그대로 둔다. */
+    fun pauseDating() {
+        preferredGender = null
+    }
     var region: String = region
         private set
     var bio: String? = bio

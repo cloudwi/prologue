@@ -130,7 +130,7 @@ class DailyMeetController(
         @Valid @RequestBody request: AnswerRequest,
     ): TodayResponse {
         val accountId = UUID.fromString(authentication.name)
-        val result = dailyAnswerService.answerToday(accountId, request.content)
+        val result = dailyAnswerService.answerToday(accountId, request.content, request.selectedOptionIds, request.questionId)
         return todayResponse(accountId, inkEarned = result.inkEarned)
     }
 

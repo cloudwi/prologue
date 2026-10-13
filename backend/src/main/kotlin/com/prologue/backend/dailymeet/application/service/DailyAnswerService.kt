@@ -4,6 +4,7 @@ import com.prologue.backend.growth.GrowthEvents
 import com.prologue.backend.growth.GrowthEvent
 
 import com.prologue.backend.dailymeet.domain.model.Answer
+import com.prologue.backend.dailymeet.domain.model.DailyMeetException
 import com.prologue.backend.dailymeet.domain.model.Question
 import com.prologue.backend.dailymeet.domain.model.QuestionRotation
 import com.prologue.backend.dailymeet.domain.model.ServiceDay
@@ -36,16 +37,19 @@ class DailyAnswerService(
     fun today(accountId: UUID): TodayView {
         val question = todayQuestion()
         val mine = answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
-        return TodayView(question.id, question.content, mine != null, mine?.content)
+        return TodayView(question.id, question.content, mine != null, mine?.content, question.inputType, question.options, mine?.selectedOptionIds ?: emptyList())
     }
 
     /** 오늘의 질문에 답변(최초 작성 또는 수정). 저장이 통과한 뒤에야 잉크를 준다 — 같은 트랜잭션. */
     @Transactional
-    fun answerToday(accountId: UUID, content: String): AnswerResult {
+    fun answerToday(accountId: UUID, content: String, selectedOptionIds: List<String> = emptyList(), questionId: Long? = null): AnswerResult {
         val question = todayQuestion()
+        if (questionId != null && questionId != question.id) throw DailyMeetException("질문이 바뀌었어요. 새 질문을 확인해주세요")
+        // 구버전 앱의 글 답변도 계속 받는다. 새 앱의 선택 답변은 서버의 선택지로 검증한다.
+        val (selection, answerContent) = if (selectedOptionIds.isNotEmpty()) question.selection(selectedOptionIds) else emptyList<String>() to content
         val existing = answerRepository.findByAccountIdAndQuestionId(accountId, question.id)
-        val answer = existing?.apply { updateContent(content) }
-            ?: Answer.write(accountId, question.id, content)
+        val answer = existing?.apply { updateContent(answerContent, selection) }
+            ?: Answer.write(accountId, question.id, answerContent, selectedOptionIds = selection)
         val saved = answerRepository.save(answer)
         if (existing == null) growthEvents.record(accountId, GrowthEvent.ANSWER_SUBMITTED, "answer:${saved.id}")
         return AnswerResult(saved, inkEarned = inkService.rewardDailyAnswer(accountId))

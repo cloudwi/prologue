@@ -29,6 +29,7 @@ import { Avatar } from '@/components/avatar';
 import { BottomTabInset, Fonts, Radius, Type, type ThemeColors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
 import { answerToday, getPastPeers, getPeers, getToday, unlockAnswers, type Peer, type Today } from '@/lib/daily';
+import { QuestionChoices } from '@/components/question-choices';
 import { getInkBalance, INK_PRICE } from '@/lib/ink';
 import { getTasteDeck } from '@/lib/taste';
 import { publishDailyToFeed } from '@/lib/feed';
@@ -46,7 +47,7 @@ import type { Gender } from '@/lib/member';
 import { pickDemoProfiles, type DemoProfile } from '@/lib/demo-profiles';
 
 // 답변 최소 분량 — 서버와 같은 값. "ㅇㅇ" 한 마디는 상대의 하루를 비운다.
-const ANSWER_MIN = 10;
+const ANSWER_MIN = 1;
 const ANSWER_MAX = 500;
 
 function peerMetaLabel(peer: Peer): string {
@@ -100,7 +101,7 @@ export default function DiscoverScreen() {
         icon="sparkles-outline"
         title="아직 소개를 받고 있지 않아요"
         lines={[
-          '만나고 싶은 성별만 정하면 내일부터 소개가 시작돼요.',
+          '사진 한 장과 만나고 싶은 성별을 준비하면 소개를 받을 수 있어요.',
           '모임은 지금처럼 그대로 쓸 수 있어요.',
         ]}
       />
@@ -122,6 +123,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
    * 갱신이 입력 중인 글을 지울 위험도, 규칙 위반도 함께 있었다. 파생값으로 두면 둘 다 사라진다.
    */
   const [typed, setTyped] = useState<string | null>(null);
+  const [picked, setPicked] = useState<{ questionId: number; ids: string[] } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [unlockingAnswer, setUnlockingAnswer] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -221,18 +223,22 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
   useSessionGuard(todayQuery.error, toLogin);
 
   const draft = typed ?? today?.myAnswer ?? '';
+  const isChoice = today?.inputType != null && today.inputType !== 'TEXT' && (today.options?.length ?? 0) > 0;
+  const selectedIds = picked?.questionId === today?.questionId ? picked?.ids ?? [] : today?.mySelectedOptionIds ?? [];
+  const canSubmit = isChoice ? selectedIds.length > 0 : draft.trim().length >= ANSWER_MIN;
 
   async function submit() {
-    if (draft.trim().length < ANSWER_MIN || submitting) return;
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
     try {
       const wasAnswered = today?.answered ?? false;
-      const updated = await answerToday(draft.trim());
+      const updated = await answerToday(isChoice ? '' : draft.trim(), isChoice ? selectedIds : [], today?.questionId);
       track('answer_submitted', { inkEarned: updated.inkEarned });
       haptics.success(); // 오늘의 한 편을 남긴 순간 — 손에도 남게
       // 서버가 준 최신값을 캐시에 그대로 얹는다. 다시 물을 필요가 없다.
       queryClient.setQueryData(['daily', 'today'], updated);
       setTyped(null); // 저장했으니 다시 서버 값을 비춘다
+      setPicked(null);
       setEditing(false);
       // 오늘의 답변으로 고인 잉크 — 칩을 그 자리에서 올리고, 어디서 늘었는지 한 줄로 알려준다.
       if (updated.inkEarned > 0) {
@@ -285,11 +291,13 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
 
   function startEdit() {
     setTyped(null);
+    setPicked(null);
     setEditing(true);
   }
 
   function cancelEdit() {
     setTyped(null);
+    setPicked(null);
     setEditing(false);
     setComposing(false);
   }
@@ -304,7 +312,7 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
   const showingDemoProfiles = demoProfiles.length > 0 && peersData != null && peersData.peers.length === 0;
 
   const isEditing = !today?.answered || editing;
-  const editorOpen = isEditing && (today?.answered ? true : composing);
+  const editorOpen = isEditing && (isChoice || (today?.answered ? true : composing));
 
   if (todayQuery.isError && !today) {
     return <ScreenLoadError title="오늘의 질문을 불러오지 못했어요" onRetry={refreshAll} retrying={todayQuery.isFetching} />;
@@ -389,10 +397,17 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
                 editorOpen ? (
                   <AnswerSheet c={c} isDark={isDark}>
                     <View style={styles.sheetBody}>
-                      <TextInput
+                      {isChoice ? <QuestionChoices
+                        inputType={today?.inputType ?? 'TEXT'}
+                        options={today?.options ?? []}
+                        selected={selectedIds}
+                        onChange={(ids) => { if (today) setPicked({ questionId: today.questionId, ids }); }}
+                        disabled={submitting}
+                        c={c}
+                      /> : <TextInput
                         value={draft}
                         onChangeText={setTyped}
-                        placeholder="오늘의 마음을 적어보세요"
+                        placeholder="한 단어도 좋아요"
                         placeholderTextColor={c.textSecondary}
                         multiline
                         autoFocus
@@ -401,22 +416,22 @@ function DiscoverBoard({ preferredGender }: { preferredGender: Gender | null }) 
                         cursorColor={c.primary}
                         selectionColor={c.primary}
                         style={[styles.input, { color: c.text, fontFamily: Fonts.serif }]}
-                      />
+                      />}
                     </View>
                     {/* 최소 분량까지 차오르는 선 — 규칙을 읽히는 대신 보이게 한다. */}
-                    <MinProgress length={draft.trim().length} c={c} />
+                    {!isChoice && <MinProgress length={draft.trim().length} c={c} />}
                     <View style={styles.sheetFoot}>
-                      <AnswerCounter length={draft.trim().length} c={c} />
+                      {isChoice ? <Text style={[styles.counter, { color: c.textSecondary }]}>{selectedIds.length ? `${selectedIds.length}개 선택` : ''}</Text> : <AnswerCounter length={draft.trim().length} c={c} />}
                       <View style={styles.rowActions}>
                         <Pressable onPress={cancelEdit} disabled={submitting} style={styles.cancel} hitSlop={6}>
                           <Text style={[styles.link, { color: c.textSecondary }]}>취소</Text>
                         </Pressable>
                         <Pressable
                           onPress={submit}
-                          disabled={draft.trim().length < ANSWER_MIN || submitting}
+                          disabled={!canSubmit || submitting}
                           style={[
                             styles.submit,
-                            { backgroundColor: c.primary, opacity: draft.trim().length < ANSWER_MIN || submitting ? 0.35 : 1 },
+                            { backgroundColor: c.primary, opacity: !canSubmit || submitting ? 0.35 : 1 },
                           ]}
                         >
                           <Text style={[styles.submitText, { color: c.primaryText }]}>
@@ -724,7 +739,7 @@ function AnswerSheet({ c, isDark, children }: { c: ThemeColors; isDark: boolean;
 /**
  * 최소 분량까지 차오르는 선.
  *
- * "10자부터 남길 수 있어요"를 읽게 하는 대신, 종이 아래 선이 차오르는 걸 보게 한다.
+ * 첫 글자가 생겨 저장할 수 있는 순간에만 작은 촉각 피드백을 준다.
  * 다 차면 선은 사라진다 — 더 알려줄 게 없어서다. 그 자리에서 저장 버튼이 켜진다.
  */
 function MinProgress({ length, c }: { length: number; c: ThemeColors }) {
@@ -759,7 +774,7 @@ function AnswerCounter({ length, c }: { length: number; c: ThemeColors }) {
   const text =
     length < ANSWER_MIN
       ? length === 0
-        ? `${ANSWER_MIN}자부터`
+        ? '한 단어도 좋아요'
         : `앞으로 ${ANSWER_MIN - length}자`
       : length > ANSWER_MAX - 40
         ? `${length}/${ANSWER_MAX}`

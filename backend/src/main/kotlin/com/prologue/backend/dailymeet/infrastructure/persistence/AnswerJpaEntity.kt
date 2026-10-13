@@ -33,4 +33,6 @@ class AnswerJpaEntity(
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
+    @Column(name = "selected_option_ids", nullable = false, length = 32)
+    var selectedOptionIds: String = "",
 )

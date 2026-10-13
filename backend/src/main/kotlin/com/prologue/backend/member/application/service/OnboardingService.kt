@@ -24,6 +24,14 @@ class OnboardingService(
     private val memberGateService: MemberGateService? = null,
 ) {
     @Transactional
+    fun pauseDating(accountId: java.util.UUID): Member {
+        val member = memberRepository.findByAccountId(accountId)
+            ?: throw MemberDomainException("프로필을 먼저 만들어주세요")
+        member.pauseDating()
+        return memberRepository.save(member)
+    }
+
+    @Transactional
     fun complete(command: CompleteOnboardingCommand): Member {
         val existing = memberRepository.findByAccountId(command.accountId)
         recordConsent(command, isFirst = existing == null)

@@ -54,6 +54,14 @@ class OnboardingController(
         return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
     }
 
+    /** 소개만 중지한다. 이전 회원도 전화번호 등 다른 정보를 다시 입력할 필요가 없다. */
+    @PutMapping("/me/dating/pause")
+    fun pauseDating(authentication: Authentication): MemberProfileResponse {
+        val accountId = UUID.fromString(authentication.name)
+        val member = onboardingService.pauseDating(accountId)
+        return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
+    }
+
     /** 프로필 생성/수정 (upsert). */
     @PutMapping("/me")
     fun completeOnboarding(

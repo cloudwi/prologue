@@ -53,7 +53,7 @@ export default function ConsentScreen() {
    * intent — 이 사람이 무엇을 하러 왔는지. 'meetup'이면 모임에 손들려고 온 손님이다.
    * next — 가입이 끝나면 되돌아갈 자리(보던 모임의 초대장 등).
    */
-  const { intent, next } = useLocalSearchParams<{ intent?: string; next?: string }>();
+  const { intent, next, authenticated } = useLocalSearchParams<{ intent?: string; next?: string; authenticated?: string }>();
   const meetupOnly = intent === 'meetup';
 
   /*
@@ -94,10 +94,12 @@ export default function ConsentScreen() {
     track('consent_completed');
     await saveConsent({ marketing: checked.marketing, sensitive: checked.sensitive });
     // 무엇을 하러 왔는지와 돌아갈 자리를 다음 화면에 넘긴다 — 인증이 끼어 있어 상태로는 못 잇는다.
-    router.push({
-      pathname: '/email-auth',
+    const destination = {
+      pathname: authenticated === '1' ? '/onboarding' as const : '/email-auth' as const,
       params: { ...(meetupOnly ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) },
-    });
+    };
+    if (authenticated === '1') router.replace(destination);
+    else router.push(destination);
   };
 
   return (
@@ -109,6 +111,7 @@ export default function ConsentScreen() {
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={[styles.title, { color: c.text }]}>시작하기 전에{'\n'}동의가 필요해요</Text>
+          {authenticated === '1' && <Text style={[styles.subtitle, { color: c.textSecondary }]}>아직 프로필을 만들지 않았어요. 동의 후 가입을 이어갈 수 있어요.</Text>}
           <Text style={[styles.subtitle, { color: c.textSecondary }]}>
             시행일 {LEGAL_EFFECTIVE_DATE}
           </Text>

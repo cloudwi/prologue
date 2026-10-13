@@ -5,12 +5,15 @@ import MeetupEditor from '../app/meetup-host/edit';
 import { saveMeetup, uploadMeetupCover } from '../lib/meetups';
 import { pickPhotos } from '../components/photo-grid';
 import { useHostMeetups } from '../hooks/use-host-meetups';
+import { clearMeetupDraft, loadMeetupDraft, saveMeetupDraft } from '../lib/meetup-draft-storage';
+import { meetupDraft } from '../lib/meetup-draft';
 
 jest.mock('../global.css', () => ({}));
 jest.mock('expo-router', () => ({ useRouter: jest.fn(), useLocalSearchParams: () => ({}) }));
 jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
 jest.mock('../hooks/use-theme', () => ({ useTheme: () => ({ text: '#111', textSecondary: '#555' }) }));
 jest.mock('../hooks/use-host-meetups', () => ({ useHostMeetups: jest.fn() }));
+jest.mock('../lib/meetup-draft-storage', () => ({ clearMeetupDraft: jest.fn(), loadMeetupDraft: jest.fn(), saveMeetupDraft: jest.fn() }));
 jest.mock('../lib/meetups', () => ({ ...jest.requireActual('../lib/meetups'), saveMeetup: jest.fn(), uploadMeetupCover: jest.fn() }));
 jest.mock('../components/photo-grid', () => ({ pickPhotos: jest.fn() }));
 jest.mock('../components/sub-screen', () => {
@@ -29,8 +32,48 @@ jest.mock('../components/meetup-invitation', () => {
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useRouter).mockReturnValue({ replace: jest.fn() } as unknown as ReturnType<typeof useRouter>);
-  jest.mocked(useHostMeetups).mockReturnValue({ data: { meetups: [], canCreate: true }, session: { loading: false, signedIn: true }, isPending: false } as unknown as ReturnType<typeof useHostMeetups>);
+  jest.mocked(useHostMeetups).mockReturnValue({ data: { meetups: [], canCreate: true }, session: { loading: false, signedIn: true, profile: { accountId: 'test-account' } }, isPending: false } as unknown as ReturnType<typeof useHostMeetups>);
+  jest.mocked(loadMeetupDraft).mockReturnValue(null);
   jest.mocked(saveMeetup).mockResolvedValue('created-id');
+});
+
+it('입력 중인 초안을 기기에 저장하고 재진입하면 복원한다', async () => {
+  await render(<MeetupEditor />);
+  await fillBasic();
+  expect(saveMeetupDraft).toHaveBeenLastCalledWith('test-account', expect.objectContaining({ title: '과자 모임', place: '서로서가' }), undefined);
+  await screen.unmount();
+  jest.mocked(loadMeetupDraft).mockReturnValue({ ...meetupDraft(), title: '이어 쓰는 모임', description: '작성 중인 소개' });
+  await render(<MeetupEditor />);
+  expect(screen.getByLabelText('모임 이름')).toHaveProp('value', '이어 쓰는 모임');
+  expect(screen.getByLabelText('짧은 소개')).toHaveProp('value', '작성 중인 소개');
+});
+
+it('최종 제출이 성공하면 기기의 초안을 지운다', async () => {
+  await render(<MeetupEditor />); await fillBasic();
+  jest.mocked(clearMeetupDraft).mockClear();
+  await fireEvent.press(screen.getByText('미리보기'));
+  await fireEvent.press(screen.getByText('이대로 제출하기'));
+  await waitFor(() => expect(clearMeetupDraft).toHaveBeenCalledWith('test-account', undefined));
+});
+
+it('계정이 바뀌면 이전 계정의 초안을 새 계정에 저장하지 않는다', async () => {
+  await render(<MeetupEditor />); await fillBasic();
+  jest.mocked(saveMeetupDraft).mockClear();
+  jest.mocked(useHostMeetups).mockReturnValue({ data: { meetups: [], canCreate: true }, session: { loading: false, signedIn: true, profile: { accountId: 'other-account' } }, isPending: false } as unknown as ReturnType<typeof useHostMeetups>);
+  await screen.rerender(<MeetupEditor />);
+  expect(loadMeetupDraft).toHaveBeenLastCalledWith('other-account', undefined);
+  expect(screen.getByLabelText('모임 이름')).toHaveProp('value', '');
+  expect(saveMeetupDraft).not.toHaveBeenCalled();
+});
+
+it('유료 모임의 연락 링크가 없으면 미리보기 전에 알려준다', async () => {
+  await render(<MeetupEditor />); await fillBasic();
+  await fireEvent.press(screen.getByText('사진·소개·참가비 더하기 · 선택'));
+  await fireEvent.changeText(screen.getByLabelText('참가비 · 0원이면 무료'), '10000');
+  expect(screen.getByLabelText('연락 링크 · 유료 모임 필수')).toBeTruthy();
+  await fireEvent.press(screen.getByText('미리보기'));
+  expect(screen.getByRole('alert')).toHaveTextContent(/연락 링크/);
+  expect(saveMeetup).not.toHaveBeenCalled();
 });
 
 async function fillBasic() {

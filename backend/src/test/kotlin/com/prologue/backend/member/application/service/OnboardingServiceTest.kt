@@ -70,6 +70,29 @@ class OnboardingServiceTest {
     }
 
     @Test
+    fun `소개를 중지해도 전화번호 없는 이전 회원의 프로필과 사진은 그대로다`() {
+        val member = existingMember()
+        member.addPhoto("https://cdn/photo.jpg")
+        every { memberRepository.findByAccountId(accountId) } returns member
+        every { memberRepository.save(any()) } answers { firstArg() }
+
+        val result = service.pauseDating(accountId)
+        assertNull(result.preferredGender)
+        assertNull(result.phone)
+        assertEquals("옛닉", result.nickname)
+        assertEquals("부산", result.region)
+        assertEquals(listOf("https://cdn/photo.jpg"), result.photoUrls)
+        verify(exactly = 0) { consentRepository.save(any()) }
+    }
+
+    @Test
+    fun `소개를 중지할 때 남의 프로필을 만들거나 수정하지 않는다`() {
+        every { memberRepository.findByAccountId(accountId) } returns null
+        assertFailsWith<com.prologue.backend.member.domain.model.MemberDomainException> { service.pauseDating(accountId) }
+        verify(exactly = 0) { memberRepository.save(any()) }
+    }
+
+    @Test
     fun `성비 게이트 - 최초 온보딩을 마친 회원만 줄 세우기를 묻는다`() {
         val gate = mockk<MemberGateService>(relaxed = true)
         val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate)

@@ -24,6 +24,7 @@ export function SignupGate({
   title,
   lines,
   mode,
+  intent,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   /** 이 탭이 무엇을 하는 곳인지. 잠긴 사실이 아니라 놓치고 있는 것을 적는다. */
@@ -32,6 +33,8 @@ export function SignupGate({
   lines: string[];
   /** 'guest'면 가입으로, 'dating-off'면 소개팅 켜기로 보낸다. */
   mode: 'guest' | 'dating-off';
+  /** 모임에서 들어온 손님은 소개팅 가입으로 바꾸지 않는다. */
+  intent?: 'meetup';
 }) {
   const c = useTheme();
   const router = useRouter();
@@ -57,13 +60,17 @@ export function SignupGate({
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push(guest ? '/consent' : '/my/start-dating')}
+            onPress={() => router.push(guest ? { pathname: '/consent', params: intent ? { intent } : {} } : '/my/start-dating')}
             style={({ pressed }) => [styles.cta, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
             <Text style={[styles.ctaText, { color: c.primaryText }]}>
               {guest ? '프롤로그 시작하기' : '소개팅 시작하기'}
             </Text>
           </Pressable>
+
+          {guest && <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'login', ...(intent ? { intent } : {}) } })} style={styles.login}>
+            <Text style={[styles.foot, { color: c.textSecondary }]}>이미 가입했어요 · 로그인</Text>
+          </Pressable>}
 
           <Text style={[styles.foot, { color: c.textSecondary }]}>
             {guest ? '모임은 가입하지 않아도 둘러볼 수 있어요.' : '모임은 지금처럼 그대로 쓸 수 있어요.'}
@@ -91,5 +98,6 @@ const styles = StyleSheet.create({
   line: { ...Type.body, textAlign: 'center' },
   cta: { marginTop: 30, alignSelf: 'stretch', minHeight: 54, paddingVertical: 12, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   ctaText: { ...Type.button },
+  login: { minHeight: 44, justifyContent: 'center' },
   foot: { ...Type.caption, marginTop: 14, textAlign: 'center' },
 });

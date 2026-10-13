@@ -45,6 +45,7 @@ class AnswerPersistenceAdapter(
             questionId = questionId,
             content = content,
             createdAt = createdAt,
+            selectedOptionIds = selectedOptionIds.joinToString(","),
         )
 
     private fun AnswerJpaEntity.toDomain(): Answer =
@@ -54,5 +55,6 @@ class AnswerPersistenceAdapter(
             questionId = questionId,
             content = content,
             createdAt = createdAt,
+            selectedOptionIds = selectedOptionIds.split(",").filter { it.isNotEmpty() },
         )
 }

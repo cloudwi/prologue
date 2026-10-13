@@ -9,12 +9,15 @@ import { Image } from 'expo-image';
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { ScreenLoadError } from '@/components/screen-load-error';
+
 import { Colors, Fonts } from '@/constants/theme';
 import { identify, track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
 import { useAppearance } from '@/lib/appearance';
 import { getMyProfile } from '@/lib/member';
+import { getConsent } from '@/lib/consent';
 import { SESSION_QUERY_KEY } from '@/lib/session';
 
 export default function LoginScreen() {
@@ -23,6 +26,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
+  const [checkFailed, setCheckFailed] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   /** 갈 곳이 정해졌으니 스플래시를 내린다. 실패해도 앱은 그대로 간다(루트에 안전장치가 있다). */
   const hideSplash = () => void SplashScreen.hideAsync().catch(() => {});
@@ -30,35 +35,57 @@ export default function LoginScreen() {
   // 앱 시작 시: 저장된 토큰이 있으면 프로필 확인 후 자동 진입
   useEffect(() => {
     let active = true;
+    const timeout = setTimeout(() => {
+      if (!active) return;
+      active = false;
+      setChecking(false);
+      setCheckFailed(true);
+      hideSplash();
+    }, 20000);
     (async () => {
-      const token = await getAccessToken();
-      if (!token) {
-        if (active) setChecking(false);
-        return;
-      }
       try {
+        const token = await getAccessToken();
+        if (!token) {
+          if (active) setChecking(false);
+          return;
+        }
         const profile = await getMyProfile();
+        const pendingConsent = profile ? null : await getConsent();
+        if (!active) return;
         if (profile?.accountId) identify(profile.accountId);
         // 방금 확인한 것을 세션 캐시에 심어둔다 — 탭들이 같은 질문을 다시 네트워크로 묻지 않게.
         // (심지 않으면 발견 탭이 자기 차례에 프로필을 또 기다리며 빈 화면을 낸다)
         queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: true, profile });
         if (active) {
-          router.replace(profile ? (profile.preferredGender ? '/discover' : '/meetups') : '/onboarding');
+          router.replace(profile ? (profile.preferredGender ? '/discover' : '/meetups') : {
+            pathname: pendingConsent ? '/onboarding' : '/consent',
+            params: { ...(!pendingConsent ? { authenticated: '1' } : {}), ...(!pendingConsent?.sensitive ? { intent: 'meetup' } : {}) },
+          });
           hideSplash(); // 목적지가 그려지는 프레임에 맞춰 내린다
         }
       } catch (e) {
+        if (!active) return;
         // 재발급까지 실패한 만료(401/403) — authedFetch가 토큰을 지웠으니 로그인 화면으로 남는다
         if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
           await clearTokens();
           queryClient.clear();
+        } else if (active) {
+          setCheckFailed(true);
         }
-        if (active) setChecking(false);
+        if (active) { setChecking(false); hideSplash(); }
+      } finally {
+        clearTimeout(timeout);
       }
     })();
     return () => {
       active = false;
+      clearTimeout(timeout);
     };
-  }, [router, queryClient]);
+  }, [router, queryClient, retryAttempt]);
+
+  if (checkFailed) return <ScreenLoadError title="로그인 정보를 확인하지 못했어요" onRetry={() => {
+    setChecking(true); setCheckFailed(false); setRetryAttempt((n) => n + 1);
+  }} />;
 
   /*
    * 확인이 끝나기 전 — 그 자리는 스플래시가 덮고 있다.
@@ -81,6 +108,7 @@ export default function LoginScreen() {
           style={styles.splashMatch}
           contentFit="contain"
         />
+        <Text style={[styles.tagline, { color: c.textSecondary }]}>로그인 정보를 확인하고 있어요</Text>
       </View>
     );
   }
@@ -101,20 +129,22 @@ export default function LoginScreen() {
             <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
           </Animated.View>
           <Animated.View entering={FadeInDown.duration(380).delay(90)} style={styles.center}>
-            <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답으로 알아가는,</Text>
-            <Text style={[styles.tagline, { color: c.textSecondary }]}>가치관이 꼭 맞는 소중한 인연</Text>
+            <Text style={[styles.tagline, { color: c.textSecondary }]}>가벼운 모임부터, 문답으로 알아가는 인연까지</Text>
           </Animated.View>
         </View>
 
-        {/* 이메일 인증은 가입과 로그인이 같은 흐름이라 진입 버튼도 하나로 둔다.
-            이메일도 개인정보라 수집 전에 동의를 받아야 해서, 동의 화면을 먼저 거친다. */}
+        {/* 신규 가입은 동의부터, 기존 회원은 이메일 인증으로 바로 간다. */}
         <Animated.View entering={FadeInUp.duration(380).delay(180)} style={styles.buttons}>
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/consent')}
             style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
-            <Text style={[styles.startBtnText, { color: c.primaryText }]}>이메일로 시작하기</Text>
+            <Text style={[styles.startBtnText, { color: c.primaryText }]}>문답으로 인연 만나기</Text>
+          </Pressable>
+
+          <Pressable accessibilityRole="button" onPress={() => router.push('/email-auth?mode=login')} style={styles.loginLink}>
+            <Text style={[styles.loginText, { color: c.textSecondary }]}>이미 가입했어요 · 로그인</Text>
           </Pressable>
 
           {/*
@@ -167,6 +197,8 @@ const styles = StyleSheet.create({
   wordmarkEn: { fontSize: 14, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
   tagline: { fontSize: 16, marginTop: 6 },
   buttons: { gap: 12 },
+  loginLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  loginText: { fontSize: 14 },
   startBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   startBtnText: { fontSize: 17, fontWeight: '700' },
   // 두 번째 문이라 테두리만 — 색 덩어리가 둘이면 어느 쪽이 본길인지 흐려진다.

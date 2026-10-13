@@ -22,6 +22,7 @@ import { requestCode, verifyCode } from '@/lib/auth';
 import { clearPendingEmail, getPendingEmail, savePendingEmail } from '@/lib/auth-storage';
 import { getMyProfile } from '@/lib/member';
 import { SESSION_QUERY_KEY } from '@/lib/session';
+import { clearConsent, getConsent } from '@/lib/consent';
 import { useTheme } from '@/hooks/use-theme';
 
 type Step = 'email' | 'code';
@@ -37,7 +38,8 @@ export default function EmailAuthScreen() {
     code: linkedCode,
     intent,
     next,
-  } = useLocalSearchParams<{ code?: string; intent?: string; next?: string }>();
+    mode,
+  } = useLocalSearchParams<{ code?: string; intent?: string; next?: string; mode?: string }>();
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -121,13 +123,16 @@ export default function EmailAuthScreen() {
        *  - 그 외 → 소개팅 회원은 발견, 모임 회원은 모임 탭.
        */
       if (!profile) {
+        const consent = mode === 'login' ? null : await getConsent();
         router.replace({
-          pathname: '/onboarding',
-          params: { ...(intent === 'meetup' ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) },
+          pathname: consent ? '/onboarding' : '/consent',
+          params: { ...(!consent ? { authenticated: '1' } : {}), ...(intent === 'meetup' ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) },
         });
       } else if (next) {
+        await clearConsent();
         router.replace(next as never);
       } else {
+        await clearConsent();
         router.replace(intent === 'meetup' || !profile.preferredGender ? '/meetups' : '/discover');
       }
     } catch (e) {
@@ -165,14 +170,15 @@ export default function EmailAuthScreen() {
             {step === 'email' ? (
               <>
                 <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>
-                  이메일로 시작해요
+                  {mode === 'login' ? '다시 만나서 반가워요' : '이메일로 시작해요'}
                 </Text>
                 {/* 문장 경계에서 끊어 "요."만 다음 줄로 떨어지는 것을 막는다 */}
                 <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-                  인증코드를 보내드릴게요.{'\n'}이미 가입하셨다면 바로 로그인돼요.
+                  인증코드를 보내드릴게요.{'\n'}{mode === 'login' ? '가입한 이메일로 로그인해주세요.' : '이미 가입하셨다면 바로 로그인돼요.'}
                 </Text>
                 <View style={styles.form}>
                   <PlaceholderInput
+                    accessibilityLabel="이메일"
                     value={email}
                     onChangeText={(t) => {
                       setEmail(t);
@@ -239,6 +245,7 @@ export default function EmailAuthScreen() {
                       })}
                     </View>
                     <TextInput
+                      accessibilityLabel="인증코드"
                       value={code}
                       onChangeText={(t) => {
                         setCode(t.replace(/\D/g, '').slice(0, 6));

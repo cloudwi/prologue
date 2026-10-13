@@ -150,6 +150,11 @@ export async function completeOnboarding(profile: OnboardingProfile): Promise<Me
   return authedRequest<MemberProfile>('PUT', '/members/me', profile);
 }
 
+/** 소개만 중지한다. 전체 프로필을 덮어쓰거나 기존 기록을 지우지 않는다. */
+export async function pauseDating(): Promise<MemberProfile> {
+  return authedRequest<MemberProfile>('PUT', '/members/me/dating/pause');
+}
+
 /** 회원 탈퇴 — 계정과 모든 데이터를 되돌릴 수 없게 지운다 (DELETE /members/me). */
 export async function deleteAccount(): Promise<void> {
   await authedRequest<void>('DELETE', '/members/me');
