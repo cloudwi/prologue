@@ -73,8 +73,7 @@
           "organization": "prologue-4k",
           "project": "prologue-app"
         }
-      ],
-      "./plugins/with-pod-deployment-floor.cjs"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
