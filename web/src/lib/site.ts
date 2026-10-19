@@ -6,7 +6,7 @@ export const SITE_URL = 'https://prologue.day';
 export const CONTACT_EMAIL = 'prologue.kr.team@gmail.com';
 
 /**
- * API 주소 — 운영자 화면에서 사용한다. /host는 앱 관리 화면으로 안내만 한다.
+ * API 주소 — 운영자 화면에서 사용한다.
  */
 export const API_BASE = 'https://api.prologue.day';
 

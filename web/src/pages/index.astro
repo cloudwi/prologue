@@ -42,13 +42,6 @@ const steps = [
     img: '/screens/2-mails.webp',
     alt: '프롤로그 앱 화면 — 봉투로 도착한 편지와 열어보기·거절 버튼',
   },
-  {
-    n: '05',
-    title: '문답 밖에서, 모임으로',
-    body: '글로만 알아가는 게 답답할 땐 오프라인 모임에 신청해보세요. 모임 페이지는 초대장처럼 펼쳐지고, 같은 모임이 다시 열리면 알림을 받을 수 있어요.',
-    img: '/screens/5-meetup.webp',
-    alt: '프롤로그 앱 화면 — 초대장처럼 펼쳐지는 오프라인 모임 상세',
-  },
 ];
 
 const faqs = [
@@ -152,10 +145,10 @@ const jsonLd = [
         <div class="landing-section-head"><div><p class="eyebrow">앱 미리보기</p><h2 id="how-title">시작은 가볍게.<br />이야기는 자연스럽게.</h2></div><p>궁금한 단계를 눌러보세요.<br />실제 앱 화면으로 안내해 드릴게요.</p></div>
         <div class="walkthrough" data-walkthrough>
           <div class="walkthrough-nav" role="tablist" aria-label="프롤로그 이용 단계" hidden>
-            {['문답 남기기', '오늘의 상대', '편지 쓰기', '편지함', '모임'].map((label, i) => <button type="button" role="tab" id={`step-tab-${i}`} aria-controls={`step-panel-${i}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}><span>{steps[i].n}</span>{label}</button>)}
+            {['문답 남기기', '오늘의 상대', '편지 쓰기', '편지함'].map((label, i) => <button type="button" role="tab" id={`step-tab-${i}`} aria-controls={`step-panel-${i}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}><span>{steps[i].n}</span>{label}</button>)}
           </div>
           {steps.map((s, i) => <article class="walkthrough-panel" id={`step-panel-${i}`} role="tabpanel" aria-labelledby={`step-tab-${i}`} tabindex="0">
-            <div class="walkthrough-copy"><span class="walkthrough-count">STEP {s.n} / 05</span><h3>{s.title}</h3><p>{s.body}</p><a class="text-link" href="/download">앱에서 시작하기 <Icon name="arrow" size={18} /></a></div>
+            <div class="walkthrough-copy"><span class="walkthrough-count">STEP {s.n} / {String(steps.length).padStart(2, '0')}</span><h3>{s.title}</h3><p>{s.body}</p><a class="text-link" href="/download">앱에서 시작하기 <Icon name="arrow" size={18} /></a></div>
             <div class="walkthrough-shot">{i < 2 ? <div class="walkthrough-profile"><ProfilePreview variant={i === 0 ? 'question' : 'peer'} /></div> : <img src={s.img} alt={s.alt} width="300" height="652" loading="lazy" />}</div>
           </article>)}
         </div>
