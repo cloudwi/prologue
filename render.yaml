@@ -37,6 +37,12 @@ services:
     # 정적 사이트는 유저가 방금 만든 모임의 페이지를 미리 구워둘 수 없다. 그렇다고 앱이 api.prologue.day를
     # 공유하게 두면 그 주소가 앱 바이너리에 박혀 영영 못 옮긴다 — 그래서 대문은 prologue.day로 두고 여기서 넘긴다.
     routes:
+      - type: redirect
+        source: /meetups
+        destination: /download
+      - type: redirect
+        source: /host
+        destination: /download
       - type: rewrite
         source: /m/*
         destination: https://api.prologue.day/m/*

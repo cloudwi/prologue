@@ -22,8 +22,8 @@ const storyLastmod = new Map(
 
 export default defineConfig({
   site: 'https://prologue.day',
-  // 이전 웹 모임 주소는 앱 다운로드로 보낸다. 생성된 정적 리다이렉트 페이지가
-  // Render에 남아 있는 /meetups 백엔드 rewrite보다 우선해 목록 노출도 막는다.
+  // 이전 웹 모임 주소는 앱 다운로드로 보낸다. 운영 Render의 같은 주소도
+  // backend rewrite 대신 /download redirect로 설정해야 한다(render.yaml).
   redirects: {
     '/meetups': '/download',
     '/host': '/download',
