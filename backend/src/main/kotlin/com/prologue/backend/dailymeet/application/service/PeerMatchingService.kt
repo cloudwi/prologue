@@ -299,21 +299,26 @@ class PeerMatchingService(
         question: Question,
         seen: Set<UUID>,
         eligible: (peer: Member, answer: Answer) -> Boolean,
-    ): MutableList<Candidate> =
-        answers
+    ): MutableList<Candidate> {
+        val latestAnswers = answers
             .filter { it.id !in seen }
             .groupBy { it.accountId }
             .values
             .map { perAccount -> perAccount.maxBy { it.createdAt } }
+        if (latestAnswers.isEmpty()) return mutableListOf()
+        val profiles = memberQueryService.findProfiles(latestAnswers.map { it.accountId })
+        val exposures = dailyRevealRepository.countByQuestionAndPeerAnswers(question.id, latestAnswers.map { it.id!! })
+        return latestAnswers
             .mapNotNull { answer ->
-                val peer = memberQueryService.findProfile(answer.accountId) ?: return@mapNotNull null
+                val peer = profiles[answer.accountId] ?: return@mapNotNull null
                 if (!eligible(peer, answer)) return@mapNotNull null
-                val exposure = dailyRevealRepository.countByQuestionAndPeerAnswer(question.id, answer.id!!)
+                val exposure = exposures[answer.id] ?: 0L
                 // 오늘 이미 상한만큼 소개된 사람은 더 내보내지 않는다
                 if (exposure >= maxExposurePerDay) return@mapNotNull null
                 Candidate(answer, peer, exposure)
             }
             .toMutableList()
+    }
 
     private fun fallbackDays(): List<Int> =
         candidateFallbackDays.split(',').mapNotNull { it.trim().toIntOrNull() }.filter { it > candidateDays }.sorted()

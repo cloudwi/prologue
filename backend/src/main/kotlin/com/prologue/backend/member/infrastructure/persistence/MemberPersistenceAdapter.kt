@@ -47,6 +47,7 @@ class MemberPersistenceAdapter(
             drinking = drinking,
             meetFrequency = meetFrequency,
             contactFrequency = contactFrequency,
+            onboardingComplete = onboardingComplete,
         )
 
     private fun MemberJpaEntity.toDomain(): Member =
@@ -76,6 +77,7 @@ class MemberPersistenceAdapter(
             drinking = drinking,
             meetFrequency = meetFrequency,
             contactFrequency = contactFrequency,
+            onboardingComplete = onboardingComplete,
         )
 
     private fun splitKeywords(joined: String?): List<String> =

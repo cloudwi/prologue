@@ -72,6 +72,7 @@ class OnboardingController(
         val member = onboardingService.complete(
             CompleteOnboardingCommand(
                 accountId = accountId,
+                onboardingPending = request.onboardingPending,
                 nickname = request.nickname,
                 gender = request.gender!!,
                 birthDate = request.birthDate!!,
@@ -103,7 +104,13 @@ class OnboardingController(
         return MemberProfileResponse.from(member, accountQueryService.findEmail(accountId))
     }
 
-    /** 프로필 사진 추가(멀티파트, 최대 6장). 온보딩 완료 후 사용. */
+    @PutMapping("/me/onboarding/complete")
+    fun finishOnboarding(authentication: Authentication): MemberProfileResponse {
+        val accountId = UUID.fromString(authentication.name)
+        return MemberProfileResponse.from(onboardingService.finish(accountId), accountQueryService.findEmail(accountId))
+    }
+
+    /** 프로필 사진 추가(멀티파트, 최대 6장). 기본 정보 저장 후 사용. */
     @PostMapping("/me/photos", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun addPhoto(
         authentication: Authentication,

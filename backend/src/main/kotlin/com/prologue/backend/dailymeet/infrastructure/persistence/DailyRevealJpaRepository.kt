@@ -7,6 +7,14 @@ import java.time.Instant
 import java.util.UUID
 
 interface DailyRevealJpaRepository : JpaRepository<DailyRevealJpaEntity, UUID> {
+    interface ExposureCount {
+        val peerAnswerId: UUID
+        val exposure: Long
+    }
+
+    @Query("select r.peerAnswerId as peerAnswerId, count(r) as exposure from DailyRevealJpaEntity r where r.questionId = :questionId and r.peerAnswerId in :answerIds group by r.peerAnswerId")
+    fun countExposures(@Param("questionId") questionId: Long, @Param("answerIds") answerIds: Collection<UUID>): List<ExposureCount>
+
     fun findAllByViewerAccountIdAndQuestionIdOrderByCreatedAtAsc(viewerAccountId: UUID, questionId: Long): List<DailyRevealJpaEntity>
     fun countByQuestionIdAndPeerAnswerId(questionId: Long, peerAnswerId: UUID): Long
     fun findByViewerAccountIdAndCreatedAtAfterOrderByCreatedAtDesc(

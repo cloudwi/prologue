@@ -59,6 +59,7 @@ export type OnboardingProfile = {
   kakaoId?: string | null;
   /** 가입 동의. 최초 가입에서만 보낸다 — 프로필 수정에는 없다. */
   consent?: Consent;
+  onboardingPending?: boolean;
 };
 
 /**
@@ -66,13 +67,15 @@ export type OnboardingProfile = {
  * 요청 타입(OnboardingProfile)에는 없고 응답에만 있다.
  */
 export type MemberProfile = Required<
-  Omit<OnboardingProfile, 'phone' | 'consent' | 'preferredGender' | 'minAge' | 'maxAge'>
+  Omit<OnboardingProfile, 'phone' | 'consent' | 'preferredGender' | 'minAge' | 'maxAge' | 'onboardingPending'>
 > & {
   minAge: number | null;
   maxAge: number | null;
   /** null이면 소개팅을 아직 켜지 않은 회원 — 모임만 쓰고 있다. */
   preferredGender: Gender | null;
   accountId: string;
+  /** 구버전 서버는 보내지 않는다. false일 때만 가입을 이어간다. */
+  onboardingComplete?: boolean;
   /** 프로필 사진 URL 목록(등록 순). 첫 장이 대표. */
   photoUrls: string[];
   /** 전화번호 필수 도입 이전 회원은 아직 없을 수 있다 — 기본 정보에서 등록. */
@@ -148,6 +151,10 @@ export async function updateBeliefs(input: {
 /** 온보딩 프로필 생성/수정 (PUT /members/me, 인증 필요). */
 export async function completeOnboarding(profile: OnboardingProfile): Promise<MemberProfile> {
   return authedRequest<MemberProfile>('PUT', '/members/me', profile);
+}
+
+export async function finishOnboarding(): Promise<MemberProfile> {
+  return authedRequest<MemberProfile>('PUT', '/members/me/onboarding/complete');
 }
 
 /** 소개만 중지한다. 전체 프로필을 덮어쓰거나 기존 기록을 지우지 않는다. */

@@ -112,4 +112,7 @@ class MemberJpaEntity(
 
     @Column(name = "kakao_id", length = 30)
     var kakaoId: String? = null,
+
+    @Column(name = "onboarding_complete", nullable = false)
+    var onboardingComplete: Boolean = true,
 )

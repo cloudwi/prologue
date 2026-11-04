@@ -13,6 +13,8 @@ import com.prologue.backend.member.domain.model.Gender
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
 
@@ -48,9 +50,17 @@ class FeedService(
     private val profileAccessService: ProfileAccessService,
     private val reports: ReportRepository,
     private val photoPreviews: FeedPhotoPreviewService,
+    transactionManager: PlatformTransactionManager,
 ) {
-    @Transactional(readOnly = true)
+    private val readTransaction = TransactionTemplate(transactionManager).apply { isReadOnly = true }
+
     fun latest(accountId: UUID, sort: String = "latest"): List<FeedPostView> {
+        val rows = readTransaction.execute { loadLatest(accountId, sort) }
+        val previews = photoPreviews.previewDataUris(rows.mapNotNull { it.second })
+        return rows.map { (view, original) -> view.copy(photoPreview = original?.let(previews::get)) }
+    }
+
+    private fun loadLatest(accountId: UUID, sort: String): List<Pair<FeedPostView, String?>> {
         val me = members.findProfile(accountId) ?: throw DailyMeetException("프로필을 먼저 완성해주세요")
         val exclusion = blockService.exclusionFor(accountId, me.phone)
         val unlocked = profileAccessService.unlockedPeers(accountId)
@@ -62,7 +72,7 @@ class FeedService(
                    (select count(*) from feed_post_hearts h where h.post_id = p.id) as heart_count,
                    exists(select 1 from feed_post_hearts h where h.post_id = p.id and h.account_id = ?) as hearted
             from feed_posts p
-            join members m on m.account_id = p.author_account_id
+            join members m on m.account_id = p.author_account_id and m.onboarding_complete = true
             join accounts a on a.id = p.author_account_id and a.status = 'ACTIVE'
             order by $orderBy
             limit 50
@@ -79,23 +89,21 @@ class FeedService(
                 )
             }, accountId,
         )
+        val authors = members.findProfiles(posts.map { it.authorId }.distinct())
         val visible = posts.mapNotNull { raw ->
-            val author = members.findProfile(raw.authorId) ?: return@mapNotNull null
+            val author = authors[raw.authorId] ?: return@mapNotNull null
             if (raw.authorId != accountId && exclusion.excludes(author)) return@mapNotNull null
             raw to author.photoUrls.firstOrNull()
         }
         val opened = { authorId: UUID -> authorId == accountId || authorId in unlocked }
-        val previews = photoPreviews.previewDataUris(
-            visible.filterNot { (raw, _) -> opened(raw.authorId) }.mapNotNull { it.second },
-        )
         return visible.map { (raw, photoUrl) ->
             val open = opened(raw.authorId)
             raw.toView(
                 viewer = accountId,
                 unlocked = raw.authorId in unlocked,
-                photoPreview = if (open) null else photoUrl?.let(previews::get),
+                photoPreview = null,
                 photoUrl = if (open) photoPreviews.unlockedPhotoUrl(photoUrl) else null,
-            )
+            ) to if (open) null else photoUrl
         }
     }
 

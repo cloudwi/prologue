@@ -19,6 +19,9 @@ class DailyRevealPersistenceAdapter(
     override fun countByQuestionAndPeerAnswer(questionId: Long, peerAnswerId: UUID): Long =
         jpa.countByQuestionIdAndPeerAnswerId(questionId, peerAnswerId)
 
+    override fun countByQuestionAndPeerAnswers(questionId: Long, peerAnswerIds: Collection<UUID>): Map<UUID, Long> =
+        if (peerAnswerIds.isEmpty()) emptyMap() else jpa.countExposures(questionId, peerAnswerIds).associate { it.peerAnswerId to it.exposure }
+
     override fun findEverPairedAccountIds(accountId: UUID): Set<UUID> =
         (jpa.findRevealedPeerAccountIds(accountId) + jpa.findViewersRevealedTo(accountId)).toSet()
 

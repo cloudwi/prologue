@@ -35,4 +35,39 @@ class FeedPhotoPreviewServiceTest {
     fun `스토리지 주소가 없으면 연 프로필 주소도 만들지 않는다`() {
         assertNull(FeedPhotoPreviewService.unlockedUrl(original, "", "profile-photos"))
     }
+
+    @Test
+    fun `이미지 서버가 응답하지 않아도 피드 사진 대기는 제한 시간 뒤 끝난다`() = checkTimeout(false)
+
+    @Test
+    fun `이미지 본문 전송이 멈춰도 제한 시간 뒤 미리보기를 생략한다`() = checkTimeout(true)
+
+    private fun checkTimeout(partialBody: Boolean) {
+        val release = java.util.concurrent.CountDownLatch(1)
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/") { exchange ->
+            if (partialBody) {
+                exchange.sendResponseHeaders(200, 2)
+                exchange.responseBody.write(1)
+                exchange.responseBody.flush()
+            }
+            release.await(6, java.util.concurrent.TimeUnit.SECONDS)
+            runCatching {
+                if (!partialBody) exchange.sendResponseHeaders(200, 1)
+                exchange.responseBody.use { it.write(1) }
+            }
+            exchange.close()
+        }
+        server.start()
+        try {
+            val url = "http://127.0.0.1:${server.address.port}"
+            val service = FeedPhotoPreviewService(url, "profile-photos", org.springframework.web.client.RestClient.builder())
+            val start = System.nanoTime()
+            assertEquals(emptyMap(), service.previewDataUris(listOf("$url/storage/v1/object/public/profile-photos/synthetic/photo")))
+            kotlin.test.assertTrue(java.time.Duration.ofNanos(System.nanoTime() - start).toMillis() < 5000)
+        } finally {
+            release.countDown()
+            server.stop(0)
+        }
+    }
 }

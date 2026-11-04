@@ -1,0 +1,51 @@
+---
+import Icon from './Icon.astro';
+---
+
+<div class="first-look" id="try" tabindex="-1" data-first-look>
+  <p class="preview-label">가입 없이 문답 체험</p>
+  <h2 id="preview-question">쉬는 날에는 주로<br />무엇을 하나요?</h2>
+  <fieldset aria-labelledby="preview-question" data-preview-choices hidden>
+    <label><input type="radio" name="preview-answer" value="outdoors" /><span>밖에서 새로운 곳을 찾아요</span><span class="choice-mark" aria-hidden="true"></span></label>
+    <label><input type="radio" name="preview-answer" value="home" /><span>집에서 좋아하는 일을 해요</span><span class="choice-mark" aria-hidden="true"></span></label>
+  </fieldset>
+  <p class="preview-privacy">체험 선택은 저장되거나 다른 사람에게 공개되지 않아요.</p>
+  <div class="preview-placeholder" data-preview-placeholder hidden><Icon name="message" size={28} /><p>답을 하나 골라보세요.<br />다른 사람의 생각을 읽는 경험이 시작돼요.</p></div>
+  <div class="preview-result" data-preview-result aria-live="polite" aria-atomic="true">
+    <p class="answer-label">같은 질문에 남긴 답 · 예시</p>
+    <div data-preview-answer="outdoors"><p class="sample-answer">늦은 아침을 먹고 목적지 없이 걷는 편이에요. 마음에 드는 카페나 소품 가게를 찾으면 사진을 한 장 남겨요.</p><p class="sample-author">오후의산책 · 예시 프로필</p></div>
+    <div data-preview-answer="home"><p class="sample-answer">아침에 시장에 다녀와요. 뭘 만들지는 대개 가서 정하고, 돌아와서 두어 시간 부엌에 서 있습니다.</p><p class="sample-author">목요일의부엌 · 예시 프로필</p></div>
+    <p class="preview-letter">마음이 닿으면 연락처를 담은 편지로 이어가요.</p>
+    <a href="/download" class="preview-start">앱에서 문답 시작하기 <Icon name="arrow" size={16} /></a>
+  </div>
+  <p class="preview-notice">실제 소개는 가입 후 시작돼요. 소개 가능한 상대가 없으면 새로운 상대를 기다릴 수 있어요.</p>
+</div>
+
+<script>
+  import { initFirstLook } from '../lib/first-look.js';
+  import { trackWeb } from '../lib/web-analytics.js';
+  document.querySelectorAll('[data-first-look]').forEach((root) => initFirstLook(root, trackWeb));
+</script>
+
+<style>
+  .first-look { padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); }
+  .preview-label, .answer-label { color: var(--muted); font-size: 13px; }
+  h2 { margin: 16px 0 24px; font-size: 28px; line-height: 1.4; }
+  fieldset { border: 0; display: grid; gap: 10px; min-width: 0; }
+  .first-look [hidden] { display: none; }
+  label { position: relative; display: flex; gap: 12px; align-items: center; justify-content: space-between; min-height: 56px; padding: 14px 16px; background: var(--paper); border-radius: var(--radius-control); cursor: pointer; font-size: 15px; }
+  input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  label:has(input:checked) { background: var(--sunken); }
+  label:has(input:focus-visible) { outline: 3px solid var(--terracotta-strong); outline-offset: 3px; }
+  .choice-mark { flex: 0 0 18px; width: 18px; height: 18px; border: 1px solid var(--muted); border-radius: 50%; }
+  input:checked ~ .choice-mark { border: 5px solid var(--ink); }
+  .preview-privacy, .preview-notice { margin-top: 14px; font-size: 12px; line-height: 1.7; color: var(--muted); }
+  .preview-placeholder { display: flex; align-items: center; gap: 16px; min-height: 160px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+  .preview-placeholder :global(svg) { flex-shrink: 0; }
+  .preview-result { margin-top: 24px; }
+  .sample-answer { margin-top: 12px; font-size: 17px; line-height: 1.8; }
+  .sample-author { margin-top: 12px; color: var(--muted); font-size: 13px; }
+  .preview-letter { margin-top: 20px; font-size: 13px; color: var(--muted); }
+  .preview-start { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 6px; font-size: 14px; font-weight: 600; }
+  @media (max-width: 680px) { .first-look { padding: 24px 20px; } h2 { font-size: 26px; } }
+</style>

@@ -2,6 +2,7 @@ package com.prologue.backend.member.application.service
 
 import com.prologue.backend.growth.GrowthEvents
 import com.prologue.backend.growth.GrowthEvent
+import com.prologue.backend.dailymeet.domain.repository.ProfileLetterRepository
 
 import com.prologue.backend.member.domain.model.Member
 import com.prologue.backend.member.domain.model.MemberDomainException
@@ -22,6 +23,7 @@ class OnboardingService(
     private val growthEvents: GrowthEvents = GrowthEvents.NONE,
     /** 성비 게이트 — 신규 남성을 줄 세운다. null은 격리된 테스트를 위한 값이고 Spring은 빈을 넣어준다. */
     private val memberGateService: MemberGateService? = null,
+    private val profileLetters: ProfileLetterRepository,
 ) {
     @Transactional
     fun pauseDating(accountId: java.util.UUID): Member {
@@ -83,12 +85,30 @@ class OnboardingService(
                 avatarId = command.avatarId,
             )
         }
+        if (existing == null && command.onboardingPending) member.beginOnboarding()
         return memberRepository.save(member).also {
-            if (existing == null) {
+            if (existing == null && it.onboardingComplete) {
                 growthEvents.record(command.accountId, GrowthEvent.ONBOARDED, "onboarding")
                 // 온보딩을 마친 신규 남성만 줄을 선다 — 여성과 기존 회원은 행이 생기지 않는다.
                 memberGateService?.enqueueIfNeeded(it)
             }
+        }
+    }
+
+    /** 사진·문답이 저장된 뒤 가입을 완료한다. 재요청은 같은 결과를 반환한다. */
+    @Transactional
+    fun finish(accountId: java.util.UUID): Member {
+        val member = memberRepository.findByAccountId(accountId)
+            ?: throw MemberDomainException("프로필을 먼저 만들어주세요")
+        if (member.onboardingComplete) return member
+        if (member.photoUrls.size < Member.MIN_PHOTOS) throw MemberDomainException("사진을 한 장 이상 등록해주세요")
+        if (member.preferredGender != null && profileLetters.findAllByAccountId(accountId).isEmpty()) {
+            throw MemberDomainException("프로필 문답을 하나 이상 남겨주세요")
+        }
+        member.finishOnboarding()
+        return memberRepository.save(member).also {
+            growthEvents.record(accountId, GrowthEvent.ONBOARDED, "onboarding")
+            memberGateService?.enqueueIfNeeded(it)
         }
     }
 

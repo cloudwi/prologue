@@ -37,10 +37,19 @@ class PeerMatchingServiceTest {
         // 프로필에 함께 싣는 "최근 답변"은 기본적으로 없다 — 그걸 보는 테스트에서만 채운다
         every { findAllByAccountId(any()) } returns emptyList()
     }
-    private val dailyRevealRepository = mockk<DailyRevealRepository>(relaxed = true)
+    private val dailyRevealRepository = mockk<DailyRevealRepository>(relaxed = true) {
+        every { countByQuestionAndPeerAnswers(any(), any()) } answers {
+            val questionId = firstArg<Long>()
+            secondArg<Collection<UUID>>().associateWith { countByQuestionAndPeerAnswer(questionId, it) }
+        }
+    }
     private val mailRepository = mockk<com.prologue.backend.dailymeet.domain.repository.MailRepository>(relaxed = true)
     private val heartRepository = mockk<com.prologue.backend.dailymeet.domain.repository.HeartRepository>(relaxed = true)
-    private val memberQueryService = mockk<MemberQueryService>()
+    private val memberQueryService = mockk<MemberQueryService> {
+        every { findProfiles(any()) } answers {
+            firstArg<Collection<UUID>>().mapNotNull { id -> findProfile(id)?.let { id to it } }.toMap()
+        }
+    }
     private val profileLetterService = mockk<ProfileLetterService> {
         every { lettersOf(any()) } returns emptyList()
     }
@@ -221,6 +230,8 @@ class PeerMatchingServiceTest {
         assertEquals(2, saved.size)
         assertTrue(view.answerUnlocked)
         assertEquals(2, view.peers.mapNotNull { it.peerAnswer }.size)
+        verify(exactly = 1) { memberQueryService.findProfiles(match { it.toSet() == peers.map { p -> p.accountId }.toSet() }) }
+        verify(exactly = 1) { dailyRevealRepository.countByQuestionAndPeerAnswers(1L, match { it.toSet() == peers.map { p -> p.id!! }.toSet() }) }
     }
 
     @Test

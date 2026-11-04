@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { ScreenLoadError } from '@/components/screen-load-error';
 
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors, Fonts, Radius } from '@/constants/theme';
 import { identify, track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
@@ -57,7 +57,9 @@ export default function LoginScreen() {
         // (심지 않으면 발견 탭이 자기 차례에 프로필을 또 기다리며 빈 화면을 낸다)
         queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: true, profile });
         if (active) {
-          router.replace(profile ? (profile.preferredGender ? '/discover' : '/meetups') : {
+          router.replace(profile?.onboardingComplete === false ? {
+            pathname: '/onboarding', params: { resume: '1', ...(!profile.preferredGender ? { intent: 'meetup' } : {}) },
+          } : profile ? (profile.preferredGender ? '/discover' : '/meetups') : {
             pathname: pendingConsent ? '/onboarding' : '/consent',
             params: { ...(!pendingConsent ? { authenticated: '1' } : {}), ...(!pendingConsent?.sensitive ? { intent: 'meetup' } : {}) },
           });
@@ -129,7 +131,7 @@ export default function LoginScreen() {
             <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
           </Animated.View>
           <Animated.View entering={FadeInDown.duration(380).delay(90)} style={styles.center}>
-            <Text style={[styles.tagline, { color: c.textSecondary }]}>가벼운 모임부터, 문답으로 알아가는 인연까지</Text>
+            <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답, 생각부터 알아가는 소개팅</Text>
           </Animated.View>
         </View>
 
@@ -141,6 +143,14 @@ export default function LoginScreen() {
             style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
           >
             <Text style={[styles.startBtnText, { color: c.primaryText }]}>문답으로 인연 만나기</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/preview')}
+            style={({ pressed }) => [styles.previewBtn, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.75 : 1 }]}
+          >
+            <Text style={[styles.previewBtnText, { color: c.text }]}>가입 없이 문답 체험하기</Text>
           </Pressable>
 
           <Pressable accessibilityRole="button" onPress={() => router.push('/email-auth?mode=login')} style={styles.loginLink}>
@@ -195,7 +205,9 @@ const styles = StyleSheet.create({
   logo: { width: 89, height: 64, marginBottom: 6 }, // 마크는 1.4:1 가로형
   wordmark: { fontSize: 36, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
   wordmarkEn: { fontSize: 14, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
-  tagline: { fontSize: 16, marginTop: 6 },
+  tagline: { fontSize: 16, lineHeight: 24, marginTop: 12, textAlign: 'center' },
+  previewBtn: { minHeight: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  previewBtnText: { fontSize: 15, fontWeight: '600' },
   buttons: { gap: 12 },
   loginLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   loginText: { fontSize: 14 },

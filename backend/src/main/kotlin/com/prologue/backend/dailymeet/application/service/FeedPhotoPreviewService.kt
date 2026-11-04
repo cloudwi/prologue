@@ -3,10 +3,13 @@ package com.prologue.backend.dailymeet.application.service
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
+import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
 import java.util.Base64
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
+import java.net.http.HttpClient
+import java.time.Duration
 import java.util.concurrent.Executors
 
 /**
@@ -23,8 +26,13 @@ class FeedPhotoPreviewService(
     @param:Value("\${supabase.storage.bucket:profile-photos}") private val bucket: String,
     restClientBuilder: RestClient.Builder,
 ) {
-    private val client = restClientBuilder.build()
-    private val cache = ConcurrentHashMap<String, String>()
+    private val client = restClientBuilder.clone().requestFactory(
+        JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build())
+            .apply { setReadTimeout(Duration.ofSeconds(2)) },
+    ).build()
+    private val cache = Collections.synchronizedMap(object : LinkedHashMap<String, String>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > 256
+    })
 
     fun previewDataUri(originalUrl: String?): String? {
         if (originalUrl.isNullOrBlank()) return null

@@ -32,6 +32,8 @@ data class CompleteOnboardingCommand(
      * 옛 앱 버전은 이 값을 보내지 않으므로 null을 허용한다 — 필수로 바꾸면 이미 배포된 앱의 가입이 막힌다.
      */
     val consent: ConsentAgreement? = null,
+    /** 새 앱은 사진·문답 저장까지 끝난 뒤 별도 요청으로 가입을 마친다. */
+    val onboardingPending: Boolean = false,
 )
 
 /** 클라이언트가 보낸 동의 체크 결과. */

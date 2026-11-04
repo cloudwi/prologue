@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Alert,
   Animated,
@@ -29,11 +29,11 @@ import { formatPhoneDigits, isValidPhoneDigits, sanitizePhoneDigits } from '@/li
 import { toProfilePayload, type ProfileExtra } from '@/components/profile-extra-fields';
 import { RegionPicker } from '@/components/region-picker';
 import { LEGAL_VERSION } from '@/constants/legal';
-import { Fonts, type ThemeColors } from '@/constants/theme';
+import { Fonts, Radius, Type, type ThemeColors } from '@/constants/theme';
 import { ApiError } from '@/lib/api';
 import { clearConsent, getConsent } from '@/lib/consent';
-import { getLetterQuestions, writeLetter, LETTER_MIN_LENGTH, LETTER_MAX_LENGTH, type LetterQuestion } from '@/lib/letters';
-import { completeOnboarding, updateBeliefs, updateContactFrequency, updateLifestyle, type Gender } from '@/lib/member';
+import { getLetterQuestions, getMyLetters, writeLetter, LETTER_MIN_LENGTH, LETTER_MAX_LENGTH, type LetterQuestion } from '@/lib/letters';
+import { completeOnboarding, finishOnboarding, getMyProfile, updateBeliefs, updateContactFrequency, updateLifestyle, type Gender, type MemberProfile } from '@/lib/member';
 import { SESSION_QUERY_KEY } from '@/lib/session';
 import { uploadPhoto } from '@/lib/photo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -54,7 +54,7 @@ const NICKNAME_EXAMPLES = [
   '조용한위로', '별보는밤', '따뜻한문장', '오후의햇살', '깊은밤라디오',
 ];
 
-/** 한 화면에 한 질문씩 보여주는 스텝 정의. */
+/** 필수 정보는 관련 항목끼리 묶고, 선택 정보는 건너뛸 수 있다. */
 type StepDef = {
   key: string;
   title: string;
@@ -85,8 +85,12 @@ export default function OnboardingScreen() {
    * 오는지 알기에 충분하고, 그 이상은 모임과 상관없는 질문이다. 소개팅을 나중에 켜면
    * (my/start-dating) 그때 필요한 것을 그 자리에서 채운다.
    */
-  const { intent, next: nextPath } = useLocalSearchParams<{ intent?: string; next?: string }>();
-  const meetupOnly = intent === 'meetup';
+  const { intent, next: nextPath, resume } = useLocalSearchParams<{ intent?: string; next?: string; resume?: string }>();
+  const [resumedProfile, setResumedProfile] = useState<MemberProfile | null>(null);
+  const meetupOnly = resumedProfile ? resumedProfile.preferredGender == null : intent === 'meetup';
+  const [restoring, setRestoring] = useState(resume === '1');
+  const [restoreError, setRestoreError] = useState(false);
+  const needsFinalization = useRef(false);
   /** 모임·소개팅 모두 대표 사진 한 장으로 시작할 수 있다. */
   const minPhotos = MIN_PHOTOS;
   /**
@@ -113,6 +117,7 @@ export default function OnboardingScreen() {
   const [region, setRegion] = useState('');
   const [phoneDigits, setPhoneDigits] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [savedPhotos, setSavedPhotos] = useState<string[]>([]);
   // 자르기를 기다리는 사진 줄 — 고른 순서대로 한 장씩 4:5 창을 거쳐 photos로 들어간다.
   const [cropQueue, setCropQueue] = useState<{ uris: string[]; total: number } | null>(null);
   const [extra, setExtra] = useState<ProfileExtra>(EMPTY_EXTRA);
@@ -146,9 +151,38 @@ export default function OnboardingScreen() {
       .then((qs) => setLetterQuestions([...qs].sort(() => Math.random() - 0.5)))
       .catch(() => {});
   }
+  const restore = useCallback(() => getMyProfile().then(async (profile) => {
+    if (!profile) { router.replace('/consent'); return; }
+    if (profile.onboardingComplete !== false) {
+      router.replace(profile.preferredGender ? '/discover' : '/meetups');
+      return;
+    }
+    const [questions, letters] = await Promise.all([
+      profile.preferredGender ? getLetterQuestions() : Promise.resolve<LetterQuestion[]>([]),
+      profile.preferredGender ? getMyLetters() : Promise.resolve([]),
+    ]);
+    setResumedProfile(profile);
+    needsFinalization.current = true;
+    setNickname(profile.nickname);
+    setGender(profile.gender);
+    setBirthDigits(profile.birthDate.replace(/-/g, ''));
+    setPreferredGender(profile.preferredGender);
+    setPreferredTouched(true);
+    setRegion(profile.region);
+    setPhoneDigits(profile.phone ?? '');
+    setSavedPhotos(profile.photoUrls);
+    setExtra({ bio: profile.bio ?? '', avatarId: profile.avatarId, height: profile.heightCm?.toString() ?? '', hobbies: profile.hobbies, interests: profile.interests, strengths: profile.strengths });
+    const first = letters[0];
+    setLetterQuestions(first ? [{ questionId: first.questionId, content: first.question }, ...questions.filter((q) => q.questionId !== first.questionId)] : questions);
+    setLetterIndex(0);
+    setLetterDraft(first?.content ?? '');
+    setStepIndex(profile.photoUrls.length >= MIN_PHOTOS && profile.preferredGender ? 4 : 3);
+    track('onboarding_resumed');
+  }).catch(() => setRestoreError(true)).finally(() => setRestoring(false)), [router]);
   useEffect(() => {
-    loadLetterQuestions();
-  }, []);
+    if (resume === '1') void restore();
+    else loadLetterQuestions();
+  }, [resume, restore]);
   const currentLetterQuestion =
     letterQuestions.length > 0 ? letterQuestions[letterIndex % letterQuestions.length] : null;
   useEffect(() => {
@@ -175,6 +209,7 @@ export default function OnboardingScreen() {
       valid: nickname.trim().length > 0,
       content: (
         <PlaceholderInput
+          accessibilityLabel="닉네임"
           value={nickname}
           onChangeText={setNickname}
           placeholder="닉네임을 입력해 주세요"
@@ -213,7 +248,9 @@ export default function OnboardingScreen() {
       key: 'gender',
       title: '성별을 알려주세요',
       valid: gender != null,
-      content: <GenderToggle value={gender} onChange={selectGender} c={c} />,
+      content: resumedProfile
+        ? <Text style={[styles.hint, { color: c.textSecondary }]}>나의 성별 · {gender === 'MALE' ? '남성' : '여성'}</Text>
+        : <GenderToggle label="나의 성별" value={gender} onChange={selectGender} c={c} />,
     },
     {
       key: 'birthDate',
@@ -240,6 +277,7 @@ export default function OnboardingScreen() {
       valid: preferredGender != null,
       content: (
         <GenderToggle
+          label="만나고 싶은 성별"
           value={preferredGender}
           onChange={(g) => {
             setPreferredTouched(true);
@@ -266,6 +304,7 @@ export default function OnboardingScreen() {
       valid: isValidPhoneDigits(phoneDigits),
       content: (
         <PlaceholderInput
+          accessibilityLabel="전화번호"
           value={formatPhoneDigits(phoneDigits)}
           onChangeText={(t) => setPhoneDigits(sanitizePhoneDigits(t))}
           placeholder="010-0000-0000"
@@ -282,19 +321,22 @@ export default function OnboardingScreen() {
       subtitle: meetupOnly
         ? `얼굴이 보이는 사진 ${minPhotos}장이면 충분해요. 모임장이 누가 오는지 알 수 있게요.\n최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`
         : `얼굴이 보이는 사진 ${minPhotos}장이면 시작할 수 있어요. 첫 번째가 대표 사진이에요.\n두 번째부터는 여행·반려동물·좋아하는 것의 사진도 좋아요. 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`,
-      valid: photos.length >= minPhotos,
+      valid: photos.length + savedPhotos.length >= minPhotos,
       content: (
-        <PhotoGrid
-          photos={photos}
-          onAdd={async () => {
-            // 고른 사진은 바로 넣지 않는다 — 한 장씩 4:5 창에서 자른 뒤에 들어간다.
-            const picked = await pickPhotos(MAX_PHOTOS - photos.length);
-            if (picked.length > 0) setCropQueue({ uris: picked, total: picked.length });
-          }}
-          onRemove={(photo) => setPhotos((prev) => prev.filter((p) => p !== photo))}
-          busy={submitting}
-          c={c}
-        />
+        <>
+          {savedPhotos.length > 0 && <Text style={[styles.hint, { color: c.textSecondary }]}>사진 {savedPhotos.length}장은 이미 저장됐어요.</Text>}
+          <PhotoGrid
+            photos={photos}
+            onAdd={async () => {
+              // 고른 사진은 바로 넣지 않는다 — 한 장씩 4:5 창에서 자른 뒤에 들어간다.
+              const picked = await pickPhotos(Math.max(0, MAX_PHOTOS - savedPhotos.length - photos.length));
+              if (picked.length > 0) setCropQueue({ uris: picked, total: picked.length });
+            }}
+            onRemove={(photo) => setPhotos((prev) => prev.filter((p) => p !== photo))}
+            busy={submitting}
+            c={c}
+          />
+        </>
       ),
     },
     {
@@ -323,6 +365,7 @@ export default function OnboardingScreen() {
             </Pressable>
           </View>
           <PlaceholderInput
+            accessibilityLabel="프로필 첫 문답"
             value={letterDraft}
             onChangeText={setLetterDraft}
             placeholder="한두 문장이면 충분해요. 나중에 MY에서 고칠 수 있어요."
@@ -349,9 +392,31 @@ export default function OnboardingScreen() {
    * 둘 다 소개팅을 켜는 날 그 자리에서 받는다.
    */
   const MEETUP_SKIPPED = ['preferredGender', 'letter'];
-  const requiredSteps = meetupOnly
+  const requiredFields = meetupOnly
     ? allRequiredSteps.filter((s) => !MEETUP_SKIPPED.includes(s.key))
     : allRequiredSteps;
+  const requiredSteps: StepDef[] = [
+    { keys: ['nickname', 'birthDate'], title: '나를 소개해주세요' },
+    { keys: ['gender', 'preferredGender'], title: '어떤 인연을 만나고 싶으세요?' },
+    { keys: ['region', 'phone'], title: '사는 곳과 연락처를 알려주세요' },
+    { keys: ['photos'], title: '' },
+    { keys: ['letter'], title: '' },
+  ].flatMap((group) => {
+    const fields = group.keys.flatMap((key) => requiredFields.filter((field) => field.key === key));
+    if (fields.length === 0) return [];
+    if (fields.length === 1) return fields;
+    return [{
+      key: group.keys.join('-'),
+      title: group.title,
+      valid: fields.every((field) => field.valid),
+      footerAccessory: fields.find((field) => field.footerAccessory)?.footerAccessory,
+      content: <View style={styles.fieldGroups}>{fields.map((field) => <View key={field.key} style={styles.fieldGroup}>
+        <Text style={[Type.label, { color: c.text }]}>{field.title}</Text>
+        {field.subtitle && <Text style={[Type.caption, { color: c.textSecondary }]}>{field.subtitle}</Text>}
+        {field.content}
+      </View>)}</View>,
+    }];
+  });
 
   // 선택 스텝 — 가입 후 이성에게 더 잘 보이기 위해 채우는 항목. MY에서도 언제든 수정 가능.
   const optionalSteps: StepDef[] = [
@@ -452,8 +517,8 @@ export default function OnboardingScreen() {
       // 동의 화면에서 적어둔 값 — 회원을 만드는 첫 저장에만 실려 간다.
       // (두 번째 저장 때는 이미 지워졌고, 서버도 기존 회원에게는 기록을 남기지 않는다)
       const consent = await getConsent();
-      track('onboarding_completed');
-      await completeOnboarding({
+      const saved = await completeOnboarding({
+        onboardingPending: true,
         nickname: nickname.trim(),
         gender: gender!,
         birthDate: birthDate!,
@@ -464,6 +529,7 @@ export default function OnboardingScreen() {
         ...toProfilePayload(extra),
         ...(consent ? { consent } : {}),
       });
+      needsFinalization.current = saved.onboardingComplete === false;
       if (consent) await clearConsent();
       return true;
     } catch (e) {
@@ -484,6 +550,8 @@ export default function OnboardingScreen() {
       setUploadProgress(`사진 업로드 중... (${i + 1}/${pending.length})`);
       try {
         const result = await uploadPhoto(pending[i]);
+        setSavedPhotos(result.photoUrls);
+        setPhotos(pending.slice(i + 1));
         if (result.photoNotice) setPhotoNotice(result.photoNotice);
       } catch (e) {
         const rejected = e instanceof ApiError && e.code === 'PHOTO_REJECTED';
@@ -510,11 +578,13 @@ export default function OnboardingScreen() {
     // 필수 문답 — 골라둔 질문에 남긴 답을 프로필 문답으로 올린다(계정은 이미 만들어진 뒤라서 여기서).
     try {
       if (!meetupOnly && currentLetterQuestion) await writeLetter(currentLetterQuestion.questionId, letterDraft.trim());
+      if (needsFinalization.current) await finishOnboarding();
     } catch (e) {
       setSubmitting(false);
-      Alert.alert('문답 저장 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
+      Alert.alert('가입 마무리 실패', e instanceof Error ? e.message : '잠시 후 다시 시도해주세요');
       return;
     }
+    track('onboarding_completed');
     setSubmitting(false);
     // 방금 만든 회원을 세션 캐시에 알린다 — 잠겨 있던 탭들의 판단이 이 값 하나에 걸려 있다.
     await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
@@ -593,17 +663,25 @@ export default function OnboardingScreen() {
         : '다음';
 
   // 가입 완료 화면 — 선택 입력은 지금 하거나, MY에서 나중에.
+  if (restoring || restoreError) {
+    return <SafeAreaView style={[styles.flex, { backgroundColor: c.background }]}>
+      <View style={{ padding: 28, gap: 20 }}>
+        <Text style={[Type.title, { color: c.text }]}>{restoreError ? '가입 정보를 불러오지 못했어요' : '저장된 가입 정보를 불러오고 있어요'}</Text>
+        {restoreError && <Pressable accessibilityRole="button" onPress={() => { setRestoring(true); setRestoreError(false); void restore(); }}><Text style={{ color: c.primary }}>다시 시도</Text></Pressable>}
+      </View>
+    </SafeAreaView>;
+  }
+
   if (phase === 'choice') {
     return (
       <View style={[styles.root, { backgroundColor: c.background }]}>
         <SafeAreaView style={styles.flex}>
           <View style={styles.choiceBody}>
-            <Text style={[styles.stepEyebrow, { color: c.primary }]}>WELCOME</Text>
             <Text lineBreakStrategyIOS="hangul-word" style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>
               가입이 완료됐어요!
             </Text>
             <Text lineBreakStrategyIOS="hangul-word" style={[styles.subtitle, { color: c.textSecondary }]}>
-              키·취미·관심사를 채우면 상대에게 더 잘 보여요.{'\n'}지금 하지 않아도 MY 탭에서 언제든 채울 수 있어요.
+              취향 카드에서 좋아하는 것부터 골라보세요.{'\n'}키·취미 같은 추가 정보는 MY에서 언제든 채울 수 있어요.
             </Text>
             {photoNotice && (
               <Text style={[styles.hint, { color: c.textSecondary }]}>{photoNotice}</Text>
@@ -611,13 +689,13 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.choiceButtons}>
             <Pressable
-              onPress={startOptional}
+              onPress={done}
               style={({ pressed }) => [styles.submit, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
             >
-              <Text style={[styles.submitText, { color: c.primaryText }]}>프로필 마저 채우기</Text>
+              <Text style={[styles.submitText, { color: c.primaryText }]}>취향 카드로 시작하기</Text>
             </Pressable>
-            <Pressable onPress={done} hitSlop={8} style={styles.choiceLater}>
-              <Text style={{ color: c.textSecondary, fontSize: 16 }}>나중에 할게요</Text>
+            <Pressable onPress={startOptional} hitSlop={8} style={styles.choiceLater}>
+              <Text style={{ color: c.textSecondary, fontSize: 16 }}>프로필 더 채우기 (선택)</Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -659,7 +737,7 @@ export default function OnboardingScreen() {
                 transform: [{ translateY: enterAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
               }}
             >
-              <Text style={[styles.stepEyebrow, { color: c.primary }]}>Q{stepIndex + 1}</Text>
+              <Text style={[styles.stepEyebrow, { color: c.textSecondary }]}>{phase === 'required' ? '가입 정보' : '선택 정보'}</Text>
               <Text lineBreakStrategyIOS="hangul-word" style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>{step.title}</Text>
               {step.subtitle ? (
                 <Text lineBreakStrategyIOS="hangul-word" style={[styles.subtitle, { color: c.textSecondary }]}>{step.subtitle}</Text>
@@ -671,8 +749,10 @@ export default function OnboardingScreen() {
           <View style={styles.footer}>
             {step.footerAccessory ? <View style={styles.footerAccessory}>{step.footerAccessory}</View> : null}
             <Pressable
+              accessibilityRole="button"
               onPress={next}
               disabled={!canAdvance || submitting}
+              accessibilityState={{ disabled: !canAdvance || submitting }}
               style={[
                 styles.submit,
                 canAdvance
@@ -707,10 +787,12 @@ export default function OnboardingScreen() {
 }
 
 function GenderToggle({
+  label,
   value,
   onChange,
   c,
 }: {
+  label: string;
   value: Gender | null;
   onChange: (g: Gender) => void;
   c: ThemeColors;
@@ -726,6 +808,9 @@ function GenderToggle({
         return (
           <Pressable
             key={o.key}
+            accessibilityRole="radio"
+            accessibilityLabel={`${label} ${o.label}`}
+            accessibilityState={{ checked: selected }}
             onPress={() => onChange(o.key)}
             style={[
               styles.toggle,
@@ -744,6 +829,8 @@ function GenderToggle({
 }
 
 const styles = StyleSheet.create({
+  fieldGroups: { gap: 28 },
+  fieldGroup: { gap: 12 },
   root: { flex: 1 },
   flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 8 },
@@ -751,29 +838,29 @@ const styles = StyleSheet.create({
   progressTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   stepCount: { fontSize: 13, fontVariant: ['tabular-nums'] },
-  bioInput: { minHeight: 160, borderRadius: 18, borderWidth: 1, padding: 16, fontSize: 17, lineHeight: 25, textAlignVertical: 'top' },
+  bioInput: { minHeight: 160, borderRadius: Radius.md, borderWidth: 1, padding: 16, fontSize: 17, lineHeight: 25, textAlignVertical: 'top' },
   bioCounter: { fontSize: 13, textAlign: 'right', marginTop: 6 },
   // 필수 문답 — 질문은 카드로, 답은 그 아래에.
-  letterCard: { borderRadius: 18, padding: 18, marginBottom: 12 },
+  letterCard: { borderRadius: Radius.md, padding: 18, marginBottom: 12 },
   letterQuestion: { fontSize: 18, lineHeight: 27, fontWeight: '700' },
   letterShuffleBtn: { alignSelf: 'flex-end', marginTop: 10 },
   letterShuffle: { fontSize: 14, fontWeight: '700' },
   content: { padding: 25, paddingTop: 48, paddingBottom: 24 },
-  stepEyebrow: { fontSize: 14, fontWeight: '700', letterSpacing: 3 },
+  stepEyebrow: { ...Type.label },
   title: { fontSize: 29, fontWeight: '700', marginTop: 12, lineHeight: 40 },
   subtitle: { fontSize: 16, marginTop: 10, lineHeight: 24 },
   stepBody: { marginTop: 40 },
   hint: { fontSize: 14, marginTop: 6 },
-  input: { height: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 17 },
+  input: { height: 52, borderRadius: Radius.sm, borderWidth: 1, paddingHorizontal: 16, fontSize: 17 },
   suggestHint: { fontSize: 14, marginBottom: 8 },
   suggestRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   footerAccessory: { marginBottom: 14 },
-  suggestChip: { paddingHorizontal: 14, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  suggestChip: { paddingHorizontal: 14, height: 38, borderRadius: Radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   counter: { fontSize: 13, textAlign: 'right', marginTop: 6 },
   toggleRow: { flexDirection: 'row', gap: 12 },
-  toggle: { flex: 1, height: 52, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  toggle: { flex: 1, height: 52, borderRadius: Radius.sm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingHorizontal: 25, paddingBottom: 12 },
-  submit: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  submit: { height: 56, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   submitText: { fontSize: 17, fontWeight: '700' },
   choiceBody: { flex: 1, justifyContent: 'center', paddingHorizontal: 25 },
   choiceButtons: { paddingHorizontal: 25, paddingBottom: 12 },

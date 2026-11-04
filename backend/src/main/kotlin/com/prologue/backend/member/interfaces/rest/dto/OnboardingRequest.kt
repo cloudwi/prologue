@@ -56,6 +56,7 @@ data class OnboardingRequest(
 
     /** 가입 화면에서 받은 동의. 프로필 수정 요청에는 없고, 이 기능 이전 앱 버전도 보내지 않는다. */
     val consent: ConsentRequest? = null,
+    val onboardingPending: Boolean = false,
 )
 
 /** 동의 체크 결과. 필수 항목 검증은 도메인(MemberConsent)에서 한다. */

@@ -168,6 +168,8 @@ const baseJsonLd = [
 </html>
 
 <script>
+  import { initWebAnalytics } from '../lib/web-analytics.js';
+  initWebAnalytics();
   const menu = document.querySelector<HTMLDetailsElement>('.header-menu');
   if (menu) {
     menu.addEventListener('keydown', (event) => {

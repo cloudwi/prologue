@@ -22,7 +22,7 @@ class OnboardingServiceTest {
 
     private val memberRepository = mockk<MemberRepository>()
     private val consentRepository = mockk<MemberConsentRepository>(relaxed = true)
-    private val service = OnboardingService(memberRepository, consentRepository)
+    private val service = OnboardingService(memberRepository, consentRepository, profileLetters = mockk(relaxed = true))
 
     private val agreement = ConsentAgreement(
         legalVersion = "2026-08-11",
@@ -95,7 +95,7 @@ class OnboardingServiceTest {
     @Test
     fun `성비 게이트 - 최초 온보딩을 마친 회원만 줄 세우기를 묻는다`() {
         val gate = mockk<MemberGateService>(relaxed = true)
-        val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate)
+        val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate, profileLetters = mockk(relaxed = true))
         every { memberRepository.findByAccountId(accountId) } returns null
         every { memberRepository.save(any()) } answers { firstArg() }
 
@@ -107,7 +107,7 @@ class OnboardingServiceTest {
     @Test
     fun `성별은 가입 후 바꿀 수 없다 - 같은 성별이면 수정되고 줄 세우기는 하지 않는다`() {
         val gate = mockk<MemberGateService>(relaxed = true)
-        val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate)
+        val gated = OnboardingService(memberRepository, consentRepository, memberGateService = gate, profileLetters = mockk(relaxed = true))
         every { memberRepository.findByAccountId(accountId) } returns existingMember()
         every { memberRepository.save(any()) } answers { firstArg() }
 
@@ -198,5 +198,65 @@ class OnboardingServiceTest {
 
         assertEquals(accountId, result.accountId)
         verify(exactly = 0) { consentRepository.save(any()) }
+    }
+
+    @Test
+    fun `새 앱의 기본 정보 저장은 가입 완료 이벤트나 성비 게이트를 열지 않는다`() {
+        val growth = mockk<com.prologue.backend.growth.GrowthEvents>(relaxed = true)
+        val gate = mockk<MemberGateService>(relaxed = true)
+        val staged = OnboardingService(memberRepository, consentRepository, growth, gate, mockk(relaxed = true))
+        every { memberRepository.findByAccountId(accountId) } returns null
+        every { memberRepository.save(any()) } answers { firstArg() }
+        val member = staged.complete(command.copy(onboardingPending = true))
+        kotlin.test.assertFalse(member.onboardingComplete)
+        kotlin.test.assertFalse(member.isVisibleToOthers())
+        verify(exactly = 0) { growth.record(any(), any(), any()) }
+        verify(exactly = 0) { gate.enqueueIfNeeded(any(), any()) }
+    }
+
+    @Test
+    fun `사진과 문답이 없으면 가입 완료를 거절하고 저장된 프로필은 남긴다`() {
+        val member = existingMember().apply { beginOnboarding() }
+        every { memberRepository.findByAccountId(accountId) } returns member
+        assertFailsWith<com.prologue.backend.member.domain.model.MemberDomainException> { service.finish(accountId) }
+        member.addPhoto("https://example.test/photo")
+        assertFailsWith<com.prologue.backend.member.domain.model.MemberDomainException> { service.finish(accountId) }
+        kotlin.test.assertFalse(member.onboardingComplete)
+        verify(exactly = 0) { memberRepository.save(any()) }
+    }
+
+    @Test
+    fun `가입 마무리는 재요청해도 이벤트와 게이트를 중복 처리하지 않는다`() {
+        val member = existingMember().apply { beginOnboarding(); addPhoto("https://example.test/photo") }
+        val letters = mockk<com.prologue.backend.dailymeet.domain.repository.ProfileLetterRepository> {
+            every { findAllByAccountId(accountId) } returns listOf(mockk())
+        }
+        val growth = mockk<com.prologue.backend.growth.GrowthEvents>(relaxed = true)
+        val gate = mockk<MemberGateService>(relaxed = true)
+        val staged = OnboardingService(memberRepository, consentRepository, growth, gate, letters)
+        every { memberRepository.findByAccountId(accountId) } returns member
+        every { memberRepository.save(any()) } answers { firstArg() }
+        assertTrue(staged.finish(accountId).onboardingComplete)
+        assertTrue(staged.finish(accountId).onboardingComplete)
+        verify(exactly = 1) { growth.record(accountId, com.prologue.backend.growth.GrowthEvent.ONBOARDED, "onboarding") }
+        verify(exactly = 1) { gate.enqueueIfNeeded(any(), any()) }
+    }
+
+    @Test
+    fun `모임 가입은 사진만 있으면 문답 없이 완료한다`() {
+        val member = existingMember(preferredGender = null).apply { beginOnboarding(); addPhoto("https://example.test/photo") }
+        every { memberRepository.findByAccountId(accountId) } returns member
+        every { memberRepository.save(any()) } answers { firstArg() }
+        assertTrue(service.finish(accountId).onboardingComplete)
+    }
+
+    @Test
+    fun `미완료 가입을 프로필 수정으로 완료하거나 기존 회원을 대기로 되돌리지 않는다`() {
+        val member = existingMember().apply { beginOnboarding() }
+        every { memberRepository.findByAccountId(accountId) } returns member
+        every { memberRepository.save(any()) } answers { firstArg() }
+        kotlin.test.assertFalse(service.complete(command).onboardingComplete)
+        member.finishOnboarding()
+        assertTrue(service.complete(command.copy(onboardingPending = true)).onboardingComplete)
     }
 }

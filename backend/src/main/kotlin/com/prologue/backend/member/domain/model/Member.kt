@@ -39,7 +39,14 @@ class Member private constructor(
     drinking: Drinking?,
     meetFrequency: MeetFrequency?,
     contactFrequency: ContactFrequency?,
+    onboardingComplete: Boolean = true,
 ) {
+    var onboardingComplete: Boolean = onboardingComplete
+        private set
+
+    fun beginOnboarding() { onboardingComplete = false }
+    fun finishOnboarding() { onboardingComplete = true }
+
     var nickname: String = nickname
         private set
     var gender: Gender = gender
@@ -152,7 +159,7 @@ class Member private constructor(
      * 온보딩(클라이언트)이 [MIN_PHOTOS]장을 요구하고, 한번 채운 뒤에는 [removePhoto]가
      * 그 밑으로 내려가지 못하게 막는다 — 사진 한 장이면 소개를 시작할 수 있다.
      */
-    fun isVisibleToOthers(): Boolean = photoUrls.size >= MIN_PHOTOS
+    fun isVisibleToOthers(): Boolean = onboardingComplete && photoUrls.size >= MIN_PHOTOS
 
     /** 사진 추가(전용 엔드포인트). 최대 [MAX_PHOTOS]장. */
     fun addPhoto(url: String) {
@@ -324,10 +331,12 @@ class Member private constructor(
             drinking: Drinking? = null,
             meetFrequency: MeetFrequency? = null,
             contactFrequency: ContactFrequency? = null,
+            onboardingComplete: Boolean = true,
         ): Member = Member(
             accountId, nickname, gender, birthDate, preferredGender, region, createdAt,
             bio, heightCm, bodyType, hobbies, interests, strengths, avatarId, photoUrls,
             phone, kakaoId, minAge, maxAge, religion, politicalLeaning, smoking, drinking, meetFrequency, contactFrequency,
+            onboardingComplete,
         )
 
         private fun normalizeKeywords(keywords: List<String>): List<String> =

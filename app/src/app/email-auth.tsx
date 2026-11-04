@@ -128,6 +128,8 @@ export default function EmailAuthScreen() {
           pathname: consent ? '/onboarding' : '/consent',
           params: { ...(!consent ? { authenticated: '1' } : {}), ...(intent === 'meetup' ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) },
         });
+      } else if (profile.onboardingComplete === false) {
+        router.replace({ pathname: '/onboarding', params: { resume: '1', ...(!profile.preferredGender ? { intent: 'meetup' } : {}), ...(next ? { next } : {}) } });
       } else if (next) {
         await clearConsent();
         router.replace(next as never);

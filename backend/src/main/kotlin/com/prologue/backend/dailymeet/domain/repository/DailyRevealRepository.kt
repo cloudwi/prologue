@@ -10,6 +10,7 @@ interface DailyRevealRepository {
 
     /** 해당 질문에서 특정 상대 답변이 지금까지 몇 명에게 노출됐는지(공평 분배용). */
     fun countByQuestionAndPeerAnswer(questionId: Long, peerAnswerId: UUID): Long
+    fun countByQuestionAndPeerAnswers(questionId: Long, peerAnswerIds: Collection<UUID>): Map<UUID, Long>
 
     /**
      * 이 사용자와 한 번이라도 이어진 적 있는 사람들 — 내가 본 상대와 나를 본 상대 양쪽 모두.

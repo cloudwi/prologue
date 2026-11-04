@@ -45,6 +45,7 @@ data class MemberProfileResponse(
     val email: String?,
     /** 사진 업로드 성공 시에만 내려가는 비차단 권장 안내. 구버전 앱은 무시해도 된다. */
     val photoNotice: String? = null,
+    val onboardingComplete: Boolean = true,
 ) {
     companion object {
         fun from(member: Member, email: String? = null): MemberProfileResponse =
@@ -74,6 +75,7 @@ data class MemberProfileResponse(
                 phone = member.phone,
                 kakaoId = member.kakaoId,
                 email = email,
+                onboardingComplete = member.onboardingComplete,
             )
     }
 }

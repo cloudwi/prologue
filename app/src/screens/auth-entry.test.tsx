@@ -125,3 +125,17 @@ it.each(['성공', '인증 오류'])('확인이 너무 오래 걸리면 재시�
     expect(clearTokens).not.toHaveBeenCalled();
   } finally { jest.useRealTimers(); }
 });
+
+it('프로필이 있어도 가입이 미완료이면 앱 재진입 때 이어가기로 보낸다', async () => {
+  jest.mocked(getAccessToken).mockResolvedValue('synthetic-token');
+  jest.mocked(getMyProfile).mockResolvedValue({ onboardingComplete: false, preferredGender: 'FEMALE' } as never);
+  await render(<LoginScreen />);
+  await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/onboarding', params: { resume: '1' } }));
+});
+
+it('로그인 후에도 미완료 가입을 먼저 마친 뒤 보던 모임으로 돌아간다', async () => {
+  mockParams = { mode: 'login', intent: 'meetup', next: '/meetup/synthetic' };
+  jest.mocked(getMyProfile).mockResolvedValue({ onboardingComplete: false, preferredGender: null } as never);
+  await render(<EmailAuthScreen />); await authenticate();
+  await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/onboarding', params: { resume: '1', intent: 'meetup', next: '/meetup/synthetic' } }));
+});
