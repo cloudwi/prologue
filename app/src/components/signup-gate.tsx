@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BottomTabInset, Fonts, Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -43,39 +42,45 @@ export function SignupGate({
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <Animated.View entering={FadeInDown.duration(360)} style={styles.body}>
-          {/* 봉인된 봉투 — 이 앱에서 '아직 열리지 않은 것'의 그림이다. */}
-          <View style={[styles.sealWrap, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
-            <Ionicons name={icon} size={30} color={c.primary} />
-          </View>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.body}>
+            {/* 봉인된 봉투 — 이 앱에서 '아직 열리지 않은 것'의 그림이다. */}
+            <View style={[styles.sealWrap, { backgroundColor: c.backgroundElement, borderColor: c.border }]}>
+              <Ionicons name={icon} size={30} color={c.textSecondary} />
+            </View>
 
-          <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>{title}</Text>
-          <View style={styles.lines}>
-            {lines.map((line) => (
-              <Text key={line} style={[styles.line, { color: c.textSecondary }]}>
-                {line}
+            <Text style={[styles.title, { color: c.text, fontFamily: Fonts.serif }]}>{title}</Text>
+            <View style={styles.lines}>
+              {lines.map((line) => (
+                <Text key={line} style={[styles.line, { color: c.textSecondary }]}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push(guest ? { pathname: '/consent', params: intent ? { intent } : {} } : '/my/start-dating')}
+              style={({ pressed }) => [styles.cta, { backgroundColor: c.primaryStrong, opacity: pressed ? 0.85 : 1 }]}
+            >
+              <Text style={[styles.ctaText, { color: c.primaryText }]}>
+                {guest ? '프롤로그 시작하기' : '소개팅 시작하기'}
               </Text>
-            ))}
-          </View>
+            </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push(guest ? { pathname: '/consent', params: intent ? { intent } : {} } : '/my/start-dating')}
-            style={({ pressed }) => [styles.cta, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={[styles.ctaText, { color: c.primaryText }]}>
-              {guest ? '프롤로그 시작하기' : '소개팅 시작하기'}
+            {guest && intent !== 'meetup' && <Pressable accessibilityRole="button" onPress={() => router.push('/preview')} style={({ pressed }) => [styles.preview, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.75 : 1 }]}>
+              <Text style={[Type.button, { color: c.text }]}>가입 없이 문답 체험하기</Text>
+            </Pressable>}
+
+            {guest && <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'login', ...(intent ? { intent } : {}) } })} style={styles.login}>
+              <Text style={[styles.foot, { color: c.textSecondary }]}>이미 가입했어요 · 로그인</Text>
+            </Pressable>}
+
+            <Text style={[styles.foot, { color: c.textSecondary }]}>
+              {guest ? '모임은 가입하지 않아도 둘러볼 수 있어요.' : '모임은 지금처럼 그대로 쓸 수 있어요.'}
             </Text>
-          </Pressable>
-
-          {guest && <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/email-auth', params: { mode: 'login', ...(intent ? { intent } : {}) } })} style={styles.login}>
-            <Text style={[styles.foot, { color: c.textSecondary }]}>이미 가입했어요 · 로그인</Text>
-          </Pressable>}
-
-          <Text style={[styles.foot, { color: c.textSecondary }]}>
-            {guest ? '모임은 가입하지 않아도 둘러볼 수 있어요.' : '모임은 지금처럼 그대로 쓸 수 있어요.'}
-          </Text>
-        </Animated.View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -84,7 +89,8 @@ export function SignupGate({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: BottomTabInset },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: BottomTabInset + 24 },
+  body: { width: '100%', maxWidth: 440, alignSelf: 'center', alignItems: 'center' },
   sealWrap: {
     width: 68,
     height: 68,
@@ -98,6 +104,7 @@ const styles = StyleSheet.create({
   line: { ...Type.body, textAlign: 'center' },
   cta: { marginTop: 30, alignSelf: 'stretch', minHeight: 54, paddingVertical: 12, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   ctaText: { ...Type.button },
+  preview: { alignSelf: 'stretch', minHeight: 52, alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: Radius.md, marginTop: 12 },
   login: { minHeight: 44, justifyContent: 'center' },
   foot: { ...Type.caption, marginTop: 14, textAlign: 'center' },
 });

@@ -85,10 +85,10 @@ export default function DiscoverScreen() {
       <SignupGate
         mode="guest"
         icon="sparkles-outline"
-        title={'하루에 한 사람,\n문답으로 알아가요'}
+        title={'사진보다 생각을,\n문답으로 알아가요'}
         lines={[
-          '매일 같은 질문에 답한 사람 중 한 명이 소개돼요.',
-          '사진보다 답변을 먼저 읽는 소개예요.',
+          '하루 한 문답으로 생각을 나눠요.',
+          '소개할 상대가 없으면 기다릴 수 있어요.',
         ]}
       />
     );

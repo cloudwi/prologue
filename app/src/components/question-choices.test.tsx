@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Colors } from '../constants/theme';
 import { QuestionChoices } from './question-choices';
@@ -37,4 +38,21 @@ it('OX도 한 가지를 고르며 저장 중에는 바꿀 수 없다', async () 
   await render(<Editor type="OX" disabled />);
   await fireEvent.press(screen.getByRole('radio', { name: 'O, 맞아요' }));
   expect(screen.getByRole('radio', { name: 'O, 맞아요' })).toHaveProp('accessibilityState', { checked: false, disabled: true });
+});
+
+it('웹은 Space로 고르고 방향키로 선택과 포커스를 함께 옮긴다', async () => {
+  jest.replaceProperty(Platform, 'OS', 'web');
+  try {
+    await render(<Editor type="SINGLE_CHOICE" />);
+    const focus = [jest.fn(), jest.fn()];
+    const key = (name: string) => ({ key: name, preventDefault: jest.fn(), currentTarget: { parentElement: { querySelectorAll: () => focus.map((f) => ({ focus: f })) } } });
+    await fireEvent(screen.getByRole('radio', { name: '산책' }), 'keyDown', key(' '));
+    expect(screen.getByRole('radio', { name: '산책', checked: true })).toBeTruthy();
+    await fireEvent(screen.getByRole('radio', { name: '산책' }), 'keyDown', key('ArrowDown'));
+    expect(screen.getByRole('radio', { name: '영화', checked: true })).toBeTruthy();
+    expect(focus[1]).toHaveBeenCalledTimes(1);
+    await fireEvent(screen.getByRole('radio', { name: '영화' }), 'keyDown', key('ArrowDown'));
+    expect(screen.getByRole('radio', { name: '산책', checked: true })).toBeTruthy();
+    expect(focus[0]).toHaveBeenCalledTimes(1);
+  } finally { jest.restoreAllMocks(); }
 });

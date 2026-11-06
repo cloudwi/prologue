@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LEGAL_EFFECTIVE_DATE } from '@/constants/legal';
+import { Radius, Type } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { track } from '@/lib/analytics';
 import { saveConsent } from '@/lib/consent';
@@ -105,7 +106,7 @@ export default function ConsentScreen() {
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
       <SafeAreaView style={styles.safe}>
-        <Pressable onPress={() => router.back()} style={styles.back} hitSlop={10}>
+        <Pressable accessibilityRole="button" accessibilityLabel="뒤로" onPress={() => router.back()} style={styles.back} hitSlop={10}>
           <Text style={[styles.backText, { color: c.textSecondary }]}>← 뒤로</Text>
         </Pressable>
 
@@ -118,6 +119,10 @@ export default function ConsentScreen() {
 
           {/* 전체 동의 — 하나씩 누르는 수고를 덜어주되, 각 항목은 아래에 그대로 보인다 */}
           <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel="전체 동의하기"
+            accessibilityState={{ checked: allChecked }}
+            aria-checked={allChecked}
             onPress={toggleAll}
             style={({ pressed }) => [
               styles.allRow,
@@ -137,6 +142,10 @@ export default function ConsentScreen() {
               <View key={item.key}>
                 <View style={styles.itemRow}>
                   <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`${item.required ? '필수' : '선택'}, ${item.label}`}
+                    accessibilityState={{ checked: checked[item.key] }}
+                    aria-checked={checked[item.key]}
                     onPress={() => toggle(item.key)}
                     style={({ pressed }) => [styles.itemMain, { opacity: pressed ? 0.7 : 1 }]}
                     hitSlop={6}
@@ -151,7 +160,7 @@ export default function ConsentScreen() {
                   </Pressable>
 
                   {item.link && (
-                    <Pressable onPress={() => router.push(item.link!)} hitSlop={10}>
+                    <Pressable accessibilityRole="link" accessibilityLabel={`${item.key === 'terms' ? '이용약관' : '개인정보처리방침'} 보기`} style={styles.viewAction} onPress={() => router.push(item.link!)} hitSlop={10}>
                       <Text style={[styles.view, { color: c.textSecondary }]}>보기</Text>
                     </Pressable>
                   )}
@@ -166,12 +175,14 @@ export default function ConsentScreen() {
         </ScrollView>
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canProceed }}
           onPress={proceed}
           disabled={!canProceed}
           style={({ pressed }) => [
             styles.cta,
             {
-              backgroundColor: canProceed ? c.primary : c.backgroundSelected,
+              backgroundColor: canProceed ? c.primaryStrong : c.backgroundSelected,
               opacity: pressed && canProceed ? 0.85 : 1,
             },
           ]}
@@ -192,7 +203,7 @@ function CheckBox({ checked, c }: { checked: boolean; c: ReturnType<typeof useTh
       style={[
         styles.box,
         checked
-          ? { backgroundColor: c.primary, borderColor: c.primary }
+          ? { backgroundColor: c.primaryStrong, borderColor: c.primaryStrong }
           : { backgroundColor: 'transparent', borderColor: c.border },
       ]}
     >
@@ -203,29 +214,31 @@ function CheckBox({ checked, c }: { checked: boolean; c: ReturnType<typeof useTh
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  safe: { flex: 1, paddingHorizontal: 25 },
-  back: { paddingVertical: 12 },
-  backText: { fontSize: 16 },
+  safe: { flex: 1, paddingHorizontal: 24, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  back: { minHeight: 44, justifyContent: 'center' },
+  backText: { ...Type.body },
   scroll: { paddingBottom: 24 },
-  title: { fontSize: 26, fontWeight: '700', lineHeight: 36, marginTop: 12 },
-  subtitle: { fontSize: 14, marginTop: 10 },
+  title: { ...Type.display, marginTop: 12 },
+  subtitle: { ...Type.caption, marginTop: 10 },
   allRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    height: 60,
-    borderRadius: 14,
+    minHeight: 60,
+    paddingVertical: 16,
+    borderRadius: Radius.md,
     borderWidth: 1,
     paddingHorizontal: 16,
     marginTop: 28,
   },
-  allText: { fontSize: 17, fontWeight: '700' },
+  allText: { ...Type.title, flex: 1 },
   items: { marginTop: 20, gap: 18 },
   itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  itemMain: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  itemLabel: { fontSize: 15, flex: 1, lineHeight: 21 },
-  view: { fontSize: 14, textDecorationLine: 'underline' },
-  note: { fontSize: 13, lineHeight: 19, marginTop: 6, marginLeft: 34 },
+  itemMain: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minHeight: 44 },
+  itemLabel: { ...Type.body, flex: 1 },
+  view: { ...Type.label, textDecorationLine: 'underline' },
+  viewAction: { minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  note: { ...Type.caption, marginTop: 4, marginLeft: 34 },
   box: {
     width: 22,
     height: 22,
@@ -234,7 +247,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  check: { fontSize: 14, fontWeight: '900', lineHeight: 17 },
-  cta: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  ctaText: { fontSize: 17, fontWeight: '700' },
+  check: { ...Type.label },
+  cta: { minHeight: 56, padding: 16, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  ctaText: { ...Type.button },
 });

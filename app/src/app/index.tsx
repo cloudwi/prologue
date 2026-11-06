@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
@@ -11,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { ScreenLoadError } from '@/components/screen-load-error';
 
-import { Colors, Fonts, Radius } from '@/constants/theme';
+import { Colors, Radius, Type } from '@/constants/theme';
 import { identify, track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { clearTokens, getAccessToken } from '@/lib/auth-storage';
@@ -28,6 +27,7 @@ export default function LoginScreen() {
   const [checking, setChecking] = useState(true); // 자동 로그인 확인 중
   const [checkFailed, setCheckFailed] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
+  const wide = useWindowDimensions().width >= 900;
 
   /** 갈 곳이 정해졌으니 스플래시를 내린다. 실패해도 앱은 그대로 간다(루트에 안전장치가 있다). */
   const hideSplash = () => void SplashScreen.hideAsync().catch(() => {});
@@ -119,74 +119,87 @@ export default function LoginScreen() {
     <View style={[styles.root, { backgroundColor: c.background }]} onLayout={hideSplash}>
 
       <SafeAreaView style={styles.safe}>
-        {/* 브랜드 */}
-        <View style={styles.brand}>
-          <Animated.View entering={FadeInDown.duration(380)} style={styles.center}>
-            <Image
-              source={require('@/assets/images/brand-mark.png')}
-              style={styles.logo}
-              contentFit="contain"
-            />
-            <Text style={[styles.wordmark, { color: c.text, fontFamily: Fonts.serif }]}>프롤로그</Text>
-            <Text style={[styles.wordmarkEn, { color: c.primary }]}>PROLOGUE</Text>
-          </Animated.View>
-          <Animated.View entering={FadeInDown.duration(380).delay(90)} style={styles.center}>
-            <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답, 생각부터 알아가는 소개팅</Text>
-          </Animated.View>
-        </View>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={[styles.layout, wide && styles.wideLayout]}>
+            <View style={[styles.brand, wide && styles.wideBrand]}>
+              <View style={styles.brandRow}>
+                <Image
+                  source={require('@/assets/images/brand-mark.png')}
+                  style={styles.logo}
+                  contentFit="contain"
+                />
+                <Text style={[styles.wordmark, { color: c.text }]}>프롤로그</Text>
+              </View>
+              <Text accessibilityRole="header" style={[styles.headline, wide && styles.wideHeadline, { color: c.text }]}>사진보다 먼저,{'\n'}생각이 닿는 사이.</Text>
+              <Text style={[styles.tagline, { color: c.textSecondary }]}>하루 한 문답으로 서로를 알아가고,{'\n'}마음이 닿으면 편지로 이어가요.</Text>
+            </View>
 
-        {/* 신규 가입은 동의부터, 기존 회원은 이메일 인증으로 바로 간다. */}
-        <Animated.View entering={FadeInUp.duration(380).delay(180)} style={styles.buttons}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/consent')}
-            style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primary, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={[styles.startBtnText, { color: c.primaryText }]}>문답으로 인연 만나기</Text>
-          </Pressable>
+            {/* 신규 가입은 동의부터, 기존 회원은 이메일 인증으로 바로 간다. */}
+            <View style={[styles.buttons, wide && styles.wideButtons]}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="가입 없이 문답 체험하기"
+                onPress={() => router.push('/preview')}
+                style={({ pressed }) => [styles.previewCard, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.75 : 1 }]}
+              >
+                <View style={styles.previewHeading}>
+                  <Text style={[Type.caption, { color: c.textSecondary }]}>예시 문답</Text>
+                  <Text style={[Type.caption, { color: c.textSecondary }]}>가입 없이 체험</Text>
+                </View>
+                <Text style={[Type.title, { color: c.text }]}>쉬는 날에는 주로 무엇을 하나요?</Text>
+                <View style={[styles.sampleAnswer, { backgroundColor: c.background }]}>
+                  <Text style={[Type.body, { color: c.textSecondary }]}>늦은 아침을 먹고 목적지 없이 걷는 편이에요.</Text>
+                </View>
+                <View style={styles.previewHeading}>
+                  <Text style={[Type.label, { color: c.text }]}>가입 없이 문답 체험하기</Text>
+                  <Text style={[Type.title, { color: c.text }]} accessibilityElementsHidden importantForAccessibility="no">›</Text>
+                </View>
+              </Pressable>
+              <Text style={[styles.freeNote, { color: c.textSecondary }]}>가입과 매일의 문답은 무료예요</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/consent')}
+                style={({ pressed }) => [styles.startBtn, { backgroundColor: c.primaryStrong, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Text style={[styles.startBtnText, { color: c.primaryText }]}>문답으로 인연 만나기</Text>
+              </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/preview')}
-            style={({ pressed }) => [styles.previewBtn, { backgroundColor: c.backgroundElement, opacity: pressed ? 0.75 : 1 }]}
-          >
-            <Text style={[styles.previewBtnText, { color: c.text }]}>가입 없이 문답 체험하기</Text>
-          </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/email-auth?mode=login')} style={styles.loginLink}>
+                <Text style={[styles.loginText, { color: c.textSecondary }]}>이미 가입했어요 · 로그인</Text>
+              </Pressable>
 
-          <Pressable accessibilityRole="button" onPress={() => router.push('/email-auth?mode=login')} style={styles.loginLink}>
-            <Text style={[styles.loginText, { color: c.textSecondary }]}>이미 가입했어요 · 로그인</Text>
-          </Pressable>
+              {/*
+                * 가입하지 않고 모임부터 — 1.3에서 낸 두 번째 문.
+                *
+                * 소개팅은 사진과 문답을 먼저 요구해서 문턱이 높다. 그런데 모임은 그럴 이유가 없다
+                * ("모임을 하는 사람이 굳이 솔로일 필요는 없다"). 어떤 자리가 열려 있는지 먼저 보고
+                * 가입을 정하게 한다 — 손드는 순간에만 나를 밝히면 된다.
+                */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  track('guest_browsed');
+                  queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: false, profile: null });
+                  router.replace('/meetups');
+                }}
+                style={({ pressed }) => [styles.guestBtn, { borderTopColor: c.border, opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={[styles.guestBtnText, { color: c.text }]}>가입 없이 모임 둘러보기</Text>
+              </Pressable>
 
-          {/*
-            * 가입하지 않고 모임부터 — 1.3에서 낸 두 번째 문.
-            *
-            * 소개팅은 사진과 문답을 먼저 요구해서 문턱이 높다. 그런데 모임은 그럴 이유가 없다
-            * ("모임을 하는 사람이 굳이 솔로일 필요는 없다"). 어떤 자리가 열려 있는지 먼저 보고
-            * 가입을 정하게 한다 — 손드는 순간에만 나를 밝히면 된다.
-            */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              track('guest_browsed');
-              queryClient.setQueryData(SESSION_QUERY_KEY, { signedIn: false, profile: null });
-              router.replace('/meetups');
-            }}
-            style={({ pressed }) => [styles.guestBtn, { borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}
-          >
-            <Text style={[styles.guestBtnText, { color: c.text }]}>가입 없이 모임 둘러보기</Text>
-          </Pressable>
-
-          {/* 동의는 다음 화면에서 항목별로 받는다 — 여기서는 미리 읽어볼 수 있는 통로만 둔다 */}
-          <Text style={[styles.terms, { color: c.textSecondary }]}>
-            <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/terms')}>
-              이용약관
-            </Text>
-            {'   ·   '}
-            <Text style={[styles.termsLink, { color: c.text }]} onPress={() => router.push('/privacy')}>
-              개인정보처리방침
-            </Text>
-          </Text>
-        </Animated.View>
+              {/* 동의는 다음 화면에서 항목별로 받는다 — 여기서는 미리 읽어볼 수 있는 통로만 둔다 */}
+              <Text style={[styles.terms, { color: c.textSecondary }]}>
+                <Text accessibilityRole="link" style={[styles.termsLink, { color: c.textSecondary }]} onPress={() => router.push('/terms')}>
+                  이용약관
+                </Text>
+                {'   ·   '}
+                <Text accessibilityRole="link" style={[styles.termsLink, { color: c.textSecondary }]} onPress={() => router.push('/privacy')}>
+                  개인정보처리방침
+                </Text>
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -200,22 +213,31 @@ const styles = StyleSheet.create({
   splashMatch: { width: SPLASH_WIDTH, height: SPLASH_WIDTH * SPLASH_RATIO },
   root: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  safe: { flex: 1, paddingHorizontal: 25, justifyContent: 'flex-end' },
-  brand: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 89, height: 64, marginBottom: 6 }, // 마크는 1.4:1 가로형
-  wordmark: { fontSize: 36, fontWeight: '700', letterSpacing: 2, marginTop: 8 },
-  wordmarkEn: { fontSize: 14, fontWeight: '700', letterSpacing: 6, marginTop: 6 },
-  tagline: { fontSize: 16, lineHeight: 24, marginTop: 12, textAlign: 'center' },
-  previewBtn: { minHeight: 52, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  previewBtnText: { fontSize: 15, fontWeight: '600' },
-  buttons: { gap: 12 },
+  safe: { flex: 1 },
+  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 24, justifyContent: 'center' },
+  layout: { flexGrow: 1, width: '100%', maxWidth: 480, alignSelf: 'center', gap: 32, justifyContent: 'space-between' },
+  wideLayout: { flexDirection: 'row', alignItems: 'center', maxWidth: 1040, gap: 80 },
+  brand: { paddingTop: 8, gap: 20 },
+  wideBrand: { flex: 1 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logo: { width: 39, height: 28 },
+  wordmark: { ...Type.title },
+  headline: { ...Type.display, marginTop: 12, fontSize: 32, lineHeight: 44, letterSpacing: -0.8 },
+  wideHeadline: { fontSize: 42, lineHeight: 58 },
+  tagline: { ...Type.body },
+  buttons: { gap: 8 },
+  wideButtons: { width: 380 },
+  previewCard: { padding: 20, borderRadius: Radius.lg, gap: 16, marginBottom: 8 },
+  previewHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  sampleAnswer: { padding: 16, borderRadius: Radius.sm },
+  freeNote: { ...Type.caption, textAlign: 'center', marginBottom: 4 },
   loginLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  loginText: { fontSize: 14 },
-  startBtn: { height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  startBtnText: { fontSize: 17, fontWeight: '700' },
-  // 두 번째 문이라 테두리만 — 색 덩어리가 둘이면 어느 쪽이 본길인지 흐려진다.
-  guestBtn: { height: 52, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  guestBtnText: { fontSize: 16, fontWeight: '600' },
-  terms: { fontSize: 12, textAlign: 'center', marginTop: 12, marginBottom: 8, lineHeight: 18 },
+  loginText: { ...Type.label },
+  startBtn: { minHeight: 56, padding: 16, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  startBtnText: { ...Type.button },
+  // 모임은 소개팅 시작과 구분하되 별도의 큰 버튼 면을 더하지 않는다.
+  guestBtn: { minHeight: 52, borderTopWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  guestBtnText: { ...Type.label },
+  terms: { ...Type.caption, textAlign: 'center', marginTop: 8, marginBottom: 8 },
   termsLink: { textDecorationLine: 'underline', fontWeight: '600' },
 });

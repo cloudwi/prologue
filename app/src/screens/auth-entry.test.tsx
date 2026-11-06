@@ -49,8 +49,19 @@ it('기존 회원은 가입 동의 없이 로그인으로 들어간다', async (
   expect(mockRouter.push).toHaveBeenCalledWith('/email-auth?mode=login');
 });
 
+it('첫 화면과 비회원 발견 안내에서 문답 체험으로 바로 들어간다', async () => {
+  const first = await render(<LoginScreen />);
+  await fireEvent.press(await screen.findByRole('button', { name: '가입 없이 문답 체험하기' }));
+  expect(mockRouter.push).toHaveBeenLastCalledWith('/preview');
+  await first.unmount();
+  await render(<SignupGate icon="sparkles-outline" title="문답으로 알아가요" lines={[]} mode="guest" />);
+  await fireEvent.press(screen.getByRole('button', { name: '가입 없이 문답 체험하기' }));
+  expect(mockRouter.push).toHaveBeenLastCalledWith('/preview');
+});
+
 it('모임에서 MY로 들어온 손님은 모임 전용 가입·로그인으로 이어진다', async () => {
   await render(<SignupGate icon="person-outline" title="내 자리" lines={[]} mode="guest" intent="meetup" />);
+  expect(screen.queryByRole('button', { name: '가입 없이 문답 체험하기' })).toBeNull();
   await fireEvent.press(screen.getByText('프롤로그 시작하기'));
   expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/consent', params: { intent: 'meetup' } });
   await fireEvent.press(screen.getByText('이미 가입했어요 · 로그인'));

@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlaceholderInput } from '@/components/placeholder-input';
-import { Fonts } from '@/constants/theme';
+import { Fonts, Radius, Type } from '@/constants/theme';
 import { identify, track } from '@/lib/analytics';
 import { ApiError } from '@/lib/api';
 import { requestCode, verifyCode } from '@/lib/auth';
@@ -156,7 +156,7 @@ export default function EmailAuthScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
-            <Pressable onPress={() => (step === 'code' ? editEmail() : router.back())} hitSlop={12}>
+            <Pressable accessibilityRole="button" accessibilityLabel="뒤로" style={styles.backAction} onPress={() => (step === 'code' ? editEmail() : router.back())} hitSlop={12}>
               <Text style={[styles.back, { color: c.textSecondary }]}>← 뒤로</Text>
             </Pressable>
           </View>
@@ -198,19 +198,21 @@ export default function EmailAuthScreen() {
                     returnKeyType="send"
                     style={[styles.input, { backgroundColor: c.backgroundElement, color: c.text, borderColor: c.border }]}
                   />
-                  {error ? <Text style={[styles.error, { color: c.primary }]}>{error}</Text> : null}
+                  {error ? <Text accessibilityLiveRegion="polite" style={[styles.error, { color: c.primaryStrong }]}>{error}</Text> : null}
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !emailValid || submitting, busy: submitting }}
                     onPress={sendCode}
                     disabled={!emailValid || submitting}
                     style={({ pressed }) => [
                       styles.submit,
-                      { backgroundColor: c.primary, opacity: !emailValid || submitting ? 0.5 : pressed ? 0.85 : 1 },
+                      { backgroundColor: !emailValid ? c.backgroundSelected : c.primaryStrong, opacity: submitting ? 0.7 : pressed ? 0.85 : 1 },
                     ]}
                   >
                     {submitting ? (
                       <ActivityIndicator color={c.primaryText} />
                     ) : (
-                      <Text style={[styles.submitText, { color: c.primaryText }]}>인증코드 받기</Text>
+                      <Text style={[styles.submitText, { color: !emailValid ? c.textSecondary : c.primaryText }]}>인증코드 받기</Text>
                     )}
                   </Pressable>
                 </View>
@@ -266,24 +268,26 @@ export default function EmailAuthScreen() {
                       style={styles.otpHiddenInput}
                     />
                   </View>
-                  {error ? <Text style={[styles.error, { color: c.primary }]}>{error}</Text> : null}
+                  {error ? <Text accessibilityLiveRegion="polite" style={[styles.error, { color: c.primaryStrong }]}>{error}</Text> : null}
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !codeValid || submitting, busy: submitting }}
                     onPress={submitCode}
                     disabled={!codeValid || submitting}
                     style={({ pressed }) => [
                       styles.submit,
-                      { backgroundColor: c.primary, opacity: !codeValid || submitting ? 0.5 : pressed ? 0.85 : 1 },
+                      { backgroundColor: !codeValid ? c.backgroundSelected : c.primaryStrong, opacity: submitting ? 0.7 : pressed ? 0.85 : 1 },
                     ]}
                   >
                     {submitting ? (
                       <ActivityIndicator color={c.primaryText} />
                     ) : (
-                      <Text style={[styles.submitText, { color: c.primaryText }]}>확인</Text>
+                      <Text style={[styles.submitText, { color: !codeValid ? c.textSecondary : c.primaryText }]}>확인</Text>
                     )}
                   </Pressable>
 
                   <Pressable onPress={sendCode} disabled={cooldown > 0 || submitting} hitSlop={8} style={styles.resend}>
-                    <Text style={[styles.resendText, { color: cooldown > 0 ? c.textSecondary : c.primary }]}>
+                    <Text style={[styles.resendText, { color: cooldown > 0 ? c.textSecondary : c.primaryStrong }]}>
                       {cooldown > 0 ? `코드 재전송 (${cooldown}초)` : '코드 재전송'}
                     </Text>
                   </Pressable>
@@ -318,19 +322,20 @@ function verifyErrorMessage(e: unknown): string {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
-  safe: { flex: 1, paddingHorizontal: 25 },
+  safe: { flex: 1, paddingHorizontal: 24, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  backAction: { minHeight: 44, justifyContent: 'center' },
   header: { height: 44, justifyContent: 'center' },
-  back: { fontSize: 16 },
+  back: { ...Type.body },
   body: { paddingTop: 36, paddingBottom: 24 },
-  title: { fontSize: 28, fontWeight: '700' },
-  subtitle: { fontSize: 16, marginTop: 8, lineHeight: 23 },
+  title: { ...Type.display },
+  subtitle: { ...Type.body, marginTop: 8 },
   form: { marginTop: 32, gap: 12 },
-  input: { height: 54, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 17 },
+  input: { minHeight: 54, borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: 16, ...Type.body },
   otpRow: { flexDirection: 'row', gap: 8 },
   otpCell: {
     flex: 1,
     height: 58,
-    borderRadius: 12,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -338,9 +343,9 @@ const styles = StyleSheet.create({
   otpCaret: { position: 'absolute', width: 2, height: 24, borderRadius: 1 },
   // 투명 입력 — 셀 전체를 덮어 어디를 눌러도 포커스되고, 자동완성도 이 입력이 받는다.
   otpHiddenInput: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, opacity: 0.01, fontSize: 1 },
-  error: { fontSize: 14, marginTop: 2, marginLeft: 4 },
-  submit: { height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  submitText: { fontSize: 17, fontWeight: '700' },
+  error: { ...Type.label, marginTop: 2, marginLeft: 4 },
+  submit: { minHeight: 54, padding: 16, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  submitText: { ...Type.button },
   resend: { alignItems: 'center', paddingVertical: 14 },
   resendText: { fontSize: 15 },
 });
