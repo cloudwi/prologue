@@ -17,6 +17,9 @@ import java.util.UUID
  * DB 연결을 붙든 채 남의 서버 응답을 기다리는 꼴이 된다. 알림이 늦거나 실패해도
  * 편지는 이미 저장돼 있어야 한다.
  *
+ * 발송 뒤 Expo 접수 기록을 저장하고 무효 기기 토큰을 정리하므로 발송 트랜잭션도 쓰기를 허용한다.
+ * 읽기 전용이면 HTTP 발송은 성공해도 접수 기록 INSERT가 실패한다.
+ *
  * 알림 끄기는 기기 토큰 삭제로 표현한다 — 보낼 곳이 없으면 안 간다.
  */
 @Service
@@ -45,7 +48,7 @@ class NotificationService(
     fun forget(accountId: UUID) = deviceTokenRepository.deleteAllByAccountId(accountId)
 
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun letterArrived(recipientAccountId: UUID) = notify(
         recipientAccountId,
         PushMessage(
@@ -56,7 +59,7 @@ class NotificationService(
     )
 
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun heartArrived(recipientAccountId: UUID) = notify(
         recipientAccountId,
         PushMessage(
@@ -67,7 +70,7 @@ class NotificationService(
     )
 
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun mutualHeartArrived(recipientAccountId: UUID) = notify(
         recipientAccountId,
         PushMessage(
@@ -79,7 +82,7 @@ class NotificationService(
 
     /** 피드의 가벼운 반응은 건마다 울리지 않고 하루 동안 모인 마음을 한 번만 전한다. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun feedHeartsGathered(accountId: UUID, count: Int) = notify(
         accountId,
         PushMessage(
@@ -91,7 +94,7 @@ class NotificationService(
 
     /** 모임장이 자리를 확정했다 — 입금 확인이 끝났다는 뜻이라 신청자가 가장 기다리는 소식. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun meetupConfirmed(applicantAccountId: UUID, meetupTitle: String) = notify(
         applicantAccountId,
         PushMessage(
@@ -103,7 +106,7 @@ class NotificationService(
 
     /** 새 신청이 들어왔다 — 모임장이 오픈채팅에서 맞이할 수 있게 바로 알린다. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun meetupApplied(hostAccountId: UUID, meetupTitle: String, applicantNickname: String?) = notify(
         hostAccountId,
         PushMessage(
@@ -115,7 +118,7 @@ class NotificationService(
 
     /** 모임이 취소됐다 — 기다리던 신청자가 헛걸음하지 않도록 바로 알린다. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun meetupCanceled(applicantAccountId: UUID, meetupTitle: String) = notify(
         applicantAccountId,
         PushMessage(
@@ -132,7 +135,7 @@ class NotificationService(
      * 알림이 잦아지면 정작 중요한 것도 안 읽는다.
      */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun meetupChanged(applicantAccountId: UUID, meetupTitle: String, what: String) = notify(
         applicantAccountId,
         PushMessage(
@@ -144,7 +147,7 @@ class NotificationService(
 
     /** 이레가 지나도록 열리지 않아 회수된 편지 — 보낸 사람에게 환급 사실을 알린다. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun mailExpired(senderAccountId: UUID, refund: Int) = notify(
         senderAccountId,
         PushMessage(
@@ -161,7 +164,7 @@ class NotificationService(
      * 무엇을 하면 무엇이 오는지를 한 줄에 담는다 — 열고 나서 "이럴 줄 몰랐다"가 없게.
      */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun newQuestionArrived(accountId: UUID) = notify(
         accountId,
         PushMessage(
@@ -172,7 +175,7 @@ class NotificationService(
     )
 
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun peerArrived(accountId: UUID) = notify(
         accountId,
         PushMessage(
@@ -187,7 +190,7 @@ class NotificationService(
      * 지난번에 좋았던 자리가 다시 열렸다는 소식이라, 모임 알림 중 가장 반가운 축이다.
      */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun meetupSeriesOpened(accountId: UUID, meetupTitle: String) = notify(
         accountId,
         PushMessage(
@@ -204,7 +207,7 @@ class NotificationService(
      * 무엇을 하면 소개가 시작되는지를 같은 줄에 적는다 — 열고 나서 빈 화면을 보게 하지 않게.
      */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun gateAdmitted(accountId: UUID) = notify(
         accountId,
         PushMessage(
@@ -216,7 +219,7 @@ class NotificationService(
 
     /** 내 초대 코드로 친구가 들어왔다 — 보상이 들어왔다는 것도 함께. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun referralRewarded(inviterAccountId: UUID, ink: Int) = notify(
         inviterAccountId,
         PushMessage(
@@ -233,6 +236,6 @@ class NotificationService(
 
     /** 모두에게 — 매일 정해진 시각의 안내. */
     @Async
-    @Transactional(readOnly = true)
+    @Transactional
     fun broadcast(message: PushMessage) = pushSender.send(deviceTokenRepository.findAllTokens(), message)
 }
