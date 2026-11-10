@@ -1,0 +1,16 @@
+Use case: ads-marketing
+Asset type: Original Instagram single-image daily question for 프롤로그. Portrait 4:5, ideally exactly 1024x1280 pixels.
+Primary request: A quiet polished Korean question creative based on a natural everyday photo-booth scene; multiple-choice question about photo poses. The photo scene and typography must be integrated, not a flat illustrated card.
+Scene/backdrop: A close angled editorial still life at an empty photo booth counter. Warm light oak countertop, muted terracotta curtain edge at the upper right, two cream unprinted four-frame photo strips lying diagonally at the lower left, with tiny simple outline pose symbols instead of human portraits on the strips. Soft natural afternoon shadows. No people, no actual couple photographs, no shop logos, no envelope, no cinema seats, no coffee cup, no books. This is an AI-generated concept scene, not a real user photo.
+Composition: Unlike a centered poster, use an asymmetrical diagonal composition. Small series label near upper left; large question left aligned around upper-middle. Four short equal choices arranged in a neat 2x2 at lower right, with sufficient clear table surface for legibility. Photo strips at lower-left must not obscure text. Keep all text at least 8% inside frame. No extra card borders, no full flat gray background.
+Typography: Readable clean Korean sans-serif, charcoal #1B2126; emphasize only '네 컷 사진' in terracotta #D9694C. Main question is the star, labels smaller. Generous space.
+Text, verbatim:
+"프롤로그 · 오늘의 질문"
+"둘이 찍을 네 컷 사진에\n어떤 포즈를 담고 싶나요?"
+"A 브이"
+"B 손하트"
+"C 장난스러운 표정"
+"D 등 맞대기"
+"여러 개 골라도 좋아요"
+"prologue.day"
+Constraints: Correct Korean spelling, no clipping. Four choices equally weighted and none visibly selected. No fake votes, stats, testimonials, app download claim or additional text. AI-generated editorial photograph with clean overlaid lettering, no watermark. Maintain original 4:5 portrait proportion, no square.

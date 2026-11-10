@@ -1,0 +1,12 @@
+Use case: ads-marketing
+Asset type: Instagram Prologue daily question, one portrait 4:5 image.
+Primary request: A beautifully typeset Korean editorial text card about making a playlist together. Typography is the protagonist. Mature, quiet, fresh, approachable.
+Scene/backdrop: Flat cool gray paper #F6F8FA with an almost imperceptible paper grain. No photo, no realistic objects.
+Composition: An asymmetric typography-led layout. Small brand header at top left. Very generous empty upper half with a tiny charcoal audio waveform near the upper right. Main Korean question in the lower-middle left, large but fully contained within spacious margins. Three lines, exact:
+"둘이 플레이리스트를"
+"만들면 첫 곡은"
+"무엇인가요?"
+Highlight only the words "첫 곡" in terracotta #D9694C. All other large question text charcoal #1B2126. Use clean, highly legible modern Korean sans serif with natural spacing and clear glyphs. This is a text card, not an illustrated scene. Keep the waveform very subtle and secondary.
+Exact small header: "프롤로그 · 오늘의 질문"
+Exact small footer near bottom left: "prologue.day"
+Constraints: All text exactly as specified; no other words, no answers, no song titles or lyrics, no fake statistics. No envelope, chairs, tables, speech bubbles, frame, photograph, drop shadows or extra illustration. No enormous question mark. Full portrait 4:5 canvas, all content at least 8% away from edges, no clipping.

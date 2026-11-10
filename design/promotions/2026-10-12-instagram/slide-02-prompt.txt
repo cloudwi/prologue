@@ -1,0 +1,10 @@
+Use case: ads-marketing
+Asset type: Instagram Prologue carousel slide 2 of 3, portrait 4:5.
+Primary request: Same quiet photographic editorial atmosphere and typography as reference slide 1. Two actual everyday situation examples illustrated as original AI scene photographs, explicitly examples, not user results. Upper photo shows face-down phone and keys on pale entry console under cool evening light. Lower photo shows face-down phone beside a plain breakfast plate and coffee under morning window light. No people, no visible screen messages, no logos.
+Composition: Two wide photographic crops stacked vertically, equal size, enough near-white space between them for readable Korean labels. Neutral light stone wall background, charcoal text #1B2126, terracotta #D9694C accent very small. Header and footer consistent small branding.
+Exact brand header: "프롤로그 · 오늘의 질문"
+Exact title: "예를 들면, 이런 순간"
+Exact upper photo label: "집에 도착했을 때"
+Exact lower photo label: "다음 날 아침"
+Exact footer: "prologue.day"
+Constraints: exact Korean, no percentages/statistics/testimonials or implied popular answer. Clean readable Korean sans serif, generous safe margins, same 4:5 portrait ratio as reference, no envelope. Both scenes coherent natural photography, not illustrations.

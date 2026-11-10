@@ -1,0 +1,16 @@
+Use case: ads-marketing
+Asset type: Instagram Prologue daily question, one portrait 4:5 image, 1120x1400.
+Primary request: Beautiful Korean editorial typography card with a light, easy two-option question about arriving for a date. Typography is protagonist.
+Scene/backdrop: cool gray paper #F6F8FA with subtle fine texture. No photo or envelope.
+Composition: Unlike a lower-left question card, put a tiny brand line at upper left, then the large main question in the upper-middle left. In the lower half place two clean unboxed rows as answer examples, A and B, with ample vertical spacing. A very small abstract clock tick motif near the right edge, secondary. Do not draw a full scene. Sophisticated quiet magazine style; clean legible Korean sans serif.
+Exact text, no additions:
+Small header: "프롤로그 · 오늘의 질문"
+Main question, three lines:
+"데이트 약속에는"
+"미리 가나요,"
+"딱 맞춰 가나요?"
+Two equally neutral choice rows:
+"A   조금 미리 도착"
+"B   약속 시간에 맞춰"
+Small footer: "prologue.day"
+Charcoal #1B2126 for text; terracotta #D9694C only on "미리" and small A/B letters. Answer rows are smaller than the main question, but comfortably readable on a phone. No checkmarks, no percentages, no fabricated poll or correct answer, no demand to comment. Keep at least 8% margin on all sides and no clipped glyphs. Balanced full 4:5 canvas; no borders, shadows, envelope, phone, food or photo.

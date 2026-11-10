@@ -1,0 +1,1 @@
+Adjust only the original question.png canvas to 4:5 portrait. Expand paper along the left and right, preserve all Korean question text, A/B rows, brand header, prologue.day handle, colors and hierarchy. No new words or clipping. Built-in imagegen edit using question.png as reference; final question-4x5.png.

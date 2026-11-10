@@ -1,0 +1,10 @@
+Use case: ads-marketing
+Asset type: Prologue Instagram daily question, a single 4:5 portrait illustration card.
+Primary request: A restrained adult editorial illustration about cooking together, with one Korean question as the protagonist. Refreshing pale sage paper background #EDF3ED, charcoal #1B2126 text, terracotta #D9694C single accent. Clean hand-drawn colored pencil and gentle ink, tasteful, not childish.
+Composition: Small brand header at top left. A compact charming still life in the upper-middle: a cutting board, two wooden spoons leaning opposite ways, a tomato, a mushroom, a small flour bowl and neatly folded linen. The illustration should occupy only about one quarter of the canvas and stay light with generous breathing room. No people, no chairs, no coffee-table scene. Main question below the illustration in lower-middle, prominent but not shouting, centered with generous margins. Modern highly legible Korean sans serif. Main question exact three lines:
+"둘이 함께 요리한다면"
+"어떤 메뉴부터"
+"만들고 싶나요?"
+Highlight only "어떤 메뉴부터" in terracotta. Exact small header: "프롤로그 · 오늘의 질문"
+Exact small footer at bottom: "prologue.day"
+Constraints: Exact Korean glyphs and spacing, question and handle fully contained, 8% safe margins all edges, portrait 4:5. No envelope, speech bubbles, fictional user responses, statistics, food brand labels, phone, photorealistic scene, logos, stickers, watermarks, other text. The still life supports an open-ended menu choice; do not show a finished specific meal.

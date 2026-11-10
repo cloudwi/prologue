@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <rect width="1080" height="1350" fill="#242322"/>
+  <circle cx="910" cy="155" r="180" fill="#D9694C" opacity="0.13"/>
+  <circle cx="110" cy="1190" r="230" fill="#F7F2E8" opacity="0.05"/>
+  <image href="brand-mark.png" x="431" y="148" width="218" height="156" preserveAspectRatio="xMidYMid meet"/>
+  <g font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" text-anchor="middle">
+    <text x="540" y="380" fill="#FFF9EF" font-size="56" font-weight="700" letter-spacing="4">프롤로그</text>
+    <text x="540" y="476" fill="#FFF9EF" font-size="56" font-weight="650" letter-spacing="-1">사진보다 생각이 먼저 닿는</text>
+    <text x="540" y="548" fill="#FFF9EF" font-size="56" font-weight="650" letter-spacing="-1">새로운 시작</text>
+    <text x="540" y="668" fill="#CFC7B8" font-size="31" font-weight="500">하루 한 문답으로 만나고</text>
+    <text x="540" y="714" fill="#CFC7B8" font-size="31" font-weight="500">가벼운 모임에서 직접 이야기해요.</text>
+  </g>
+  <rect x="168" y="820" width="744" height="112" rx="56" fill="#D9694C"/>
+  <text x="540" y="890" fill="#FFF9EF" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="36" font-weight="700" text-anchor="middle">프로필 링크에서 프롤로그 다운로드</text>
+  <g font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" text-anchor="middle">
+    <text x="540" y="1040" fill="#FFF9EF" font-size="34" font-weight="600">prologue.day/download</text>
+    <text x="540" y="1110" fill="#9E9890" font-size="27" font-weight="500">App Store · Google Play</text>
+    <text x="540" y="1260" fill="#D9694C" font-size="26" font-weight="600" letter-spacing="3">PROLOGUE</text>
+  </g>
+</svg>

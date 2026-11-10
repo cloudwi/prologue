@@ -1,0 +1,43 @@
+SLIDE 1
+Use case: ads-marketing
+Asset type: One slide of a three-slide Instagram carousel for 프롤로그, EXACT portrait 4:5 aspect ratio, ideally 1024x1280.
+Visual system: Quiet refined Korean editorial illustration, small hand-painted gouache objects with delicate charcoal outlines, tactile paper, open white space. Pale mist blue paper background, charcoal #1B2126 sans-serif Korean typography, sparing terracotta #D9694C accents. Soft slate-blue raindrops and subtle sage touches. This is SMALL ILLUSTRATION style, no photographic scene. No envelopes, no big gray text-card box, no cinema, no people, no real shop brands.
+Composition: Small '프롤로그 · 오늘의 질문' at top; primary text clearly legible with generous margins; charming understated rainy-day café/bookstore illustrations in lower half. Footer 'prologue.day' and small slide index. Keep typeface, colors and visual atmosphere consistent across all three slides. Text must have correct Korean spelling and not be cropped. Only exact copy below, no invented additional words, hashtags, logos or watermark. 8% safe margins.
+Slide: 1/3, cover. Primary question very prominent upper half with natural line breaks. Lower half: a small folded terracotta umbrella between a little coffee cup and two stacked books, with a few tiny raindrops. Avoid empty excessive blank lower half; let the illustration breathe and balance the headline. A tiny page-turn cue '넘겨서 골라보세요' is subordinate.
+Exact text:
+"프롤로그 · 오늘의 질문"
+"데이트 중 비가 오면\n어디로 들어가고 싶나요?"
+"넘겨서 골라보세요"
+"prologue.day"
+"1 / 3"
+
+SLIDE 2
+Use case: ads-marketing
+Asset type: One slide of a three-slide Instagram carousel for 프롤로그, EXACT portrait 4:5 aspect ratio, ideally 1024x1280.
+Visual system: Quiet refined Korean editorial illustration, small hand-painted gouache objects with delicate charcoal outlines, tactile paper, open white space. Pale mist blue paper background, charcoal #1B2126 sans-serif Korean typography, sparing terracotta #D9694C accents. Soft slate-blue raindrops and subtle sage touches. This is SMALL ILLUSTRATION style, no photographic scene. No envelopes, no big gray text-card box, no cinema, no people, no real shop brands.
+Composition: Small '프롤로그 · 오늘의 질문' at top; primary text clearly legible with generous margins; charming understated rainy-day café/bookstore illustrations in lower half. Footer 'prologue.day' and small slide index. Keep typeface, colors and visual atmosphere consistent across all three slides. Text must have correct Korean spelling and not be cropped. Only exact copy below, no invented additional words, hashtags, logos or watermark. 8% safe margins.
+Slide: 2/3, two actual hypothetical choices, not survey results. Two balanced stacked spacious scenes and labels. A scene: café window with cup and small rainy window, caption. B scene: two books and little bookstore shelf with rainy window, caption. Large A and B marks in terracotta; keep body short and readable. Both choices equally appealing.
+Exact text:
+"프롤로그 · 오늘의 질문"
+"잠깐 비를 피한다면"
+"A  카페"
+"창가에서 빗소리 들으며 쉬기"
+"B  서점"
+"책장 사이에서 취향 구경하기"
+"선택 예시"
+"prologue.day"
+"2 / 3"
+
+SLIDE 3
+Use case: ads-marketing
+Asset type: One slide of a three-slide Instagram carousel for 프롤로그, EXACT portrait 4:5 aspect ratio, ideally 1024x1280.
+Visual system: Quiet refined Korean editorial illustration, small hand-painted gouache objects with delicate charcoal outlines, tactile paper, open white space. Pale mist blue paper background, charcoal #1B2126 sans-serif Korean typography, sparing terracotta #D9694C accents. Soft slate-blue raindrops and subtle sage touches. This is SMALL ILLUSTRATION style, no photographic scene. No envelopes, no big gray text-card box, no cinema, no people, no real shop brands.
+Composition: Small '프롤로그 · 오늘의 질문' at top; primary text clearly legible with generous margins; charming understated rainy-day café/bookstore illustrations in lower half. Footer 'prologue.day' and small slide index. Keep typeface, colors and visual atmosphere consistent across all three slides. Text must have correct Korean spelling and not be cropped. Only exact copy below, no invented additional words, hashtags, logos or watermark. 8% safe margins.
+Slide: 3/3, useful conversation starter about the same rainy-date choice. Make a beautiful friendly handwritten-appointment-note composition without actual envelope, no physical note border. Small illustration at bottom: folded umbrella leaning beside two tiny coffee cups and a slim closed book, keeping both café and bookstore represented. Main copy left aligned center, with visible blank fill-in field in terracotta, intended to fill with 카페 or 서점. Upper label is small. There is no second unrelated question.
+Exact text:
+"프롤로그 · 오늘의 질문"
+"다음 데이트에 꺼낼 한마디"
+"비가 오면,\n우리 [          ]에서\n잠깐 쉬어갈까요?"
+"오늘 고른 곳을 넣어보세요."
+"prologue.day"
+"3 / 3"

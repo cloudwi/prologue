@@ -1,0 +1,12 @@
+Use case: ads-marketing
+Asset type: Instagram Prologue carousel slide 3 of 3, portrait 4:5.
+Primary request: Matching quiet photographic editorial style to reference, a different close view of a face-down smartphone on the same pale stone console beside keys, soft morning daylight on textured wall. An everyday image supporting a useful conversation starter for dating. No people or screen messages.
+Composition: Photo in lower half, soft wall above for clear text. Same clean Korean sans serif, charcoal #1B2126 and a small terracotta #D9694C accent. Generous safe margins, attractive layout consistent with the other two carousel slides.
+Exact small header: "프롤로그 · 오늘의 질문"
+Exact main heading: "다음에 만날 땐"
+Next main line: "이렇게 물어봐요"
+Exact quoted conversation starter below:
+"헤어진 뒤 연락은"
+"언제 받는 게 좋아요?"
+Exact small footer: "prologue.day"
+Constraints: No extra comment/share demand; the quote is a conversation example, not a real user answer. Text exactly as written, no clipping, no envelope, no fake phone conversation, no logo or watermarks, portrait 4:5.

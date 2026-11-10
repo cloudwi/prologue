@@ -1,0 +1,5 @@
+Use case: ads-marketing. Create one final Instagram portrait feed question card in 4:5 ratio. Image 1 is STYLE REFERENCE ONLY, the previous day in our series. Follow the same cool paper #F6F8FA, charcoal #1B2126, terracotta #D9694C, generous white space, left alignment, friendly small cream envelope with heart seal at lower right, and small handle at lower left. New exact Korean question, one sentence split into four lines, dominant large bold clean Korean type:
+오래 기억에
+남는 다정한 말은
+어떤 말인가요?
+Use charcoal for the main text except '다정한 말' in terracotta. Slightly reduce main font only enough to keep every glyph inside at least 8% margins. Small upper-left header exactly '프롤로그 · 오늘의 질문'. Lower-left handle exactly 'prologue.day'. Keep quiet polished editorial card style matching reference, no additional copy or date, no stats or extra icons, no watermarks, no fake screenshot. All Korean spelling must be exact. Retain spacious composition and full question as main subject.

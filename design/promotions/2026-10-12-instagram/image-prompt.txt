@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: Instagram Prologue daily question carousel slide 1 of 3, portrait 4:5.
+Primary request: A tasteful Korean editorial lifestyle photograph with the daily question as the readable protagonist. Photorealistic empty home entryway console after an evening date, a smartphone screen face down and a small keyring placed on pale stone, distant doorway, soft dusk blue window light. Quiet anticipation, no people, no identifying information, no actual-user implication.
+Composition: Full-bleed photo, lower 55% contains the console with phone and keys, upper 45% soft near-white wall and negative space for large Korean question. Clean modern Korean sans serif, charcoal #1B2126, one terracotta #D9694C emphasis on "연락". Small top brand, small bottom handle. No envelope.
+Exact header: "프롤로그 · 오늘의 질문"
+Exact main question on three lines:
+"데이트 후 연락은"
+"언제 받으면 가장"
+"반가운가요?"
+Exact footer: "prologue.day"
+Constraints: all Korean accurate, generous margins 8%, no clipping, strong readability, no other text, no fake message, no brand logos, no watermarks. 4:5 portrait. Original AI-created conceptual scene, not a real attendee or meeting.

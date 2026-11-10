@@ -1,0 +1,14 @@
+Use case: ads-marketing
+Asset type: single-image Instagram daily question, portrait exactly 4:5 aspect ratio, ideally 1024x1280.
+Primary request: A polished Korean original editorial social card for 프롤로그, mixing a natural cinema scene with highly legible question typography. One new light OX question dominates.
+Scene/backdrop: An empty intimate movie theater after a screening. Lower half shows two adjacent terracotta upholstered cinema seats at a gentle diagonal, softly lit, with a light aisle fading into the background. Upper half has a softly illuminated warm ivory cinema screen, clean enough for readable typography. No people, no movie still, no actual film titles or credits, no envelopes or phones. This is an AI-created conceptual scene, not evidence of a real event.
+Style/medium: Natural editorial lifestyle photography, realistic fabric and soft film grain, refined quiet magazine composition. Avoid cartoon, avoid generic flat gray card.
+Composition/framing: Portrait 4:5. All copy comfortably inside safe margins at least 8%. Small series brand at upper left; main question large and left aligned across three short lines on the ivory screen in upper half. Lower part devoted to the cinema seats. A restrained two-column O/X choice row directly beneath question, well separated from seats. Small handle at bottom.
+Lighting/mood: Warm low theater light, gentle and inviting; typography region bright enough for dark charcoal lettering.
+Color palette: Warm ivory, muted cinema terracotta; charcoal #1B2126 typography and terracotta #D9694C accent only on the words 엔딩 크레딧. Consistent Korean modern sans-serif.
+Text (verbatim, do not alter any spelling):
+Small brand: "프롤로그 · 오늘의 질문"
+Main question: "영화 데이트 때\n엔딩 크레딧까지\n보는 편인가요?"
+Choice labels: "O 끝까지 봐요" and "X 먼저 나와요"
+Small footer: "prologue.day"
+Constraints: The complete question and both O/X labels must be readable, accurate Korean, no cropping or missing letters. Exactly this text only, no extra slogan, no arrow, no fabricated statistics, no app screenshots, no watermark. Maintain true portrait 4:5 composition, not 2:3.

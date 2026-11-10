@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="storyShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171717" stop-opacity="0.18"/>
+      <stop offset="0.58" stop-color="#171717" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#171717" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+  <image href="cover-source.png" width="1080" height="1920" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1080" height="1920" fill="url(#storyShade)"/>
+  <image href="brand-mark.png" x="78" y="118" width="140" height="100" preserveAspectRatio="xMidYMid meet"/>
+  <text x="246" y="186" fill="#FFF9EF" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="42" font-weight="700">프롤로그</text>
+  <g font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" fill="#FFF9EF">
+    <text x="72" y="1280" font-size="74" font-weight="700" letter-spacing="-2">좋아하는 과자 한 봉지로</text>
+    <text x="72" y="1370" font-size="74" font-weight="700" letter-spacing="-2">시작하는 새로운 대화</text>
+    <text x="72" y="1460" font-size="34" font-weight="500">10.17 토 · 18:00–21:00 · 서로서가</text>
+    <text x="72" y="1515" font-size="34" font-weight="600">8명 · 참가비 10,000원</text>
+  </g>
+  <rect x="72" y="1600" width="936" height="154" rx="77" fill="#D9694C"/>
+  <text x="540" y="1664" fill="#FFF9EF" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="31" font-weight="600" text-anchor="middle">링크 스티커</text>
+  <text x="540" y="1712" fill="#FFF9EF" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="38" font-weight="700" text-anchor="middle">프롤로그에서 신청하기</text>
+  <text x="540" y="1830" fill="#FFF9EF" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="28" font-weight="500" text-anchor="middle">prologue.day/download</text>
+</svg>

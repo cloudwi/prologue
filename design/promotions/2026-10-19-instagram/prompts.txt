@@ -1,0 +1,43 @@
+SLIDE 1
+Use case: ads-marketing
+Asset: One slide of a 3-slide Instagram carousel, EXACT 4:5 portrait ideally 1024x1280.
+Brand and art direction: 프롤로그 original daily-question series. Small editorial gouache illustration with lightly textured pale sage background, charcoal #1B2126 readable Korean modern sans-serif, terracotta #D9694C restrained highlights. A quiet charming bakery-and-walk motif, simple shapes and generous breathing room. No gray envelope, no cinema, no photo-booth, no rain or bookstore, no real people, no actual business brand. This is a fictional conceptual illustration, not a real shop or user event.
+All 3 slides should share colors, line weight and typography. Small brand at top, small prologue.day footer, tiny index. Main copy clearly legible with 8% safe margins, accurate Korean text. Illustrations must support rather than overpower words. No fake voting results, stats, testimonials, logos, watermark, or additional text.
+Slide 1/3 cover: Big question upper left broken across 3 short lines, emphasize '빵집' in terracotta. In lower half a small inviting bakery storefront with a terracotta striped awning, a golden croissant in the window and a winding footpath. The shop is a small illustration with much open space around it.
+Exact visible text:
+"프롤로그 · 오늘의 질문"
+"데이트 중 발견한 빵집에\n바로 들어가는 편인가요?"
+"넘겨서 골라보세요"
+"prologue.day"
+"1 / 3"
+
+SLIDE 2
+Use case: ads-marketing
+Asset: One slide of a 3-slide Instagram carousel, EXACT 4:5 portrait ideally 1024x1280.
+Brand and art direction: 프롤로그 original daily-question series. Small editorial gouache illustration with lightly textured pale sage background, charcoal #1B2126 readable Korean modern sans-serif, terracotta #D9694C restrained highlights. A quiet charming bakery-and-walk motif, simple shapes and generous breathing room. No gray envelope, no cinema, no photo-booth, no rain or bookstore, no real people, no actual business brand. This is a fictional conceptual illustration, not a real shop or user event.
+All 3 slides should share colors, line weight and typography. Small brand at top, small prologue.day footer, tiny index. Main copy clearly legible with 8% safe margins, accurate Korean text. Illustrations must support rather than overpower words. No fake voting results, stats, testimonials, logos, watermark, or additional text.
+Slide 2/3: Two equal hypothetical O/X choices in two spacious stacked sections, no selection marked. O uses a small paper bread bag and croissant. X uses a small simple illustrated map with a terracotta bookmark pin, no location names or smartphone UI. Both attractive and neutral.
+Exact visible text:
+"프롤로그 · 오늘의 질문"
+"산책길에 빵 냄새가 난다면"
+"O  잠깐 들러요"
+"지금 먹고 싶은 빵 하나 고르기"
+"X  다음에 가요"
+"다음 산책 코스로 기억해 두기"
+"선택 예시"
+"prologue.day"
+"2 / 3"
+
+SLIDE 3
+Use case: ads-marketing
+Asset: One slide of a 3-slide Instagram carousel, EXACT 4:5 portrait ideally 1024x1280.
+Brand and art direction: 프롤로그 original daily-question series. Small editorial gouache illustration with lightly textured pale sage background, charcoal #1B2126 readable Korean modern sans-serif, terracotta #D9694C restrained highlights. A quiet charming bakery-and-walk motif, simple shapes and generous breathing room. No gray envelope, no cinema, no photo-booth, no rain or bookstore, no real people, no actual business brand. This is a fictional conceptual illustration, not a real shop or user event.
+All 3 slides should share colors, line weight and typography. Small brand at top, small prologue.day footer, tiny index. Main copy clearly legible with 8% safe margins, accurate Korean text. Illustrations must support rather than overpower words. No fake voting results, stats, testimonials, logos, watermark, or additional text.
+Slide 3/3: A useful gentle conversation starter for the SAME bakery-on-a-walk question, not a separate topic. Main quoted phrase around center, left aligned, generous line spacing. At bottom a small illustration of the bakery door open with a footpath leading toward it, and a small croissant beside it, no person or speech balloon. A tiny concluding line says trying a short invitation naturally begins conversation, no artificial promise.
+Exact visible text:
+"프롤로그 · 오늘의 질문"
+"다음 산책에 꺼낼 한마디"
+"저 빵집,\n잠깐 들러볼까요?"
+"뜻밖의 발견도 데이트의 한 장면."
+"prologue.day"
+"3 / 3"

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <defs>
+    <clipPath id="frame"><rect width="1080" height="1350" rx="0"/></clipPath>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171717" stop-opacity="0.46"/>
+      <stop offset="0.42" stop-color="#171717" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#171717" stop-opacity="0.82"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#frame)">
+    <image href="cover-source.png" width="1080" height="1350" preserveAspectRatio="xMidYMid slice"/>
+    <rect width="1080" height="1350" fill="url(#shade)"/>
+  </g>
+  <g font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" fill="#FFF9EF">
+    <text x="72" y="90" font-size="28" font-weight="600" letter-spacing="2">프롤로그 · MEETUP 01</text>
+    <text x="1008" y="90" font-size="24" font-weight="500" text-anchor="end">10.17 SAT</text>
+    <text x="72" y="1030" font-size="74" font-weight="700" letter-spacing="-2">좋아하는 과자</text>
+    <text x="72" y="1118" font-size="74" font-weight="700" letter-spacing="-2">한 봉지만 들고 오세요.</text>
+  </g>
+  <rect x="72" y="1174" width="278" height="68" rx="34" fill="#D9694C"/>
+  <text x="211" y="1220" fill="#FFF9EF" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="30" font-weight="600" text-anchor="middle">봉지 뜯는 사이</text>
+</svg>
